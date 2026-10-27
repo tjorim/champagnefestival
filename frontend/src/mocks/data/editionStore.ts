@@ -45,6 +45,7 @@ export interface SeedProduct {
   category: string;
   purchasable: boolean;
   required: boolean;
+  unit?: "item" | "table" | "person";
   inclusions?: SeedProductInclusion[] | null;
   included_product_id: string | null;
   included_per_guests: number | null;

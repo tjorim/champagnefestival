@@ -199,3 +199,77 @@ it("applies a domain status highlight to desktop rows and mobile cards", () => {
   ).toBe(true);
   expect(screen.getByRole("row", { name: "Ada" }).className).not.toContain("bg-warning/10");
 });
+
+it("applies a filter's default while the URL carries none, without a removable chip", () => {
+  route.search.table_people = { filters: {} };
+  mount({
+    filters: [
+      {
+        id: "status",
+        label: "Status",
+        defaultValue: "open",
+        options: [
+          { value: "open", label: "Open items" },
+          { value: "all", label: "Everything" },
+        ],
+      },
+    ],
+  });
+  expect(screen.getByRole("combobox", { name: "Status" }).textContent).toContain("Open items");
+  expect(screen.queryByRole("button", { name: /Status: .* ×/ })).toBeNull();
+});
+it("offers no Open button for rows without a detail view", () => {
+  mount({ onOpen: undefined });
+  expect(screen.queryByRole("button", { name: "Open: Zoe" })).toBeNull();
+});
+it("steps back to the last page that has rows when the current page empties", () => {
+  mount({
+    useDataSource: () => ({
+      data: { items: [], total: 100 },
+      isFetching: false,
+      refetch: vi.fn(),
+    }),
+  });
+  expect(readAdminTableState(route.search.table_people)).toMatchObject({ page: 4 });
+});
+it("describes an empty result from the current state", () => {
+  route.search.table_people = { search: "zzz" };
+  mount({
+    useDataSource: () => ({ data: { items: [], total: 0 }, isFetching: false, refetch: vi.fn() }),
+    labels: {
+      ...labels,
+      empty: (state: { search: string }) => (state.search ? "Nothing matches" : "Nothing yet"),
+    },
+  });
+  expect(screen.getByText("Nothing matches")).toBeTruthy();
+});
+it("returns focus to the result count when the focused row leaves the page", () => {
+  const rows = [{ id: "1", name: "Ada" }];
+  const dataSource = () => ({
+    data: { items: rows.slice(), total: rows.length },
+    isFetching: false,
+    refetch: vi.fn(),
+  });
+  const props = {
+    id: "people",
+    columns: [
+      helper.display({
+        id: "actions",
+        header: "Actions",
+        cell: (info) => <button type="button">{`Act ${info.row.original.name}`}</button>,
+      }),
+    ],
+    columnVisibilityKey: "people-columns",
+    getRowId: (row: Person) => row.id,
+    getRowLabel: (row: Person) => row.name,
+    renderCard: (row: Person) => row.name,
+    labels,
+  };
+  const view = render(<AdminDataTable {...props} useDataSource={dataSource} />);
+  const button = screen.getAllByRole("button", { name: "Act Ada" })[0]!;
+  button.focus();
+  rows.pop();
+  rows.push({ id: "2", name: "Bea" });
+  view.rerender(<AdminDataTable {...props} useDataSource={dataSource} />);
+  expect(document.activeElement).toBe(screen.getByRole("status", { name: "" }));
+});

@@ -146,12 +146,12 @@ async def test_waitlist_admin_list_filters_by_event_and_product(client):
     )
 
     by_event = await client.get("/api/waitlist", params={"event_id": event_a["id"]}, headers=ADMIN_HEADERS)
-    assert [e["name"] for e in by_event.json()] == ["Guest A"]
+    assert [e["name"] for e in by_event.json()["items"]] == ["Guest A"]
 
     by_product = await client.get("/api/waitlist", params={"product_id": product_b}, headers=ADMIN_HEADERS)
-    assert [e["name"] for e in by_product.json()] == ["Guest B"]
+    assert [e["name"] for e in by_product.json()["items"]] == ["Guest B"]
 
-    entry = by_event.json()[0]
+    entry = by_event.json()["items"][0]
     assert entry["event_id"] == event_a["id"]
     assert entry["product_name"] == "Product A"
 
@@ -182,11 +182,57 @@ async def test_waitlist_admin_mark_handled_and_delete(client):
     assert deleted.status_code == 204
 
     listed = await client.get("/api/waitlist", headers=ADMIN_HEADERS)
-    assert listed.json() == []
+    assert listed.json()["items"] == []
+    assert listed.json()["total"] == 0
 
 
 @pytest.mark.anyio
 async def test_waitlist_admin_endpoints_require_admin(unauth_client):
     assert (await unauth_client.get("/api/waitlist")).status_code == 401
+    assert (await unauth_client.get("/api/waitlist/scopes")).status_code == 401
     assert (await unauth_client.put("/api/waitlist/nonexistent/handled")).status_code == 401
     assert (await unauth_client.delete("/api/waitlist/nonexistent")).status_code == 401
+
+
+@pytest.mark.anyio
+async def test_waitlist_admin_list_status_search_paging_and_scopes(client):
+    event_a = await _create_event(client, edition_id="edition-waitlist-a", title="Event A")
+    event_b = await _create_event(client, edition_id="edition-waitlist-b", title="Event B")
+    product_a = await _create_sold_out_product(client, event_id=event_a["id"], name="Product A")
+    product_b = await _create_sold_out_product(client, event_id=event_b["id"], name="Product B")
+    ids = {
+        "Guest A1": "11111111-1111-1111-1111-111111111111",
+        "Guest A2": "22222222-2222-2222-2222-222222222222",
+        "Guest B1": "33333333-3333-3333-3333-333333333333",
+    }
+    for name, submission_id in ids.items():
+        await client.post(
+            "/api/waitlist",
+            json={
+                "submission_id": submission_id,
+                "product_id": product_a if "A" in name else product_b,
+                "name": name,
+                "email": f"{name.replace(' ', '').lower()}@example.com",
+            },
+        )
+    await client.put(f"/api/waitlist/{ids['Guest A1']}/handled", headers=ADMIN_HEADERS)
+
+    async def names(**params):
+        body = (await client.get("/api/waitlist", params=params, headers=ADMIN_HEADERS)).json()
+        return [e["name"] for e in body["items"]], body["total"]
+
+    assert await names(status="unhandled") == (["Guest A2", "Guest B1"], 2)
+    assert await names(status="handled") == (["Guest A1"], 1)
+    assert await names(status="unhandled", event_id=event_a["id"]) == (["Guest A2"], 1)
+    assert await names(q="product b") == (["Guest B1"], 1)
+    assert await names(limit=2, page=2) == (["Guest B1"], 3)
+
+    scopes = (await client.get("/api/waitlist/scopes", headers=ADMIN_HEADERS)).json()
+    assert [(e["title"], e["outstanding"], e["total"]) for e in scopes["events"]] == [
+        ("Event A", 1, 2),
+        ("Event B", 1, 1),
+    ]
+    assert [(p["id"], p["event_id"], p["outstanding"]) for p in scopes["products"]] == [
+        (product_a, event_a["id"], 1),
+        (product_b, event_b["id"], 1),
+    ]

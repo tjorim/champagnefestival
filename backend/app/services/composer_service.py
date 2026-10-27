@@ -30,6 +30,10 @@ _COMPOSER_MESSAGE_PUSH = "composer_message_push"
 _COMPOSER_MESSAGE_EMAIL = "composer_message_email"
 
 
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
 async def _estimated_push_audience(db: AsyncSession) -> int:
     return (await db.execute(select(func.count()).select_from(PushSubscription))).scalar_one()
 
@@ -131,6 +135,7 @@ async def to_dict(db: AsyncSession, item: ComposedMessage) -> dict:
         "updated_at": item.updated_at,
         "estimated_push_audience": await _estimated_push_audience(db),
         "estimated_email_audience": await _estimated_email_audience(db, item),
+        "member_mail_available": member_mail.member_mail_available(),
         **await _result_fields(db, item),
     }
 
@@ -140,8 +145,8 @@ async def list_messages(db: AsyncSession) -> list[dict]:
     return [await to_dict(db, item) for item in result.scalars()]
 
 
-async def get_message(db: AsyncSession, message_id: str) -> ComposedMessage:
-    item = await db.get(ComposedMessage, message_id)
+async def get_message(db: AsyncSession, message_id: str, *, for_update: bool = False) -> ComposedMessage:
+    item = await db.get(ComposedMessage, message_id, with_for_update=for_update or None)
     if item is None:
         raise NotFoundError(f"Composed message '{message_id}' not found.")
     return item
@@ -168,7 +173,8 @@ async def create_draft(db: AsyncSession, *, actor: str, body: ComposedMessageCre
 async def update_draft(
     db: AsyncSession, *, actor: str, message_id: str, body: ComposedMessageUpdate, request_id: str | None
 ) -> dict:
-    item = await get_message(db, message_id)
+    # Same row lock as schedule_send, so an edit cannot commit over a message that was just scheduled.
+    item = await get_message(db, message_id, for_update=True)
     if item.state != "draft":
         raise ConflictError(f"Composed message '{message_id}' is no longer a draft; it cannot be edited.")
     fields_set = body.model_fields_set
@@ -203,6 +209,7 @@ async def schedule_send(
     scheduled_at: datetime | None,
     request_id: str | None,
     expected_email_audience: int | None = None,
+    expected_updated_at: datetime | None = None,
 ) -> dict:
     """Transition ``draft`` -> ``scheduled`` and hand off to the outbox.
 
@@ -219,6 +226,10 @@ async def schedule_send(
         raise NotFoundError(f"Composed message '{message_id}' not found.")
     if item.state != "draft":
         raise ConflictError(f"Composed message '{message_id}' has already been scheduled or sent.")
+    if expected_updated_at is not None and _as_utc(item.updated_at) != _as_utc(expected_updated_at):
+        raise ConflictError(
+            f"Composed message '{message_id}' was saved after it was reviewed.", code="composed_message_changed"
+        )
 
     try:
         ComposedMessageWrite.model_validate({name: getattr(item, name) for name in ComposedMessageWrite.model_fields})

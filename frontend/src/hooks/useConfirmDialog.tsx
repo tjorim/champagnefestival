@@ -7,6 +7,7 @@ interface ConfirmRequest {
   body: ReactNode;
   errorFallback: string;
   confirmLabel?: ReactNode;
+  cancelLabel?: ReactNode;
   variant?: "danger" | "warning" | "primary";
   icon?: string;
 }
@@ -71,6 +72,7 @@ export function useConfirmDialog({ admin = false }: { admin?: boolean } = {}) {
       body={request.body}
       errorFallback={request.errorFallback}
       confirmLabel={request.confirmLabel}
+      cancelLabel={request.cancelLabel}
       variant={request.variant}
       icon={request.icon}
       onConfirm={() => {

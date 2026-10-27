@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 
 export default function AdminEditorDialog({
@@ -32,28 +32,16 @@ export default function AdminEditorDialog({
   const opener = useRef(
     document.activeElement instanceof HTMLElement ? document.activeElement : null,
   );
-  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
-  async function close() {
-    if (busy) return;
-    if (
-      dirty &&
-      !(await confirm({
-        title: m.admin_editor_discard_title(),
-        body: m.admin_editor_discard_body(),
-        confirmLabel: m.admin_policy_discard_action(),
-        errorFallback: m.admin_editor_discard_error(),
-        variant: "warning",
-        icon: "exclamation-triangle",
-      }))
-    )
-      return;
-    setOpen(false);
-  }
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty,
+    busy,
+    onDismiss: () => setOpen(false),
+  });
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) void close();
+        if (!nextOpen) void requestClose();
       }}
       onOpenChangeComplete={(nextOpen) => {
         if (!nextOpen) onClose();
@@ -65,7 +53,7 @@ export default function AdminEditorDialog({
         </DialogHeader>
         <DialogBody>{children}</DialogBody>
         <DialogFooter>
-          <Button variant="outline" disabled={busy} onClick={() => void close()}>
+          <Button variant="outline" disabled={busy} onClick={() => void requestClose()}>
             {m.admin_action_cancel()}
           </Button>
           {footer}

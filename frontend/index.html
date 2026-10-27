@@ -74,6 +74,10 @@
       or when the bundle fails to load, so the readable fragment is never lost.
     -->
     <style>
+      /* Layers keep the order of their first mention, and this style precedes the bundled
+         stylesheet: declare the full order here (identical to src/styles/tailwind.css) so
+         "components" cannot land below Tailwind's preflight in "base". */
+      @layer theme, base, vendor, components, utilities;
       @layer components {
         html[data-app-pending] .site-server-content {
           display: none;

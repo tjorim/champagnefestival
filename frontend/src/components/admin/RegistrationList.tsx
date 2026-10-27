@@ -1347,9 +1347,10 @@ export default function RegistrationList({
       <RegistrationCreateModal
         show={showCreateModal}
         authHeaders={authHeaders}
-        onSaved={(registration) => {
-          onAddRegistration(registration);
+        onSaved={onAddRegistration}
+        onOpenBooking={(registration) => {
           setShowCreateModal(false);
+          onViewDetail(registration);
         }}
         onHide={() => setShowCreateModal(false)}
       />

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { AdminEmptyState } from "./AdminEmptyState";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 import { useAppTable, type AdminTableFeatures } from "@/hooks/useAdminTable";
@@ -38,6 +38,8 @@ export interface AdminDataSourceResult<T> {
 export interface AdminTableFilter {
   id: string;
   label: string;
+  /** Applies while the filter is absent from the URL (for example a queue's "unhandled" view). */
+  defaultValue?: string;
   options: readonly { value: string; label: string }[];
 }
 export interface AdminTableAction<T> {
@@ -55,7 +57,8 @@ export interface AdminDataTableProps<T extends RowData> {
   getRowId: (row: T) => string;
   getRowLabel: (row: T) => string;
   getRowClassName?: (row: T) => string | undefined;
-  onOpen: (row: T) => void;
+  /** Omit for rows with no detail view; their actions then live in an `actions` column. */
+  onOpen?: (row: T) => void;
   /** Primary identifiers and status, independent of desktop column visibility. */
   renderCard: (row: T) => ReactNode;
   actions?: readonly AdminTableAction<T>[];
@@ -68,7 +71,8 @@ export interface AdminDataTableProps<T extends RowData> {
     sort: string;
     clear: string;
     loading: string;
-    empty: string;
+    /** A function lets a queue tell "nothing waiting" from "no match for these filters". */
+    empty: string | ((state: AdminTableState) => string);
     error: string;
     retry: string;
     open: string;
@@ -215,6 +219,21 @@ function ServerAdminDataTable<T extends RowData>({
       : savedVisibility;
   const result = useDataSource(state);
   const filters = result.filters ?? configuredFilters;
+  const total = result.data?.total ?? 0;
+  const itemCount = result.data?.items.length ?? 0;
+  const settled = result.data !== undefined && !result.isPlaceholderData && !result.isFetching;
+  // Handling the last row of a page leaves it empty: step back to the last page that has rows.
+  useEffect(() => {
+    if (!settled || itemCount > 0 || total === 0 || state.page === 0) return;
+    update({ ...state, page: Math.max(0, Math.ceil(total / state.pageSize) - 1) });
+  });
+  // A row that acts on itself and then leaves the page takes the keyboard focus with it.
+  const statusRef = useRef<HTMLSpanElement>(null);
+  const focusInside = useRef(false);
+  const rowIds = result.data?.items.map(getRowId).join("\u0000");
+  useEffect(() => {
+    if (focusInside.current && document.activeElement === document.body) statusRef.current?.focus();
+  }, [rowIds]);
   const [action, setAction] = useState<{ action: AdminTableAction<T>; row: T } | null>(null);
   const [busy, setBusy] = useState(false);
   const [operationError, setOperationError] = useState(false);
@@ -276,14 +295,16 @@ function ServerAdminDataTable<T extends RowData>({
   const hasActionsColumn = table.getVisibleLeafColumns().some((column) => column.id === "actions");
   const rowActions = (row: T) => (
     <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => onOpen(row)}
-        aria-label={`${labels.open}: ${getRowLabel(row)}`}
-      >
-        {labels.open}
-      </Button>
+      {onOpen && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onOpen(row)}
+          aria-label={`${labels.open}: ${getRowLabel(row)}`}
+        >
+          {labels.open}
+        </Button>
+      )}
       {actions.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -304,9 +325,23 @@ function ServerAdminDataTable<T extends RowData>({
     </div>
   );
   return (
-    <section aria-label={labels.caption} aria-busy={result.isFetching} className="space-y-3 p-4">
+    <section
+      aria-label={labels.caption}
+      aria-busy={result.isFetching}
+      className="space-y-3 p-4"
+      onFocus={() => {
+        focusInside.current = true;
+      }}
+      onBlur={(event) => {
+        if (event.relatedTarget)
+          focusInside.current = event.currentTarget.contains(event.relatedTarget);
+        else if (event.target.isConnected) focusInside.current = false;
+      }}
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <span role="status">{labels.results(result.data?.total ?? 0)}</span>
+        <span role="status" ref={statusRef} tabIndex={-1}>
+          {labels.results(total)}
+        </span>
         <Input
           className="w-full sm:w-auto"
           aria-label={labels.search}
@@ -317,10 +352,15 @@ function ServerAdminDataTable<T extends RowData>({
         {filters.map((filter) => (
           <Select
             key={filter.id}
-            value={state.filters[filter.id] ?? ""}
+            items={
+              filter.defaultValue === undefined
+                ? [{ value: "", label: filter.label }, ...filter.options]
+                : filter.options
+            }
+            value={state.filters[filter.id] ?? filter.defaultValue ?? ""}
             onValueChange={(value) => {
               const next = { ...state.filters };
-              if (value) next[filter.id] = value;
+              if (value && value !== filter.defaultValue) next[filter.id] = value;
               else delete next[filter.id];
               update({ ...state, filters: next, page: 0 });
             }}
@@ -329,7 +369,9 @@ function ServerAdminDataTable<T extends RowData>({
               <SelectValue placeholder={filter.label} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{filter.label}</SelectItem>
+              {filter.defaultValue === undefined && (
+                <SelectItem value="">{filter.label}</SelectItem>
+              )}
               {filter.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -396,7 +438,9 @@ function ServerAdminDataTable<T extends RowData>({
         </div>
       )}
       {result.data && result.data.items.length === 0 && (
-        <AdminEmptyState>{labels.empty}</AdminEmptyState>
+        <AdminEmptyState>
+          {typeof labels.empty === "function" ? labels.empty(state) : labels.empty}
+        </AdminEmptyState>
       )}
       <div className="hidden md:block">
         <AdminControlledTable
@@ -409,7 +453,7 @@ function ServerAdminDataTable<T extends RowData>({
           actionsLabel={labels.actions}
         />
       </div>
-      <div className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
+      <div role="group" className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
         {table
           .getAllLeafColumns()
           .filter((column) => column.getCanSort())

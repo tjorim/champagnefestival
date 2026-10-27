@@ -184,10 +184,11 @@ function LogoGroup({
                 )}
                 {description && (
                   <p
-                    title={description}
+                    lang={description.lang}
+                    title={description.text}
                     className="m-0 line-clamp-2 w-full text-xs text-muted-foreground wrap-break-word"
                   >
-                    {description}
+                    {description.text}
                   </p>
                 )}
               </div>

@@ -22,6 +22,7 @@ interface ConfirmModalProps {
   onConfirm: () => Promise<void>;
   onHide: () => void;
   confirmLabel?: ReactNode;
+  cancelLabel?: ReactNode;
   variant?: "danger" | "warning" | "primary";
   icon?: string;
   errorFallback: string;
@@ -42,6 +43,7 @@ export default function ConfirmModal({
   onConfirm,
   onHide,
   confirmLabel,
+  cancelLabel,
   variant = "danger",
   icon = "trash",
   errorFallback,
@@ -108,7 +110,9 @@ export default function ConfirmModal({
           </div>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{m.admin_action_cancel()}</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>
+            {cancelLabel ?? m.admin_action_cancel()}
+          </AlertDialogCancel>
           <Button
             variant={
               variant === "danger" ? "destructive" : variant === "warning" ? "warning" : "default"

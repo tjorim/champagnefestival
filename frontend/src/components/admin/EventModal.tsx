@@ -13,7 +13,7 @@ import OrganizationTranslationSuggestion from "@/components/OrganizationTranslat
 import { SaveIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 
 import {
@@ -24,6 +24,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { type Event, type EventFormData } from "@/types/event";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
@@ -58,6 +59,7 @@ interface EventModalProps {
   edition: Edition;
   initial: Event | null;
   authHeaders: () => Record<string, string>;
+  saving?: boolean;
   onSave: (formData: EventFormData) => void;
   onHide: () => void;
 }
@@ -88,53 +90,64 @@ export default function EventModal({
   edition,
   initial,
   authHeaders,
+  saving,
   onSave,
   onHide,
 }: EventModalProps) {
   const isFestival = edition.editionType === "festival";
-  const derivedStandaloneDate = useMemo(
-    () => edition.dates[0] ?? initial?.date ?? "",
-    [edition.dates, initial?.date],
+  // The event as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(
+    show,
+    `${edition.id}/${initial?.id ?? ""}`,
+    initial,
   );
+  const derivedStandaloneDate = useMemo(
+    () => edition.dates[0] ?? record?.date ?? "",
+    [edition.dates, record?.date],
+  );
+  const { data: categories = [] } = useEventCategories();
+  // A new event starts in the first category once they have loaded.
+  const firstCategory = categories[0]?.key ?? "";
 
   // `useForm` re-applies its `defaultValues` on every render (a layout effect in
   // @tanstack/react-form with no dependency array). Feeding it a static template
   // while hydrating through `form.reset(record)` makes the two fight: the reset
   // rewrites the stored defaults, the next render sees them differ from the
-  // template and wipes the record back out. Deriving the defaults from `initial`
+  // template and wipes the record back out. Deriving the defaults from the session record
   // keeps both sides in agreement, so the record survives.
   const defaultValues = useMemo(
     (): EventFormData =>
-      initial
+      record
         ? {
-            editionId: initial.editionId,
-            titleNl: initial.titleNl ?? "",
-            titleFr: initial.titleFr ?? "",
-            titleEn: initial.titleEn ?? "",
-            descriptionNl: initial.descriptionNl ?? "",
-            descriptionFr: initial.descriptionFr ?? "",
-            descriptionEn: initial.descriptionEn ?? "",
-            date: initial.date,
-            startTime: initial.startTime,
-            endTime: initial.endTime ?? "",
-            category: initial.category,
-            volunteersOnly: initial.volunteersOnly ?? false,
-            membersOnly: initial.membersOnly ?? false,
-            registrationRequired: initial.registrationRequired,
-            registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
-            registrationsCloseAt: initial.registrationsCloseAt ?? "",
-            sortOrder: initial.sortOrder != null ? String(initial.sortOrder) : "",
-            active: initial.active,
+            editionId: record.editionId,
+            titleNl: record.titleNl ?? "",
+            titleFr: record.titleFr ?? "",
+            titleEn: record.titleEn ?? "",
+            descriptionNl: record.descriptionNl ?? "",
+            descriptionFr: record.descriptionFr ?? "",
+            descriptionEn: record.descriptionEn ?? "",
+            date: record.date,
+            startTime: record.startTime,
+            endTime: record.endTime ?? "",
+            category: record.category,
+            volunteersOnly: record.volunteersOnly ?? false,
+            membersOnly: record.membersOnly ?? false,
+            registrationRequired: record.registrationRequired,
+            registrationsOpenFrom: record.registrationsOpenFrom ?? "",
+            registrationsCloseAt: record.registrationsCloseAt ?? "",
+            sortOrder: record.sortOrder != null ? String(record.sortOrder) : "",
+            active: record.active,
           }
         : {
             ...EMPTY_FORM,
+            category: firstCategory,
             editionId: edition.id,
             date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
-    [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival],
+    [derivedStandaloneDate, edition.id, edition.dates, firstCategory, record, isFestival],
   );
 
-  const { data: categories = [] } = useEventCategories();
   const [textError, setTextError] = useState<"title" | "description" | null>(null);
 
   const form = useForm({
@@ -157,18 +170,19 @@ export default function EventModal({
     },
   });
 
-  // Seed a new editing session, not a refreshed object for the same record.
-  // Explicit reset is needed on reopen because touched forms retain their draft.
-  const target = { show, editionId: edition.id, eventId: initial?.id ?? null };
-  const [previousTarget, setPreviousTarget] = useState(target);
-  if (
-    show !== previousTarget.show ||
-    target.editionId !== previousTarget.editionId ||
-    target.eventId !== previousTarget.eventId
-  ) {
-    setPreviousTarget(target);
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched. Read through an effect event so
+  // categories that arrive later (which refresh `defaultValues`) cannot re-seed a
+  // draft in progress.
+  const seedForm = useEffectEvent(() => form.reset(defaultValues));
+  useLayoutEffect(() => {
+    if (show) seedForm();
+  }, [show, sessionId]);
+  const [seenSession, setSeenSession] = useState(sessionId);
+  if (sessionId !== seenSession) {
+    setSeenSession(sessionId);
     setTextError(null);
-    if (show) form.reset(defaultValues);
   }
 
   // Keep standalone date field in sync with derived date
@@ -180,23 +194,22 @@ export default function EventModal({
 
   const dateValue = useSelector(form.atom, (s) => s.values.date);
   const registrationRequired = useSelector(form.atom, (s) => s.values.registrationRequired);
-  const categoryValue = useSelector(form.atom, (s) => s.values.category);
-
-  // A new event starts in the first category once they have loaded.
-  const firstCategory = categories[0]?.key;
-  useEffect(() => {
-    if (show && !categoryValue && firstCategory) form.setFieldValue("category", firstCategory);
-  }, [show, categoryValue, firstCategory, form]);
 
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
-  const isEdit = !!initial;
+  const isEdit = !!record;
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, defaultValues),
+    busy: saving,
+    onDismiss: onHide,
+  });
 
   return (
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -515,7 +528,7 @@ export default function EventModal({
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.close()}
             </Button>
             <Button type="submit" variant="warning" size="sm">
@@ -525,6 +538,7 @@ export default function EventModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

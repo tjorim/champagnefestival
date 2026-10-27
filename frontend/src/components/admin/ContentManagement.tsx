@@ -592,6 +592,7 @@ export function ContentSection({
         show={modalOpen}
         initial={modalItem}
         authHeaders={authHeaders}
+        saving={saveItemMutation.isPending}
         onSave={handleModalSave}
         onHide={() => setModalOpen(false)}
       />

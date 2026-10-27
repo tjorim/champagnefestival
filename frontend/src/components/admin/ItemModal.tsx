@@ -13,8 +13,8 @@ import {
 import { LoaderCircleIcon, SaveIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "@tanstack/react-form";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -33,6 +33,7 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from "@/components/ui/combobox";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import type { ItemDraft } from "./itemTypes";
@@ -42,29 +43,40 @@ interface ItemModalProps {
   show: boolean;
   initial: ItemDraft | null; // null = new item
   authHeaders: () => Record<string, string>;
+  saving?: boolean;
   onSave: (item: ItemDraft) => void;
   onHide: () => void;
 }
 
-export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
+export default function ItemModal({
+  show,
+  initial,
+  authHeaders,
+  saving,
+  onSave,
+  onHide,
+}: ItemModalProps) {
   const queryClient = useQueryClient();
   const [descriptionError, setDescriptionError] = useState(false);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
+  // The item as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(show, String(initial?.id ?? ""), initial);
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(() => {
-    const cp = initial?.contactPerson;
+    const cp = record?.contactPerson;
     return {
-      name: initial?.name ?? "",
-      image: initial?.image ?? "",
-      website: initial?.website ?? "",
-      description_nl: initial?.description_nl ?? "",
-      description_fr: initial?.description_fr ?? "",
-      description_en: initial?.description_en ?? "",
-      type: initial?.type ?? "vendor",
+      name: record?.name ?? "",
+      image: record?.image ?? "",
+      website: record?.website ?? "",
+      description_nl: record?.description_nl ?? "",
+      description_fr: record?.description_fr ?? "",
+      description_en: record?.description_en ?? "",
+      type: record?.type ?? "vendor",
       contactOption: (cp
         ? {
             value: cp.id,
@@ -76,7 +88,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           }
         : null) as PersonOption | null,
     };
-  }, [initial]);
+  }, [record]);
 
   const form = useForm({
     defaultValues,
@@ -93,14 +105,14 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
         // 0 marks the item as new. A client-minted positive id (e.g. Date.now())
         // reads as an existing record to saveContentSectionItem, which then sends
         // an update against an id the server has never seen.
-        id: initial?.id ?? 0,
+        id: record?.id ?? 0,
         name: value.name.trim(),
         image: value.image.trim(),
         website: value.website.trim(),
         description_nl: value.description_nl.trim() || null,
         description_fr: value.description_fr.trim() || null,
         description_en: value.description_en.trim() || null,
-        active: initial?.active ?? true,
+        active: record?.active ?? true,
         type: value.type,
         contactPersonId: value.contactOption?.value ?? null,
         contactPerson: value.contactOption
@@ -115,20 +127,28 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal. Reset during render rather than in an effect
-  // (the "adjusting state when a prop changes" pattern) since this only needs to
-  // react to the show=false->true transition, not to every render.
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched.
+  useLayoutEffect(() => {
+    if (show) form.reset(defaultValues);
+    // `sessionId` covers reopening the same record, which leaves `defaultValues` unchanged.
+  }, [show, sessionId, form, defaultValues]);
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
     if (show) {
-      form.reset(defaultValues);
       setDescriptionError(false);
       setPersonQuery("");
       setDebouncedPersonQuery("");
     }
   }
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, defaultValues),
+    busy: saving,
+    onDismiss: onHide,
+  });
 
   useEffect(() => {
     if (!show) return;
@@ -153,7 +173,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -396,7 +416,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </AdminField>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.close()}
             </Button>
             <Button type="submit" variant="warning" size="sm">
@@ -406,6 +426,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

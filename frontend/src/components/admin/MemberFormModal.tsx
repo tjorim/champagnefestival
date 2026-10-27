@@ -11,7 +11,7 @@ import {
 import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { Alert } from "@/components/ui/alert";
 
@@ -24,6 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { devError } from "@/utils/devLog";
@@ -58,25 +59,28 @@ export default function MemberFormModal({
   onHide,
   limitReached = false,
 }: MemberFormModalProps) {
-  const isEdit = member != null;
   const [error, setError] = useState<string | null>(null);
+  // The record as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(show, member?.id ?? "", member);
+  const isEdit = record != null;
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(
     (): MemberFormData =>
-      member
+      record
         ? {
-            name: member.name,
-            email: member.email ?? "",
-            phone: member.phone ?? "",
-            preferredLanguage: member.preferredLanguage ?? null,
-            address: member.address ?? "",
-            notes: member.notes ?? "",
-            inactivityExempt: member.inactivityExempt ?? false,
-            inactivityExemptNote: member.inactivityExemptNote ?? "",
-            memberSince: roleSince(member, "member") ?? "",
+            name: record.name,
+            email: record.email ?? "",
+            phone: record.phone ?? "",
+            preferredLanguage: record.preferredLanguage ?? null,
+            address: record.address ?? "",
+            notes: record.notes ?? "",
+            inactivityExempt: record.inactivityExempt ?? false,
+            inactivityExemptNote: record.inactivityExemptNote ?? "",
+            memberSince: roleSince(record, "member") ?? "",
           }
         : {
             name: "",
@@ -89,7 +93,7 @@ export default function MemberFormModal({
             inactivityExempt: false,
             inactivityExemptNote: "",
           },
-    [member],
+    [record],
   );
 
   const form = useForm({
@@ -121,27 +125,33 @@ export default function MemberFormModal({
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal. Reset during render rather than in an effect
-  // (the "adjusting state when a prop changes" pattern) since this only needs to
-  // react to the show=false->true transition, not to every render.
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched.
+  useLayoutEffect(() => {
+    if (show) form.reset(defaultValues);
+    // `sessionId` covers reopening the same record, which leaves `defaultValues` unchanged.
+  }, [show, sessionId, form, defaultValues]);
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) {
-      form.reset(defaultValues);
-      setError(null);
-    }
+    if (show) setError(null);
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, defaultValues),
+    busy: isSubmitting,
+    onDismiss: onHide,
+  });
 
   return (
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -350,7 +360,7 @@ export default function MemberFormModal({
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline" onClick={onHide} disabled={isSubmitting}>
+            <Button variant="outline" onClick={() => void requestClose()} disabled={isSubmitting}>
               {m.admin_action_cancel()}
             </Button>
             <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
@@ -369,6 +379,7 @@ export default function MemberFormModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }
