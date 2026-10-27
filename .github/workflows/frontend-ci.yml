@@ -143,6 +143,8 @@ jobs:
   e2e:
     name: E2E Tests (Chromium)
     runs-on: ubuntu-latest
+    # A stuck or systematically failing run (retries double it) must not occupy a runner for hours.
+    timeout-minutes: 30
     # Self-contained: start alongside lint/unit tests/build to shorten CI latency.
     defaults:
       run:
@@ -173,9 +175,18 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
 
+      # Pull requests run the default theme only (every width and colour scheme of it); the
+      # other five themes repeat the same specs and rarely change. Pushes to main and manual
+      # runs (`gh workflow run frontend-ci.yml --ref <branch>`) run every theme.
       - name: Run E2E tests
+        env:
+          E2E_SKIP_THEMES: classic|riviera|cuvee|remuage|millesime
         run: |
-          pnpm run test:e2e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            pnpm exec playwright test --grep-invert "$E2E_SKIP_THEMES"
+          else
+            pnpm run test:e2e
+          fi
           pnpm exec playwright test --config playwright.signage.config.ts
 
       - name: Upload Playwright report

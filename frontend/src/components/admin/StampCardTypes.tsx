@@ -5,6 +5,7 @@ import {
   stampKeys,
   stampRequest,
   stampTypeName,
+  stampTypeNameText,
   type StampCardType,
   type StampCardTypeWrite,
 } from "@/utils/stampCards";
@@ -244,7 +245,8 @@ export default function StampCardTypes({
             {types.data.map((type) => (
               <div key={type.id} className="flex flex-wrap items-center gap-2">
                 <span>
-                  {stampTypeName(type)} ({type.box_count})
+                  <span lang={stampTypeNameText(type).lang}>{stampTypeNameText(type).text}</span> (
+                  {type.box_count})
                 </span>
                 <Badge variant={type.active ? "success" : "secondary"}>
                   {type.active ? m.stamp_active() : m.stamp_inactive()}

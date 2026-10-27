@@ -9,13 +9,14 @@ administrator queue lives in `app.services.waitlist_service`, shared with the MC
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dependencies import ListQuery
 from app.dialect_functions import dialect_insert
 from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
@@ -58,6 +59,36 @@ class WaitlistEntryAdminOut(WaitlistEntryOut):
     product_name: str
     event_id: str
     event_title: str
+
+
+class WaitlistEntryListEnvelope(BaseModel):
+    """One page of the queue; ``total`` counts every entry matching the filters."""
+
+    items: list[WaitlistEntryAdminOut]
+    total: int
+    limit: int
+    page: int
+
+
+class WaitlistEventScope(BaseModel):
+    id: str
+    title: str
+    outstanding: int
+    total: int
+
+
+class WaitlistProductScope(BaseModel):
+    id: str
+    name: str
+    event_id: str
+    event_title: str
+    outstanding: int
+    total: int
+
+
+class WaitlistScopes(BaseModel):
+    events: list[WaitlistEventScope]
+    products: list[WaitlistProductScope]
 
 
 def _to_admin_out(entry: dict) -> WaitlistEntryAdminOut:
@@ -119,14 +150,24 @@ async def _call(operation):
         raise to_http_exception(exc) from exc
 
 
-@router.get("", response_model=list[WaitlistEntryAdminOut], dependencies=[Depends(require_admin)])
+@router.get("", response_model=WaitlistEntryListEnvelope, dependencies=[Depends(require_admin)])
 async def list_waitlist_entries(
     db: AsyncSession = Depends(get_db),
+    query: ListQuery = Depends(),
+    queue_status: service.QueueStatus = Query(
+        default="all", alias="status", description="`unhandled` (not yet contacted), `handled` or `all`"
+    ),
     product_id: str | None = None,
     event_id: str | None = None,
-) -> list[WaitlistEntryAdminOut]:
-    entries = await service.list_entries(db, product_id=product_id, event_id=event_id)
-    return [_to_admin_out(entry) for entry in entries]
+) -> dict:
+    """Oldest first (the manual waitlist order), paged; ``total`` spans the whole filtered queue."""
+    return await service.list_entries_page(db, query, status=queue_status, product_id=product_id, event_id=event_id)
+
+
+@router.get("/scopes", response_model=WaitlistScopes, dependencies=[Depends(require_admin)])
+async def list_waitlist_scopes(db: AsyncSession = Depends(get_db)) -> dict:
+    """The events and products that have entries, for the queue's filter options."""
+    return await service.list_scopes(db)
 
 
 @router.put("/{entry_id}/handled", response_model=WaitlistEntryAdminOut, dependencies=[Depends(require_admin)])

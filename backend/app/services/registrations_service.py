@@ -37,16 +37,25 @@ from app.schemas import (
     OrderItemRequest,
     RegistrationAdminCreate,
     RegistrationDeliveryUpdate,
+    RegistrationOut,
     RegistrationUpdate,
     TableAllocation,
 )
 from app.services import allocations_service, payments_service, people_service
 from app.services import product_inventory as inventory
-from app.services.errors import ApiHTTPException
+from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
+from app.services.idempotency import (
+    check_idempotency_key,
+    commit_with_idempotency_guard,
+    hash_request,
+    record_idempotency_key,
+)
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
 
 logger = logging.getLogger(__name__)
+
+ADMIN_REGISTRATION_SCOPE = "registrations.admin_create"
 
 
 async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
@@ -195,6 +204,18 @@ async def admin_create_registration(
     commit: bool = True,
     poll_question_id: str | None = None,
 ) -> dict:
+    idempotency_key = body.idempotency_key if commit else None
+    request_hash = hash_request(body.model_dump(mode="json", exclude={"idempotency_key"}))
+    if idempotency_key:
+        try:
+            cached = await check_idempotency_key(
+                db, scope=ADMIN_REGISTRATION_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
+            )
+        except ConflictError as exc:
+            raise to_http_exception(exc) from exc
+        if cached is not None:
+            return cached
+
     person = await people_service.get_person_or_404(db, body.person_id)
     event = await inventory.lock_event(db, body.event_id)
     from app.services.order_questions_service import validate_answers
@@ -238,11 +259,30 @@ async def admin_create_registration(
             edition_id=event.edition_id,
         ),
     )
-    if commit:
-        await db.commit()
-    else:
+    if not commit:
         await db.flush()
+        registration = await get_registration_or_404(db, registration.id)
+        return registration_to_dict(registration, person, event)
 
+    # The replayed response is staged in the same transaction as the booking, so
+    # it is only ever visible once the booking is committed.
+    if idempotency_key:
+        # Stored in its serialized form: the order totals are Decimals, which the JSON column cannot hold.
+        response = RegistrationOut.model_validate(
+            registration_to_dict(await get_registration_or_404(db, registration.id), person, event)
+        ).model_dump(mode="json")
+        record_idempotency_key(
+            db,
+            scope=ADMIN_REGISTRATION_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=response,
+        )
+    try:
+        await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
+    except ConflictError as exc:
+        raise to_http_exception(exc) from exc
     registration = await get_registration_or_404(db, registration.id)
     return registration_to_dict(registration, person, event)
 

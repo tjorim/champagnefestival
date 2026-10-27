@@ -2,6 +2,8 @@ import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import {
+  createAdminPerson,
+  createAdminRegistration,
   fetchAdminPersonOptions,
   fetchAdminPersonRegistrations,
   fetchPersonPaymentSummary,
@@ -124,7 +126,15 @@ describe("fetchAdminPersonOptions", () => {
 
   it("maps the people in the {items, total, limit, page} envelope the API returns", async () => {
     stubPeople({
-      items: [{ id: "person-1", name: "Alice", email: "alice@example.com", phone: "123" }],
+      items: [
+        {
+          id: "person-1",
+          name: "Alice",
+          email: "alice@example.com",
+          phone: "123",
+          registration_count: 3,
+        },
+      ],
       total: 1,
       limit: 200,
       page: 1,
@@ -138,6 +148,7 @@ describe("fetchAdminPersonOptions", () => {
         name: "Alice",
         email: "alice@example.com",
         phone: "123",
+        registrationCount: 3,
       },
     ]);
   });
@@ -156,5 +167,104 @@ describe("fetchRegistrableEvents", () => {
     server.use(http.get("/api/events", () => HttpResponse.json({ detail: "oops" })));
 
     await expect(fetchRegistrableEvents(authHeaders)).rejects.toThrow(/expected an array/);
+  });
+});
+
+describe("createAdminPerson", () => {
+  it("creates the person and returns it as a selectable option", async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post("/api/people", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json(
+          {
+            id: "person-9",
+            name: "Zoë",
+            email: "zoe@example.com",
+            phone: "",
+            registration_count: 0,
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    await expect(
+      createAdminPerson(
+        { name: "Zoë", email: "zoe@example.com", phone: "", preferredLanguage: "nl" },
+        authHeaders,
+      ),
+    ).resolves.toMatchObject({ value: "person-9", label: "Zoë", registrationCount: 0 });
+    expect(body).toEqual({
+      name: "Zoë",
+      email: "zoe@example.com",
+      phone: "",
+      preferred_language: "nl",
+    });
+  });
+
+  it("sends no email rather than an empty string", async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post("/api/people", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "p", name: "Zoë", email: "", phone: "" }, { status: 201 });
+      }),
+    );
+
+    await createAdminPerson(
+      { name: "Zoë", email: "", phone: "", preferredLanguage: null },
+      authHeaders,
+    );
+
+    expect(body?.email).toBeNull();
+  });
+});
+
+describe("createAdminRegistration", () => {
+  it("sends the ordered products and the idempotency key", async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post("/api/registrations/admin", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "reg-1", guest_count: 2 }, { status: 201 });
+      }),
+    );
+
+    await createAdminRegistration(
+      {
+        personId: "person-1",
+        eventId: "event-1",
+        guestCount: 2,
+        notes: "",
+        orderItems: [{ productId: "ticket", quantity: 2 }],
+        idempotencyKey: "key-1",
+      },
+      authHeaders,
+    );
+
+    expect(body).toMatchObject({
+      order_items: [{ product_id: "ticket", quantity: 2 }],
+      idempotency_key: "key-1",
+      status: "confirmed",
+    });
+  });
+
+  it("still sends an empty order when no products are chosen", async () => {
+    let body: Record<string, unknown> | undefined;
+    server.use(
+      http.post("/api/registrations/admin", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "reg-1" }, { status: 201 });
+      }),
+    );
+
+    await createAdminRegistration(
+      { personId: "p", eventId: "e", guestCount: 1, notes: "" },
+      authHeaders,
+    );
+
+    expect(body?.order_items).toEqual([]);
+    expect(body).not.toHaveProperty("idempotency_key");
   });
 });

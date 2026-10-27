@@ -96,6 +96,7 @@ async def schedule_send(
             message_id=message_id,
             scheduled_at=body.scheduled_at,
             expected_email_audience=body.expected_email_audience,
+            expected_updated_at=body.expected_updated_at,
             request_id=getattr(request.state, "request_id", None),
         )
     except ServiceError as exc:

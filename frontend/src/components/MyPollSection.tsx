@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ANSWER_INPUTS } from "@/components/MyPollAnswers";
 import { PublicField, PublicLabel, PublicTextarea } from "@/components/PublicFields";
+import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { apiErrorMessage } from "@/utils/apiErrors";
@@ -54,10 +56,24 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
     load();
   }, [load, getAccessToken]);
 
-  if (loadMutation.isError && !poll) {
-    return <Alert variant="danger">{m.my_poll_load_error()}</Alert>;
+  // Loading, failed, no active edition and no questions look different, so a volunteer can tell a
+  // temporary failure (retry) from there simply being nothing to answer.
+  if (!poll) {
+    return loadMutation.isError ? (
+      <LoadErrorAlert onRetry={() => load()}>{m.my_poll_load_error()}</LoadErrorAlert>
+    ) : (
+      <div className="flex items-center justify-center gap-2 text-subtle mb-4">
+        <Spinner label={m.loading()} size="sm" />
+      </div>
+    );
   }
-  if (!poll || poll.questions.length === 0) return null;
+  if (!poll.editionId || poll.questions.length === 0) {
+    return (
+      <Alert variant="secondary" role="status">
+        {poll.editionId ? m.my_poll_empty() : m.my_poll_no_edition()}
+      </Alert>
+    );
+  }
 
   const saving = saveMutation.isPending;
   const save = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => {

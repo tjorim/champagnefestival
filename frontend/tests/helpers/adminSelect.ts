@@ -27,3 +27,11 @@ export async function readAdminOptions(trigger: HTMLElement) {
   fireEvent.keyDown(listbox, { key: "Escape" });
   return options;
 }
+
+/** Choose an option of a Base UI select by its visible label. */
+export async function selectAdminOptionByLabel(trigger: HTMLElement, label: string | RegExp) {
+  fireEvent.click(trigger);
+  const option = await screen.findByRole("option", { name: label });
+  fireEvent.pointerDown(option, { pointerType: "mouse" });
+  fireEvent.click(option);
+}

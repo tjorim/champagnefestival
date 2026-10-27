@@ -6,10 +6,10 @@ import asyncio
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import AuditEntry, Person, Registration, User
+from app.models import AuditEntry, OutboxJob, Person, Registration, User
 from app.schemas import RegistrationUpdate
 from app.services import registrations_service
 from tests.helpers import (
@@ -525,6 +525,64 @@ async def test_admin_create_reservation(client):
     assert data["person"]["name"] == "Pierre Admin"
     assert data["status"] == "confirmed"
     assert "check_in_token" not in data
+
+
+async def _admin_booking_fixture(client) -> tuple[str, dict]:
+    person = await client.post("/api/people", json={"name": "Retry Person"}, headers=ADMIN_HEADERS)
+    event = await _create_event(client, edition_id="edition-admin-idempotent", title="Vrijdagavond")
+    return person.json()["id"], event
+
+
+@pytest.mark.anyio
+async def test_admin_create_replays_the_first_booking_for_a_repeated_idempotency_key(client, db_session):
+    from tests.test_products import _create_product
+
+    person_id, event = await _admin_booking_fixture(client)
+    ticket = await _create_product(client, event["id"], name="Ticket", price="15", unit="person", required=True)
+    body = {
+        "person_id": person_id,
+        "event_id": event["id"],
+        "guest_count": 2,
+        "order_items": [{"product_id": ticket["id"], "quantity": 2}],
+        "idempotency_key": "create-booking-1",
+    }
+
+    first = await client.post("/api/registrations/admin", json=body, headers=ADMIN_HEADERS)
+    again = await client.post("/api/registrations/admin", json=body, headers=ADMIN_HEADERS)
+
+    assert first.status_code == again.status_code == 201, again.text
+    assert again.json()["id"] == first.json()["id"]
+    assert again.json()["amount_due"] == first.json()["amount_due"] == "30.00"
+    count = await db_session.scalar(
+        select(func.count()).select_from(Registration).where(Registration.person_id == person_id)
+    )
+    assert count == 1
+    jobs = await db_session.scalar(
+        select(func.count()).select_from(OutboxJob).where(OutboxJob.job_type == "registration_confirmation")
+    )
+    assert jobs == 1
+
+
+@pytest.mark.anyio
+async def test_admin_create_rejects_an_idempotency_key_reused_for_a_different_booking(client):
+    person_id, event = await _admin_booking_fixture(client)
+    body = {"person_id": person_id, "event_id": event["id"], "guest_count": 2, "idempotency_key": "create-booking-2"}
+
+    assert (await client.post("/api/registrations/admin", json=body, headers=ADMIN_HEADERS)).status_code == 201
+    changed = await client.post("/api/registrations/admin", json={**body, "guest_count": 3}, headers=ADMIN_HEADERS)
+
+    assert changed.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_admin_create_without_a_key_still_creates_each_booking(client):
+    person_id, event = await _admin_booking_fixture(client)
+    body = {"person_id": person_id, "event_id": event["id"], "guest_count": 2}
+
+    first = await client.post("/api/registrations/admin", json=body, headers=ADMIN_HEADERS)
+    second = await client.post("/api/registrations/admin", json=body, headers=ADMIN_HEADERS)
+
+    assert first.json()["id"] != second.json()["id"]
 
 
 @pytest.mark.anyio

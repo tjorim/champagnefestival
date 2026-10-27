@@ -75,6 +75,9 @@ vi.mock("@/paraglide/messages", () => ({
     my_poll_quantity_increase: ({ label }: { label: string }) => `More ${label}`,
     my_poll_load_error: () => "Could not load the meal choices. Please try again.",
     my_poll_save_error: () => "Could not save your choice. Please try again.",
+    my_poll_no_edition: () => "No active edition.",
+    my_poll_empty: () => "No questions to answer.",
+    admin_retry: () => "Retry",
     my_poll_closed: () => "This question has closed.",
     my_poll_closes_at: ({ time }: { time: string }) => `Change your choices until ${time}.`,
     my_poll_note_label: () => "Allergies or dietary requirements",
@@ -233,6 +236,28 @@ describe("MyAccountPage", () => {
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(clearAuthError).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers the organisation tab through Retry after a failed load", async () => {
+    let attempts = 0;
+    server.use(
+      http.get("/api/me/organizations", () => {
+        attempts += 1;
+        return attempts === 1
+          ? new HttpResponse(null, { status: 503 })
+          : HttpResponse.json([{ id: 1, name: "Cave Dupont", can_edit: true }]);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    expect(await screen.findByText("Could not load organizations")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "My organisations" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByRole("tab", { name: "My organisations" })).toBeInTheDocument();
+    // The organisation tab's own history read is unmocked here; only the page-level Retry must go.
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
@@ -487,6 +512,85 @@ describe("MyAccountPage", () => {
       await user.click(screen.getByRole("tab", { name: "My eID" }));
       return user;
     }
+
+    it("retries a failed volunteer identity load without a reload", async () => {
+      mockVolunteer();
+      let attempts = 0;
+      server.use(
+        http.get("/api/me/volunteer", () => {
+          attempts += 1;
+          return attempts === 1
+            ? new HttpResponse(null, { status: 503 })
+            : HttpResponse.json({
+                linked: true,
+                name: "Sofie De Smet",
+                national_register_number: "91010112319",
+                eid_document_number: "123456789002",
+              });
+        }),
+        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([dinner()]))),
+      );
+
+      const user = await openPoll();
+      expect(await screen.findByText(/Could not load your volunteer identity/)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Retry" }));
+
+      expect(await screen.findByText("Your identity on file")).toBeInTheDocument();
+    });
+
+    it("retries a failed poll load, then shows the questions", async () => {
+      mockVolunteer();
+      let attempts = 0;
+      server.use(
+        http.get("/api/me/volunteer/poll", () => {
+          attempts += 1;
+          return attempts === 1
+            ? new HttpResponse(null, { status: 503 })
+            : HttpResponse.json(poll([dinner()]));
+        }),
+      );
+
+      const user = await openPoll();
+      expect(await screen.findByText(/Could not load the meal choices/)).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Retry" }));
+
+      expect(await screen.findByText("Dinner on Sunday?")).toBeInTheDocument();
+      expect(screen.queryByText(/Could not load the meal choices/)).not.toBeInTheDocument();
+    });
+
+    it("shows a loading state while the poll is slow", async () => {
+      mockVolunteer();
+      server.use(
+        http.get("/api/me/volunteer/poll", async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return HttpResponse.json(poll([dinner()]));
+        }),
+      );
+
+      await openPoll();
+      expect(await screen.findAllByRole("status")).not.toHaveLength(0);
+      expect(await screen.findByText("Dinner on Sunday?")).toBeInTheDocument();
+    });
+
+    it("tells apart no active edition from no questions", async () => {
+      mockVolunteer();
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          HttpResponse.json({ edition_id: null, questions: [], note: null }),
+        ),
+      );
+      await openPoll();
+      expect(await screen.findByText("No active edition.")).toBeInTheDocument();
+      expect(screen.queryByText("No questions to answer.")).not.toBeInTheDocument();
+    });
+
+    it("says there are no questions when the edition has none", async () => {
+      mockVolunteer();
+      server.use(http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([]))));
+
+      await openPoll();
+      expect(await screen.findByText("No questions to answer.")).toBeInTheDocument();
+    });
 
     it("lets a volunteer pick meal quantities, saving the whole set each time", async () => {
       mockVolunteer();
