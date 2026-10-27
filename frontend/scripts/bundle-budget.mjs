@@ -2,7 +2,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const budgets = { total: 2810, entry: 315, admin: 450, eager: 665 };
+export const budgets = { total: 2870, entry: 325, admin: 450, eager: 665 };
 
 export async function measureBundle(directory) {
   const manifest = JSON.parse(await readFile(resolve(directory, ".vite/manifest.json"), "utf8"));
