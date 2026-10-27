@@ -23,3 +23,17 @@ export function saveColVis(key: string, state: ColumnVisibilityState): void {
     // ignore storage errors (e.g. private browsing quota)
   }
 }
+
+/**
+ * Hides `column` by default while there is nothing to show in it (for example the hall-layout
+ * column before any floor plan has tables). A saved choice, shown or hidden, always wins.
+ */
+export function hideColumnUntilUsed(
+  visibility: ColumnVisibilityState,
+  column: string,
+  hasContent: boolean,
+): ColumnVisibilityState {
+  return hasContent || visibility[column] !== undefined
+    ? visibility
+    : { ...visibility, [column]: false };
+}

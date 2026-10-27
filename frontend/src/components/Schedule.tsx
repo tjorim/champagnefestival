@@ -126,7 +126,10 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                               )}
                             </div>
                             <div className="grow">
-                              <h5 className="event-title mb-1">{eventTitle(event, locale)}</h5>
+                              {/* h5 keeps the themes' card styling; aria-level places it under the section's h2 */}
+                              <h5 aria-level={3} className="event-title mb-1">
+                                {eventTitle(event, locale)}
+                              </h5>
                               {event.volunteersOnly && (
                                 <Badge variant="info" className="mb-2">
                                   {m.event_volunteers_only()}

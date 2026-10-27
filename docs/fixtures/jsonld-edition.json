@@ -25,7 +25,33 @@
       "title_en": "Opening reception",
       "description_nl": "Welkom met een glas champagne",
       "description_fr": null,
-      "description_en": null
+      "description_en": null,
+      "products": [
+        {
+          "id": "prod-ticket",
+          "name": "Toegangsticket",
+          "name_nl": "Toegangsticket",
+          "name_fr": null,
+          "name_en": "Entrance ticket",
+          "price": "25.00",
+          "required": true,
+          "purchasable": true,
+          "sold_out": false,
+          "category": "ticket"
+        },
+        {
+          "id": "prod-pack",
+          "name": "Champagnepakket",
+          "name_nl": "Champagnepakket",
+          "name_fr": null,
+          "name_en": null,
+          "price": "60.00",
+          "required": false,
+          "purchasable": true,
+          "sold_out": false,
+          "category": "package"
+        }
+      ]
     },
     {
       "id": "evt-brunch",
@@ -37,7 +63,21 @@
       "title_en": null,
       "description_nl": null,
       "description_fr": null,
-      "description_en": null
+      "description_en": null,
+      "products": [
+        {
+          "id": "prod-brunch",
+          "name": "Brunchticket",
+          "name_nl": "Brunchticket",
+          "name_fr": null,
+          "name_en": null,
+          "price": "45.50",
+          "required": true,
+          "purchasable": true,
+          "sold_out": true,
+          "category": "ticket"
+        }
+      ]
     }
   ]
 }

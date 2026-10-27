@@ -44,6 +44,13 @@ def json_ld_script(data: Mapping) -> str:
     return f'<script type="application/ld+json" data-ssr-jsonld="true">{payload}</script>'
 
 
+def hero_preload_link(href: str) -> str:
+    """A high-priority image preload for the home page's hero photo. The hero is a CSS
+    background (themes read ``--edition-hero-image``), which the browser would otherwise
+    only discover after the theme stylesheet has loaded."""
+    return f'<link rel="preload" as="image" href="{_attr(href)}" fetchpriority="high">'
+
+
 def _rewrite_title(shell_html: str, title: str) -> str:
     return re.sub(r"(<title>)[^<]*(</title>)", lambda m: m.group(1) + _text(title) + m.group(2), shell_html, count=1)
 
@@ -138,6 +145,7 @@ def render_privacy_content(*, title: str, html_body: str) -> str:
 
 
 __all__ = [
+    "hero_preload_link",
     "inject_marker",
     "json_ld_script",
     "render_faq_section",

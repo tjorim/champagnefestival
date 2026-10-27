@@ -9,6 +9,7 @@ on a FAQ mutation.
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models import Policy, PolicyVersion
+from app.services.public_render import hero_preload_link
 from tests.helpers import ADMIN_HEADERS, _create_event
 
 _FIXTURE_DIST = Path(__file__).parent / "fixtures" / "frontend_dist"
@@ -75,6 +77,8 @@ async def test_home_page_renders_with_no_active_edition_and_no_faq(client):
     # No edition — no JSON-LD, but the site's own tagline still fills description.
     assert "application/ld+json" not in r.text
     assert 'content="Een viering van fijne champagne en gemeenschap"' in r.text
+    # The hero photo is preloaded even without an edition (the themes fall back to it).
+    assert '<link rel="preload" as="image" href="/images/champagne-hero.webp" fetchpriority="high">' in r.text
 
 
 async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
@@ -97,6 +101,43 @@ async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
     assert "Een champagnefestival." in r.text
     assert 'data-ssr-jsonld="true"' in r.text
     assert '"@type":"Event"' in r.text
+    assert 'rel="preload" as="image" href="/images/champagne-hero.webp"' in r.text
+
+
+def test_hero_preload_link_escapes_the_href():
+    link = hero_preload_link('/uploads/editions/"><script>x</script>.jpg')
+    assert "<script>" not in link
+    assert link.startswith('<link rel="preload" as="image" href="/uploads/editions/&quot;&gt;')
+
+
+async def test_home_page_json_ld_prices_the_required_entry_product(client):
+    event = await _create_event(client, title="Vrijdagavond", date="2099-03-21")
+    product = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name_nl": "Toegangsticket",
+            "price": "25.00",
+            "category": "champagne",
+            "required": True,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert product.status_code == 201, product.text
+
+    page = await client.get("/")
+    assert page.status_code == 200
+    json_ld = json.loads(page.text.split('data-ssr-jsonld="true">')[1].split("</script>")[0])
+    assert json_ld["offers"] == [
+        {
+            "@type": "Offer",
+            "name": "Toegangsticket",
+            "url": settings.public_url,
+            "price": "25.00",
+            "priceCurrency": "EUR",
+            "availability": "https://schema.org/InStock",
+        }
+    ]
 
 
 async def test_home_page_escapes_admin_authored_faq_content(client):

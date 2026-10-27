@@ -2,8 +2,28 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  // A scroll container must be reachable by keyboard, or its hidden columns are unreachable
+  // without a mouse (WCAG 2.1.1). Only a table that actually overflows takes a tab stop.
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [scrollable, setScrollable] = React.useState(false);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const update = () => setScrollable(container.scrollWidth > container.clientWidth);
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    if (container.firstElementChild) observer.observe(container.firstElementChild);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div
+      ref={containerRef}
+      data-slot="table-container"
+      tabIndex={scrollable ? 0 : undefined}
+      className="relative w-full overflow-x-auto outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm text-foreground", className)}

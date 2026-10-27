@@ -44,26 +44,14 @@
     <meta name="twitter:description" content="Een viering van fijne champagne en gemeenschap" />
     <meta name="twitter:image" content="%VITE_PUBLIC_URL%/images/og-image.jpg" />
 
-    <!-- Preload critical assets -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <!-- Optimized font loading - limit to needed weights -->
+    <!-- Inter is self-hosted (src/styles/fonts.css); preload the subset every page needs. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-      media="print"
-      onload="this.media = 'all'"
+      rel="preload"
+      href="/fonts/inter-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
     />
-    <!-- Fallback for JS disabled browsers -->
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
 
     <!-- Language alternates for SEO -->
     <link rel="alternate" hreflang="en" href="%VITE_PUBLIC_URL%?lng=en" />
@@ -95,6 +83,14 @@
           if (VARIANTS.includes(stored)) visualTheme = stored;
         } catch {}
         document.documentElement.dataset.visualTheme = visualTheme;
+
+        // The theme stylesheet is attached by main.tsx once the bundle has run; fetching it now
+        // takes that round trip off the first paint. Keep the path in step with useVisualTheme.ts.
+        const themePreload = document.createElement("link");
+        themePreload.rel = "preload";
+        themePreload.as = "style";
+        themePreload.href = "/themes/theme-" + visualTheme + ".css";
+        document.head.appendChild(themePreload);
 
         const query = window.matchMedia("(prefers-color-scheme: light)");
         const applyTheme = () => {

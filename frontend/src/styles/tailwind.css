@@ -9,6 +9,8 @@
 @import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "leaflet/dist/leaflet.css" layer(vendor);
+@import "./fonts.css";
+@import "./print.css";
 
 /* A nearer light scope must override a dark public theme and vice versa. */
 @custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *):not(:where([data-theme-mode="dark"] [data-theme-mode="light"], [data-theme-mode="dark"] [data-theme-mode="light"] *)));

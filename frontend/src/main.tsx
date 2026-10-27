@@ -24,6 +24,7 @@ import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-quer
 import { Link, RouterProvider } from "@tanstack/react-router";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
+import "./config/localeQuery";
 import "./styles/tailwind.css";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -38,6 +39,7 @@ import ThemeSwitcher from "./components/ThemeSwitcher";
 import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
 import RivieraHero from "./components/riviera/RivieraHero";
 import CuveeHero from "./components/cuvee/CuveeHero";
+import type { HeroRegistrationProps } from "./components/heroRegistration";
 import RemuageFeatureRack from "./components/remuage/RemuageFeatureRack";
 import RemuageHero from "./components/remuage/RemuageHero";
 import EventStructuredData from "./components/JsonLd";
@@ -46,6 +48,7 @@ import FestivalMascot from "./components/FestivalMascot";
 import ContactInfo from "./components/ContactInfo";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
+import LoadWhenVisible from "./components/LoadWhenVisible";
 import LazyRegistrationModal from "./components/LazyRegistrationModal";
 import AnnouncementBanner from "./components/AnnouncementBanner";
 
@@ -332,7 +335,7 @@ function App() {
   const { isMaintenanceMode } = useMaintenanceMode();
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
-  const { edition, hasEdition, hasLoadError } = useActiveEdition();
+  const { edition, hasEdition, hasLoadError, isLoaded } = useActiveEdition();
   const { producers, sponsors, vendors = [] } = edition;
   useEditionHeroImage(edition.heroImage);
   // Stand labels are an enhancement: a failed or empty lookup just shows no stand lines.
@@ -471,7 +474,20 @@ function App() {
           year: String(dayjs(firstFestivalDate).year()),
         })
       : m.festival_name();
+  // Date and place repeat in the hero so visitors see them without scrolling on small screens.
+  const heroFacts = hasEdition
+    ? [festivalDateRange, [venueName, city].filter(Boolean).join(", ")].filter(Boolean)
+    : [];
   const openRegistrationModal = useCallback(() => setShowRegistrationModal(true), []);
+  // What the themed heroes add to the title: the way in (see the default hero below).
+  const heroRegistration: HeroRegistrationProps = {
+    facts: heroFacts,
+    registration:
+      registrableEvents.length > 0
+        ? { label: m.registration_cta(), onRegister: openRegistrationModal }
+        : undefined,
+    note: registrationOpensOn ? m.registration_opens_on({ date: registrationOpensOn }) : null,
+  };
 
   if (isMaintenanceMode) {
     return (
@@ -507,6 +523,7 @@ function App() {
         {/* Hero Section */}
         {variant === "remuage" ? (
           <RemuageHero
+            {...heroRegistration}
             festivalName={heroKicker}
             title={m.welcome_title()}
             subtitle={m.welcome_subtitle()}
@@ -515,6 +532,7 @@ function App() {
           />
         ) : variant === "riviera" ? (
           <RivieraHero
+            {...heroRegistration}
             festivalName={heroKicker}
             title={m.welcome_title()}
             subtitle={m.welcome_subtitle()}
@@ -523,6 +541,7 @@ function App() {
           />
         ) : variant === "cuvee" ? (
           <CuveeHero
+            {...heroRegistration}
             festivalName={heroKicker}
             title={m.welcome_title()}
             subtitle={m.welcome_subtitle()}
@@ -533,10 +552,21 @@ function App() {
           <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-            <ButtonLink href="#what-we-do" variant="brand" className="rounded-full px-6 py-2">
-              {m.welcome_learn_more()}
-              <Icon icon={CircleArrowDownIcon} />
-            </ButtonLink>
+            {registrableEvents.length > 0 ? (
+              <Button
+                variant="brand"
+                className="rounded-full px-6 py-2"
+                onClick={openRegistrationModal}
+              >
+                <Icon icon={CalendarPlusIcon} />
+                {m.registration_cta()}
+              </Button>
+            ) : (
+              <ButtonLink href="#what-we-do" variant="brand" className="rounded-full px-6 py-2">
+                {m.welcome_learn_more()}
+                <Icon icon={CircleArrowDownIcon} />
+              </ButtonLink>
+            )}
           </section>
         ) : (
           <section className="hero" id="welcome">
@@ -544,16 +574,38 @@ function App() {
               <span className="hero-kicker">{heroKicker}</span>
               <h1 className="brand-title">{m.welcome_title()}</h1>
               <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-              <div className="hero-actions">
-                <ButtonLink
-                  href="#what-we-do"
-                  variant="brand"
-                  size="lg"
-                  className="h-auto px-5 py-3 text-base"
+              {/* Holds its place while the edition loads, so the buttons below do not jump. */}
+              {(heroFacts.length > 0 || !isLoaded) && (
+                <p
+                  className="hero-meta mb-6 flex flex-wrap items-center gap-x-5 gap-y-1 font-semibold"
+                  data-pending={isLoaded ? undefined : ""}
+                  aria-hidden={isLoaded ? undefined : true}
                 >
-                  {m.welcome_learn_more()}
-                  <Icon icon={CircleArrowDownIcon} />
-                </ButtonLink>
+                  {isLoaded ? heroFacts.map((fact) => <span key={fact}>{fact}</span>) : "\u00a0"}
+                </p>
+              )}
+              <div className="hero-actions">
+                {registrableEvents.length > 0 ? (
+                  <Button
+                    variant="brand"
+                    size="lg"
+                    className="h-auto px-5 py-3 text-base"
+                    onClick={openRegistrationModal}
+                  >
+                    <Icon icon={CalendarPlusIcon} />
+                    {m.registration_cta()}
+                  </Button>
+                ) : (
+                  <ButtonLink
+                    href="#what-we-do"
+                    variant="brand"
+                    size="lg"
+                    className="h-auto px-5 py-3 text-base"
+                  >
+                    {m.welcome_learn_more()}
+                    <Icon icon={CircleArrowDownIcon} />
+                  </ButtonLink>
+                )}
                 <ButtonLink
                   href="#schedule"
                   variant="light"
@@ -563,11 +615,16 @@ function App() {
                   {m.schedule_title()}
                 </ButtonLink>
               </div>
+              {registrationOpensOn && (
+                <p className="hero-meta mt-4 mb-0">
+                  {m.registration_opens_on({ date: registrationOpensOn })}
+                </p>
+              )}
             </div>
           </section>
         )}
 
-        {hasEdition && (
+        {hasEdition ? (
           <FestivalFacts
             dateRange={festivalDateRange}
             venueName={edition.venue.venueName}
@@ -576,6 +633,15 @@ function App() {
             registrationOpensOn={registrationOpensOn}
             onRegister={openRegistrationModal}
           />
+        ) : (
+          !isLoaded && (
+            // Holds the strip's height while the edition loads (about 290/230/100px on phone/tablet/
+            // desktop), so the sections below do not jump when it appears.
+            <div
+              aria-hidden="true"
+              className="min-h-72 border-y border-border site-md:min-h-56 site-lg:min-h-24"
+            />
+          )
         )}
 
         {/* What we do */}
@@ -756,26 +822,35 @@ function App() {
                     )}
                   </div>
                 )}
-                <SuspenseWithBoundary
-                  fallback={
-                    <div className="map-loading flex items-center justify-center py-12">
-                      <div className="text-center">
-                        <Spinner variant="primary" />
-                        <p className="mt-2">{m.loading()}</p>
-                      </div>
-                    </div>
+                <LoadWhenVisible
+                  placeholder={
+                    <div
+                      data-slot="location-map-placeholder"
+                      className="aspect-video rounded-md border border-border bg-muted"
+                    />
                   }
-                  errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
                 >
-                  <MapComponent
-                    location={edition.venue.venueName}
-                    address={edition.venue.address}
-                    city={edition.venue.city}
-                    postalCode={edition.venue.postalCode}
-                    country={edition.venue.country}
-                    coordinates={edition.venue.coordinates}
-                  />
-                </SuspenseWithBoundary>
+                  <SuspenseWithBoundary
+                    fallback={
+                      <div className="map-loading flex items-center justify-center py-12">
+                        <div className="text-center">
+                          <Spinner variant="primary" />
+                          <p className="mt-2">{m.loading()}</p>
+                        </div>
+                      </div>
+                    }
+                    errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
+                  >
+                    <MapComponent
+                      location={edition.venue.venueName}
+                      address={edition.venue.address}
+                      city={edition.venue.city}
+                      postalCode={edition.venue.postalCode}
+                      country={edition.venue.country}
+                      coordinates={edition.venue.coordinates}
+                    />
+                  </SuspenseWithBoundary>
+                </LoadWhenVisible>
               </div>
             </div>
           </div>

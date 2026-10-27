@@ -261,6 +261,7 @@ async def test_home_page_uses_share_image_then_hero_then_default(client, edition
     page = await head()
     assert f'<meta property="og:image" content="{default}"' in page
     assert default in page and page.count(default) == 3  # og:image, twitter:image, JSON-LD
+    assert '<link rel="preload" as="image" href="/images/champagne-hero.webp"' in page
 
     hero = (await upload(client, edition, "hero")).json()["hero_image"]
     page = await head()
@@ -268,11 +269,14 @@ async def test_home_page_uses_share_image_then_hero_then_default(client, edition
     assert f'<meta property="og:image" content="{expected}"' in page
     assert f'<meta name="twitter:image" content="{expected}"' in page
     assert f'"image":["{expected}"]' in page
+    # The hero photo is also preloaded, so the browser has it before the theme stylesheet arrives.
+    assert f'<link rel="preload" as="image" href="{hero}" fetchpriority="high">' in page
 
     share = (await upload(client, edition, "share")).json()["share_image"]
     page = await head()
     assert f'<meta property="og:image" content="{settings.public_url}{share}"' in page
-    assert hero not in page
+    assert f'content="{settings.public_url}{hero}"' not in page  # not the share image any more
+    assert f'href="{hero}"' in page  # but still the hero preload
 
     await client.delete(f"/api/editions/{edition}/artwork/share", headers=ADMIN_HEADERS)
     await client.delete(f"/api/editions/{edition}/artwork/hero", headers=ADMIN_HEADERS)

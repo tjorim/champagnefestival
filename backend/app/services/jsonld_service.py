@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from app.services.frontend_i18n_snippets import FESTIVAL_NAME, WELCOME_SUBTITLE, Locale
@@ -73,6 +74,33 @@ def _sub_events(events: list[dict], locale: Locale) -> list[dict]:
     return entries
 
 
+def _offers(events: list[dict], *, base_url: str) -> list[dict]:
+    """One schema.org ``Offer`` per distinct required (entry) product of the edition, with its
+    real price. A product is sold out only when every event offering it is. Optional extras are
+    not advertised; the list is empty (and the key omitted) when nothing carries a price."""
+    seen: dict[tuple[str, str], dict] = {}
+    for event in events:
+        for product in event.get("products") or []:
+            if not product.get("required"):
+                continue
+            price = f"{Decimal(str(product['price'])):.2f}"
+            key = (product["name"], price)
+            available = not product.get("sold_out")
+            if key in seen:
+                if available:
+                    seen[key]["availability"] = "https://schema.org/InStock"
+                continue
+            seen[key] = {
+                "@type": "Offer",
+                "name": product["name"],
+                "url": base_url,
+                "price": price,
+                "priceCurrency": "EUR",
+                "availability": "https://schema.org/InStock" if available else "https://schema.org/SoldOut",
+            }
+    return list(seen.values())
+
+
 def edition_share_image(edition: Mapping, *, base_url: str) -> str | None:
     """Absolute URL of the edition's uploaded sharing image, else its hero, else ``None``
     (callers then keep the static default). Mirrors ``editionShareImage`` in ``JsonLd.tsx``."""
@@ -115,12 +143,6 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
         },
         "image": [edition_share_image(edition, base_url=base_url) or f"{base_url}/images/og-image.jpg"],
         "description": WELCOME_SUBTITLE[locale],
-        "offers": {
-            "@type": "Offer",
-            "url": base_url,
-            "availability": "https://schema.org/InStock",
-            "priceCurrency": "EUR",
-        },
         "inLanguage": locale,
         "organizer": {
             "@type": "Organization",
@@ -128,6 +150,9 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
             "url": base_url,
         },
     }
+    offers = _offers(edition.get("events") or [], base_url=base_url)
+    if offers:
+        structured_data["offers"] = offers
     if edition.get("events"):
         structured_data["subEvent"] = _sub_events(edition["events"], locale)
     return structured_data

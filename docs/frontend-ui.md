@@ -50,6 +50,10 @@ Cuvée map theme variables through semantic surface tokens; Remuage maps its
 theme with a numbered two-column section layout from 992px) maps its `--mil-*`
 palette to the same shared tokens and uses only system fonts.
 
+Fonts are self-hosted: Inter is declared in `src/styles/fonts.css` and Fraunces (Cuvée only)
+in `public/themes/theme-cuvee.css`, both from `public/fonts` (see its README). Do not add a
+third-party font stylesheet; it sends the visitor's address to that service.
+
 `data-theme-mode` drives the dark variant: Refresh and Millésime follow the
 system (Millésime's dark "ink" variant is keyed on `html[data-theme-mode="dark"]`),
 Classic is dark, and Riviera, Cuvée and Remuage are light. The admin scope uses

@@ -130,6 +130,11 @@ jobs:
           # Web Push opt-in and admin live-update stream (TanStack DB) load on
           # demand, so index fell 683 -> 465 KiB (first visit 347 -> 235 KiB
           # gzipped). Total 2783 KiB, admin 397. Keep this ceiling tight.
+          # Total raised 2800 -> 2820 for the public-site and admin usability pass:
+          # `?lng=` language links, load-when-visible map, print stylesheet, scroll-aware
+          # table focus, translated confirmations and empty states. Same dependencies:
+          # total 2797.5 -> 2801.9 KiB (+4.4), entry 369.1 -> 372.1, eager 720.1 -> 722.5,
+          # admin stays 390. No new dependencies; the other ceilings are unchanged.
           # Keep framework splitting from hiding growth in static dependencies.
           # The full eager graph was 710.2 KiB on Base UI 1.8 and 712.7 on 1.9.
           node --test scripts/bundle-budget.verify.mjs

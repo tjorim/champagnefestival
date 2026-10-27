@@ -109,12 +109,24 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
       },
       image: [`${import.meta.env.VITE_PUBLIC_URL}/images/og-image.jpg`],
       description: "Een viering van fijne champagne en gemeenschap",
-      offers: {
-        "@type": "Offer",
-        url: import.meta.env.VITE_PUBLIC_URL,
-        availability: "https://schema.org/InStock",
-        priceCurrency: "EUR",
-      },
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Toegangsticket",
+          url: import.meta.env.VITE_PUBLIC_URL,
+          price: "25.00",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/InStock",
+        },
+        {
+          "@type": "Offer",
+          name: "Brunchticket",
+          url: import.meta.env.VITE_PUBLIC_URL,
+          price: "45.50",
+          priceCurrency: "EUR",
+          availability: "https://schema.org/SoldOut",
+        },
+      ],
       inLanguage: "nl",
       organizer: {
         "@type": "Organization",
@@ -149,6 +161,10 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
         (event: { name: string }) => event.name,
       );
       expect(names).toEqual(["Opening reception", "Brunch"]);
+      const offerNames = getStructuredData(container).offers.map(
+        (offer: { name: string }) => offer.name,
+      );
+      expect(offerNames).toEqual(["Entrance ticket", "Brunchticket"]);
     } finally {
       vi.mocked(getLocale).mockReturnValue("nl");
     }

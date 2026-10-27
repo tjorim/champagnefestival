@@ -1,6 +1,7 @@
 import { CircleArrowDownIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-interface CuveeHeroProps {
+import type { HeroRegistrationProps } from "@/components/heroRegistration";
+interface CuveeHeroProps extends HeroRegistrationProps {
   festivalName: string;
   title: string;
   subtitle: string;
@@ -18,6 +19,9 @@ const CuveeHero = ({
   subtitle,
   learnMoreLabel,
   scheduleLabel,
+  facts = [],
+  registration,
+  note,
 }: CuveeHeroProps) => {
   return (
     <section className="cuvee-hero" id="welcome">
@@ -31,15 +35,29 @@ const CuveeHero = ({
           <span />
         </div>
         <p className="cuvee-hero__subtitle">{subtitle}</p>
+        {facts.length > 0 && (
+          <p className="cuvee-hero__meta">
+            {facts.map((fact) => (
+              <span key={fact}>{fact}</span>
+            ))}
+          </p>
+        )}
         <div className="cuvee-hero__actions">
-          <a href="#what-we-do" className="cuvee-button">
-            {learnMoreLabel}
-            <Icon icon={CircleArrowDownIcon} />
-          </a>
+          {registration ? (
+            <button type="button" className="cuvee-button" onClick={registration.onRegister}>
+              {registration.label}
+            </button>
+          ) : (
+            <a href="#what-we-do" className="cuvee-button">
+              {learnMoreLabel}
+              <Icon icon={CircleArrowDownIcon} />
+            </a>
+          )}
           <a href="#schedule" className="cuvee-button cuvee-button--ghost">
             {scheduleLabel}
           </a>
         </div>
+        {note && <p className="cuvee-hero__note">{note}</p>}
       </div>
     </section>
   );

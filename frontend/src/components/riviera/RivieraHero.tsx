@@ -1,6 +1,7 @@
 import { CircleArrowDownIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-interface RivieraHeroProps {
+import type { HeroRegistrationProps } from "@/components/heroRegistration";
+interface RivieraHeroProps extends HeroRegistrationProps {
   festivalName: string;
   title: string;
   subtitle: string;
@@ -14,6 +15,9 @@ const RivieraHero = ({
   subtitle,
   learnMoreLabel,
   scheduleLabel,
+  facts = [],
+  registration,
+  note,
 }: RivieraHeroProps) => {
   return (
     <section className="riviera-hero" id="welcome">
@@ -23,15 +27,29 @@ const RivieraHero = ({
         <span className="riviera-eyebrow">{festivalName}</span>
         <h1 className="riviera-hero__title">{title}</h1>
         <p className="riviera-hero__subtitle">{subtitle}</p>
+        {facts.length > 0 && (
+          <p className="riviera-hero__meta">
+            {facts.map((fact) => (
+              <span key={fact}>{fact}</span>
+            ))}
+          </p>
+        )}
         <div className="riviera-hero__actions">
-          <a href="#what-we-do" className="riviera-button">
-            {learnMoreLabel}
-            <Icon icon={CircleArrowDownIcon} />
-          </a>
+          {registration ? (
+            <button type="button" className="riviera-button" onClick={registration.onRegister}>
+              {registration.label}
+            </button>
+          ) : (
+            <a href="#what-we-do" className="riviera-button">
+              {learnMoreLabel}
+              <Icon icon={CircleArrowDownIcon} />
+            </a>
+          )}
           <a href="#schedule" className="riviera-button riviera-button--secondary">
             {scheduleLabel}
           </a>
         </div>
+        {note && <p className="riviera-hero__note">{note}</p>}
       </div>
       <div className="riviera-hero__poster" aria-hidden="true">
         <span className="riviera-hero__poster-mark">CF</span>

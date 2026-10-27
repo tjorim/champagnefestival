@@ -1030,17 +1030,20 @@ export default function LayoutEditor({
           {rooms.length === 0 ? (
             <AdminEmptyState>
               <Icon icon={InfoIcon} className="me-1" />
-              {m.admin_room_no_rooms()}
+              {m.admin_floor_plan_no_rooms({ section: m.admin_venues_rooms_tab() })}
             </AdminEmptyState>
           ) : activeRoom ? (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="font-semibold" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                    style={{ color: safeRoomColor(activeRoom.color, "inherit") }}
-                    /* oxlint-enable shadcn/no-inline-styles */
-                  >
+                  <span className="inline-flex items-center gap-2 font-semibold">
+                    {/* The saved room colour is a swatch, not the text colour: any chosen colour can fail contrast against the admin background. */}
+                    <span
+                      aria-hidden="true"
+                      className="size-3 shrink-0 rounded-full border border-border" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                      style={{ backgroundColor: safeRoomColor(activeRoom.color, "transparent") }}
+                      /* oxlint-enable shadcn/no-inline-styles */
+                    />
                     <Icon icon={BuildingIcon} className="me-1" />
                     {activeRoom.name}
                   </span>

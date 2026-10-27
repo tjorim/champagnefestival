@@ -6,7 +6,7 @@ const MANAGED_NAME = /^[a-f0-9]{32}-[a-f0-9]{64}\.jpg$/;
 
 /** The static images the site falls back to while a slot is empty. */
 export const DEFAULT_FLYER = "/images/flyer.jpg";
-export const DEFAULT_HERO = "/images/champagne-hero.png";
+export const DEFAULT_HERO = "/images/champagne-hero.webp";
 export const DEFAULT_SHARE = "/images/og-image.jpg";
 
 /** The path when it is a managed upload, else `null` (so a bad value can never reach CSS or an `<img>`). */

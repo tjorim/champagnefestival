@@ -6,7 +6,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { PublicCheck } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
-import { sendTestPush } from "@/utils/pushApi";
+import { sendTestPush, subscribeToPush } from "@/utils/pushApi";
+import { getLocale } from "@/paraglide/runtime";
 
 interface PushOptInProps {
   /** Credentials for admin test-send; the backend enforces the admin role. */
@@ -43,8 +44,6 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
       const json = subscription.toJSON();
       if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth)
         throw new Error("incomplete subscription");
-      const { subscribeToPush } = await import("@/utils/pushApi");
-      const { getLocale } = await import("@/paraglide/runtime");
       const result = await subscribeToPush({
         endpoint: json.endpoint,
         p256dh: json.keys.p256dh,

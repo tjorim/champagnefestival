@@ -8,7 +8,7 @@ manager review, so only a public storage root exists.
 | Slot | Used for | Accepted | Stored as |
 | --- | --- | --- | --- |
 | `flyer` | The flyer on the maintenance page (falls back to `/images/flyer.jpg`) | Portrait (width ≤ height, ratio ≥ 0.4), at least 400 × 560 px | JPEG, longest side fitted into 2000 × 2800, never cropped |
-| `hero` | The wide photo behind the Refresh theme's hero and the maintenance page (falls back to `/images/champagne-hero.png`) | Ratio 1.5–2.4, at least 1200 × 500 px | JPEG, fitted into 2400 × 1600 |
+| `hero` | The wide photo behind the Refresh theme's hero and the maintenance page (falls back to `/images/champagne-hero.webp`) | Ratio 1.5–2.4, at least 1200 × 500 px | JPEG, fitted into 2400 × 1600 |
 | `share` | `og:image`, `twitter:image` and the JSON-LD `Event.image` of the home page (falls back to the hero, then `/images/og-image.jpg`) | Ratio 1.91:1 ± 3 %, at least 1200 × 630 px | JPEG, trimmed and resized to exactly 1200 × 630 |
 
 The hero is **per edition** (the public site only renders the active festival's

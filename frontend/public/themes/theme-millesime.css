@@ -413,6 +413,11 @@
     line-height: 1.45;
   }
 
+  .hero-meta {
+    justify-content: center;
+    text-align: center;
+  }
+
   .hero-actions {
     display: flex;
     flex-wrap: wrap;

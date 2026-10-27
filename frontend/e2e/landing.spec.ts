@@ -45,3 +45,20 @@ test.describe("Public landing page", () => {
     await expect(page.locator("footer")).toBeVisible();
   });
 });
+
+test.describe("Language links", () => {
+  test("?lng opens the page in that language and keeps in step with the switcher", async ({
+    page,
+  }) => {
+    await page.goto("/?lng=fr");
+    await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Bienvenue");
+
+    await page.locator(".site-lang-toggle").click();
+    await page.getByRole("menuitem", { name: /English/ }).click();
+
+    await expect(page).toHaveURL(/lng=en/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome");
+  });
+});
