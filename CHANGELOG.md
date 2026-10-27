@@ -25,6 +25,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
+- The composed-message send confirmation (Announcements → Compose & send) names the channels in the interface language, shows the saved title and text per language (and which language falls back to Dutch), the link, and only the audience of the selected channels (Web Push subscribers, email category and recipients; none for an in-app only message). It states that the message sends immediately, ends with a specific final button (**Publish announcement** or **Send now**) and a **Keep as draft** cancel. The send request carries `expected_updated_at`, so a draft saved after it was reviewed is refused (`composed_message_changed`); an email draft is blocked, with the reason, while member mail is not set up (#1432).
 - Public English and French home and privacy pages use `/en` and `/fr` paths, with matching canonical URLs, language alternates and sitemap entries. Switching language preserves the hash. Query-string language selection has been removed (#1418; deploy apps#296 routing first).
 - The Refresh hero offers **Register now** as its primary action while registration is open, repeats the dates and venue, and shows the opening date when it is not. On phones the hero is shorter and its secondary button stays readable over the photo.
 - Inter and Fraunces are served from `/fonts` instead of Google Fonts, so no visitor address is sent to a third party and the first render no longer waits on one; Inter's main file is preloaded.
