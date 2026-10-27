@@ -1223,6 +1223,8 @@ class RegistrationAdminCreate(RegistrationNotesRequest):
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: Text4000 = ""
     status: RegistrationStatus = "confirmed"
+    idempotency_key: NonEmptyText200 | None = None
+    """Lets a client retry after a timeout without booking twice: a repeat with the same key and body returns the first booking."""
 
     @field_validator("event_id", "notes", mode="before")
     @classmethod
