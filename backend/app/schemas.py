@@ -10,7 +10,7 @@ from typing import Any, Literal, Self
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
 from app.models import MAX_POLL_PEOPLE, MAX_POLL_QUANTITY
@@ -1223,6 +1223,8 @@ class RegistrationAdminCreate(RegistrationNotesRequest):
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: Text4000 = ""
     status: RegistrationStatus = "confirmed"
+    idempotency_key: NonEmptyText200 | None = None
+    """Lets a client retry after a timeout without booking twice: a repeat with the same key and body returns the first booking."""
 
     @field_validator("event_id", "notes", mode="before")
     @classmethod
@@ -3127,6 +3129,9 @@ class ComposedMessageOut(BaseModel):
     sending service took the mail, not that it reached an inbox; a mail whose outcome was uncertain
     counts as failed and is never submitted again. *Skipped* recipients were no longer eligible when
     their turn came (consent withdrawn, role retired, address suppressed)."""
+    member_mail_available: bool
+    """Whether member mail is configured. Without it the email channel is refused at scheduling, so
+    the admin screen can say so before offering the final action (#1432)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -3143,12 +3148,16 @@ class ComposedMessageScheduleRequest(RequestModel):
     expected_email_audience: int | None = Field(default=None, ge=0)
     """The ``estimated_email_audience`` the administrator confirmed (#1407). Required for the email
     channel; a different current count is refused so nobody mails a list they did not see."""
+    expected_updated_at: datetime | None = None
+    """The ``updated_at`` of the saved message the administrator reviewed (#1432). When given, a
+    message saved since then is refused (``composed_message_changed``) so the reviewed text is what
+    goes out. Optional so existing callers (the MCP tool) keep working."""
 
-    @field_validator("scheduled_at")
+    @field_validator("scheduled_at", "expected_updated_at")
     @classmethod
-    def timezone_required(cls, value: datetime | None) -> datetime | None:
+    def timezone_required(cls, value: datetime | None, info: ValidationInfo) -> datetime | None:
         if value and value.utcoffset() is None:
-            raise ValueError("scheduled_at must include a timezone")
+            raise ValueError(f"{info.field_name} must include a timezone")
         return value
 
 

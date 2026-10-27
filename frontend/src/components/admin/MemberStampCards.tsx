@@ -5,6 +5,7 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import {
   stampKeys,
   stampLabel,
+  stampLabelText,
   stampRequest,
   type StampCard,
   type StampReward,
@@ -72,7 +73,7 @@ export default function MemberStampCards({
                 <section className="rounded border border-border p-4" key={card.id}>
                   <h3>{card.completed_at ? m.stamp_past_card() : m.stamp_current_card()}</h3>
                   <p>{m.stamp_progress({ count: card.stamps.length, total: card.box_count })}</p>
-                  <p>{stampLabel(card)}</p>
+                  <p lang={stampLabelText(card).lang}>{stampLabelText(card).text}</p>
                   <p className="text-sm text-subtle">
                     {m.stamp_opened({ date: new Date(card.opened_at).toLocaleDateString() })}
                   </p>

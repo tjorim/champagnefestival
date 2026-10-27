@@ -12,7 +12,7 @@ test.describe("Admin dashboard", () => {
   });
 
   test("back to site link is available", async ({ page }) => {
-    const backLink = page.locator('a[href="/"]');
+    const backLink = page.locator('a[href="/en"]');
     await expect(backLink).toBeVisible();
   });
 
@@ -24,8 +24,8 @@ test.describe("Admin dashboard", () => {
   });
 
   test("back to site link navigates home", async ({ page }) => {
-    const backLink = page.locator('a[href="/"]');
+    const backLink = page.locator('a[href="/en"]');
     await backLink.click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/en");
   });
 });

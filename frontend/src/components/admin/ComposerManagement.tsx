@@ -32,41 +32,16 @@ import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
 import { emailConsentKeys, emailRequest, type EmailCategory } from "@/utils/emailCategories";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
+import ComposerSendReview from "./ComposerSendReview";
+import {
+  composedChannelLabel,
+  composedSendBlockedByMail,
+  composedStateLabel,
+  type ComposedMessage,
+  type ComposedMessageState,
+} from "@/utils/composedMessage";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-
-type ComposedMessageChannel = "announcement" | "push" | "email";
-type ComposedMessageState = "draft" | "scheduled" | "sent";
-
-interface ComposedMessage {
-  id: string;
-  title_nl: string | null;
-  title_en: string | null;
-  title_fr: string | null;
-  body_nl: string | null;
-  body_en: string | null;
-  body_fr: string | null;
-  level: "info" | "warning" | "urgent";
-  channels: ComposedMessageChannel[];
-  link_url: string | null;
-  email_category_key: string | null;
-  state: ComposedMessageState;
-  scheduled_at: string | null;
-  announcement_id: string | null;
-  push_audience_snapshot: string[] | null;
-  email_audience_snapshot: string[] | null;
-  sent_at: string | null;
-  created_at: string;
-  estimated_push_audience: number;
-  push_delivered_count: number;
-  push_failed_count: number;
-  push_pending_count: number;
-  estimated_email_audience: number;
-  email_accepted_count: number;
-  email_failed_count: number;
-  email_skipped_count: number;
-  email_pending_count: number;
-}
 
 type Draft = Pick<
   ComposedMessage,
@@ -183,6 +158,9 @@ export default function ComposerManagement({
   const channels = useSelector(form.atom, (s) => s.values.channels);
   const emailCategoryKey = useSelector(form.atom, (s) => s.values.email_category_key);
   const emailSelected = channels.includes("email");
+  const needsCategoryNames = items.some(
+    (item) => item.state === "draft" && item.channels.includes("email"),
+  );
   const categories = useQuery({
     // Localised names differ from the category screen's, so the locale is part of the key; the
     // shared prefix keeps that screen's invalidation matching.
@@ -194,10 +172,21 @@ export default function ComposerManagement({
         m.email_category_load_error(),
         signal,
       ),
-    enabled: editor !== null,
+    enabled: editor !== null || needsCategoryNames,
   });
   // Automatic categories (reward ready) are sent by the application and cannot be composed.
   const composableCategories = (categories.data ?? []).filter((category) => !category.automatic);
+  const refetchCategories = categories.refetch;
+  const loadedCategories = categories.data;
+  // The review names the category; wait for the list instead of showing its internal key.
+  const categoryNameFor = useCallback(
+    async (key: string | null) => {
+      if (key === null) return "";
+      const list = loadedCategories ?? (await refetchCategories()).data ?? [];
+      return list.find((category) => category.key === key)?.name ?? key;
+    },
+    [loadedCategories, refetchCategories],
+  );
 
   const dirty = useSelector(form.atom, (state) => !state.isDefaultValue);
   const openEditor = useCallback(
@@ -235,12 +224,14 @@ export default function ComposerManagement({
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          // Confirms the recipient count shown in the dialog; the server refuses a changed list.
-          body: JSON.stringify(
-            item.channels.includes("email")
+          // Confirms what the dialog showed: the saved version, and for email the recipient
+          // count. The server refuses a message saved again or a changed list.
+          body: JSON.stringify({
+            expected_updated_at: item.updated_at,
+            ...(item.channels.includes("email")
               ? { expected_email_audience: item.estimated_email_audience }
-              : {},
-          ),
+              : {}),
+          }),
         },
         m.admin_composer_error_send(),
       ),
@@ -254,24 +245,26 @@ export default function ComposerManagement({
   const scheduleMessage = scheduleSend.mutate;
   const handleSend = useCallback(
     async (item: ComposedMessage) => {
+      if (composedSendBlockedByMail(item)) {
+        setError(m.admin_composer_send_blocked_email());
+        return;
+      }
+      setError("");
+      const categoryName = await categoryNameFor(item.email_category_key);
+      const announcementOnly = item.channels.length === 1 && item.channels[0] === "announcement";
       const confirmed = await confirm({
         title: m.admin_composer_send_confirm_title(),
-        body: item.channels.includes("email")
-          ? m.admin_composer_send_confirm_body_email({
-              audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
-              emailAudience: item.estimated_email_audience,
-              channels: item.channels.join(", "),
-            })
-          : m.admin_composer_send_confirm_body({
-              audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
-              channels: item.channels.join(", "),
-            }),
+        body: <ComposerSendReview item={item} categoryName={categoryName} />,
+        confirmLabel: announcementOnly
+          ? m.admin_composer_send_confirm_publish()
+          : m.admin_composer_send_confirm_send(),
+        cancelLabel: m.admin_composer_send_confirm_keep(),
         errorFallback: m.admin_composer_error_send(),
         variant: "primary",
       });
       if (confirmed) scheduleMessage(item);
     },
-    [confirm, scheduleMessage],
+    [confirm, scheduleMessage, categoryNameFor],
   );
 
   const columns = useMemo(
@@ -287,14 +280,16 @@ export default function ComposerManagement({
           id: "channels",
           header: m.admin_composer_column_channels(),
           enableSorting: false,
-          cell: ({ row }) => row.original.channels.join(", "),
+          cell: ({ row }) => row.original.channels.map(composedChannelLabel).join(", "),
         }),
         columnHelper.display({
           id: "state",
           header: m.admin_composer_column_state(),
           enableSorting: false,
           cell: ({ row }) => (
-            <Badge variant={stateBadgeVariant(row.original.state)}>{row.original.state}</Badge>
+            <Badge variant={stateBadgeVariant(row.original.state)}>
+              {composedStateLabel(row.original.state)}
+            </Badge>
           ),
         }),
         columnHelper.display({
@@ -331,6 +326,9 @@ export default function ComposerManagement({
             if (!item.channels.includes("push") && !item.channels.includes("email")) return null;
             return (
               <span className="flex flex-col text-sm text-subtle">
+                {item.state === "draft" && composedSendBlockedByMail(item) && (
+                  <span className="text-destructive">{m.admin_composer_send_blocked_email()}</span>
+                )}
                 {item.channels.includes("push") && (
                   <span>
                     {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
@@ -360,7 +358,12 @@ export default function ComposerManagement({
                   <Button size="sm" variant="outline" onClick={() => openEditor(item)}>
                     {m.admin_composer_edit_button()}
                   </Button>
-                  <Button size="sm" variant="warning" onClick={() => void handleSend(item)}>
+                  <Button
+                    size="sm"
+                    variant="warning"
+                    disabled={composedSendBlockedByMail(item)}
+                    onClick={() => void handleSend(item)}
+                  >
                     {m.admin_composer_send_button()}
                   </Button>
                 </div>

@@ -60,6 +60,11 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await page.screenshot({ path: adminPath });
         await testInfo.attach("admin form", { path: adminPath, contentType: "image/png" });
         await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+        // The form has unsaved input, so closing it asks before discarding.
+        await page
+          .getByRole("alertdialog", { name: "Discard changes?", exact: true })
+          .getByRole("button", { name: "Discard changes", exact: true })
+          .click();
         await expect(dialog).toHaveCount(0);
         await expect(page.getByRole("button", { name: "Add person", exact: true })).toBeFocused();
       });

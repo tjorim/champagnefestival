@@ -67,8 +67,11 @@ export default function OrganizationDetailModal({
                 <LogoImage item={item} className="size-full object-contain" />
               </div>
               {description && (
-                <DialogDescription className="m-0 text-sm whitespace-pre-line text-foreground">
-                  {description}
+                <DialogDescription
+                  lang={description.lang}
+                  className="m-0 text-sm whitespace-pre-line text-foreground"
+                >
+                  {description.text}
                 </DialogDescription>
               )}
               {stands.length > 0 && (
