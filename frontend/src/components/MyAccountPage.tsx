@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
+import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import MyPollSection from "@/components/MyPollSection";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -175,7 +176,9 @@ export default function MyAccountPage() {
           <Spinner label={m.loading()} size="sm" />
         </div>
       ) : identityMutation.isError && !identity ? (
-        <Alert variant="danger">{m.my_eid_load_error()}</Alert>
+        <LoadErrorAlert onRetry={() => identityMutation.mutate()}>
+          {m.my_eid_load_error()}
+        </LoadErrorAlert>
       ) : identity?.linked ? (
         <>
           <Alert variant="secondary">
@@ -439,9 +442,12 @@ export default function MyAccountPage() {
             </div>
           )}
           {organizationsQuery.isError && (isAuthenticated || emailRegistrations !== null) && (
-            <Alert variant="danger" role="alert">
+            <LoadErrorAlert
+              onRetry={() => void organizationsQuery.refetch()}
+              retrying={organizationsQuery.isFetching}
+            >
               {m.manager_error()}
-            </Alert>
+            </LoadErrorAlert>
           )}
           <Tabs themed value={activeTab} onValueChange={(value) => setSelectedTab(String(value))}>
             {visibleTabs.length > 1 && (

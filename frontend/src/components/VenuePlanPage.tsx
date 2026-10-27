@@ -1,20 +1,119 @@
 import { AreaIcon } from "@/components/AreaIcon";
 import { UsersIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
+import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import { useQuery } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
+import { Link, useLocation, useSearch } from "@tanstack/react-router";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import { safeRoomColor } from "@/utils/layoutUtils";
-import { venuePlanQueryOptions } from "@/utils/venuePlanApi";
+import {
+  fetchVenuePlanEditionChoices,
+  venuePlanFailure,
+  venuePlanQueryOptions,
+} from "@/utils/venuePlanApi";
+
+function Loading() {
+  return (
+    <div className="text-center p-12">
+      <Spinner label={m.loading()} />
+    </div>
+  );
+}
+
+/** Sign-in guidance that returns to this exact plan, so the destination survives the IdP round trip. */
+function SignInPrompt({ message, returnTo }: { message: string; returnTo: string }) {
+  const auth = useAuth();
+  return (
+    <Alert variant="info" className="flex flex-wrap items-center justify-between gap-3">
+      <span>{message}</span>
+      <Button
+        variant="outline-warning"
+        size="sm"
+        onClick={() => auth.login(returnTo)}
+        disabled={auth.isSigningIn}
+      >
+        {auth.isSigningIn ? (
+          <>
+            <Spinner size="sm" className="me-2" aria-hidden="true" />
+            {m.auth_signing_in()}
+          </>
+        ) : (
+          m.admin_login_button()
+        )}
+      </Button>
+    </Alert>
+  );
+}
+
+/** Next step when no valid edition is open: pick one, or retry the list that offers them. */
+function EditionPicker({ message, isAdmin }: { message: string; isAdmin: boolean }) {
+  const auth = useAuth();
+  const choices = useQuery({
+    queryKey: ["venue-plan-editions", isAdmin],
+    queryFn: () =>
+      fetchVenuePlanEditionChoices(isAdmin, (): Record<string, string> => {
+        const token = auth.getAccessToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }),
+    retry: false,
+  });
+
+  return (
+    <div className="site-container mx-auto w-full py-4">
+      <Alert variant="warning">{message}</Alert>
+      {choices.isPending && <Loading />}
+      {choices.isError && (
+        <LoadErrorAlert onRetry={() => void choices.refetch()} retrying={choices.isFetching}>
+          {m.venue_plan_editions_error()}
+        </LoadErrorAlert>
+      )}
+      {choices.data?.length === 0 && <Alert variant="info">{m.venue_plan_no_editions()}</Alert>}
+      {choices.data && choices.data.length > 0 && (
+        <nav aria-label={m.venue_plan_choose_edition()}>
+          <p className="font-medium">{m.venue_plan_choose_edition()}</p>
+          <ul className="flex flex-col items-start gap-2 ps-0 list-none">
+            {choices.data.map((choice) => (
+              <li key={choice.id}>
+                <ButtonLink
+                  render={<Link to="/venue-plan" search={{ edition: choice.id }} />}
+                  variant="outline-warning"
+                >
+                  {choice.label}
+                </ButtonLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+/** Signed in, but the account is neither a volunteer nor an admin: explain, and leave a way out. */
+function NoAccess() {
+  return (
+    <div className="site-container mx-auto w-full py-4">
+      <Alert variant="warning">{m.venue_plan_forbidden()}</Alert>
+      <ButtonLink href="/" variant="outline">
+        {m.back_to_site()}
+      </ButtonLink>
+    </div>
+  );
+}
 
 export default function VenuePlanPage() {
   const auth = useAuth();
+  const location = useLocation();
   const { edition, table } = useSearch({ from: "/admin-layout/venue-plan" });
+  const returnTo = location.pathname + location.searchStr;
+  const isAdmin = auth.hasRole("admin");
+  const canView = auth.isAuthenticated && (isAdmin || auth.hasRole("volunteer"));
   const authHeaders = (): Record<string, string> => {
     const token = auth.getAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -28,18 +127,40 @@ export default function VenuePlanPage() {
   // waterfall) without changing this component's error-handling shape.
   const query = useQuery({
     ...venuePlanQueryOptions(edition ?? "", authHeaders),
-    enabled: Boolean(edition && (auth.hasRole("admin") || auth.hasRole("volunteer"))),
+    enabled: Boolean(edition && canView),
   });
 
-  if (!edition) return <Alert variant="warning">{m.venue_plan_missing_edition()}</Alert>;
-  if (query.isLoading)
+  if (auth.isLoading) return <Loading />;
+  // Signed-out and unauthorised are not "no plan": say what is needed before looking at any data.
+  if (!auth.isAuthenticated)
     return (
-      <div className="text-center p-12">
-        <Spinner label={m.loading()} />
+      <div className="site-container mx-auto w-full py-4">
+        <SignInPrompt message={m.venue_plan_sign_in_required()} returnTo={returnTo} />
       </div>
     );
-  if (query.isError) return <Alert variant="danger">{query.error.message}</Alert>;
-  if (!query.data?.layouts.length) return <Alert variant="info">{m.venue_plan_empty()}</Alert>;
+  if (!canView) return <NoAccess />;
+  if (!edition) return <EditionPicker message={m.venue_plan_missing_edition()} isAdmin={isAdmin} />;
+  if (query.isPending) return <Loading />;
+  if (query.isError) {
+    const failure = venuePlanFailure(query.error);
+    if (failure === "expired")
+      return (
+        <div className="site-container mx-auto w-full py-4">
+          <SignInPrompt message={m.venue_plan_session_expired()} returnTo={returnTo} />
+        </div>
+      );
+    if (failure === "forbidden") return <NoAccess />;
+    if (failure === "not-found")
+      return <EditionPicker message={m.venue_plan_edition_not_found()} isAdmin={isAdmin} />;
+    return (
+      <div className="site-container mx-auto w-full py-4">
+        <LoadErrorAlert onRetry={() => void query.refetch()} retrying={query.isFetching}>
+          {m.venue_plan_error()}
+        </LoadErrorAlert>
+      </div>
+    );
+  }
+  if (!query.data.layouts.length) return <Alert variant="info">{m.venue_plan_empty()}</Alert>;
 
   return (
     <div className="site-container mx-auto w-full py-4">
