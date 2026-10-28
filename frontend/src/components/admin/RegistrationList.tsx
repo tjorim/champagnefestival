@@ -68,6 +68,7 @@ import { hideColumnUntilUsed, loadColVis, saveColVis } from "@/utils/columnVisib
 import {
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
+  fetchRegistration,
   fetchAllRegistrationPages,
   type RegistrationSortKey,
 } from "@/utils/adminFetch";
@@ -449,6 +450,12 @@ export default function RegistrationList({
   const effectivePageSize = pageQuery.data?.limit ?? pageSize;
   const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
 
+  const qrDetailQuery = useQuery({
+    queryKey: [...queryKeys.admin.registrations, "qr", qrTargetId],
+    queryFn: () => fetchRegistration(qrTargetId!, authHeaders),
+    enabled: qrTargetId !== null,
+    staleTime: 0,
+  });
   const qrRegistration = qrTargetId
     ? (pageRegistrations.find((record) => record.id === qrTargetId) ??
       registrationsById.get(qrTargetId) ??
@@ -820,7 +827,7 @@ export default function RegistrationList({
                     <DropdownMenuItem onClick={() => onViewDetail(reg)}>
                       {m.admin_view_edit_booking()}
                     </DropdownMenuItem>
-                    {reg.checkInToken && (
+                    {reg.status !== "cancelled" && (
                       <DropdownMenuItem onClick={() => setQrTargetId(reg.id)}>
                         <QrCodeIcon className="size-4" aria-hidden="true" />
                         {m.admin_qr_code()}
@@ -1554,7 +1561,7 @@ export default function RegistrationList({
       </Card>
 
       <Dialog
-        open={qrRegistration !== null}
+        open={qrTargetId !== null}
         onOpenChange={(open) => {
           if (!open) setQrTargetId(null);
         }}
@@ -1571,17 +1578,30 @@ export default function RegistrationList({
             {qrRegistration?.status === "cancelled" && (
               <Alert variant="warning">{m.admin_status_cancelled()}</Alert>
             )}
-            {qrRegistration && qrRegistration.status !== "cancelled" && (
-              <div className="inline-block rounded-md bg-white p-4">
-                <QRCodeSVG
-                  role="img"
-                  aria-label={m.admin_qr_code()}
-                  value={`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/check-in?id=${encodeURIComponent(qrRegistration.id)}#token=${encodeURIComponent(qrRegistration.checkInToken ?? "")}`}
-                  size={180}
-                  level="M"
-                />
-              </div>
+            {qrDetailQuery.isPending && <Spinner aria-label={m.admin_loading()} />}
+            {qrDetailQuery.isError && (
+              <Alert variant="danger">
+                {apiErrorMessage(qrDetailQuery.error, m.admin_error_load_data())}
+              </Alert>
             )}
+            {qrDetailQuery.data?.status === "cancelled" &&
+              qrRegistration?.status !== "cancelled" && (
+                <Alert variant="warning">{m.admin_status_cancelled()}</Alert>
+              )}
+            {!qrDetailQuery.isError &&
+              qrDetailQuery.data?.checkInToken &&
+              qrDetailQuery.data.status !== "cancelled" &&
+              qrRegistration?.status !== "cancelled" && (
+                <div className="inline-block rounded-md bg-white p-4">
+                  <QRCodeSVG
+                    role="img"
+                    aria-label={m.admin_qr_code()}
+                    value={`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/check-in?id=${encodeURIComponent(qrDetailQuery.data.id)}#token=${encodeURIComponent(qrDetailQuery.data.checkInToken)}`}
+                    size={180}
+                    level="M"
+                  />
+                </div>
+              )}
           </div>
         </DialogContent>
       </Dialog>

@@ -705,7 +705,7 @@ export default function CheckInPage() {
                     <ToggleGroupItem
                       ref={scanButtonRef}
                       value="scan"
-                      className="h-auto w-full min-w-0 whitespace-normal site-sm:w-auto site-sm:flex-1"
+                      className="h-auto w-full min-w-0 whitespace-normal aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-pressed:hover:text-background site-sm:w-auto site-sm:flex-1"
                     >
                       <ScanQrCodeIcon className="size-4 shrink-0" aria-hidden="true" />
                       {m.checkin_scan_method()}
@@ -713,7 +713,7 @@ export default function CheckInPage() {
                     <ToggleGroupItem
                       ref={lookupButtonRef}
                       value="manual"
-                      className="h-auto w-full min-w-0 whitespace-normal site-sm:w-auto site-sm:flex-1"
+                      className="h-auto w-full min-w-0 whitespace-normal aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-pressed:hover:text-background site-sm:w-auto site-sm:flex-1"
                     >
                       <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
                       {m.checkin_manual_search_title()}

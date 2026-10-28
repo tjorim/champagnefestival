@@ -173,3 +173,27 @@ Frontend typecheck, lint, formatting, message parity, UI inventory/verification,
 production build and all existing bundle budgets passed. Backend changed-test
 lint and formatting passed. Local verification uses synthetic fixtures and does
 not replace the hardware/production limits above.
+
+
+### PR #1454 review follow-up
+
+The QR menu action is available for active bookings even though list responses
+omit the sensitive token. Opening it fetches authenticated registration detail;
+the QR code uses only that response's token. The detail query participates in
+registration invalidation so token rotation refreshes the open dialog. Loading
+and translated failure states are explicit; cancelled bookings, missing tokens
+and failed detail requests never render a QR code. Regression tests use token-free
+list responses and cover rotation, cancellation and detail-fetch failure.
+
+
+### CI browser follow-up
+
+Run 40594164608 exposed a selected check-in toggle contrast failure in the
+refresh light theme, an ambiguous manual-search locator and a keyboard test
+that accessed registration filters before expanding them. The lookup toggles
+now use the semantic foreground/background contrast pair when selected. The
+widget test targets the manual-search disclosure explicitly, and the shared
+controls test opens the filter disclosure before exercising keyboard selection.
+The focused rerun passed all 10 Chromium cases: setup, refresh check-in axe in
+light/dark/narrow layouts, four account-widget cases, and laptop/phone keyboard
+controls.

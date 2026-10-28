@@ -28,7 +28,9 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await page.screenshot({ path: accountPath, fullPage: true });
         await testInfo.attach("account", { path: accountPath, contentType: "image/png" });
         await page.goto("/check-in");
-        const trigger = page.getByRole("button", { name: "Find guest manually", exact: true });
+        const trigger = page
+          .getByRole("button", { name: "Find guest manually", exact: true })
+          .and(page.locator("[aria-controls=manual-checkin-search]"));
         await expect(trigger).toHaveAttribute("aria-expanded", "true");
         await trigger.focus();
         await page.keyboard.press("Enter");

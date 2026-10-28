@@ -256,11 +256,19 @@ describe("RegistrationList — responsive actions", () => {
 });
 
 it("keeps an open QR dialog in sync with token rotation and cancellation", async () => {
-  const raw = { ...buildRawRegistration(1), check_in_token: "original-token" };
+  const raw = buildRawRegistration(1);
+  let token = "original-token";
+  const detailRequests = vi.fn();
   server.use(
     http.get("/api/registrations", () =>
       HttpResponse.json({ items: [raw], total: 1, limit: 50, page: 1 }),
     ),
+  );
+  server.use(
+    http.get("/api/registrations/reg-page-01", () => {
+      detailRequests();
+      return HttpResponse.json({ ...raw, check_in_token: token });
+    }),
   );
   const queryClient = renderRegistrationList([]);
   await screen.findByRole("button", { name: "Guest 01" });
@@ -269,7 +277,8 @@ it("keeps an open QR dialog in sync with token rotation and cancellation", async
     screen.getByRole("button", { name: 'admin_more_actions_for({"name":"Guest 01"})' }),
   );
   await user.click(screen.getByRole("menuitem", { name: "admin_qr_code" }));
-  const before = screen.getByRole("img", { name: "admin_qr_code" }).outerHTML;
+  const before = (await screen.findByRole("img", { name: "admin_qr_code" })).outerHTML;
+  expect(detailRequests).toHaveBeenCalledTimes(1);
   const update = (patch: Record<string, unknown>) => {
     queryClient.setQueriesData<RegistrationsPage>(
       { queryKey: ["admin", "registrations", "page"] },
@@ -283,7 +292,8 @@ it("keeps an open QR dialog in sync with token rotation and cancellation", async
     );
   };
   await act(async () => {
-    update({ checkInToken: "rotated-token" });
+    token = "rotated-token";
+    await queryClient.invalidateQueries({ queryKey: ["admin", "registrations"] });
   });
   await waitFor(() =>
     expect(screen.getByRole("img", { name: "admin_qr_code" }).outerHTML).not.toBe(before),
@@ -309,5 +319,41 @@ it.each([true, false])(
     if (succeeded)
       await waitFor(() => expect(screen.getByText("Guest 01: admin_checked_in")).toBeVisible());
     else expect(screen.queryByText("Guest 01: admin_checked_in")).not.toBeInTheDocument();
+  },
+);
+
+it.each(["failed", "cancelled", "missing-token"])(
+  "does not render a QR code for a %s detail response",
+  async (scenario) => {
+    const raw = buildRawRegistration(1);
+    server.use(
+      http.get("/api/registrations", () =>
+        HttpResponse.json({ items: [raw], total: 1, limit: 50, page: 1 }),
+      ),
+      http.get("/api/registrations/reg-page-01", () =>
+        scenario === "failed"
+          ? HttpResponse.json({ detail: "Internal diagnostic" }, { status: 500 })
+          : HttpResponse.json({
+              ...raw,
+              status: scenario === "cancelled" ? "cancelled" : "confirmed",
+              check_in_token: scenario === "missing-token" ? null : "token",
+            }),
+      ),
+    );
+    renderRegistrationList([]);
+    await screen.findByRole("button", { name: "Guest 01" });
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: 'admin_more_actions_for({"name":"Guest 01"})' }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "admin_qr_code" }));
+    await waitFor(() => expect(screen.queryByLabelText("admin_loading")).not.toBeInTheDocument());
+    expect(screen.queryByRole("img", { name: "admin_qr_code" })).not.toBeInTheDocument();
+    if (scenario === "failed") {
+      expect(screen.getByRole("alert")).toHaveTextContent("admin_error_load_data");
+      expect(screen.queryByText("Internal diagnostic")).not.toBeInTheDocument();
+    }
+    if (scenario === "cancelled")
+      expect(screen.getByRole("alert")).toHaveTextContent("admin_status_cancelled");
   },
 );
