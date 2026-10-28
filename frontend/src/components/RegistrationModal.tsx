@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -274,6 +274,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     }
     return included;
   }, [guestCount, orderItems, products]);
+
+  // The dialog stays mounted between openings, so the anti-bot timing field is stamped when it
+  // opens, not at mount or at the previous close.
+  useEffect(() => {
+    if (show) form.setFieldValue("formStartTime", new Date().toISOString());
+  }, [show, form]);
 
   const handleClose = useCallback(() => {
     form.reset({

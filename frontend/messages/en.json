@@ -1908,6 +1908,7 @@
   "my_eid_niss_hint": "On the back of your Belgian identity card: 11 digits, in the format YY.MM.DD-XXX.CC.",
   "my_eid_eid_hint": "The document number on the front of your Belgian eID: 12 digits, in the format XXX-XXXXXXX-CC.",
   "my_eid_help": "These details link your account to your volunteer record. If you cannot supply them, ask the organisers for help before submitting this form.",
+  "my_eid_conflict": "These details match or conflict with an existing record, so we could not link them to your account. Please contact the organisers for help.",
   "my_eid_optional_details": "Your volunteer record is linked. Some identity details are absent; you can answer questions without adding them here.",
   "my_poll_prerequisite": "Link your volunteer record first. You can then answer the active edition’s questions here.",
   "my_poll_auto": "Changes save immediately.",

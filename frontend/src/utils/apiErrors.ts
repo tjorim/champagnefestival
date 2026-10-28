@@ -28,7 +28,7 @@ export class ApiError extends Error {
 const API_ERROR_MESSAGES: Record<string, () => string> = {
   volunteer_invalid_niss: () => m.my_eid_invalid_niss(),
   volunteer_invalid_eid: () => m.my_eid_invalid_eid(),
-  volunteer_identity_conflict: () => m.my_eid_help(),
+  volunteer_identity_conflict: () => m.my_eid_conflict(),
   stamp_reward_handed_out: () => m.stamp_error_handed_out(),
   stamp_card_has_successor: () => m.stamp_error_successor(),
   stamp_reward_pending: () => m.stamp_error_pending(),

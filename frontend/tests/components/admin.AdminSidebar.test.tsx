@@ -50,12 +50,17 @@ function render(ui: ReactElement) {
 
 const expandedGroups = new Set(["events", "content", "venue"]);
 
-function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
+function renderSidebar(
+  setActiveKey = vi.fn(),
+  canManageAdminSections = true,
+  activeKey = "registrations",
+  groups = expandedGroups,
+) {
   render(
     <AdminSidebar
-      activeKey="registrations"
+      activeKey={activeKey}
       setActiveKey={setActiveKey}
-      expandedGroups={expandedGroups}
+      expandedGroups={groups}
       toggleGroup={vi.fn()}
       navRef={createRef<HTMLElement>()}
       handleNavKeyDown={vi.fn()}
@@ -148,6 +153,14 @@ describe("AdminSidebar", () => {
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual(["My tasks", "Registrations2"]);
+  });
+
+  it("lets a group holding the active section stay collapsed", () => {
+    renderSidebar(vi.fn(), true, "editions", new Set(["content", "venue"]));
+
+    const trigger = screen.getByRole("button", { name: "Events" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Editions" })).not.toBeInTheDocument();
   });
 
   it("selects a leaf destination directly from the sidebar", () => {

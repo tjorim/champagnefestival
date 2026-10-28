@@ -64,11 +64,16 @@ export default function MyAccountPage() {
   const [sessionEpoch, setSessionEpoch] = useState(0);
   const sessionEpochRef = useRef(0);
   const [emailRegistrations, setEmailRegistrations] = useState<GuestRegistration[] | null>(null);
+  // Whether email-session discovery has reported at all; `emailRegistrations` stays null both
+  // before it reports and when there is no session, so it cannot tell the two apart.
+  const [emailSessionResolved, setEmailSessionResolved] = useState(false);
   const [selectedTab, setSelectedTab] = useLocationChoice("tab", accountTabs, "registrations");
   const onEmailSessionChange = useCallback(
     (registrations: GuestRegistration[] | null) => {
       // Discard a late result from the component replaced after sign-out.
-      if (sessionEpochRef.current === sessionEpoch) setEmailRegistrations(registrations);
+      if (sessionEpochRef.current !== sessionEpoch) return;
+      setEmailRegistrations(registrations);
+      setEmailSessionResolved(true);
     },
     [sessionEpoch],
   );
@@ -96,6 +101,7 @@ export default function MyAccountPage() {
       sessionEpochRef.current += 1;
       setSessionEpoch(sessionEpochRef.current);
       setEmailRegistrations(null);
+      setEmailSessionResolved(false);
       setSelectedTab("registrations");
     },
   });
@@ -233,7 +239,10 @@ export default function MyAccountPage() {
                     <PublicInput
                       aria-invalid={Boolean(correctionValidationError)}
                       value={field.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
+                      onChange={(event) => {
+                        if (correctionValidationError) setCorrectionValidationError("");
+                        field.handleChange(event.target.value);
+                      }}
                       onBlur={(event) => {
                         field.handleBlur();
                         if (isValidEidNumber(event.target.value)) {
@@ -305,7 +314,11 @@ export default function MyAccountPage() {
                   <PublicInput
                     aria-invalid={Boolean(registerValidationError === m.my_eid_invalid_niss())}
                     value={field.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onChange={(event) => {
+                      if (registerValidationError === m.my_eid_invalid_niss())
+                        setRegisterValidationError("");
+                      field.handleChange(event.target.value);
+                    }}
                     onBlur={(event) => {
                       field.handleBlur();
                       if (isValidNiss(event.target.value))
@@ -328,7 +341,11 @@ export default function MyAccountPage() {
                   <PublicInput
                     aria-invalid={Boolean(registerValidationError === m.my_eid_invalid_eid())}
                     value={field.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onChange={(event) => {
+                      if (registerValidationError === m.my_eid_invalid_eid())
+                        setRegisterValidationError("");
+                      field.handleChange(event.target.value);
+                    }}
                     onBlur={(event) => {
                       field.handleBlur();
                       if (isValidEidNumber(event.target.value)) {
@@ -421,6 +438,10 @@ export default function MyAccountPage() {
     ? selectedTab
     : visibleTabs[0]?.key;
 
+  // A deep link can name a tab that only exists once discovery finishes (organisations,
+  // email preferences), so only call the destination unavailable after both have settled.
+  const tabsSettled = emailSessionResolved && !organizationsQuery.isLoading;
+
   const activeTitle = visibleTabs.find((tab) => tab.key === activeTab)?.title;
   useEffect(() => {
     const title = activeTitle;
@@ -433,7 +454,7 @@ export default function MyAccountPage() {
         {m.my_account_title()}
       </h1>
 
-      {locationSearch.tab !== undefined && locationSearch.tab !== activeTab && (
+      {tabsSettled && locationSearch.tab !== undefined && locationSearch.tab !== activeTab && (
         <Alert variant="info">{m.navigation_destination_unavailable()}</Alert>
       )}
       {authError && (

@@ -17,7 +17,7 @@ import RegistrationDetail from "./RegistrationDetail";
 import type { ItemDraft } from "./itemTypes";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import StaffTasks from "@/components/StaffTasks";
-import AdminSidebar from "./AdminSidebar";
+import AdminSidebar, { adminSidebarGroupOf } from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
 import type { Registration, RegistrationStatus } from "@/types/registration";
@@ -121,14 +121,26 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // Sidebar navigation state
   const locationSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const [activeKey, setActiveKey] = useLocationChoice("section", adminSections, "home");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
-
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
   // instead of resetting `activeKey` itself in an effect, which loses one
   // render to a blank content pane before it takes effect.
   const effectiveActiveKey =
     canManageAdminSections || activeKey === "home" ? activeKey : "registrations";
+
+  // `expandedGroups` is the only source of truth for what is open, so a group holding the
+  // active section can still be collapsed. Navigating to a section expands its group, adjusted
+  // during render (comparing against the previous key) rather than in an effect.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const group = adminSidebarGroupOf(effectiveActiveKey);
+    return new Set(group ? [group] : []);
+  });
+  const [expandedForKey, setExpandedForKey] = useState(effectiveActiveKey);
+  if (expandedForKey !== effectiveActiveKey) {
+    setExpandedForKey(effectiveActiveKey);
+    const group = adminSidebarGroupOf(effectiveActiveKey);
+    if (group && !expandedGroups.has(group)) setExpandedGroups(new Set(expandedGroups).add(group));
+  }
 
   useEffect(() => {
     if (!visible || !isAuthenticated) return;

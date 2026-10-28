@@ -2,6 +2,7 @@ import { renderLocation } from "../utils/locationRouter";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
+import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,8 +12,16 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 // MyRegistrationsPage needs a TanStack Router context (useSearch/useNavigate)
 // that these tests don't set up — irrelevant here since none of them exercise
 // the registrations tab itself.
+// It reports "no email session" on mount, as the real page does once discovery finishes; the
+// destination alert waits for that report. `discovery.reports` lets a test hold it back.
+const discovery = vi.hoisted(() => ({ reports: true }));
 vi.mock("@/components/MyRegistrationsPage", () => ({
-  default: () => <div>Registrations section</div>,
+  default: ({ onEmailSessionChange }: { onEmailSessionChange?: (value: null) => void }) => {
+    useEffect(() => {
+      if (discovery.reports) onEmailSessionChange?.(null);
+    }, [onEmailSessionChange]);
+    return <div>Registrations section</div>;
+  },
 }));
 
 vi.mock("@/paraglide/messages", () => ({
@@ -121,6 +130,7 @@ async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
 
 describe("MyAccountPage", () => {
   beforeEach(() => {
+    discovery.reports = true;
     server.use(http.get("/api/me/membership", () => HttpResponse.json({ state: "inactive" })));
     server.use(http.get("/api/me/organizations", () => HttpResponse.json([])));
     vi.mocked(useAuth).mockReturnValue({
@@ -165,6 +175,14 @@ describe("MyAccountPage", () => {
       "aria-selected",
       "true",
     );
+  });
+
+  it("waits for email-session discovery before calling a destination unavailable", async () => {
+    discovery.reports = false;
+    await renderLocation(<MyAccountPage />, "/me?tab=volunteer", createTestQueryClientWrapper());
+    expect(await screen.findByRole("tab", { name: "Registrations" })).toBeVisible();
+    // Discovery has not reported, so the requested tab may still appear.
+    expect(screen.queryByText("Destination unavailable")).not.toBeInTheDocument();
   });
 
   it("shows organizations for the same OIDC account as staff sections", async () => {
@@ -457,6 +475,13 @@ describe("MyAccountPage", () => {
       "my-eid-new-number-description my-eid-new-number-error",
     );
     expect(correctionCalls).toBe(0);
+
+    // Editing the field clears the stale error so it is not announced for a corrected value.
+    await user.type(input, "1");
+    expect(
+      screen.queryByText("That doesn't look like a valid eID document number."),
+    ).not.toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "false");
   });
 
   it("shows three switchable tabs for an authenticated volunteer, defaulting to Registrations", async () => {
