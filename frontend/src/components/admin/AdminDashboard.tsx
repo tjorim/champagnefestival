@@ -16,6 +16,7 @@ import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import type { ItemDraft } from "./itemTypes";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import StaffTasks from "@/components/StaffTasks";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -107,25 +108,32 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
-  const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
+  const [filterValue, setFilter] = useLocationChoice(
+    "registrationStatus",
+    ["all", "pending", "confirmed", "cancelled"],
+    "all",
+  );
+  const filter = filterValue as "all" | RegistrationStatus;
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
   // Sidebar navigation state
   const locationSearch = useSearch({ strict: false }) as Record<string, unknown>;
-  const [activeKey, setActiveKey] = useLocationChoice("section", adminSections, "registrations");
+  const [activeKey, setActiveKey] = useLocationChoice("section", adminSections, "home");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
   // instead of resetting `activeKey` itself in an effect, which loses one
   // render to a blank content pane before it takes effect.
-  const effectiveActiveKey = canManageAdminSections ? activeKey : "registrations";
+  const effectiveActiveKey =
+    canManageAdminSections || activeKey === "home" ? activeKey : "registrations";
 
   useEffect(() => {
     if (!visible || !isAuthenticated) return;
     const labels: Record<string, string> = {
+      home: m.workspace_title(),
       registrations: m.admin_registrations_tab(),
       waitlist: m.admin_waitlist_section(),
       scratchpad: m.admin_scratchpad_section(),
@@ -535,10 +543,27 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Alert>
             )}
 
-            {isAnyPending && !cacheStatus.warmStart ? (
+            {isAnyPending && !cacheStatus.warmStart && effectiveActiveKey !== "home" ? (
               <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
               <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
+                {effectiveActiveKey === "home" && (
+                  <StaffTasks
+                    expanded
+                    pendingBookings={{
+                      count: registrationCountsQuery.data?.pending,
+                      loading: registrationCountsQuery.isPending,
+                      error: registrationCountsQuery.isError,
+                      retry: () => void registrationCountsQuery.refetch(),
+                    }}
+                    editionId={activeEdition.id || undefined}
+                    editionLabel={
+                      activeEdition.id
+                        ? `${activeEditionLabel(activeEdition)} · ${activeEdition.dates.map((date) => new Date(date).toLocaleDateString()).join(", ")}`
+                        : undefined
+                    }
+                  />
+                )}
                 {effectiveActiveKey === "registrations" && (
                   <RegistrationList
                     registrations={registrations}
@@ -555,6 +580,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onAddRegistration={handleAddRegistration}
                     authHeaders={authHeaders}
                     activeEdition={activeEdition}
+                    countedPendingQueue={locationSearch.workQueue === "pending"}
                     applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
                     sectionError={registrationError}
                     onClearSectionError={() => setRegistrationError("")}

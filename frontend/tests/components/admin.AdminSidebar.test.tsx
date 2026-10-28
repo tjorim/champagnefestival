@@ -7,6 +7,7 @@ import AdminSidebar from "@/components/admin/AdminSidebar";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    workspace_title: () => "My tasks",
     admin_title: () => "Administration",
     admin_registrations_tab: () => "Registrations",
     admin_waitlist_section: () => "Waitlist",
@@ -80,6 +81,7 @@ describe("AdminSidebar", () => {
         .getAllByRole("button")
         .map((button) => button.textContent),
     ).toEqual([
+      "My tasks",
       "Registrations2",
       "Waitlist",
       "Contact messages",
@@ -137,7 +139,7 @@ describe("AdminSidebar", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Last synced: 12:00");
   });
 
-  it("shows only registrations to non-admin roles", () => {
+  it("shows tasks and registrations to non-admin roles", () => {
     renderSidebar(vi.fn(), false);
 
     const navigation = screen.getByRole("navigation", { name: "Administration" });
@@ -145,7 +147,7 @@ describe("AdminSidebar", () => {
       within(navigation)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["Registrations2"]);
+    ).toEqual(["My tasks", "Registrations2"]);
   });
 
   it("selects a leaf destination directly from the sidebar", () => {

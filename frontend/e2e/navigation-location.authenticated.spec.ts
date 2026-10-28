@@ -47,7 +47,7 @@ test("unknown sections explain the fallback", async ({ page }) => {
   await expect(
     page
       .getByRole("navigation", { name: "Admin Dashboard", exact: true })
-      .getByRole("button", { name: /^Registrations(?:\s|\d|$)/ }),
+      .getByRole("button", { name: "My tasks", exact: true }),
   ).toHaveAttribute("aria-current", "page");
 });
 

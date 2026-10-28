@@ -70,7 +70,9 @@ async function seedForms(page: Page, linked: boolean) {
     history.pushState(null, "", "/me");
     dispatchEvent(new PopStateEvent("popstate"));
   }, linked);
-  await page.getByRole("tab", { name: /My eID|Mijn eID|Mon eID/ }).click();
+  await page
+    .getByRole("tab", { name: /My volunteer tasks|Mijn vrijwilligerstaken|Mes tâches bénévoles/ })
+    .click();
 }
 
 async function checkLayout(page: Page) {

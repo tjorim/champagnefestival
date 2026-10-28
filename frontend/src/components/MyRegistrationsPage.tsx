@@ -83,7 +83,7 @@ export default function MyRegistrationsPage({
   onEmailSessionChange,
 }: MyRegistrationsPageProps = {}) {
   const auth = useAuth();
-  const { token: rawToken, tab } = useSearch({ from: "/me" });
+  const { token: rawToken, tab, edition } = useSearch({ from: "/me" });
   const token = rawToken?.trim() ?? "";
   const navigate = useNavigate({ from: "/me" });
   const accessToken = auth.getAccessToken();
@@ -438,8 +438,8 @@ export default function MyRegistrationsPage({
             onClick={() => {
               // Hand over what was typed so the IdP's email link can start from the same address.
               const loginHint = email.trim();
-              if (loginHint.includes("@")) auth.login(accountReturnTo(tab), { loginHint });
-              else auth.login(accountReturnTo(tab));
+              if (loginHint.includes("@")) auth.login(accountReturnTo(tab, edition), { loginHint });
+              else auth.login(accountReturnTo(tab, edition));
             }}
           >
             {m.my_registrations_sign_in_instead()}

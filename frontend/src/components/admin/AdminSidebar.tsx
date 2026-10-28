@@ -197,6 +197,12 @@ export default function AdminSidebar({
           <nav aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
             <SidebarMenu>
               <SidebarItem
+                itemKey="home"
+                icon={NotebookTextIcon}
+                label={m.workspace_title()}
+                {...itemProps}
+              />
+              <SidebarItem
                 itemKey="registrations"
                 icon={CalendarCheckIcon}
                 label={m.admin_registrations_tab()}

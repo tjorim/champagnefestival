@@ -125,6 +125,7 @@ interface RegistrationListProps {
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
   activeEdition: ActiveEdition;
+  countedPendingQueue?: boolean;
   applyActiveEditionFilterRequest: number;
   sectionError?: string;
   onClearSectionError?: () => void;
@@ -196,6 +197,7 @@ export default function RegistrationList({
   onAddRegistration,
   authHeaders,
   activeEdition,
+  countedPendingQueue = false,
   applyActiveEditionFilterRequest,
   sectionError,
   onClearSectionError,
@@ -310,13 +312,13 @@ export default function RegistrationList({
   const isActiveEditionDay = activeDayIndex >= 0;
 
   useEffect(() => {
-    if (!isActiveEditionDay) return;
+    if (!isActiveEditionDay || countedPendingQueue) return;
     if (filterDefaultsAppliedRef.current === activeEdition.id) return;
     filterDefaultsAppliedRef.current = activeEdition.id;
     setActiveEditionOnly(true);
     setPage(1);
     clearSelection();
-  }, [activeEdition.id, isActiveEditionDay, clearSelection]);
+  }, [activeEdition.id, isActiveEditionDay, clearSelection, countedPendingQueue]);
 
   // The parent bumps this counter to imperatively request the filter. Adjust
   // during render (comparing against the previous value) rather than in an

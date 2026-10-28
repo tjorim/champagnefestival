@@ -1,3 +1,4 @@
+import StaffTasks from "@/components/StaffTasks";
 import {
   ArrowLeftIcon,
   CalendarDaysIcon,
@@ -166,6 +167,9 @@ function StandaloneRoute({
       </a>
       <StandaloneNavBar icon={icon} title={title} />
       <main id="main-content" className="standalone-main">
+        <div className="site-container mx-auto w-full px-4 pt-4">
+          <StaffTasks />
+        </div>
         <AppSuspense errorFallbackText={errorFallbackText}>{children}</AppSuspense>
       </main>
     </div>

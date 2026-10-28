@@ -18,6 +18,17 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 vi.mock("@/paraglide/messages", () => ({
   m: {
     navigation_destination_unavailable: () => "Destination unavailable",
+    workspace_volunteer: () => "My volunteer tasks",
+    workspace_questions: () => "Questions and availability",
+    workspace_identity: () => "Identity and documents",
+    workspace_settings: () => "Account settings",
+    membership_title: () => "My membership",
+    membership_active: () => "Active membership",
+    membership_inactive: () => "No active membership found",
+    membership_load_error: () => "Could not load membership",
+    membership_unknown: () => "Membership unavailable",
+    membership_help: () => "Contact the organisers if this is incorrect.",
+    membership_rewards: () => "Reward progress is unavailable here.",
     my_eid_help: () => "my_eid_help",
     my_eid_niss_hint: () => "my_eid_niss_hint",
     my_eid_eid_hint: () => "my_eid_eid_hint",
@@ -103,13 +114,14 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("tab", { name: "My Account" }));
+  await user.click(screen.getByRole("tab", { name: "Account settings" }));
   await user.click(screen.getByRole("button", { name: "Delete my account" }));
   return screen.getByRole("alertdialog");
 }
 
 describe("MyAccountPage", () => {
   beforeEach(() => {
+    server.use(http.get("/api/me/membership", () => HttpResponse.json({ state: "inactive" })));
     server.use(http.get("/api/me/organizations", () => HttpResponse.json([])));
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
@@ -139,7 +151,7 @@ describe("MyAccountPage", () => {
     await waitFor(() => expect(router.state.location.search.tab).toBe("registrations"));
     router.history.back();
     await waitFor(() =>
-      expect(screen.getByRole("tab", { name: "My Account" })).toHaveAttribute(
+      expect(screen.getByRole("tab", { name: "Account settings" })).toHaveAttribute(
         "aria-selected",
         "true",
       ),
@@ -170,7 +182,7 @@ describe("MyAccountPage", () => {
     await user.click(await screen.findByRole("tab", { name: "My organisations" }));
     expect(screen.getByText("Shared account house")).toBeVisible();
     expect(authorization).toBe("Bearer oidc-access-token");
-    expect(screen.getByRole("tab", { name: "My Account" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Account settings" })).toBeVisible();
   });
 
   it("deletes the account and signs out after confirmation", async () => {
@@ -303,9 +315,9 @@ describe("MyAccountPage", () => {
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
     await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Account settings" }));
     expect(await screen.findByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
-    expect(screen.queryByText("My eID")).not.toBeInTheDocument();
+    expect(screen.queryByText("My volunteer tasks")).not.toBeInTheDocument();
   });
 
   it("shows the volunteer registration form for an unlinked volunteer account", async () => {
@@ -337,9 +349,9 @@ describe("MyAccountPage", () => {
 
     await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My eID" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Account settings" }));
     expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
   });
 
@@ -382,7 +394,7 @@ describe("MyAccountPage", () => {
     const user = userEvent.setup();
     await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await user.click(screen.getByRole("tab", { name: "My eID" }));
+    await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     expect(await screen.findByText("Update your eID document number")).toBeInTheDocument();
     const input = screen.getByLabelText("New eID document number");
     await user.type(input, "123456789103");
@@ -430,7 +442,7 @@ describe("MyAccountPage", () => {
     const user = userEvent.setup();
     await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await user.click(screen.getByRole("tab", { name: "My eID" }));
+    await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     const input = await screen.findByLabelText("New eID document number");
     await user.type(input, "999999999999");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -478,8 +490,8 @@ describe("MyAccountPage", () => {
     await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     const registrationsTab = await screen.findByRole("tab", { name: "Registrations" });
-    const volunteerTab = screen.getByRole("tab", { name: "My eID" });
-    const accountTab = screen.getByRole("tab", { name: "My Account" });
+    const volunteerTab = screen.getByRole("tab", { name: "My volunteer tasks" });
+    const accountTab = screen.getByRole("tab", { name: "Account settings" });
     expect(registrationsTab).toHaveAttribute("aria-selected", "true");
     expect(volunteerTab).toHaveAttribute("aria-selected", "false");
 
@@ -555,7 +567,7 @@ describe("MyAccountPage", () => {
     async function openPoll() {
       const user = userEvent.setup();
       await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
-      await user.click(screen.getByRole("tab", { name: "My eID" }));
+      await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
       return user;
     }
 
@@ -606,15 +618,20 @@ describe("MyAccountPage", () => {
 
     it("shows a loading state while the poll is slow", async () => {
       mockVolunteer();
+      let release = () => {};
+      const ready = new Promise<void>((resolve) => {
+        release = resolve;
+      });
       server.use(
         http.get("/api/me/volunteer/poll", async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          await ready;
           return HttpResponse.json(poll([dinner()]));
         }),
       );
 
       await openPoll();
       expect(await screen.findAllByRole("status")).not.toHaveLength(0);
+      release();
       expect(await screen.findByText("Dinner on Sunday?")).toBeInTheDocument();
     });
 
