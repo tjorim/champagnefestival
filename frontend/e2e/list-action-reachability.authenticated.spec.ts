@@ -6,7 +6,7 @@ for (const width of [390, 1024, 1366]) {
   }) => {
     await page.setViewportSize({ width, height: 768 });
     await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
-    await page.goto("/admin");
+    await page.goto("/admin?section=registrations");
     await expect(page.getByText("alice@moet.com").first()).toBeVisible();
     if (width < 992)
       await page.getByRole("button", { name: "Toggle navigation", exact: true }).click();

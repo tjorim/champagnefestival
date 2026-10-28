@@ -142,3 +142,32 @@ only the total-size check at 2,892.5 KiB. The [budget review](../ui-maintenance.
 sets the total allowance to 2,910 KiB, based on the already-over-limit 2,881.4 KiB
 baseline plus this feature's 11.1 KiB. Entry/admin/eager limits are unchanged.
 This supersedes the earlier unresolved total-budget failure recorded above.
+
+
+### E2E navigation and assertion maintenance — 2026-10-28
+
+Legacy cards, status, table, entrance, list-action and lazy-section tests now open
+`/admin?section=registrations` explicitly. Venue warm-start opens its own section.
+The task home remains the default. Lazy-section tests open collapsed groups and
+expect reload to retain the Analytics section. These changes preserve the tested
+behaviour without waiting for controls on the wrong page.
+
+The custom venue-view test compares the numeric aspect ratio: room dimensions
+`50 / 80` and canvas dimensions `1400 / 2240` are equivalent. It still checks
+background, selected table, percentage coordinates and horizontal overflow.
+
+PR CI now stops after three failed cases, retaining one retry per case; main and
+manual runs are uncapped. Normal timeouts are unchanged. Local diagnosis uses no
+retries and stops on the first failure, then reruns the affected cases.
+
+Validation: 96 focused E2E cases pass across the runs (excluding repeated auth
+setup): the complete six-theme cards/custom-view/status matrices plus tables,
+lazy sections, warm start, list actions and entrance cases, including native
+125%/150%/200% zoom. Retries were disabled. Typecheck, lint and formatting pass.
+Configuration inspection confirms PR CI uses `maxFailures: 3, retries: 1`, while
+manual CI retains the uncapped run and one retry.
+
+The shared-controls test now expects My tasks as the first focusable sidebar
+item and explicitly exercises the initially collapsed Content group with click,
+Space and Enter. Both 390px and 1366px cases pass without retries, including
+focus trapping/return, drawer dismissal, filtering and accessibility scans.
