@@ -1,10 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-async function seedPlan(page: Page) {
+async function seedPlan(page: Page, tableCount = 24) {
   await page.goto("/venue-plan?edition=test");
   await expect(page.getByText("No floor plan is available for this edition.")).toBeVisible();
-  await page.evaluate(async () => {
+  await page.evaluate(async (count) => {
     const browserPath = "/src/mocks/browser.ts";
     const httpPath = "/node_modules/msw/lib/http/index.js";
     const { worker } = await import(/* @vite-ignore */ browserPath);
@@ -28,14 +28,14 @@ async function seedPlan(page: Page) {
                 color: "#123456",
               },
               areas: [],
-              tables: Array.from({ length: 24 }, (_, i) => ({
+              tables: Array.from({ length: count }, (_, i) => ({
                 id: `table-${i + 1}`,
                 name: `Table ${i + 1}`,
                 capacity: 8,
-                occupied_seats: i === 23 ? 9 : 0,
-                exclusive: i === 23,
-                x: (i % 6) * 18,
-                y: Math.floor(i / 6) * 30,
+                occupied_seats: i === count - 1 ? 9 : 0,
+                exclusive: i === count - 1,
+                x: (i % (count > 24 ? 12 : 6)) * (count > 24 ? 8 : 18),
+                y: Math.floor(i / (count > 24 ? 12 : 6)) * (count > 24 ? 12 : 30),
                 rotation: 0,
                 registration_ids: [],
               })),
@@ -44,7 +44,7 @@ async function seedPlan(page: Page) {
         }),
       ),
     );
-  });
+  }, tableCount);
   await page.evaluate(() => {
     history.pushState(null, "", "/venue-plan?edition=dense&table=table-24&registration=booking-1");
     dispatchEvent(new PopStateEvent("popstate"));
@@ -144,5 +144,55 @@ for (const zoom of [1.25, 1.5, 2]) {
       await context.close();
       await rm(profile, { recursive: true, force: true });
     }
+  });
+}
+
+for (const scenario of [
+  { width: 1280, height: 600, tables: 1 },
+  { width: 1366, height: 568, tables: 24 },
+  { width: 1440, height: 650, tables: 96 },
+]) {
+  test(`reduced laptop height and wheel navigation: ${scenario.width}x${scenario.height}, ${scenario.tables} tables`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(scenario);
+    await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
+    await seedPlan(page, scenario.tables);
+    await page.getByRole("button", { name: "Table list", exact: true }).click();
+    await page.getByRole("searchbox").fill(`Table ${scenario.tables}`);
+    await page.getByRole("button", { name: "Show table on floor plan" }).click();
+    await expect(page.getByRole("status")).toBeFocused();
+    await expect(page.getByRole("status")).toContainText(`Table ${scenario.tables}`);
+    await expect(page.getByRole("link", { name: "Back to check-in" })).toHaveAttribute(
+      "href",
+      "/check-in?id=booking-1",
+    );
+    const scroller = page.getByRole("region", {
+      name: "Main hall with a long room name",
+      exact: true,
+    });
+    await scroller.scrollIntoViewIfNeeded();
+    await scroller.evaluate((element) => element.scrollTo(0, 0));
+    await scroller.hover();
+    // A two-axis wheel event exercises the browser path used by trackpad scrolling.
+    await page.mouse.wheel(220, 180);
+    await expect.poll(() => scroller.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await scroller.focus();
+    const before = await scroller.evaluate((element) => element.scrollLeft);
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(() => scroller.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(before);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
+      true,
+    );
+    await page.evaluate(() => {
+      history.pushState(null, "", "/venue-plan?edition=dense&table=missing");
+      dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await expect(page.getByRole("status")).toBeFocused();
+    await expect(page.getByRole("status")).toContainText("This table is no longer in this plan");
+    await expect(page.getByRole("searchbox")).toBeVisible();
   });
 }

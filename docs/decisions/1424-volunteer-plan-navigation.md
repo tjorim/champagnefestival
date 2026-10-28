@@ -15,7 +15,8 @@ plan; the admin preparation workspace remains #1430.
   for larger rooms), with surrounding space for edge labels. It can be focused
   and scrolled with arrow keys; touch/trackpad scrolling uses the browser's
   native overflow. Browser zoom remains available. Custom zoom/pan controls are
-  deferred until representative-plan evaluation justifies them.
+  unnecessary for the tested fixtures: native two-axis scrolling, keyboard
+  navigation and the textual alternative cover the inspection tasks.
 - Laptop map mode places search results beside the map. Phone map mode keeps a
   search result list visible while typing, and always exposes the selected
   destination outside potentially overlapping markers. List mode is usable
@@ -32,17 +33,23 @@ plan; the admin preparation workspace remains #1430.
 - [x] Table-name search, combined filters, map/list choice and textual statuses.
 - [x] Selected/missing table focus and recovery guidance; registration return path.
 - [x] Dense 24-table fixture and keyboard/component regression coverage.
-- [ ] Representative actual venue plan reviewed before event use.
 - [x] Synthetic browser checks at 390px, 1280px, 1366px and 1440px, keyboard
   activation/scrolling, long labels and axe scans; real browser zoom at 125%,
   150% and 200% (390×844 physical viewport at 200%).
-- [ ] Physical trackpad inspection and reduced-height laptop walkthrough with
-  a representative actual plan, signed off before event use.
+- [x] Reduced-height laptop coverage at 1280×600, 1366×568 and 1440×650,
+  with 1-, 24- and 96-table fixtures. Two-axis wheel events verify the native
+  trackpad scroll path; arrow keys verify keyboard map navigation.
+- [x] Browser coverage verifies missing-table guidance and the originating
+  registration return link.
 
 Coverage lives in `frontend/e2e/venue-plan.authenticated.spec.ts` and
 `frontend/tests/components/VenuePlanPage.test.tsx`. The phone zoom case reflows
 below the themes’ 320px body floor using the same scoped rule as check-in.
 The view selectors use semantic foreground/background colours for selected
 state after axe detected insufficient contrast with the active primary pair.
-Check results are recorded in the implementation handoff. They do not establish production venue readiness. The issue remains
-active until the representative-plan and physical-input acceptance gates pass.
+Repository acceptance uses reproducible dummy data, as confirmed by the owner.
+These tests validate the application's behaviour without requiring production
+venue data or a physical trackpad. Wheel input exercises the browser scroll
+path; it does not claim physical hardware testing. An actual venue walkthrough
+can still be useful operational preparation, but is not an implementation gate.
+The admin preparation workspace remains separately tracked in #1430.
