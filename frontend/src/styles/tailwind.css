@@ -301,8 +301,9 @@
 @custom-variant riviera (&:where(html[data-visual-theme="riviera"] *));
 
 @layer components {
-  /* Check-in must reflow below the themes' 320px body floor at 200% phone zoom. */
-  body:has(#check-in) {
+  /* Check-in and venue plans must reflow below the themes' 320px body floor at 200% phone zoom. */
+  body:has(#check-in),
+  body:has(#venue-plan) {
     min-width: 0;
   }
 

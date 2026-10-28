@@ -168,7 +168,11 @@ function CheckInCard({
             render={
               <Link
                 to="/venue-plan"
-                search={{ edition: registration.editionId, table: registration.tableId }}
+                search={{
+                  edition: registration.editionId,
+                  table: registration.tableId,
+                  registration: registration.id,
+                }}
               />
             }
             variant="outline-warning"

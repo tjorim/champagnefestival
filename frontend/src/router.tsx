@@ -34,6 +34,7 @@ export interface MyRegistrationsSearch {
   token?: string;
 }
 export interface VenuePlanSearch {
+  registration?: string;
   edition?: string;
   table?: string;
 }
@@ -121,6 +122,7 @@ export function createAppRouter({
     path: "/venue-plan",
     validateSearch: (search: Record<string, unknown>): VenuePlanSearch => ({
       edition: typeof search.edition === "string" ? search.edition : undefined,
+      registration: typeof search.registration === "string" ? search.registration : undefined,
       table: typeof search.table === "string" ? search.table : undefined,
     }),
     loaderDeps: ({ search: { edition } }: { search: VenuePlanSearch }) => ({ edition }),

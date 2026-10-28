@@ -240,14 +240,13 @@ function CheckInRoute() {
 function VenuePlanRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <StandaloneNavBar icon={MapIcon} title={m.venue_plan_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.venue_plan_error()}>
-          <VenuePlanPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={MapIcon}
+      title={m.venue_plan_title()}
+      errorFallbackText={m.venue_plan_error()}
+    >
+      <VenuePlanPage />
+    </StandaloneRoute>
   );
 }
 
