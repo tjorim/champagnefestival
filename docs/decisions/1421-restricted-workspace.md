@@ -133,3 +133,12 @@ were updated for the intentional reward disclosure and responsive layouts.
 Final typecheck, formatting and production build pass. The total bundle is now
 2,892.5 KiB after the contrast correction; the existing 2,870 KiB limit still
 fails, while entry/admin/eager limits pass. No bundle limit was changed.
+
+
+### CI total-budget reconciliation — 2026-10-28
+
+CI job 123063522406 passed every step through the production build, then failed
+only the total-size check at 2,892.5 KiB. The [budget review](../ui-maintenance.md#workspace-feature-budget-review--2026-10-28-1421)
+sets the total allowance to 2,910 KiB, based on the already-over-limit 2,881.4 KiB
+baseline plus this feature's 11.1 KiB. Entry/admin/eager limits are unchanged.
+This supersedes the earlier unresolved total-budget failure recorded above.
