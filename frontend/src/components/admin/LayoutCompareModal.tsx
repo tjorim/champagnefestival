@@ -2,7 +2,7 @@ import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -145,14 +145,14 @@ export default function LayoutCompareModal({
     roomLayouts[1]?.id ?? roomLayouts[0]?.id ?? "",
   );
 
-  useEffect(() => {
-    const baselineFallback = roomLayouts[0]?.id ?? "";
-    const currentFallback = roomLayouts[1]?.id ?? baselineFallback;
-    const hasLayout = (id: string) => roomLayouts.some((layout) => layout.id === id);
-
-    setBaselineId((id) => (hasLayout(id) ? id : baselineFallback));
-    setCurrentId((id) => (hasLayout(id) ? id : currentFallback));
-  }, [roomLayouts]);
+  const baselineFallback = roomLayouts[0]?.id ?? "";
+  const currentFallback = roomLayouts[1]?.id ?? baselineFallback;
+  if (!roomLayouts.some((layout) => layout.id === baselineId) && baselineId !== baselineFallback) {
+    setBaselineId(baselineFallback);
+  }
+  if (!roomLayouts.some((layout) => layout.id === currentId) && currentId !== currentFallback) {
+    setCurrentId(currentFallback);
+  }
 
   const baselineTables = useMemo(
     () => tables.filter((t) => t.layoutId === baselineId),

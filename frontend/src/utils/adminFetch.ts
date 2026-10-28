@@ -373,10 +373,11 @@ export async function fetchLayouts(authHeaders: () => Record<string, string>): P
 export async function fetchLayoutRevisions(
   authHeaders: () => Record<string, string>,
   layoutId: string,
+  signal?: AbortSignal,
 ): Promise<LayoutRevision[]> {
   return fetchArrayOrThrow(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), signal },
     m.admin_error_load_layout_revisions(),
     apiLayoutRevisionToLayoutRevision,
   );
@@ -411,11 +412,12 @@ export async function compareLayoutRevisions(
   layoutId: string,
   fromRef: string,
   toRef: string,
+  signal?: AbortSignal,
 ): Promise<LayoutRevisionDiff> {
   const params = new URLSearchParams({ from: fromRef, to: toRef });
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/compare?${params.toString()}`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), signal },
     m.admin_error_compare_layout_revisions(),
   );
   return apiLayoutRevisionDiffToLayoutRevisionDiff(payload);

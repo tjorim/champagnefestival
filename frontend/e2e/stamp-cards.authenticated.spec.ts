@@ -32,6 +32,7 @@ test("manages types, default selection, reward filtering and hand-out reversal",
   });
   await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
   await page.getByRole("tab", { name: /^Members\s/ }).click();
+  await page.getByText("Reward policy", { exact: true }).click();
   await page.getByRole("button", { name: "Add card type", exact: true }).click();
   const editor = page.getByRole("dialog");
   await editor.getByLabel("Name (nl)", { exact: true }).fill("Ruilbeurs");

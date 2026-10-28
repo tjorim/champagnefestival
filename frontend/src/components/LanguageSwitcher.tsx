@@ -1,3 +1,4 @@
+import { useHydrated } from "@/hooks/useHydrated";
 import { CheckIcon, ChevronDownIcon, GlobeIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -5,19 +6,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
 import { localizedPublicUrl } from "@/config/localePath";
 import { m } from "@/paraglide/messages";
 
 const LanguageSwitcher = () => {
-  const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
+  const preventHydrationIssue = useHydrated();
   const [currentLang, setCurrentLang] = useState(getLocale());
-
-  // Prevent hydration issues by not rendering on first mount
-  useEffect(() => {
-    setPreventHydrationIssue(true);
-  }, []);
 
   // Language definitions
   const languages = [

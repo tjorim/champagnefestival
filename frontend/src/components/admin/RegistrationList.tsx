@@ -125,6 +125,7 @@ interface RegistrationListProps {
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
   activeEdition: ActiveEdition;
+  countedPendingQueue?: boolean;
   applyActiveEditionFilterRequest: number;
   sectionError?: string;
   onClearSectionError?: () => void;
@@ -196,6 +197,7 @@ export default function RegistrationList({
   onAddRegistration,
   authHeaders,
   activeEdition,
+  countedPendingQueue = false,
   applyActiveEditionFilterRequest,
   sectionError,
   onClearSectionError,
@@ -273,11 +275,6 @@ export default function RegistrationList({
     retry: false,
   });
 
-  // Refs so column header/cell can read latest selection state without being in deps
-  const selectedIdsRef = useRef<Set<string>>(selectedIds);
-  selectedIdsRef.current = selectedIds;
-  const pageRegistrationsRef = useRef<Registration[]>([]);
-
   const allContactPersonIds = useMemo(
     () =>
       new Set(
@@ -310,13 +307,13 @@ export default function RegistrationList({
   const isActiveEditionDay = activeDayIndex >= 0;
 
   useEffect(() => {
-    if (!isActiveEditionDay) return;
+    if (!isActiveEditionDay || countedPendingQueue) return;
     if (filterDefaultsAppliedRef.current === activeEdition.id) return;
     filterDefaultsAppliedRef.current = activeEdition.id;
     setActiveEditionOnly(true);
     setPage(1);
     clearSelection();
-  }, [activeEdition.id, isActiveEditionDay, clearSelection]);
+  }, [activeEdition.id, isActiveEditionDay, clearSelection, countedPendingQueue]);
 
   // The parent bumps this counter to imperatively request the filter. Adjust
   // during render (comparing against the previous value) rather than in an
@@ -499,19 +496,18 @@ export default function RegistrationList({
       columnHelper.display({
         id: "select",
         header: () => {
-          const allIds = pageRegistrationsRef.current.map((r) => r.id);
-          const allSelected =
-            allIds.length > 0 && allIds.every((id) => selectedIdsRef.current.has(id));
+          const allIds = pageRegistrations.map((r) => r.id);
+          const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
           return (
             <Checkbox
               checked={allSelected}
-              indeterminate={!allSelected && allIds.some((id) => selectedIdsRef.current.has(id))}
+              indeterminate={!allSelected && allIds.some((id) => selectedIds.has(id))}
               onCheckedChange={() => {
                 setSelectionRecords(
                   (previous) =>
                     new Map([
                       ...previous,
-                      ...pageRegistrationsRef.current.map((record) => [record.id, record] as const),
+                      ...pageRegistrations.map((record) => [record.id, record] as const),
                     ]),
                 );
                 setSelectAllMatchingActive(false);
@@ -550,7 +546,7 @@ export default function RegistrationList({
         ),
         meta: { tdClassName: "align-middle" },
       }),
-    [selectedIds],
+    [selectedIds, pageRegistrations],
   );
 
   const handleCheckIn = useCallback(
@@ -932,7 +928,6 @@ export default function RegistrationList({
       columnVisibility: state.columnVisibility,
     }),
   );
-  pageRegistrationsRef.current = table.getRowModel().rows.map((r) => r.original);
 
   // Built from every registration, not the current page: these counts are a
   // property of the event, so they must not shift when someone searches,

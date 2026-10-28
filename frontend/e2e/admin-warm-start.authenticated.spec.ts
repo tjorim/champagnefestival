@@ -4,8 +4,7 @@ import { test, expect } from "@playwright/test";
 test("restored venue rows render while reads are pending and survive failed reconciliation", async ({
   page,
 }) => {
-  await page.goto("/admin");
-  await page.getByRole("button", { name: "Venues & Rooms", exact: true }).click();
+  await page.goto("/admin?section=venues");
   await expect(page.getByText("Brussels Expo", { exact: true })).toBeVisible();
   await expect
     .poll(async () =>

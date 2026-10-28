@@ -21,6 +21,7 @@ export function useLocationChoice(key: string, choices: readonly string[], fallb
 }
 
 export const adminSections = [
+  "home",
   "registrations",
   "waitlist",
   "scratchpad",
@@ -51,8 +52,10 @@ export const accountTabs = [
 ] as const;
 
 /** Only allow navigation context through authentication, never emailed credentials. */
-export function accountReturnTo(tab: unknown): string {
-  return typeof tab === "string" && accountTabs.includes(tab as (typeof accountTabs)[number])
-    ? `/me?tab=${encodeURIComponent(tab)}`
-    : "/me";
+export function accountReturnTo(tab: unknown, edition?: unknown): string {
+  const search = new URLSearchParams();
+  if (typeof tab === "string" && accountTabs.includes(tab as (typeof accountTabs)[number]))
+    search.set("tab", tab);
+  if (typeof edition === "string" && edition) search.set("edition", edition);
+  return `/me${search.size ? `?${search}` : ""}`;
 }

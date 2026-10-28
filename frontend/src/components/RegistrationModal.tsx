@@ -92,6 +92,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   // purchasable product, not by a separate flag.
   const showOrderItems = purchasableProducts.length > 0;
 
+  const [initialFormStartTime] = useState(() => new Date().toISOString());
   const form = useForm({
     defaultValues: {
       name: "",
@@ -102,7 +103,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       notes: "",
       newEditionsOptIn: false,
       honeypot: "",
-      formStartTime: new Date().toISOString(),
+      formStartTime: initialFormStartTime,
     } as RegistrationFields,
     onSubmit: async ({ value }) => {
       setSubmitError("");

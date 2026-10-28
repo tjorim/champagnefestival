@@ -24,6 +24,9 @@ export const exclusions = {
     "×": "multiplication sign before a quantity",
     Bearer: "HTTP authorization scheme",
   },
+  "components/MyMembership.tsx": {
+    Bearer: "HTTP authorization scheme",
+  },
   "components/MyRegistrationsPage.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",

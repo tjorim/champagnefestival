@@ -8,12 +8,12 @@ const messages = { en, nl, fr };
 async function seedForms(page: Page, linked: boolean) {
   // Use a stable, unprefixed route: the home page can redirect to a saved locale.
   await page.goto("/check-in");
-  await expect(page.locator("main")).toBeVisible();
+  await expect(page.locator("#check-in")).toBeVisible();
   await page.evaluate(async (isLinked) => {
     const browserPath = "/src/mocks/browser.ts";
     const httpPath = "/node_modules/msw/lib/http/index.js";
     const { worker } = await import(/* @vite-ignore */ browserPath);
-    const { http, HttpResponse, delay } = await import(/* @vite-ignore */ httpPath);
+    const { http, HttpResponse } = await import(/* @vite-ignore */ httpPath);
     const questions = [
       {
         id: "attendance",
@@ -44,6 +44,10 @@ async function seedForms(page: Page, linked: boolean) {
       },
     ];
     const poll = () => ({ edition_id: "test", questions, note: null });
+    // Hold the failing write until the test has observed the pending UI.
+    const failedWrite = new Promise<void>((resolve) => {
+      window.addEventListener("release-poll-write", () => resolve(), { once: true });
+    });
     worker.use(
       http.get("/api/me/organizations", () => HttpResponse.json([])),
       http.get("/api/me/volunteer", () =>
@@ -57,9 +61,10 @@ async function seedForms(page: Page, linked: boolean) {
       http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll())),
       http.put("/api/me/volunteer/poll/questions/:id", async ({ params, request }) => {
         const body = await request.json();
-        await delay(500);
-        if (params.id === "text")
+        if (params.id === "text") {
+          await failedWrite;
           return HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 500 });
+        }
         Object.assign(
           questions.find((q) => q.id === params.id)!,
           body,
@@ -70,7 +75,9 @@ async function seedForms(page: Page, linked: boolean) {
     history.pushState(null, "", "/me");
     dispatchEvent(new PopStateEvent("popstate"));
   }, linked);
-  await page.getByRole("tab", { name: /My eID|Mijn eID|Mon eID/ }).click();
+  await page
+    .getByRole("tab", { name: /My volunteer tasks|Mijn vrijwilligerstaken|Mes tâches bénévoles/ })
+    .click();
 }
 
 async function checkLayout(page: Page) {
@@ -130,6 +137,7 @@ for (const [width, height] of [
         .getByRole("button");
       await save.click();
       await expect(text).toBeDisabled();
+      await page.evaluate(() => window.dispatchEvent(new Event("release-poll-write")));
       await expect(text).toBeEnabled();
       await expect(text).toHaveValue("Long volunteer answer. ".repeat(20));
       await expect(page.getByText("PRIVATE DIAGNOSTIC")).toHaveCount(0);
@@ -206,6 +214,8 @@ for (const zoom of [1.25, 1.5]) {
         .getByRole("region", { name: "Suggestions for the volunteer team" })
         .getByRole("button");
       await save.click();
+      await expect(page.locator("#my-poll-text-text")).toBeDisabled();
+      await page.evaluate(() => window.dispatchEvent(new Event("release-poll-write")));
       await expect(page.locator("#my-poll-text-text")).toBeEnabled();
       await checkLayout(page);
       await save.scrollIntoViewIfNeeded();

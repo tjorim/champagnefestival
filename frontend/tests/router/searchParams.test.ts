@@ -1,3 +1,4 @@
+import { accountReturnTo } from "@/hooks/useLocationChoice";
 import { describe, expect, it } from "vitest";
 import { validateCheckInSearch, validateMyRegistrationsSearch } from "@/router";
 
@@ -20,4 +21,10 @@ describe("router search param validation", () => {
       token: undefined,
     });
   });
+});
+
+it("retains only permitted account and edition context for sign-in", () => {
+  expect(accountReturnTo("volunteer", "edition-1")).toBe("/me?tab=volunteer&edition=edition-1");
+  expect(accountReturnTo("token=private", "edition-1")).toBe("/me?edition=edition-1");
+  expect(accountReturnTo(undefined, { token: "private" })).toBe("/me");
 });

@@ -1,6 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { accountTabs, useLocationChoice } from "@/hooks/useLocationChoice";
 import { apiErrorMessage } from "@/utils/apiErrors";
+import MyMembership from "@/components/MyMembership";
 import EmailPreferences from "@/components/EmailPreferences";
 import MyOrganizationsSection, {
   type ManagedOrganization,
@@ -184,6 +185,9 @@ export default function MyAccountPage() {
 
   const volunteerSection = (
     <>
+      <h2 className="text-xl font-semibold mb-4">{m.workspace_questions()}</h2>
+      {identity?.linked && <MyPollSection key={accountLabel} getAccessToken={getAccessToken} />}
+      <h2 className="text-xl font-semibold mb-4">{m.workspace_identity()}</h2>
       {identityMutation.isPending ? (
         <div className="flex items-center justify-center gap-2 text-subtle mb-4">
           <Spinner label={m.loading()} size="sm" />
@@ -212,8 +216,6 @@ export default function MyAccountPage() {
               </dd>
             </dl>
           </Alert>
-
-          <MyPollSection key={accountLabel} getAccessToken={getAccessToken} />
 
           <Alert variant="secondary">
             <h3 className="text-base font-medium leading-tight">{m.my_eid_correction_heading()}</h3>
@@ -392,7 +394,7 @@ export default function MyAccountPage() {
       ),
     });
   if (isVolunteer)
-    tabs.push({ key: "volunteer", title: m.my_eid_title(), content: volunteerSection });
+    tabs.push({ key: "volunteer", title: m.workspace_volunteer(), content: volunteerSection });
   if (isAuthenticated || emailRegistrations !== null)
     tabs.push({
       key: "email-preferences",
@@ -405,7 +407,7 @@ export default function MyAccountPage() {
       ),
     });
   if (isAuthenticated)
-    tabs.push({ key: "account", title: m.my_account_title(), content: accountSection });
+    tabs.push({ key: "account", title: m.workspace_settings(), content: accountSection });
 
   const visibleTabs = tabs.filter(
     (tab) =>
@@ -479,6 +481,13 @@ export default function MyAccountPage() {
             >
               {m.manager_error()}
             </LoadErrorAlert>
+          )}
+          {(isAuthenticated || emailRegistrations !== null) && (
+            <MyMembership
+              key={`${sessionEpoch}-${accountId ?? "email"}`}
+              getAccessToken={getAccessToken}
+              accountId={accountId}
+            />
           )}
           <Tabs themed value={activeTab} onValueChange={(value) => setSelectedTab(String(value))}>
             {visibleTabs.length > 1 && (

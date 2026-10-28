@@ -20,7 +20,12 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         expect(await canvas.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain(
           "repeating-linear-gradient",
         );
-        expect(await canvas.evaluate((el) => el.style.aspectRatio)).toBe("50 / 80");
+        // Room metres and scaled canvas pixels express the same proportions.
+        const ratio = await canvas.evaluate((el) => {
+          const [width, height] = getComputedStyle(el).aspectRatio.split("/").map(Number);
+          return width / height;
+        });
+        expect(ratio).toBeCloseTo(50 / 80, 6);
 
         const selected = canvas.locator('[aria-current="location"]');
         await expect(selected).toHaveCount(1);

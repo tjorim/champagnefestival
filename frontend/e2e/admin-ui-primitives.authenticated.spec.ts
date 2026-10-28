@@ -25,7 +25,7 @@ for (const width of [1366, 390]) {
       });
       await sheet.getByRole("button", { name: "Close", exact: true }).focus();
       await page.keyboard.press("Tab");
-      await expect(sheet.getByRole("button", { name: /^Registrations/ })).toBeFocused();
+      await expect(sheet.getByRole("button", { name: "My tasks", exact: true })).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(sheet).toHaveCount(0);
       await expect(trigger).toBeFocused();
@@ -45,14 +45,14 @@ for (const width of [1366, 390]) {
       expect(Math.round((sidebar?.y ?? 0) + (sidebar?.height ?? 0))).toBe(900);
     }
     const content = navigation.getByRole("button", { name: "Content", exact: true });
+    const channels = navigation.getByRole("button", { name: "Screen channels", exact: true });
+    await expect(channels).toHaveCount(0);
     await content.click();
-    await expect(
-      navigation.getByRole("button", { name: "Screen channels", exact: true }),
-    ).toHaveCount(0);
+    await expect(channels).toBeVisible();
     await content.press("Space");
-    await expect(
-      navigation.getByRole("button", { name: "Screen channels", exact: true }),
-    ).toBeVisible();
+    await expect(channels).toHaveCount(0);
+    await content.press("Enter");
+    await expect(channels).toBeVisible();
     await navigation.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
     if (width < 992) await expect(page.getByRole("dialog")).toHaveCount(0);
     const pagination = page.getByRole("navigation", { name: "Pagination", exact: true });
