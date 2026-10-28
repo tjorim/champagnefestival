@@ -3,6 +3,18 @@
 Playwright, config in `../playwright.config.ts`. Tests run against `pnpm exec vite`
 with `VITE_MSW=true` (mocked API responses, no real backend needed).
 
+## Failure feedback
+
+Pull-request CI stops the standard Playwright run after three failed test cases
+(after the existing one retry per case). This bounds repeated failures across
+theme/viewport matrices. The separate signage run (`playwright.signage.config.ts`)
+has no failure limit. Main, manual and local runs retain the full suite. Assertion and test timeouts are
+unchanged: cold Vite loads still need the documented assertion allowance.
+
+For diagnosis, run the affected files with `--retries=0 --max-failures=1`, fix the
+first failure, then rerun the relevant matrix. Tests for a particular admin
+section should open `/admin?section=...`; `/admin` intentionally opens My tasks.
+
 ## Seeding mock state
 
 The MSW service worker owns `/api`, so `page.route` cannot override it. Public state

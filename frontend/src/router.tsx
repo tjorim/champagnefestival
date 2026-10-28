@@ -27,19 +27,24 @@ interface RouterContext {
 }
 
 export interface CheckInSearch {
+  edition?: string;
   id?: string;
 }
 
 export interface MyRegistrationsSearch {
+  edition?: string;
   token?: string;
+  tab?: string;
 }
 export interface VenuePlanSearch {
+  registration?: string;
   edition?: string;
   table?: string;
 }
 
 export function validateCheckInSearch(search: Record<string, unknown>): CheckInSearch {
   return {
+    edition: typeof search.edition === "string" ? search.edition : undefined,
     id: typeof search.id === "string" ? search.id : undefined,
   };
 }
@@ -48,6 +53,8 @@ export function validateMyRegistrationsSearch(
   search: Record<string, unknown>,
 ): MyRegistrationsSearch {
   return {
+    edition: typeof search.edition === "string" ? search.edition : undefined,
+    tab: typeof search.tab === "string" ? search.tab : undefined,
     token: typeof search.token === "string" ? search.token : undefined,
   };
 }
@@ -121,6 +128,7 @@ export function createAppRouter({
     path: "/venue-plan",
     validateSearch: (search: Record<string, unknown>): VenuePlanSearch => ({
       edition: typeof search.edition === "string" ? search.edition : undefined,
+      registration: typeof search.registration === "string" ? search.registration : undefined,
       table: typeof search.table === "string" ? search.table : undefined,
     }),
     loaderDeps: ({ search: { edition } }: { search: VenuePlanSearch }) => ({ edition }),

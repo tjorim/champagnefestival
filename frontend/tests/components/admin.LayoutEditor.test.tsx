@@ -612,7 +612,11 @@ describe("LayoutEditor", () => {
 
       const dialog = within(await screen.findByRole("dialog"));
       expect(await dialog.findByText("admin_layout_revisions_empty")).toBeInTheDocument();
-      expect(fetchLayoutRevisions).toHaveBeenCalledWith(expect.any(Function), "layout-1");
+      expect(fetchLayoutRevisions).toHaveBeenCalledWith(
+        expect.any(Function),
+        "layout-1",
+        expect.any(AbortSignal),
+      );
 
       fireEvent.change(dialog.getByPlaceholderText("admin_layout_revisions_label_placeholder"), {
         target: { value: "Opening night" },
@@ -687,6 +691,7 @@ describe("LayoutEditor", () => {
           "layout-1",
           "1",
           "current",
+          expect.any(AbortSignal),
         ),
       );
       expect(await dialog.findByText("Table B")).toBeInTheDocument();

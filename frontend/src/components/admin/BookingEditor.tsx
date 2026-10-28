@@ -1,3 +1,4 @@
+import { useTodayKey } from "@/hooks/useTodayKey";
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
@@ -28,7 +29,6 @@ import type {
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
-import { toLocalDateKey } from "@/utils/dateUtils";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 
@@ -137,10 +137,11 @@ export default function BookingEditor({
   const [transactionPending, setTransactionPending] = useState(false);
   const [transactionError, setTransactionError] = useState("");
 
+  const todayKey = useTodayKey();
   const transactionForm = useForm({
     defaultValues: {
       amount: "",
-      date: toLocalDateKey(new Date()),
+      date: todayKey,
       reference: "",
       note: "",
     },

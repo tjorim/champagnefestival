@@ -1,11 +1,11 @@
-import { useState, type ComponentProps } from "react";
+import { Alert } from "@/components/ui/alert";
+import { useLocationChoice } from "@/hooks/useLocationChoice";
+import { type ComponentProps } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import MembersManagement from "./MembersManagement";
 import PeopleManagement from "./PeopleManagement";
 import VolunteersManagement from "./VolunteersManagement";
-
-type PeopleTab = "all" | "members" | "volunteers";
 
 interface PeopleSectionProps {
   authHeaders: () => Record<string, string>;
@@ -26,29 +26,36 @@ export default function PeopleSection({
   members,
   volunteers,
 }: PeopleSectionProps) {
-  const [tab, setTab] = useState<PeopleTab>("all");
+  const [tab, setTab, invalidTab] = useLocationChoice(
+    "peopleTab",
+    ["all", "members", "volunteers"],
+    "all",
+  );
   return (
-    <Tabs value={tab} onValueChange={(value) => setTab(value as PeopleTab)}>
-      <TabsList variant="line" className="mb-5" aria-label={m.admin_people_tab()}>
-        <TabsTrigger value="all">
-          {m.admin_directory_tab()} ({counts.all})
-        </TabsTrigger>
-        <TabsTrigger value="members">
-          {m.admin_members_tab()} ({counts.members})
-        </TabsTrigger>
-        <TabsTrigger value="volunteers">
-          {m.admin_volunteers_tab()} ({counts.volunteers})
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="all">
-        <PeopleManagement authHeaders={authHeaders} {...people} />
-      </TabsContent>
-      <TabsContent value="members">
-        <MembersManagement authHeaders={authHeaders} {...members} />
-      </TabsContent>
-      <TabsContent value="volunteers">
-        <VolunteersManagement authHeaders={authHeaders} {...volunteers} />
-      </TabsContent>
-    </Tabs>
+    <>
+      {invalidTab && <Alert variant="info">{m.navigation_destination_unavailable()}</Alert>}
+      <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
+        <TabsList variant="line" className="mb-5" aria-label={m.admin_people_tab()}>
+          <TabsTrigger value="all">
+            {m.admin_directory_tab()} ({counts.all})
+          </TabsTrigger>
+          <TabsTrigger value="members">
+            {m.admin_members_tab()} ({counts.members})
+          </TabsTrigger>
+          <TabsTrigger value="volunteers">
+            {m.admin_volunteers_tab()} ({counts.volunteers})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="all">
+          <PeopleManagement authHeaders={authHeaders} {...people} />
+        </TabsContent>
+        <TabsContent value="members">
+          <MembersManagement authHeaders={authHeaders} {...members} />
+        </TabsContent>
+        <TabsContent value="volunteers">
+          <VolunteersManagement authHeaders={authHeaders} {...volunteers} />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }

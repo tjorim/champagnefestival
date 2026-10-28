@@ -11,6 +11,8 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // Stop repeated matrix failures early on PRs; main/manual runs retain full diagnostics.
+  maxFailures: process.env.CI && process.env.GITHUB_EVENT_NAME === "pull_request" ? 3 : undefined,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {

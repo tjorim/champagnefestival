@@ -1,6 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderLocation } from "../utils/locationRouter";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
+import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,12 +12,43 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 // MyRegistrationsPage needs a TanStack Router context (useSearch/useNavigate)
 // that these tests don't set up — irrelevant here since none of them exercise
 // the registrations tab itself.
+// It reports "no email session" on mount, as the real page does once discovery finishes; the
+// destination alert waits for that report. `discovery.reports` lets a test hold it back.
+const discovery = vi.hoisted(() => ({ reports: true }));
 vi.mock("@/components/MyRegistrationsPage", () => ({
-  default: () => <div>Registrations section</div>,
+  default: ({ onEmailSessionChange }: { onEmailSessionChange?: (value: null) => void }) => {
+    useEffect(() => {
+      if (discovery.reports) onEmailSessionChange?.(null);
+    }, [onEmailSessionChange]);
+    return <div>Registrations section</div>;
+  },
 }));
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    navigation_destination_unavailable: () => "Destination unavailable",
+    workspace_volunteer: () => "My volunteer tasks",
+    workspace_questions: () => "Questions and availability",
+    workspace_identity: () => "Identity and documents",
+    workspace_settings: () => "Account settings",
+    membership_title: () => "My membership",
+    membership_active: () => "Active membership",
+    membership_inactive: () => "No active membership found",
+    membership_load_error: () => "Could not load membership",
+    membership_unknown: () => "Membership unavailable",
+    membership_help: () => "Contact the organisers if this is incorrect.",
+    membership_rewards: () => "Reward progress is unavailable here.",
+    my_eid_help: () => "my_eid_help",
+    my_eid_niss_hint: () => "my_eid_niss_hint",
+    my_eid_eid_hint: () => "my_eid_eid_hint",
+    my_eid_optional_details: () => "my_eid_optional_details",
+    my_poll_prerequisite: () => "my_poll_prerequisite",
+    my_poll_auto: () => "my_poll_auto",
+    my_poll_explicit: () => "my_poll_explicit",
+    my_poll_pending: () => "my_poll_pending",
+    my_poll_saved: () => "my_poll_saved",
+    my_poll_retry: () => "my_poll_retry",
+
     close: () => "Close",
     logo_upload_label: () => "Upload logo",
     logo_upload_help: () => "PNG, JPEG or WebP",
@@ -90,13 +123,15 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("tab", { name: "My Account" }));
+  await user.click(screen.getByRole("tab", { name: "Account settings" }));
   await user.click(screen.getByRole("button", { name: "Delete my account" }));
   return screen.getByRole("alertdialog");
 }
 
 describe("MyAccountPage", () => {
   beforeEach(() => {
+    discovery.reports = true;
+    server.use(http.get("/api/me/membership", () => HttpResponse.json({ state: "inactive" })));
     server.use(http.get("/api/me/organizations", () => HttpResponse.json([])));
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
@@ -115,6 +150,41 @@ describe("MyAccountPage", () => {
     });
   });
 
+  it("restores an OIDC account tab through navigation history", async () => {
+    const router = await renderLocation(
+      <MyAccountPage />,
+      "/me?tab=account",
+      createTestQueryClientWrapper(),
+    );
+    expect(await screen.findByRole("button", { name: "Delete my account" })).toBeVisible();
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Registrations" }));
+    await waitFor(() => expect(router.state.location.search.tab).toBe("registrations"));
+    router.history.back();
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "Account settings" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+  });
+
+  it("explains unavailable account destinations", async () => {
+    await renderLocation(<MyAccountPage />, "/me?tab=volunteer", createTestQueryClientWrapper());
+    expect(await screen.findByText("Destination unavailable")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Registrations" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("waits for email-session discovery before calling a destination unavailable", async () => {
+    discovery.reports = false;
+    await renderLocation(<MyAccountPage />, "/me?tab=volunteer", createTestQueryClientWrapper());
+    expect(await screen.findByRole("tab", { name: "Registrations" })).toBeVisible();
+    // Discovery has not reported, so the requested tab may still appear.
+    expect(screen.queryByText("Destination unavailable")).not.toBeInTheDocument();
+  });
+
   it("shows organizations for the same OIDC account as staff sections", async () => {
     let authorization: string | null = null;
     server.use(
@@ -126,11 +196,11 @@ describe("MyAccountPage", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await user.click(await screen.findByRole("tab", { name: "My organisations" }));
     expect(screen.getByText("Shared account house")).toBeVisible();
     expect(authorization).toBe("Bearer oidc-access-token");
-    expect(screen.getByRole("tab", { name: "My Account" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Account settings" })).toBeVisible();
   });
 
   it("deletes the account and signs out after confirmation", async () => {
@@ -160,7 +230,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(screen.getByText("Signed in as mock-user")).toBeInTheDocument();
     await openDeleteConfirm(user);
@@ -180,7 +250,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -196,7 +266,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -227,7 +297,7 @@ describe("MyAccountPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(screen.getByText("Keycloak is unreachable.")).toBeInTheDocument();
     // The page never forces sign-in (unlike the old design), so the
@@ -249,7 +319,7 @@ describe("MyAccountPage", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(await screen.findByText("Could not load organizations")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "My organisations" })).not.toBeInTheDocument();
@@ -261,11 +331,11 @@ describe("MyAccountPage", () => {
   });
 
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Account settings" }));
     expect(await screen.findByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
-    expect(screen.queryByText("My eID")).not.toBeInTheDocument();
+    expect(screen.queryByText("My volunteer tasks")).not.toBeInTheDocument();
   });
 
   it("shows the volunteer registration form for an unlinked volunteer account", async () => {
@@ -295,11 +365,11 @@ describe("MyAccountPage", () => {
       ),
     );
 
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My eID" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Account settings" }));
     expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
   });
 
@@ -340,9 +410,9 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await user.click(screen.getByRole("tab", { name: "My eID" }));
+    await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     expect(await screen.findByText("Update your eID document number")).toBeInTheDocument();
     const input = screen.getByLabelText("New eID document number");
     await user.type(input, "123456789103");
@@ -388,9 +458,9 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
-    await user.click(screen.getByRole("tab", { name: "My eID" }));
+    await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
     const input = await screen.findByLabelText("New eID document number");
     await user.type(input, "999999999999");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -398,7 +468,20 @@ describe("MyAccountPage", () => {
     expect(
       await screen.findByText("That doesn't look like a valid eID document number."),
     ).toBeInTheDocument();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute(
+      "aria-describedby",
+      "my-eid-new-number-description my-eid-new-number-error",
+    );
     expect(correctionCalls).toBe(0);
+
+    // Editing the field clears the stale error so it is not announced for a corrected value.
+    await user.type(input, "1");
+    expect(
+      screen.queryByText("That doesn't look like a valid eID document number."),
+    ).not.toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "false");
   });
 
   it("shows three switchable tabs for an authenticated volunteer, defaulting to Registrations", async () => {
@@ -429,11 +512,11 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     const registrationsTab = await screen.findByRole("tab", { name: "Registrations" });
-    const volunteerTab = screen.getByRole("tab", { name: "My eID" });
-    const accountTab = screen.getByRole("tab", { name: "My Account" });
+    const volunteerTab = screen.getByRole("tab", { name: "My volunteer tasks" });
+    const accountTab = screen.getByRole("tab", { name: "Account settings" });
     expect(registrationsTab).toHaveAttribute("aria-selected", "true");
     expect(volunteerTab).toHaveAttribute("aria-selected", "false");
 
@@ -508,8 +591,8 @@ describe("MyAccountPage", () => {
 
     async function openPoll() {
       const user = userEvent.setup();
-      render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
-      await user.click(screen.getByRole("tab", { name: "My eID" }));
+      await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
+      await user.click(screen.getByRole("tab", { name: "My volunteer tasks" }));
       return user;
     }
 
@@ -560,15 +643,20 @@ describe("MyAccountPage", () => {
 
     it("shows a loading state while the poll is slow", async () => {
       mockVolunteer();
+      let release = () => {};
+      const ready = new Promise<void>((resolve) => {
+        release = resolve;
+      });
       server.use(
         http.get("/api/me/volunteer/poll", async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          await ready;
           return HttpResponse.json(poll([dinner()]));
         }),
       );
 
       await openPoll();
       expect(await screen.findAllByRole("status")).not.toHaveLength(0);
+      release();
       expect(await screen.findByText("Dinner on Sunday?")).toBeInTheDocument();
     });
 
@@ -817,7 +905,7 @@ describe("MyAccountPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
 
     expect(logout).toHaveBeenCalledTimes(1);

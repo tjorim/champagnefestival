@@ -166,7 +166,10 @@ test("captures a frozen playlist, finds the job after navigation, downloads and 
       if (url === "/api/signage/video-exports") return json(job ? [job] : []);
       if (url.includes("/slides/")) {
         const index = Number(url.split("/").at(-1));
-        const bytes = [...new Uint8Array(await (init?.body as Blob).arrayBuffer())];
+        const body = init?.body;
+        if (!(body instanceof Blob))
+          throw new Error("Expected a Blob for the rendered video slide");
+        const bytes = [...new Uint8Array(await body.arrayBuffer())];
         await (
           window as unknown as {
             recordVideoSlide: (index: number, bytes: number[]) => Promise<void>;

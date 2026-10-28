@@ -14,6 +14,9 @@ export const queryKeys = {
     ["check-in", registrationId, checkInToken] as const,
   volunteerRegistrationSearch: (query: string) => ["volunteer", "registrations", query] as const,
   admin: {
+    layoutRevisions: (layoutId: string) => ["admin", "layout-revisions", layoutId] as const,
+    layoutRevisionDiff: (layoutId: string, from: string, to: string) =>
+      ["admin", "layout-revision-diff", layoutId, from, to] as const,
     /** The admin dashboard's active edition — any type, unlike the public one. */
     activeEdition: ["admin", "active-edition"] as const,
     registrations: ["admin", "registrations"] as const,

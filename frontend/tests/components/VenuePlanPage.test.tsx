@@ -9,7 +9,7 @@ import { server } from "@/mocks/server";
 import { m } from "@/paraglide/messages";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
-let search: { edition?: string; table?: string } = {};
+let search: { edition?: string; table?: string; registration?: string } = {};
 
 vi.mock("@tanstack/react-router", () => ({
   useSearch: () => search,
@@ -18,8 +18,11 @@ vi.mock("@tanstack/react-router", () => ({
     to,
     search: linkSearch,
     ...props
-  }: { to: string; search?: { edition?: string } } & ComponentProps<"a">) => (
-    <a href={`${to}?edition=${linkSearch?.edition}`} {...props} />
+  }: { to: string; search?: { edition?: string; id?: string } } & ComponentProps<"a">) => (
+    <a
+      href={`${to}?${new URLSearchParams(Object.entries(linkSearch ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"))}`}
+      {...props}
+    />
   ),
 }));
 
@@ -135,7 +138,7 @@ describe("VenuePlanPage recovery states", () => {
 
     expect(await screen.findByText(m.venue_plan_error())).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: m.admin_retry() }));
-    expect(await screen.findByText(/Festival/)).toBeInTheDocument();
+    expect(await screen.findByRole("searchbox")).toBeInTheDocument();
     expect(screen.queryByText(m.venue_plan_error())).not.toBeInTheDocument();
   });
 
@@ -191,5 +194,93 @@ describe("VenuePlanPage recovery states", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(m.loading());
     expect(await screen.findByText(m.venue_plan_empty())).toBeInTheDocument();
+  });
+});
+
+const denseLayout = {
+  event_id: "festival",
+  event_title: "Festival",
+  id: "dense",
+  date: "2026-10-28",
+  label: "Main",
+  room: { id: "hall", name: "Main hall", width_m: 20, length_m: 15, color: "#123456" },
+  areas: [],
+  tables: Array.from({ length: 24 }, (_, index) => ({
+    id: `table-${index + 1}`,
+    name: `Table ${index + 1}`,
+    capacity: 8,
+    occupied_seats: index === 23 ? 9 : index % 3,
+    exclusive: index === 23,
+    x: (index % 6) * 18,
+    y: Math.floor(index / 6) * 30,
+    rotation: 0,
+    registration_ids: [],
+  })),
+};
+
+describe("VenuePlanPage table navigation", () => {
+  beforeEach(() => {
+    search = { edition: "ed-1" };
+    mockAuth();
+    server.use(
+      http.get("/api/venue-plan/:editionId", () =>
+        HttpResponse.json(
+          plan([
+            denseLayout,
+            {
+              ...denseLayout,
+              id: "other",
+              event_id: "dinner",
+              event_title: "Dinner",
+              date: "2026-10-29",
+              room: { ...denseLayout.room, id: "side", name: "Side room" },
+              tables: [{ ...denseLayout.tables[0], id: "side-table", name: "Side table" }],
+            },
+          ]),
+        ),
+      ),
+    );
+  });
+  it("finds a table by keyboard and reveals its map and textual status", async () => {
+    renderPage();
+    const input = await screen.findByRole("searchbox", { name: m.venue_plan_search() });
+    input.focus();
+    await userEvent.keyboard("Table 24");
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: m.venue_plan_show_table() }));
+    expect(screen.getByRole("status")).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent("Main hall — Festival");
+    expect(screen.getByRole("status")).toHaveTextContent(m.venue_plan_over_capacity());
+    expect(screen.getByRole("status")).toHaveTextContent(m.venue_plan_exclusive());
+    expect(document.querySelector('[aria-current="location"]')).toHaveTextContent("Table 24");
+  });
+  it("focuses direct-linked destinations and gives guidance for missing tables", async () => {
+    search.table = "table-24";
+    search.registration = "booking-1";
+    const rendered = renderPage();
+    await screen.findByRole("heading", { name: "Table 24", level: 2 });
+    expect(screen.getByRole("status")).toHaveFocus();
+    expect(screen.getByRole("status")).toHaveTextContent("Table 24");
+    expect(screen.getByRole("link", { name: m.venue_plan_back_check_in() })).toHaveAttribute(
+      "href",
+      "/check-in?id=booking-1",
+    );
+    rendered.unmount();
+    search.table = "missing";
+    renderPage();
+    expect(await screen.findByText(m.venue_plan_table_missing())).toHaveFocus();
+    expect(screen.getByRole("searchbox")).toBeVisible();
+  });
+  it("filters by room, event and date and explains empty results", async () => {
+    renderPage();
+    await screen.findByRole("searchbox");
+    await userEvent.click(screen.getByRole("combobox", { name: m.floor_plan_room() }));
+    await userEvent.click(screen.getByRole("option", { name: "Side room" }));
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    await userEvent.click(screen.getByRole("combobox", { name: m.venue_plan_event() }));
+    await userEvent.click(screen.getByRole("option", { name: "Dinner" }));
+    await userEvent.click(screen.getByRole("combobox", { name: m.floor_plan_day() }));
+    await userEvent.click(screen.getByRole("option", { name: "2026-10-28" }));
+    expect(screen.getByText(m.venue_plan_no_results())).toBeVisible();
   });
 });

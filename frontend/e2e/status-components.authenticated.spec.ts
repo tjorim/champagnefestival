@@ -30,7 +30,7 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         });
 
         // Admin: fixed-dark scope keeps readable, token-driven badges.
-        await page.goto("/admin");
+        await page.goto("/admin?section=registrations");
         await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
         const adminBadge = page.locator('#admin [data-slot="badge"]').first();
         await expect(adminBadge).toBeVisible();

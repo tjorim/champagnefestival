@@ -69,18 +69,26 @@ export async function seedVisualTheme(page: Page, theme: string): Promise<void> 
 export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
 /**
- * Waits for finite CSS animations (the admin content pane fades in over 200ms) to finish, so axe
- * never measures contrast against a half-transparent element. Infinite ones (spinners) are skipped.
+ * Waits for the page to stop changing, so axe never measures a half-finished state. Finite CSS
+ * animations and transitions (the admin content pane fades in over 200ms, buttons ease their
+ * colours) must finish, and layout-driven updates must land: `ResizeObserver` callbacks and the
+ * React re-renders they cause (an overflowing table taking its tab stop) arrive a frame or two
+ * after the data, later still on a loaded runner. Each pass therefore waits two frames before
+ * looking for animations those updates started. Infinite ones (spinners) are skipped.
  */
 export async function settleAnimations(page: Page): Promise<void> {
-  await page.evaluate(() =>
-    Promise.all(
-      document
+  await page.evaluate(async () => {
+    const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    for (let pass = 0; pass < 5; pass++) {
+      await frame();
+      await frame();
+      const running = document
         .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
-  );
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity);
+      if (running.length === 0) return;
+      await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    }
+  });
 }
 
 export async function expectNoAxeViolations(
