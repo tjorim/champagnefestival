@@ -16,6 +16,17 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    my_eid_help: () => "my_eid_help",
+    my_eid_niss_hint: () => "my_eid_niss_hint",
+    my_eid_eid_hint: () => "my_eid_eid_hint",
+    my_eid_optional_details: () => "my_eid_optional_details",
+    my_poll_prerequisite: () => "my_poll_prerequisite",
+    my_poll_auto: () => "my_poll_auto",
+    my_poll_explicit: () => "my_poll_explicit",
+    my_poll_pending: () => "my_poll_pending",
+    my_poll_saved: () => "my_poll_saved",
+    my_poll_retry: () => "my_poll_retry",
+
     close: () => "Close",
     logo_upload_label: () => "Upload logo",
     logo_upload_help: () => "PNG, JPEG or WebP",
@@ -398,6 +409,12 @@ describe("MyAccountPage", () => {
     expect(
       await screen.findByText("That doesn't look like a valid eID document number."),
     ).toBeInTheDocument();
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute(
+      "aria-describedby",
+      "my-eid-new-number-description my-eid-new-number-error",
+    );
     expect(correctionCalls).toBe(0);
   });
 

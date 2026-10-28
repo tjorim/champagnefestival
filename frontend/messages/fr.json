@@ -1903,5 +1903,15 @@
   "admin_composer_send_confirm_send": "Envoyer maintenant",
   "admin_composer_send_confirm_keep": "Garder comme brouillon",
   "admin_composer_send_blocked_email": "L’e-mail n’est pas encore configuré, ce message ne peut donc pas être envoyé.",
-  "api_error_composed_message_changed": "Ce message a été enregistré après votre vérification. Consultez la dernière version et réessayez."
+  "api_error_composed_message_changed": "Ce message a été enregistré après votre vérification. Consultez la dernière version et réessayez.",
+  "my_eid_niss_hint": "Au dos de votre carte d’identité belge : 11 chiffres, au format AA.MM.JJ-XXX.CC.",
+  "my_eid_eid_hint": "Le numéro de document au recto de votre eID belge : 12 chiffres, au format XXX-XXXXXXX-CC.",
+  "my_eid_help": "Ces données relient votre compte à votre dossier bénévole. Si vous ne pouvez pas les fournir, demandez de l’aide à l’organisation avant d’envoyer ce formulaire.",
+  "my_eid_optional_details": "Votre dossier bénévole est lié. Certaines données d’identité ne sont pas renseignées ; vous pouvez répondre aux questions sans les ajouter ici.",
+  "my_poll_prerequisite": "Reliez d’abord votre dossier bénévole. Vous pourrez ensuite répondre ici aux questions de l’édition active.",
+  "my_poll_auto": "Les modifications sont enregistrées immédiatement.",
+  "my_poll_explicit": "Utilisez le bouton d’enregistrement pour sauvegarder votre texte.",
+  "my_poll_pending": "Enregistrement en cours. Patientez avant de modifier une autre réponse.",
+  "my_poll_saved": "Réponse enregistrée.",
+  "my_poll_retry": "Réessayer l’enregistrement"
 }

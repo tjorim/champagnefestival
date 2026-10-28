@@ -132,6 +132,7 @@ async def test_register_rejects_invalid_niss_checksum(volunteer_client_as):
     async with volunteer_client_as("subject-a") as vclient:
         r = await _register(vclient, niss="00000000000")
         assert r.status_code == 422
+        assert r.json()["code"] == "volunteer_invalid_niss"
 
 
 @pytest.mark.anyio
@@ -139,6 +140,7 @@ async def test_register_rejects_invalid_eid_checksum(volunteer_client_as):
     async with volunteer_client_as("subject-a") as vclient:
         r = await _register(vclient, eid="999999999999")
         assert r.status_code == 422
+        assert r.json()["code"] == "volunteer_invalid_eid"
 
 
 @pytest.mark.anyio

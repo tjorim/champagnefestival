@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "@/utils/apiErrors";
 import EmailPreferences from "@/components/EmailPreferences";
 import MyOrganizationsSection, {
   type ManagedOrganization,
@@ -10,7 +11,13 @@ import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
+import {
+  PublicDescription,
+  PublicError,
+  PublicField,
+  PublicInput,
+  PublicLabel,
+} from "@/components/PublicFields";
 import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import MyPollSection from "@/components/MyPollSection";
 import { m } from "@/paraglide/messages";
@@ -111,10 +118,12 @@ export default function MyAccountPage() {
     onSubmit: async ({ value }) => {
       if (!isValidNiss(value.nationalRegisterNumber)) {
         setRegisterValidationError(m.my_eid_invalid_niss());
+        document.getElementById("my-eid-niss")?.focus();
         return;
       }
       if (!isValidEidNumber(value.eidDocumentNumber)) {
         setRegisterValidationError(m.my_eid_invalid_eid());
+        document.getElementById("my-eid-eid")?.focus();
         return;
       }
       setRegisterValidationError("");
@@ -150,6 +159,7 @@ export default function MyAccountPage() {
     onSubmit: async ({ value }) => {
       if (!isValidEidNumber(value.newEidDocumentNumber)) {
         setCorrectionValidationError(m.my_eid_invalid_eid());
+        document.getElementById("my-eid-new-number")?.focus();
         return;
       }
       setCorrectionValidationError("");
@@ -183,6 +193,9 @@ export default function MyAccountPage() {
         <>
           <Alert variant="secondary">
             <h3 className="text-base font-medium leading-tight">{m.my_eid_identity_heading()}</h3>
+            {(!identity.nationalRegisterNumber || !identity.eidDocumentNumber) && (
+              <p className="text-sm">{m.my_eid_optional_details()}</p>
+            )}
             <dl className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-0 text-sm">
               <dt className="w-5/12">{m.my_eid_niss_label()}</dt>
               <dd className="w-7/12">
@@ -213,6 +226,7 @@ export default function MyAccountPage() {
                 <correctionForm.Field name="newEidDocumentNumber">
                   {(field) => (
                     <PublicInput
+                      aria-invalid={Boolean(correctionValidationError)}
                       value={field.value}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={(event) => {
@@ -226,13 +240,14 @@ export default function MyAccountPage() {
                     />
                   )}
                 </correctionForm.Field>
+                <PublicDescription>{m.my_eid_eid_hint()}</PublicDescription>
+                {correctionValidationError && (
+                  <PublicError>{correctionValidationError}</PublicError>
+                )}
               </PublicField>
-              {(correctionValidationError || correctionMutation.isError) && (
+              {correctionMutation.isError && (
                 <Alert variant="danger" className="py-2 text-sm">
-                  {correctionValidationError ||
-                    (correctionMutation.error instanceof Error
-                      ? correctionMutation.error.message
-                      : m.my_eid_correction_error())}
+                  {apiErrorMessage(correctionMutation.error, m.my_eid_correction_error())}
                 </Alert>
               )}
               {correctionMutation.isSuccess && (
@@ -257,6 +272,8 @@ export default function MyAccountPage() {
         <Alert variant="secondary">
           <h3 className="text-base font-medium leading-tight">{m.my_eid_register_heading()}</h3>
           <p className="text-sm mb-4">{m.my_eid_register_description()}</p>
+          <p className="text-sm mb-4">{m.my_eid_help()}</p>
+          <p className="text-sm mb-4">{m.my_poll_prerequisite()}</p>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -281,6 +298,7 @@ export default function MyAccountPage() {
               <registerForm.Field name="nationalRegisterNumber">
                 {(field) => (
                   <PublicInput
+                    aria-invalid={Boolean(registerValidationError === m.my_eid_invalid_niss())}
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={(event) => {
@@ -293,12 +311,17 @@ export default function MyAccountPage() {
                   />
                 )}
               </registerForm.Field>
+              <PublicDescription>{m.my_eid_niss_hint()}</PublicDescription>
+              {registerValidationError === m.my_eid_invalid_niss() && (
+                <PublicError>{registerValidationError}</PublicError>
+              )}
             </PublicField>
             <PublicField className="mb-4" controlId="my-eid-eid">
               <PublicLabel>{m.my_eid_eid_label()}</PublicLabel>
               <registerForm.Field name="eidDocumentNumber">
                 {(field) => (
                   <PublicInput
+                    aria-invalid={Boolean(registerValidationError === m.my_eid_invalid_eid())}
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={(event) => {
@@ -312,13 +335,14 @@ export default function MyAccountPage() {
                   />
                 )}
               </registerForm.Field>
+              <PublicDescription>{m.my_eid_eid_hint()}</PublicDescription>
+              {registerValidationError === m.my_eid_invalid_eid() && (
+                <PublicError>{registerValidationError}</PublicError>
+              )}
             </PublicField>
-            {(registerValidationError || registerMutation.isError) && (
+            {registerMutation.isError && (
               <Alert variant="danger" className="py-2 text-sm">
-                {registerValidationError ||
-                  (registerMutation.error instanceof Error
-                    ? registerMutation.error.message
-                    : m.my_eid_register_error())}
+                {apiErrorMessage(registerMutation.error, m.my_eid_register_error())}
               </Alert>
             )}
             <Button

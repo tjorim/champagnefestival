@@ -89,3 +89,27 @@ describe("additional volunteer poll answers", () => {
     expect(screen.getByRole("button", { name: "poll_answer_save" })).toBeDisabled();
   });
 });
+
+it("preserves a failed draft while serializing delayed saves", async () => {
+  setup();
+  let finish: (() => void) | undefined;
+  server.use(
+    http.put("/api/me/volunteer/poll/questions/:id", async () => {
+      await new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      return HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 500 });
+    }),
+  );
+  const user = userEvent.setup();
+  const text = await screen.findByRole("textbox");
+  await user.type(text, "Keep my draft");
+  await user.click(screen.getByRole("button", { name: "poll_answer_save" }));
+  await screen.findByText("my_poll_pending");
+  for (const input of screen.getAllByRole("combobox")) expect(input).toBeDisabled();
+  finish!();
+  await screen.findByText("my_poll_save_error");
+  expect(text).toHaveValue("Keep my draft");
+  expect(screen.queryByText("PRIVATE DIAGNOSTIC")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "poll_answer_save" })).toBeEnabled();
+});

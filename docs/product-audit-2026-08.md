@@ -303,3 +303,12 @@ The synchronized HTML and PNG exports remain independent of this service.
 The full scope and acceptance criteria remain in #1349. This section records
 partial delivery and does not mark the video feature complete or change #1265's
 original HTML/PNG scope.
+
+### Volunteer form follow-up #1423 — 2026-10-28 (partial)
+
+Identity guidance, adjacent field errors and focus, translated API error handling,
+optional linked-details explanation, question-local save mode/status and serial poll
+write recovery are implemented. No additional identity collection is introduced.
+The everyday-task navigation remains owned by #1421. This item remains active:
+representative laptop/reduced-height, translated-text and 125%/150% browser zoom
+acceptance checks are still required; implementation alone does not close the issue.

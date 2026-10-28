@@ -1903,5 +1903,15 @@
   "admin_composer_send_confirm_send": "Send now",
   "admin_composer_send_confirm_keep": "Keep as draft",
   "admin_composer_send_blocked_email": "Email is not set up yet, so this message cannot be sent.",
-  "api_error_composed_message_changed": "This message was saved after you reviewed it. Review the latest version and try again."
+  "api_error_composed_message_changed": "This message was saved after you reviewed it. Review the latest version and try again.",
+  "my_eid_niss_hint": "On the back of your Belgian identity card: 11 digits, in the format YY.MM.DD-XXX.CC.",
+  "my_eid_eid_hint": "The document number on the front of your Belgian eID: 12 digits, in the format XXX-XXXXXXX-CC.",
+  "my_eid_help": "These details link your account to your volunteer record. If you cannot supply them, ask the organisers for help before submitting this form.",
+  "my_eid_optional_details": "Your volunteer record is linked. Some identity details are absent; you can answer questions without adding them here.",
+  "my_poll_prerequisite": "Link your volunteer record first. You can then answer the active edition’s questions here.",
+  "my_poll_auto": "Changes save immediately.",
+  "my_poll_explicit": "Use the save button to save your text.",
+  "my_poll_pending": "Saving. Please wait before changing another answer.",
+  "my_poll_saved": "Answer saved.",
+  "my_poll_retry": "Try saving again"
 }

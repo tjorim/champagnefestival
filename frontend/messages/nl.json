@@ -1903,5 +1903,15 @@
   "admin_composer_send_confirm_send": "Nu versturen",
   "admin_composer_send_confirm_keep": "Als concept bewaren",
   "admin_composer_send_blocked_email": "E-mail is nog niet ingesteld, dus dit bericht kan niet worden verstuurd.",
-  "api_error_composed_message_changed": "Dit bericht is opgeslagen nadat je het nakeek. Bekijk de laatste versie en probeer opnieuw."
+  "api_error_composed_message_changed": "Dit bericht is opgeslagen nadat je het nakeek. Bekijk de laatste versie en probeer opnieuw.",
+  "my_eid_niss_hint": "Op de achterkant van je Belgische identiteitskaart: 11 cijfers, in de vorm YY.MM.DD-XXX.CC.",
+  "my_eid_eid_hint": "Het documentnummer op de voorkant van je Belgische eID: 12 cijfers, in de vorm XXX-XXXXXXX-CC.",
+  "my_eid_help": "Deze gegevens koppelen je account aan je vrijwilligersdossier. Kun je ze niet invullen? Vraag de organisatie om hulp voordat je dit formulier verstuurt.",
+  "my_eid_optional_details": "Je vrijwilligersdossier is gekoppeld. Niet alle identiteitsgegevens zijn ingevuld; je hoeft hier geen ontbrekende gegevens toe te voegen om vragen te beantwoorden.",
+  "my_poll_prerequisite": "Koppel eerst je vrijwilligersdossier. Daarna kun je hier de vragen voor de actieve editie beantwoorden.",
+  "my_poll_auto": "Wijzigingen worden meteen opgeslagen.",
+  "my_poll_explicit": "Gebruik de bewaarknop om je tekst op te slaan.",
+  "my_poll_pending": "Bezig met opslaan. Wacht even voordat je een ander antwoord wijzigt.",
+  "my_poll_saved": "Antwoord opgeslagen.",
+  "my_poll_retry": "Opnieuw opslaan"
 }

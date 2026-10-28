@@ -21,13 +21,13 @@ docs/decisions/1006-volunteer-identity-self-service.md.
 
 from __future__ import annotations
 
-from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Person
+from app.services.errors import ApiHTTPException
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity
 from app.services.volunteers_service import ensure_volunteer_role
@@ -73,13 +73,15 @@ async def register_volunteer_identity(
     nrr = normalise_optional_identity(national_register_number)
     eid = normalise_optional_identity(eid_document_number)
     if nrr is None or not validate_niss_checksum(nrr):
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=422,
+            code="volunteer_invalid_niss",
             detail="That national register number doesn't look valid. Please check it and try again.",
         )
     if eid is None or not validate_eid_checksum(eid):
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=422,
+            code="volunteer_invalid_eid",
             detail="That eID document number doesn't look valid. Please check it and try again.",
         )
 
@@ -104,15 +106,17 @@ async def register_volunteer_identity(
         None,
     )
     if exact_match is None and matches:
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=409,
+            code="volunteer_identity_conflict",
             detail="These details conflict with an existing record. Ask an administrator for help.",
         )
 
     if exact_match is not None:
         if exact_match.oidc_subject is not None:
-            raise HTTPException(
+            raise ApiHTTPException(
                 status_code=409,
+                code="volunteer_identity_conflict",
                 detail="This identity is already linked to another account. Ask an administrator for help.",
             )
         exact_match.oidc_subject = subject
@@ -142,8 +146,9 @@ async def register_volunteer_identity(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=409,
+            code="volunteer_identity_conflict",
             detail="This information is already associated with another account.",
         ) from exc
     await db.refresh(person)
@@ -175,8 +180,9 @@ async def update_eid_document_number(
     """
     new_eid = normalise_optional_identity(new_eid_document_number)
     if new_eid is None or not validate_eid_checksum(new_eid):
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=422,
+            code="volunteer_invalid_eid",
             detail="That eID document number doesn't look valid. Please check it and try again.",
         )
 
@@ -199,8 +205,9 @@ async def update_eid_document_number(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
+        raise ApiHTTPException(
             status_code=409,
+            code="volunteer_identity_conflict",
             detail="This eID document number is already associated with another account.",
         ) from exc
     await db.refresh(person)
