@@ -191,6 +191,37 @@ describe("RegistrationModal component", () => {
     await waitFor(() => expect(requestBody.new_editions_opt_in).toBe(true));
   });
 
+  it("stamps the anti-bot start time when the dialog opens, not when it mounts", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-10-28T10:00:00.000Z"));
+      let requestBody: { form_start_time?: string } = {};
+      server.use(
+        http.post("/api/registrations", async ({ request }) => {
+          requestBody = (await request.json()) as { form_start_time?: string };
+          return HttpResponse.json({ id: "reg-start-time" }, { status: 201 });
+        }),
+      );
+      const view = renderModal({ show: false });
+
+      vi.setSystemTime(new Date("2026-10-28T11:30:00.000Z"));
+      view.rerender(<RegistrationModal show onHide={() => {}} event={vipEvent} />);
+
+      fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+      fireEvent.change(screen.getByLabelText(/Email \*/i), {
+        target: { value: "jane@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+        target: { value: "+32 123 456 789" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+      await waitFor(() => expect(requestBody.form_start_time).toBe("2026-10-28T11:30:00.000Z"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("sends the preferred language chosen from the themed select popup", async () => {
     let requestBody: { preferred_language?: string } = {};
     server.use(

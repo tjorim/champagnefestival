@@ -1908,6 +1908,7 @@
   "my_eid_niss_hint": "Au dos de votre carte d’identité belge : 11 chiffres, au format AA.MM.JJ-XXX.CC.",
   "my_eid_eid_hint": "Le numéro de document au recto de votre eID belge : 12 chiffres, au format XXX-XXXXXXX-CC.",
   "my_eid_help": "Ces données relient votre compte à votre dossier bénévole. Si vous ne pouvez pas les fournir, demandez de l’aide à l’organisation avant d’envoyer ce formulaire.",
+  "my_eid_conflict": "Ces données correspondent à un dossier existant ou entrent en conflit avec lui, nous n’avons donc pas pu les relier à votre compte. Veuillez contacter l’organisation pour obtenir de l’aide.",
   "my_eid_optional_details": "Votre dossier bénévole est lié. Certaines données d’identité ne sont pas renseignées ; vous pouvez répondre aux questions sans les ajouter ici.",
   "my_poll_prerequisite": "Reliez d’abord votre dossier bénévole. Vous pourrez ensuite répondre ici aux questions de l’édition active.",
   "my_poll_auto": "Les modifications sont enregistrées immédiatement.",

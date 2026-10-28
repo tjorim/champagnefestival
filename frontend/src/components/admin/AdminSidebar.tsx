@@ -48,6 +48,28 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 
+/** Sections under each collapsible sidebar group. */
+export const ADMIN_SIDEBAR_GROUPS = {
+  events: ["editions", "organizations", "event-categories", "product-categories"],
+  content: [
+    "faq",
+    "email-categories",
+    "announcements",
+    "signage-channels",
+    "policies",
+    "contact-details",
+  ],
+  venue: ["venues", "floor-plans"],
+  system: ["settings", "audit-log"],
+} as const;
+
+/** The group a section lives in, so the dashboard can expand it when the section becomes active. */
+export function adminSidebarGroupOf(section: string): string | undefined {
+  return Object.entries(ADMIN_SIDEBAR_GROUPS).find(([, keys]) =>
+    (keys as readonly string[]).includes(section),
+  )?.[0];
+}
+
 interface SidebarItemProps {
   itemKey: string;
   icon: LucideIcon;
@@ -93,7 +115,7 @@ interface SidebarGroupProps {
   groupKey: string;
   icon: LucideIcon;
   label: string;
-  itemKeys: string[];
+  itemKeys: readonly string[];
   children: React.ReactNode;
   activeKey: string;
   expandedGroups: Set<string>;
@@ -112,10 +134,7 @@ function SidebarGroup({
 }: SidebarGroupProps) {
   return (
     <SidebarMenuItem>
-      <Collapsible
-        open={expandedGroups.has(groupKey) || itemKeys.includes(activeKey)}
-        onOpenChange={() => toggleGroup(groupKey)}
-      >
+      <Collapsible open={expandedGroups.has(groupKey)} onOpenChange={() => toggleGroup(groupKey)}>
         <CollapsibleTrigger
           render={
             <SidebarMenuButton
@@ -127,11 +146,7 @@ function SidebarGroup({
           <Icon icon={icon} />
           <span>{label}</span>
           <Icon
-            icon={
-              expandedGroups.has(groupKey) || itemKeys.includes(activeKey)
-                ? ChevronUpIcon
-                : ChevronDownIcon
-            }
+            icon={expandedGroups.has(groupKey) ? ChevronUpIcon : ChevronDownIcon}
             className="ml-auto"
           />
         </CollapsibleTrigger>
@@ -236,12 +251,7 @@ export default function AdminSidebar({
                     groupKey="events"
                     icon={CalendarDaysIcon}
                     label={m.admin_events_group()}
-                    itemKeys={[
-                      "editions",
-                      "organizations",
-                      "event-categories",
-                      "product-categories",
-                    ]}
+                    itemKeys={ADMIN_SIDEBAR_GROUPS.events}
                     {...groupProps}
                   >
                     <SidebarItem
@@ -274,14 +284,7 @@ export default function AdminSidebar({
                     groupKey="content"
                     icon={LayersIcon}
                     label={m.admin_content_tab()}
-                    itemKeys={[
-                      "faq",
-                      "email-categories",
-                      "announcements",
-                      "signage-channels",
-                      "policies",
-                      "contact-details",
-                    ]}
+                    itemKeys={ADMIN_SIDEBAR_GROUPS.content}
                     {...groupProps}
                   >
                     <SidebarItem
@@ -326,7 +329,7 @@ export default function AdminSidebar({
                     groupKey="venue"
                     icon={MapPinIcon}
                     label={m.admin_venue_group()}
-                    itemKeys={["venues", "floor-plans"]}
+                    itemKeys={ADMIN_SIDEBAR_GROUPS.venue}
                     {...groupProps}
                   >
                     <SidebarItem
@@ -366,7 +369,7 @@ export default function AdminSidebar({
                     groupKey="system"
                     icon={WrenchIcon}
                     label={m.admin_system_group()}
-                    itemKeys={["settings", "audit-log"]}
+                    itemKeys={ADMIN_SIDEBAR_GROUPS.system}
                     {...groupProps}
                   >
                     <SidebarItem
