@@ -1,0 +1,238 @@
+# Restricted workspace and membership summary — #1421
+
+## Scope and identity contract (2026-10-28)
+
+The existing self-service APIs expose bookings, organisation contacts, volunteer
+identity and email preferences. Stamp-card reads are admin-only; they are not a
+member self-read API. The new `/api/me/membership` deliberately returns only
+`active`, `inactive` (no active membership found), or `unavailable` (no verified
+address). It uses the existing booking eligibility predicate: non-anonymised
+person, member role, member role not retired, and normalised verified email.
+OIDC uses only the current verified token address; a visitor session uses its
+verified address. Booking ownership, names, usernames and staff claims cannot
+substitute for that proof. No person IDs, history, documents or directory roles
+are disclosed. Responses are `Cache-Control: no-store`; the account component
+uses session-scoped queries and distinguishes load failures from membership state.
+
+This is a read only addition. Existing writes, identity provisioning, membership
+eligibility, stamp calculations and reward hand-out confirmations are unchanged;
+no write retry strategy is added. Reward progress is explicitly unavailable in
+self-service pending product approval of its scope. Capsule-exchange eligibility
+and the automatic first-card trigger are explained without promising a reward.
+
+## Task hierarchy
+
+`/admin` opens My tasks; existing `section` links continue to open their section.
+The home groups bookings/arrivals, preparation, and organiser follow-up. Admins
+see preparation and global work lists; volunteers see operational tools and their
+own details. Member and organisation-contact identities never grant staff access.
+The next active edition and dates label the home; its seating link carries that
+edition. Without an edition the existing seating picker requests one. Preparation
+links lead to edition/event/product management, people and venues/plans. Global
+people/venue/reward policy is distinguished from edition-specific work.
+
+Standalone check-in, seating and account pages share staff links. Within admin,
+links preserve namespaced list search state. Edition context travels through staff
+links and account sign-in; no emailed credential is copied.
+The existing linkable volunteer tab is labelled My volunteer tasks, with questions
+before a separate identity/document section. Account settings retains the existing
+isolated deletion section. Email-session users also get the membership summary.
+
+Reward configuration is a disclosure above the member directory, separate from
+member history. Empty history explains why festival attendance earns no stamps.
+The directory role editor explains that role metadata does not provision access.
+
+## Acceptance and remaining validation
+
+Targeted backend tests cover verified-address isolation, both sign-in methods,
+retired/anonymised records, non-member staff roles and unauthenticated denial.
+Component tests cover all five requested role combinations, account flows,
+no-edition seating links, preserved admin list state and membership load errors.
+Chromium workspace tests cover NL/FR/EN at 1280×800, 1366×768, 1440×900 and
+390×700, including link destinations, tab selection and horizontal reflow.
+
+The pending-bookings count uses the existing server count query and opens a fresh,
+global pending-registration list. A dedicated queue marker suppresses the normal
+event-day edition default, so the list matches the counted predicate. Loading and
+error remain distinct from a successful zero; the error has an explicit retry.
+Other follow-up links open whole work lists and explicitly say so.
+
+Real IdP journeys and a real-edition preparation rehearsal remain acceptance
+gates alongside #1420. Keep #1421 active until these are verified.
+
+### Validation results
+
+- Backend: Ruff, formatting and ty pass; full SQLite suite **1,947 passed,
+  35 skipped** (PostgreSQL-specific coverage requires PostgreSQL).
+- Frontend: type checking, lint and formatting pass; full suite **1,443 passed**.
+- Chromium: all 19 workspace scenarios pass across the runs, including the 12
+  locale/viewport combinations, six native 125%/150% zoom cases at 600px reduced
+  height and the pending-count-to-query check. The NL 1366px case passed on a
+  clean rerun after compilation triggered development-server reloads in the first
+  run. The six existing navigation/history scenarios also pass.
+- Production build passes. Bundle check remains over the existing total limit:
+  unchanged HEAD measured **2,881.4 KiB**, this implementation **2,892.4 KiB**,
+  limit **2,870 KiB**, using the same installed dependencies. Entry, admin and
+  eager checks pass (270.3 / 426.7 / 664.1 KiB). No budget was raised. Measurements
+  use the local toolchain and are not a production-network performance test.
+
+The browser suite uses synthetic MSW data and seeded authentication, not separate
+real IdP accounts. These checks establish navigation and reflow; they do not
+complete the real-role and real-edition operational acceptance gates above.
+
+## Expanded local validation — 2026-10-28
+
+Separate seeded browser sessions now cover admin-only, volunteer-only, member-only,
+organisation-contact and combined roles. Members and organisation contacts see
+membership/self-service without staff shortcuts; organisation contact discovery uses
+the manager mock identity. These are frontend role-boundary checks, not evidence of
+real IdP role provisioning or token issuance.
+
+A populated, read-only preparation walkthrough follows My tasks → People → Members
+→ Reward policy → My tasks → Festival Editions → event products → My tasks →
+Venues & Rooms → My tasks → booking list. It checks actual synthetic rows and the
+product dialog, rather than just the presence of shortcut links. No booking,
+member, product or venue is saved during this walkthrough.
+
+The reward lifecycle browser test passes after opening the new Reward policy
+section: create/select type, filter rewards due, confirm hand-out, reverse it and
+retire the type. Existing dense seating tests also pass.
+
+WCAG 2.0/2.1 A/AA scans of `/admin` and `/me` pass in desktop light, desktop dark
+and 375px phone layouts. The initial scan discovered inherited public text colour
+on the dark admin home (edition label and loading status). The shared task nav now
+sets `text-foreground`, fixing both consumers through their semantic theme tokens.
+UI inventory and import checks pass. The expanded tests are retained in
+`workspace-journeys.authenticated.spec.ts` and the shared preparation helper.
+
+A real IdP return still requires an allowed callback origin and actual role
+accounts. The local mock preparation check does not establish readiness of a real
+edition or a complete create/configure/publish rehearsal.
+
+The full PostgreSQL 18 suite also passes: **1,976 passed, six skipped** (SQLite-only
+compatibility checks). This includes the concurrency, advisory-lock, migrations,
+ledger-trigger and LISTEN paths skipped by the SQLite run. The database was an
+isolated local container with `pg_trgm` and `unaccent`; it was removed afterwards.
+
+The populated walkthrough now passes in all **nine laptop combinations**: widths
+1280, 1366 and 1440, each at 100%, 125% and 150% native browser zoom, with 600px
+height before zoom. Zoom cases use French labels and keyboard activation; standard
+cases use English. The test opens the responsive navigation drawer below 992 CSS
+pixels and recognises booking cards as well as table rows. Pixel ratio and visual
+viewport checks confirm native zoom, not page scaling. All six zoom scenarios and
+three standard scenarios passed in the final clean run. The earlier 12 locale/
+viewport workspace cases, five role journeys, pending queue, reward lifecycle and
+six accessibility scans also pass across the validation runs. The existing dense
+seating suite passed all ten scenarios.
+
+Follow-up frontend checks pass: targeted workspace/membership tests (15), lint,
+formatting and UI policy checks. The only application change made by this extended
+validation is the semantic text-colour correction described above; test selectors
+were updated for the intentional reward disclosure and responsive layouts.
+
+Final typecheck, formatting and production build pass. The total bundle is now
+2,892.5 KiB after the contrast correction; the existing 2,870 KiB limit still
+fails, while entry/admin/eager limits pass. No bundle limit was changed.
+
+
+### CI total-budget reconciliation — 2026-10-28
+
+CI job 123063522406 passed every step through the production build, then failed
+only the total-size check at 2,892.5 KiB. The [budget review](../ui-maintenance.md#workspace-feature-budget-review--2026-10-28-1421)
+sets the total allowance to 2,910 KiB, based on the already-over-limit 2,881.4 KiB
+baseline plus this feature's 11.1 KiB. Entry/admin/eager limits are unchanged.
+This supersedes the earlier unresolved total-budget failure recorded above.
+
+
+### E2E navigation and assertion maintenance — 2026-10-28
+
+Legacy cards, status, table, entrance, list-action and lazy-section tests now open
+`/admin?section=registrations` explicitly. Venue warm-start opens its own section.
+The task home remains the default. Lazy-section tests open collapsed groups and
+expect reload to retain the Analytics section. These changes preserve the tested
+behaviour without waiting for controls on the wrong page.
+
+The custom venue-view test compares the numeric aspect ratio: room dimensions
+`50 / 80` and canvas dimensions `1400 / 2240` are equivalent. It still checks
+background, selected table, percentage coordinates and horizontal overflow.
+
+PR CI now stops after three failed cases, retaining one retry per case; main and
+manual runs are uncapped. Normal timeouts are unchanged. Local diagnosis uses no
+retries and stops on the first failure, then reruns the affected cases.
+
+Validation: 96 focused E2E cases pass across the runs (excluding repeated auth
+setup): the complete six-theme cards/custom-view/status matrices plus tables,
+lazy sections, warm start, list actions and entrance cases, including native
+125%/150%/200% zoom. Retries were disabled. Typecheck, lint and formatting pass.
+Configuration inspection confirms PR CI uses `maxFailures: 3, retries: 1`, while
+manual CI retains the uncapped run and one retry.
+
+The shared-controls test now expects My tasks as the first focusable sidebar
+item and explicitly exercises the initially collapsed Content group with click,
+Space and Enter. Both 390px and 1366px cases pass without retries, including
+focus trapping/return, drawer dismissal, filtering and accessibility scans.
+
+### Broad CI-parity audit — 2026-10-28
+
+The complete PR Playwright selection now has **237 verified passing cases across
+the audit runs**, with retries disabled. The collected project/file/title results
+were compared with Playwright's JSON test list: zero uncovered cases. The separate
+production-worker/signage suite also passes both cases, including offline reload,
+clock synchronisation, cycle-boundary publication and wake-lock reacquisition.
+The full frontend unit suite passes **1,444 tests in 194 files**; the production
+build, locale audit, formatting and UI policy/tooling checks pass.
+
+The broader run exposed and fixed additional test issues:
+
+- The accessibility suite waited for a registration on the task home. It now
+  scans both home and the explicit registration route; all-section scans start
+  on registrations. Both destinations and every section pass light/dark/phone
+  accessibility checks.
+- History-changing role and volunteer fixtures could run before router startup.
+  They now wait for the actual Check-in component, not just document load/main.
+- A pending-state assertion depended on a 500ms response window. The mock now
+  waits for a test-controlled release after the disabled state is observed.
+
+Lint still reports **23 non-failing React purity/effect/ref/hook diagnostics** in
+existing application code. Three straightforward tooling/test warnings were
+fixed (a redundant regex escape, side-effect-only ternary and unsafe optional
+chain); locale-audit regression tests pass. No warning suppression was added.
+Runtime logs still include incomplete MSW fixtures (notably audit endpoints and
+some volunteer reads), expected negative-test failures, and dependency/tooling
+warnings. Passing tests do not establish warning-free logs or real IdP readiness.
+
+### Remaining-theme matrix — 2026-10-28
+
+All **284 non-default-theme cases** (Classic, Riviera, Cuvée, Remuage and
+Millésime) have passing results across the runs, verified against Playwright's
+project/file/title selection with zero uncovered cases. Retries were disabled.
+This covers the available public/admin theme matrices, including desktop/phone,
+light/dark preferences, forms, cards, layouts, runtime tokens, portals and the
+page-level accessibility scans. After the fix below, the complete themed admin
+selection passed in one clean run (128 cases including auth setup).
+
+The expanded registrations accessibility scan found a Cuvée contrast defect:
+`--surface-success-text: #2f7d4f` was about 4.04:1 against the `#efe6cd` parchment
+behind sticky action cells. Its Cuvée admin override is now `#286c43` (about
+5.1:1 on that surface). This corrects all consumers of that semantic text token;
+the success fill and separate dark-sidebar tokens are unchanged. Cuvée desktop
+and phone scans pass, with no accessibility exclusion added. UI policy and
+format checks pass. The earlier lint/mock/dependency warning inventory remains.
+
+### React lint cleanup — 2026-10-28
+
+The remaining React purity, effect, ref and dependency diagnostics have been
+addressed without disabling lint rules. Time-dependent rendering uses an explicit
+clock with timer cleanup and foreground refresh; client-only content uses an
+SSR-compatible hydration snapshot. Form timestamps are initialized once per
+session, registration selection uses reactive page data, and the layout drag
+modifier receives its mounted canvas through callback-ref state. Revision reads
+use session-scoped query keys and abort signals, with no automatic retry; closing
+the dialog discards that session. Existing write endpoints and retry policies
+are unchanged. Communication-preference reads retain their request-generation
+guard so a late read cannot overwrite a newer save.
+
+New regression coverage checks clock cadence and cleanup, foreground refresh,
+server/client hydration, responsive bubble density and stable rerenders, and
+countdown start/end/hide transitions. Existing revision-call assertions now
+include the cancellation signal.

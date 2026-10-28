@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,13 +37,14 @@ from app.services.pebble_access import (
     revoke_pebble_token,
     rotate_pebble_token,
 )
+from app.services.people_listing import role_active
 from app.services.users_service import (
     claim_unowned_registrations_for_email,
     get_or_create_user,
     verified_email_from_claims,
 )
 from app.translations import Language
-from app.utils import registration_to_guest_dict
+from app.utils import registration_to_guest_dict, roles_contains
 from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
 from app.visitor_session import get_current_user as get_current_portal_user
 
@@ -68,6 +69,39 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
             )
         ).all()
     )
+
+
+class MembershipSummary(BaseModel):
+    state: Literal["active", "inactive", "unavailable"]
+
+
+@router.get("/membership", response_model=MembershipSummary)
+async def get_my_membership(
+    response: Response,
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+    db: AsyncSession = Depends(get_db),
+) -> MembershipSummary:
+    """Minimal verified-address summary; no directory details or staff authorization.
+
+    Use the same active-member predicate as booking eligibility. Account ownership
+    of a booking never proves membership of its contact or another guest.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    user, claims = user_and_claims
+    email = verified_email_for_caller(user, claims)
+    if not email:
+        return MembershipSummary(state="unavailable")
+    member_id = await db.scalar(
+        select(Person.id)
+        .where(
+            roles_contains("member"),
+            role_active("member"),
+            func.lower(func.trim(Person.email)) == email,
+            Person.anonymised.is_(False),
+        )
+        .limit(1)
+    )
+    return MembershipSummary(state="active" if member_id else "inactive")
 
 
 @router.get("/communication-preference", response_model=CommunicationPreferenceOut)

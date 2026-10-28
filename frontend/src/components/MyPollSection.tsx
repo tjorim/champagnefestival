@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ANSWER_INPUTS } from "@/components/MyPollAnswers";
 import { PublicField, PublicLabel, PublicTextarea } from "@/components/PublicFields";
@@ -37,7 +37,8 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
   const token = () => getAccessToken() ?? "";
   const [poll, setPoll] = useState<MyPoll | null>(null);
   const [noteDraft, setNoteDraft] = useState<{ saved: string; text: string } | null>(null);
-  const [noteConfirmed, setNoteConfirmed] = useState(false);
+  const writeLock = useRef(false);
+  const [saveTarget, setSaveTarget] = useState<string | null>(null);
 
   const loadMutation = useMutation({
     mutationFn: () => getMyPoll(token(), getLocale()),
@@ -49,6 +50,9 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
       save(token(), getLocale()),
     retry: false,
     onSuccess: setPoll,
+    onSettled: () => {
+      writeLock.current = false;
+    },
   });
   const { mutate: load } = loadMutation;
 
@@ -76,8 +80,14 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
   }
 
   const saving = saveMutation.isPending;
-  const save = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => {
-    setNoteConfirmed(false);
+  const save = (
+    target: string,
+    action: (accessToken: string, locale: string) => Promise<MyPoll>,
+  ) => {
+    if (writeLock.current) return;
+    writeLock.current = true;
+    setSaveTarget(target);
+
     saveMutation.mutate(action);
   };
   const noted = poll.questions.filter((question) => POLL_KIND_HAS_NOTE[question.kind]);
@@ -85,14 +95,47 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
   const savedNote = poll.note ?? "";
   const note = noteDraft && noteDraft.saved === savedNote ? noteDraft.text : savedNote;
 
+  const feedback = (target: string) =>
+    saveTarget === target && (
+      <div className="mt-2" role={saveMutation.isError ? "alert" : "status"}>
+        {saving ? (
+          m.my_poll_pending()
+        ) : saveMutation.isError ? (
+          <>
+            <p>{apiErrorMessage(saveMutation.error, m.my_poll_save_error())}</p>
+            {target !== "note" &&
+              poll.questions.find((q) => q.id === target)?.kind !== "free_text" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (saveMutation.variables) save(target, saveMutation.variables);
+                  }}
+                >
+                  {m.my_poll_retry()}
+                </Button>
+              )}
+          </>
+        ) : target === "note" ? (
+          m.my_poll_note_saved()
+        ) : (
+          m.my_poll_saved()
+        )}
+      </div>
+    );
+
   return (
-    <Alert variant="secondary">
+    <section className="mb-6" aria-label={m.my_poll_heading()}>
       <h3 className="text-base font-medium leading-tight">{m.my_poll_heading()}</h3>
       <p className="text-sm mb-4">{m.my_poll_description()}</p>
       {poll.questions.map((question) => {
         const AnswerInput = ANSWER_INPUTS[question.kind];
         return (
-          <section key={question.id} className="mb-4" aria-label={question.title}>
+          <section
+            key={question.id}
+            className="mb-6 border-b border-border pb-4"
+            aria-label={question.title}
+          >
             <h4
               className="text-sm font-medium leading-tight mb-1"
               id={`my-poll-${question.id}-title`}
@@ -104,21 +147,33 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
               <p className="text-sm text-subtle mb-2">{m.volunteer_poll_event_notice()}</p>
             )}
             <Closing question={question} />
-            <AnswerInput question={question} saving={saving} save={save} />
+            {!question.closed && (
+              <p className="text-sm mb-2">
+                {question.kind === "free_text" ? m.my_poll_explicit() : m.my_poll_auto()}
+              </p>
+            )}
+            <AnswerInput
+              question={question}
+              saving={saving}
+              save={(action) => save(question.id, action)}
+            />
+            {feedback(question.id)}
           </section>
         );
       })}
       {noted.length > 0 && (
         <>
+          <p className="text-sm mb-2">{noteOpen ? m.my_poll_explicit() : m.my_poll_closed()}</p>
           <PublicField className="mb-2" controlId="my-poll-note">
             <PublicLabel>{m.my_poll_note_label()}</PublicLabel>
             <PublicTextarea
+              className="field-sizing-content"
               rows={2}
               maxLength={500}
-              disabled={!noteOpen}
+              disabled={!noteOpen || saving}
               value={note}
               onChange={(event) => {
-                setNoteConfirmed(false);
+                if (saveTarget === "note") setSaveTarget(null);
                 setNoteDraft({ saved: savedNote, text: event.target.value });
               }}
             />
@@ -129,26 +184,16 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
             className="mb-2"
             disabled={!noteOpen || saving || note.trim() === savedNote}
             onClick={() =>
-              saveMutation.mutate(
-                (accessToken, locale) => saveMyPollNote(accessToken, locale, note.trim()),
-                { onSuccess: () => setNoteConfirmed(true) },
+              save("note", (accessToken, locale) =>
+                saveMyPollNote(accessToken, locale, note.trim()),
               )
             }
           >
             {m.my_poll_note_save()}
           </Button>
-          {noteConfirmed && (
-            <p className="text-sm mb-2" role="status">
-              {m.my_poll_note_saved()}
-            </p>
-          )}
         </>
       )}
-      {saveMutation.isError && (
-        <Alert variant="danger" className="py-2 text-sm mb-0">
-          {apiErrorMessage(saveMutation.error, m.my_poll_save_error())}
-        </Alert>
-      )}
-    </Alert>
+      {feedback("note")}
+    </section>
   );
 }

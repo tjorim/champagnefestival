@@ -20,10 +20,12 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
           .context()
           .route("**/api/me/volunteer", (route) => route.fulfill({ json: { linked: false } }));
         await page.goto("/me");
-        const account = page.getByRole("tab", { name: "My Account", exact: true });
+        const account = page.getByRole("tab", { name: "Account settings", exact: true });
         await expect(account).toBeVisible();
         await account.click();
-        await expect(page.getByRole("tabpanel", { name: "My Account", exact: true })).toBeVisible();
+        await expect(
+          page.getByRole("tabpanel", { name: "Account settings", exact: true }),
+        ).toBeVisible();
         const accountPath = testInfo.outputPath(`${theme}-${width}-account.png`);
         await page.screenshot({ path: accountPath, fullPage: true });
         await testInfo.attach("account", { path: accountPath, contentType: "image/png" });

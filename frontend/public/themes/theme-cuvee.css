@@ -1032,7 +1032,8 @@
     --surface-muted-foreground: #57503f;
     --surface-border: rgba(38, 33, 20, 0.22);
     --surface-destructive: #a33d2f;
-    --surface-success-text: #2f7d4f;
+    /* Success ink must also contrast with parchment, including sticky action cells. */
+    --surface-success-text: #286c43;
     --layout-content: #241f14;
     --layout-subtle: #57503f;
     --layout-highlight: #8a6414;

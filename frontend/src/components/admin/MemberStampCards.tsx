@@ -64,7 +64,12 @@ export default function MemberStampCards({
               </Button>
             </Alert>
           )}
-          {cards.data?.length === 0 && <p>{m.stamp_no_cards()}</p>}
+          {cards.data?.length === 0 && (
+            <div>
+              <p>{m.stamp_no_cards()}</p>
+              <p>{m.stamp_eligibility_help()}</p>
+            </div>
+          )}
           <div className="flex flex-col gap-4">
             {cards.data
               ?.slice()

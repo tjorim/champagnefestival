@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/utils/queryKeys";
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminInput,
@@ -10,7 +12,7 @@ import {
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +31,6 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import type {
   LayoutRevision,
   LayoutRevisionAreaChange,
-  LayoutRevisionDiff,
   LayoutRevisionSnapshotArea,
   LayoutRevisionSnapshotTable,
   LayoutRevisionTableChange,
@@ -167,7 +168,11 @@ function DiffRowsList({ rows }: { rows: DiffRow[] }) {
   );
 }
 
-export default function LayoutRevisionsModal({
+export default function LayoutRevisionsModal(props: LayoutRevisionsModalProps) {
+  return props.show ? <LayoutRevisionsSession key={props.layoutId} {...props} /> : null;
+}
+
+function LayoutRevisionsSession({
   show,
   onHide,
   layoutId,
@@ -175,17 +180,49 @@ export default function LayoutRevisionsModal({
   onSaveRevision,
   onRestoreRevision,
 }: LayoutRevisionsModalProps) {
-  const [revisions, setRevisions] = useState<LayoutRevision[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const sessionId = useId();
+  const revisionsQuery = useQuery({
+    queryKey: [...queryKeys.admin.layoutRevisions(layoutId), sessionId],
+    queryFn: ({ signal }) => fetchLayoutRevisions(authHeaders, layoutId, signal),
+    retry: false,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const revisions = useMemo(() => revisionsQuery.data ?? [], [revisionsQuery.data]);
+  const loading = revisionsQuery.isFetching;
+  const loadError = revisionsQuery.isError
+    ? apiErrorMessage(revisionsQuery.error, m.admin_error_load_layout_revisions())
+    : null;
+  const [revisionGeneration, setRevisionGeneration] = useState(0);
+  const loadRevisions = async () => {
+    await revisionsQuery.refetch();
+    setRevisionGeneration((generation) => generation + 1);
+  };
 
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [compareFrom, setCompareFrom] = useState<string>(CURRENT_REF);
   const [compareTo, setCompareTo] = useState<string>(CURRENT_REF);
-  const [diff, setDiff] = useState<LayoutRevisionDiff | null>(null);
-  const [diffLoading, setDiffLoading] = useState(false);
-  const [diffError, setDiffError] = useState<string | null>(null);
+  const comparisonQuery = useQuery({
+    queryKey: [
+      ...queryKeys.admin.layoutRevisionDiff(layoutId, compareFrom, compareTo),
+      sessionId,
+      revisionGeneration,
+    ],
+    queryFn: ({ signal }) =>
+      compareLayoutRevisions(authHeaders, layoutId, compareFrom, compareTo, signal),
+    enabled: revisions.length > 0 && compareFrom !== compareTo,
+    retry: false,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const diff = comparisonQuery.data ?? null;
+  const diffLoading = comparisonQuery.isFetching;
+  const diffError = comparisonQuery.isError
+    ? apiErrorMessage(comparisonQuery.error, m.admin_error_compare_layout_revisions())
+    : null;
 
   const [restoreTarget, setRestoreTarget] = useState<number | null>(null);
   const [preview, setPreview] = useState<LayoutRestorePreview | null>(null);
@@ -194,42 +231,6 @@ export default function LayoutRevisionsModal({
   const [resolveAllocations, setResolveAllocations] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
-
-  // Guards against a stale response overwriting a newer one when the
-  // selected refs change faster than the network round-trip: only the most
-  // recently issued compare request is allowed to apply its result.
-  const compareRequestRef = useRef(0);
-
-  const loadRevisions = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const data = await fetchLayoutRevisions(authHeaders, layoutId);
-      setRevisions(data);
-    } catch (error) {
-      setLoadError(apiErrorMessage(error, m.admin_error_load_layout_revisions()));
-    } finally {
-      setLoading(false);
-    }
-  }, [authHeaders, layoutId]);
-
-  useEffect(() => {
-    if (!show) return;
-    setSaveError(null);
-    setDiff(null);
-    setDiffError(null);
-    setRestoreTarget(null);
-    setPreview(null);
-    setPreviewError(null);
-    setResolveAllocations(false);
-    setRestoreError(null);
-    void loadRevisions();
-    // Invalidate any compare request still in flight from a previous time
-    // this modal was open, so it can never overwrite the fresh state above.
-    return () => {
-      compareRequestRef.current += 1;
-    };
-  }, [show, loadRevisions]);
 
   const revisionOptions = useMemo(
     () => [...revisions].sort((a, b) => b.revisionNumber - a.revisionNumber),
@@ -252,36 +253,6 @@ export default function LayoutRevisionsModal({
   });
   const saving = useSelector(saveForm.atom, (s) => s.isSubmitting);
   const saveLabelValue = useSelector(saveForm.atom, (s) => s.values.label);
-
-  const runCompare = useCallback(
-    async (fromRef: string, toRef: string) => {
-      const requestId = ++compareRequestRef.current;
-      setDiffLoading(true);
-      setDiffError(null);
-      try {
-        const result = await compareLayoutRevisions(authHeaders, layoutId, fromRef, toRef);
-        if (compareRequestRef.current !== requestId) return;
-        setDiff(result);
-      } catch (error) {
-        if (compareRequestRef.current !== requestId) return;
-        setDiffError(apiErrorMessage(error, m.admin_error_compare_layout_revisions()));
-        setDiff(null);
-      } finally {
-        if (compareRequestRef.current === requestId) setDiffLoading(false);
-      }
-    },
-    [authHeaders, layoutId],
-  );
-
-  useEffect(() => {
-    if (!show || revisions.length === 0) return;
-    if (compareFrom === compareTo) {
-      compareRequestRef.current += 1;
-      setDiff(null);
-      return;
-    }
-    void runCompare(compareFrom, compareTo);
-  }, [show, compareFrom, compareTo, revisions.length, runCompare]);
 
   const openRestorePreview = async (revisionNumber: number) => {
     setRestoreTarget(revisionNumber);
@@ -316,10 +287,17 @@ export default function LayoutRevisionsModal({
     }
   };
 
-  const tableDiffRows = diff
-    ? tableRows(diff.addedTables, diff.removedTables, diff.changedTables)
+  const comparisonDiff = compareFrom === compareTo ? null : diff;
+  const tableDiffRows = comparisonDiff
+    ? tableRows(
+        comparisonDiff.addedTables,
+        comparisonDiff.removedTables,
+        comparisonDiff.changedTables,
+      )
     : [];
-  const areaDiffRows = diff ? areaRows(diff.addedAreas, diff.removedAreas, diff.changedAreas) : [];
+  const areaDiffRows = comparisonDiff
+    ? areaRows(comparisonDiff.addedAreas, comparisonDiff.removedAreas, comparisonDiff.changedAreas)
+    : [];
 
   const previewTableRows = preview
     ? tableRows(preview.tablesToAdd, preview.tablesToRemove, preview.tablesToUpdate)
@@ -468,7 +446,7 @@ export default function LayoutRevisionsModal({
                   </AdminSelect>
                 </AdminField>
               </div>
-              {diffLoading ? (
+              {compareFrom === compareTo ? null : diffLoading ? (
                 <div className="text-center py-2">
                   <Spinner label={m.admin_loading()} size="sm" />
                 </div>

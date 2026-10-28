@@ -28,7 +28,7 @@ test("downloads secondary tools only on selection and keeps navigation usable wh
     await route.continue();
   });
   try {
-    await page.goto("/admin");
+    await page.goto("/admin?section=registrations");
     await expectRegistrations(page);
     for (const module of [
       "AnalyticsDashboard",
@@ -56,7 +56,7 @@ test("downloads secondary tools only on selection and keeps navigation usable wh
 test("contains a failed chunk download and recovers after reloading", async ({ page }) => {
   test.setTimeout(60_000);
   await page.context().route(analyticsModule, (route) => route.abort("failed"));
-  await page.goto("/admin");
+  await page.goto("/admin?section=registrations");
   await expectRegistrations(page);
   await page.getByRole("button", { name: "Analytics", exact: true }).click();
   const error = page.getByRole("alert").filter({ hasText: "This section could not be loaded." });
@@ -74,19 +74,19 @@ test("contains a failed chunk download and recovers after reloading", async ({ p
     page.waitForEvent("domcontentloaded"),
     page.getByRole("button", { name: "Reload page", exact: true }).click(),
   ]);
-  await expectRegistrations(page);
-  await page.getByRole("button", { name: "Analytics", exact: true }).click();
   await expect(page.getByRole("img", { name: attendanceChart, exact: true })).toBeVisible();
 });
 
 test("opens content, editions, venue and floor-plan tools from the sidebar", async ({ page }) => {
   test.setTimeout(60_000);
-  await page.goto("/admin");
+  await page.goto("/admin?section=registrations");
   await expectRegistrations(page);
+  await page.getByRole("button", { name: "Events", exact: true }).click();
   await page.getByRole("button", { name: "Organisations", exact: true }).click();
   await expect(page.getByRole("heading", { name: /^Organisations/ })).toBeVisible();
   await page.getByRole("button", { name: "Festival Editions", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Festival Editions", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Venue", exact: true }).click();
   await page.getByRole("button", { name: "Venues & Rooms", exact: true }).click();
   await expect(page.getByRole("button", { name: "Add venue", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Floor Plans", exact: true }).click();

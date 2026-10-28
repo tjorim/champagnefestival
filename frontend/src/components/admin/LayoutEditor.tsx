@@ -41,7 +41,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAllRegistrationPages } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { withTableOccupancy } from "@/state/tableOccupancy";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { RestrictToElement } from "@dnd-kit/dom/modifiers";
@@ -445,15 +445,12 @@ function RoomCanvas({
 }: RoomCanvasProps) {
   const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null);
 
-  // RestrictToElement is called at drag time so canvasRef.current is always current.
-  // The lint rule against reading refs during render can't see that this accessor
-  // is only invoked later (dnd-kit's documented pattern for a not-yet-mounted
-  // element), and oxlint has no way to suppress it inline for this rule.
+  // Callback-ref state keeps the modifier reactive to the mounted canvas node.
   const modifiers = useMemo(
-    () => [RestrictToElement.configure({ element: () => canvasRef.current })],
-    [],
+    () => [RestrictToElement.configure({ element: () => canvasElement })],
+    [canvasElement],
   );
 
   const handleDragEnd = useCallback(
@@ -503,7 +500,7 @@ function RoomCanvas({
       <p className="sr-only">{m.admin_layout_keyboard_hint()}</p>
       <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
-          ref={canvasRef}
+          ref={setCanvasElement}
           onClick={() => {
             onSelectTable(null);
             onSelectArea(null);

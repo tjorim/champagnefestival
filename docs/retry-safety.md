@@ -1097,3 +1097,15 @@ feedback; refused or ambiguous failures never generate a success announcement.
 Tests cover all four absolute entrance payload forms with the Query online manager
 offline, prove no request/replay on reconnect, and verify the real browser controls
 and success/undo announcements.
+
+### Volunteer identity and answer feedback (#1423, 2026-10-28)
+
+Identity registration/correction retain their existing write contracts and never retry
+silently. Validation failures preserve form values. Poll writes remain serial across
+questions and the dietary note because each response contains the whole poll; controls
+pause until the response settles, preventing overlapping stale replacements. Failed
+instant answers expose a deliberate retry of the same replacement payload. Text and
+note drafts remain editable after failure and use their existing Save button to submit
+the current draft. No automatic retry is enabled. A lost response can mean the write
+committed; repeating the same answer replacement is safe under the existing poll
+contract, subject to the server checking the deadline again.

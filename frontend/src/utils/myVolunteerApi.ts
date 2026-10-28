@@ -27,11 +27,6 @@ function parseIdentity(data: unknown): MyVolunteerIdentity {
   };
 }
 
-async function throwDetailOrFallback(response: Response, fallback: string): Promise<never> {
-  const data = await response.json().catch(() => ({}));
-  throw new Error((data as { detail?: string }).detail ?? fallback);
-}
-
 /** Fetch the signed-in volunteer's own linked identity (GET /api/me/volunteer). */
 export async function getMyVolunteerIdentity(accessToken: string): Promise<MyVolunteerIdentity> {
   const response = await fetch("/api/me/volunteer", {
@@ -58,7 +53,7 @@ export async function registerMyVolunteerIdentity(
       eid_document_number: params.eidDocumentNumber,
     }),
   });
-  if (!response.ok) return throwDetailOrFallback(response, m.my_eid_register_error());
+  if (!response.ok) throw await apiErrorFromResponse(response, m.my_eid_register_error());
   return parseIdentity(await response.json());
 }
 
@@ -76,7 +71,7 @@ export async function updateMyEidDocumentNumber(
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ eid_document_number: eidDocumentNumber }),
   });
-  if (!response.ok) return throwDetailOrFallback(response, m.my_eid_correction_error());
+  if (!response.ok) throw await apiErrorFromResponse(response, m.my_eid_correction_error());
   return parseIdentity(await response.json());
 }
 

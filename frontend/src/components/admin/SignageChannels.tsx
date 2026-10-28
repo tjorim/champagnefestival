@@ -1,3 +1,4 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -156,7 +157,19 @@ export default function SignageChannels({
 }) {
   const client = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
-  const [channelId, setChannelId] = useState<string | null>(null);
+  const search = useSearch({ strict: false }) as Record<string, unknown>;
+  const navigate = useNavigate();
+  const requestedChannelId =
+    typeof search.signageChannel === "string" ? search.signageChannel : null;
+  const setChannelId = (id: string | null) => {
+    void navigate({
+      to: ".",
+      search: (previous: Record<string, unknown>) => ({
+        ...previous,
+        signageChannel: id ?? undefined,
+      }),
+    });
+  };
   const [channel, setChannel] = useState<ChannelDraft>(newChannel);
   const [channelOpen, setChannelOpen] = useState(false);
   const [channelInitial, setChannelInitial] = useState<ChannelDraft>(newChannel);
@@ -174,6 +187,35 @@ export default function SignageChannels({
     queryFn: ({ signal }) =>
       signageRequest<Channel[]>("channels", authHeaders(), "GET", undefined, signal),
   });
+  const channelId = channels.data?.some((item) => item.id === requestedChannelId)
+    ? requestedChannelId
+    : null;
+  // The selected channel lives in the URL, so a reload, shared link or history navigation can
+  // change it without `selectChannel` running. When the draft does not already describe the
+  // selected channel, adopt the loaded channel and drop the previous one's slide, error and
+  // preview state during render. Selecting or saving a channel already sets the draft, so those
+  // keep their status message. Never run while the channel dialog is open: that would discard
+  // the user's edits.
+  const [syncedChannelId, setSyncedChannelId] = useState<string | null>(null);
+  if (!channelOpen && channelId !== syncedChannelId) {
+    const selected = channels.data?.find((item) => item.id === channelId);
+    const target = selected
+      ? {
+          name: selected.name,
+          slug: selected.slug,
+          edition_id: selected.edition_id,
+          active: selected.active,
+        }
+      : newChannel();
+    setSyncedChannelId(channelId);
+    if (JSON.stringify(channel) !== JSON.stringify(target)) {
+      setChannel(target);
+      setDraft(null);
+      setSlideId(null);
+      setError("");
+      resetPreview();
+    }
+  }
   const slides = useQuery({
     queryKey: ["admin", "signage", "slides"],
     queryFn: ({ signal }) =>

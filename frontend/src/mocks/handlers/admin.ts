@@ -10,6 +10,14 @@ import {
   type SeedProductInclusion,
 } from "../data/editionStore";
 import { seedEventCategories, seedProductCategories, type SeedCategory } from "../data/categories";
+import {
+  seedAuditEntries,
+  seedContactMessages,
+  seedEmailCategories,
+  seedFaqItems,
+  seedPrivacyPolicy,
+  seedWaitlistEntries,
+} from "../data/adminContent";
 import { seedOrganizations } from "../data/organizations";
 import { localIsoDate } from "@/types/person";
 import { seedPeople } from "../data/people";
@@ -1826,6 +1834,58 @@ export const adminHandlers = [
   }),
 
   /** POST /api/push/test — admin-only test send (#941). */
+  /** Read-only queue and content screens: seeded lists so the admin sweep renders real states. */
+  http.get(
+    "/api/waitlist",
+    ({ request }) =>
+      requireAuth(request) ??
+      HttpResponse.json({ items: seedWaitlistEntries, total: seedWaitlistEntries.length }),
+  ),
+  http.get(
+    "/api/waitlist/scopes",
+    ({ request }) =>
+      requireAuth(request) ??
+      HttpResponse.json({
+        events: [{ id: "event-1", title: "Champagne dinner", outstanding: 1, total: 1 }],
+        products: [
+          {
+            id: "product-1",
+            name: "Tasting menu",
+            event_id: "event-1",
+            event_title: "Champagne dinner",
+            outstanding: 1,
+            total: 1,
+          },
+        ],
+      }),
+  ),
+  http.get(
+    "/api/contact",
+    ({ request }) =>
+      requireAuth(request) ??
+      HttpResponse.json({ items: seedContactMessages, total: seedContactMessages.length }),
+  ),
+  http.get(
+    "/api/editions/:id/scratchpad",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json({ content: "" }),
+  ),
+  http.get("/api/faq", ({ request }) => requireAuth(request) ?? HttpResponse.json(seedFaqItems)),
+  http.get(
+    "/api/email-categories",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedEmailCategories),
+  ),
+  http.get(
+    "/api/policies/:key",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedPrivacyPolicy),
+  ),
+  http.get(
+    "/api/audit/resource-types",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json(["event", "registration"]),
+  ),
+  http.get(
+    "/api/audit",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedAuditEntries),
+  ),
   http.post("/api/push/test", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

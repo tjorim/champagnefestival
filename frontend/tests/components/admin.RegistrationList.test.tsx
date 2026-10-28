@@ -65,6 +65,17 @@ function renderRegistrationList({
 }
 
 describe("RegistrationList — scoped error display", () => {
+  it("clears an active-edition restriction when choosing standalone events", async () => {
+    renderRegistrationList();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "admin_registration_filters" }));
+    const active = screen.getByRole("button", { name: /admin_filter_active_edition.*2025/ });
+    await user.click(active);
+    expect(active).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /admin_filter_edition_standalone/ }));
+    expect(active).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("shows sectionError alert inline when a mutation fails", () => {
     renderRegistrationList({ sectionError: "Check-in failed." });
     expect(screen.getByRole("alert")).toHaveTextContent("Check-in failed.");

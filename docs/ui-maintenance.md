@@ -225,3 +225,17 @@ pnpm 10.33.0; CI must read the package declaration rather than keeping a second
 hard-coded pnpm version. Frontend Node setup reads `.node-version`. Keep tool
 changes in reviewable PRs and preserve runtime-version/bundle investigations as
 separate work.
+
+### Workspace feature budget review — 2026-10-28 (#1421)
+
+The total JavaScript limit is now 2,910 KiB (from 2,870). The same-dependency
+baseline measured 2,881.4 KiB before the workspace implementation, already above
+the previous limit. The workspace, verified membership summary and NL/FR/EN copy
+bring it to 2,892.5 KiB (+11.1 KiB). CI run 40758357206 reproduced that total;
+its locale audit, typecheck, lint, tests and build passed. The new limit leaves
+17.5 KiB of headroom. No dependency or browser target changed, and no runtime
+code was removed to meet the size check.
+
+Entry (270.3 / 325 KiB), AdminDashboard (426.7 / 450 KiB) and eager graph
+(664.1 / 665 KiB) retain their existing limits. In particular, the eager graph
+remains tight and must be reviewed before adding another eager dependency.

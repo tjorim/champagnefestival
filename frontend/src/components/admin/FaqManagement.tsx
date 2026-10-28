@@ -254,8 +254,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const languageBadge = (label: string, translated: boolean) => (
     <Badge
       key={label}
-      variant={translated ? "success" : "secondary"}
-      className={`ms-1 text-tiny ${translated ? "" : "opacity-50"}`}
+      variant={translated ? "success" : "outline"}
+      className="ms-1 text-tiny"
       title={translated ? undefined : m.admin_faq_locale_missing_title({ locale: label })}
     >
       {label}

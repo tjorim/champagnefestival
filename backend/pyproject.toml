@@ -52,6 +52,14 @@ asyncio_default_test_loop_scope = "session"
 addopts = "-p no:anyio"
 markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=auto)"]
 testpaths = ["tests"]
+# Third-party deprecations we cannot fix here; each entry is scoped to the emitting
+# module. Drop an entry once its upstream release stops warning.
+filterwarnings = [
+  # slowapi 0.1.10 (latest) calls asyncio.iscoroutinefunction; removed in Python 3.16.
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:slowapi.extension",
+  # fastmcp's py-key-value-aio protocol is checked by beartype without @runtime_checkable.
+  "ignore:.*isn't explicitly decorated with @runtime_checkable:DeprecationWarning:beartype",
+]
 
 [tool.ruff]
 target-version = "py315"
