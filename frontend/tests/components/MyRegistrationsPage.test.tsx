@@ -218,10 +218,14 @@ describe("MyRegistrationsPage", () => {
       http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
-    await renderPage("/me?token=expired-token");
+    const expiredView = await renderPage("/me?token=expired-token&tab=organizations");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
+      expect(expiredView.router.state.location.search).toEqual({
+        tab: "organizations",
+        token: undefined,
+      });
       expect(
         screen.getByRole("button", { name: /request another secure link/i }),
       ).toBeInTheDocument();

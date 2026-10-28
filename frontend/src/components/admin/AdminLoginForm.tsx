@@ -40,7 +40,11 @@ export default function AdminLoginForm() {
               <p className="mb-0">{auth.authError}</p>
             </Alert>
           ) : null}
-          <Button variant="warning" onClick={() => auth.login()} disabled={auth.isSigningIn}>
+          <Button
+            variant="warning"
+            onClick={() => auth.login(window.location.pathname + window.location.search)}
+            disabled={auth.isSigningIn}
+          >
             {auth.isSigningIn ? (
               <>
                 <Spinner size="sm" className="me-2" aria-hidden="true" />

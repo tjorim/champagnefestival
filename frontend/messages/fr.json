@@ -1,4 +1,5 @@
 {
+  "navigation_destination_unavailable": "Cette destination n’est pas disponible pour votre compte. Une page disponible est affichée.",
   "admin_review_selected_bookings": "Vérifier les réservations sélectionnées ({count})",
   "admin_booking_allocation_error": "Choisissez une table et un nombre de personnes valide pour chaque attribution.",
   "admin_booking_allocation_excess": "Le nombre de places attribuées dépasse le nombre de personnes. Réduisez une attribution ou augmentez le nombre de personnes.",

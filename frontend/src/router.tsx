@@ -32,6 +32,7 @@ export interface CheckInSearch {
 
 export interface MyRegistrationsSearch {
   token?: string;
+  tab?: string;
 }
 export interface VenuePlanSearch {
   registration?: string;
@@ -49,6 +50,7 @@ export function validateMyRegistrationsSearch(
   search: Record<string, unknown>,
 ): MyRegistrationsSearch {
   return {
+    tab: typeof search.tab === "string" ? search.tab : undefined,
     token: typeof search.token === "string" ? search.token : undefined,
   };
 }

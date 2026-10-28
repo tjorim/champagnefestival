@@ -354,6 +354,7 @@ export default function RegistrationList({
   const changeEditionFilter = useCallback(
     (value: EditionFilter) => {
       setEditionFilter(value);
+      setActiveEditionOnly(false);
       setPage(1);
       clearSelection();
     },
@@ -362,6 +363,7 @@ export default function RegistrationList({
 
   const toggleActiveEditionOnly = useCallback(() => {
     setActiveEditionOnly((current) => !current);
+    setEditionFilter("all");
     setPage(1);
     clearSelection();
   }, [clearSelection]);
@@ -1214,7 +1216,13 @@ export default function RegistrationList({
                       pressed={activeEditionOnly}
                       onPressedChange={toggleActiveEditionOnly}
                     >
-                      {m.admin_filter_active_edition()} ({editionCounts.active})
+                      {m.admin_filter_active_edition()}:{" "}
+                      {activeEdition.editionType === "festival"
+                        ? m.festival_name()
+                        : activeEdition.editionType === "bourse"
+                          ? m.admin_edition_type_bourse()
+                          : m.admin_edition_type_capsule_exchange()}{" "}
+                      {activeEdition.year} ({editionCounts.active})
                     </Toggle>
                   </div>
                   {allocationOptions.length > 0 && (

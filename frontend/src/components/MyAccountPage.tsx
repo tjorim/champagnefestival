@@ -1,3 +1,5 @@
+import { useSearch } from "@tanstack/react-router";
+import { accountTabs, useLocationChoice } from "@/hooks/useLocationChoice";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import EmailPreferences from "@/components/EmailPreferences";
 import MyOrganizationsSection, {
@@ -56,11 +58,12 @@ export default function MyAccountPage() {
     clearAuthError,
     logout,
   } = useAuth();
+  const locationSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const instanceId = useId();
   const [sessionEpoch, setSessionEpoch] = useState(0);
   const sessionEpochRef = useRef(0);
   const [emailRegistrations, setEmailRegistrations] = useState<GuestRegistration[] | null>(null);
-  const [selectedTab, setSelectedTab] = useState("registrations");
+  const [selectedTab, setSelectedTab] = useLocationChoice("tab", accountTabs, "registrations");
   const onEmailSessionChange = useCallback(
     (registrations: GuestRegistration[] | null) => {
       // Discard a late result from the component replaced after sign-out.
@@ -416,12 +419,21 @@ export default function MyAccountPage() {
     ? selectedTab
     : visibleTabs[0]?.key;
 
+  const activeTitle = visibleTabs.find((tab) => tab.key === activeTab)?.title;
+  useEffect(() => {
+    const title = activeTitle;
+    if (title) document.title = `${title} — ${m.my_account_title()}`;
+  }, [activeTitle]);
+
   return (
     <div className="site-container mx-auto w-full max-w-account py-12">
       <h1 id="my-account-title" className="text-2xl font-medium leading-tight mb-6 text-center">
         {m.my_account_title()}
       </h1>
 
+      {locationSearch.tab !== undefined && locationSearch.tab !== activeTab && (
+        <Alert variant="info">{m.navigation_destination_unavailable()}</Alert>
+      )}
       {authError && (
         <Alert variant="danger" onClose={clearAuthError}>
           {authError}

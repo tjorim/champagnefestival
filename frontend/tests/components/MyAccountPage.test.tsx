@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderLocation } from "../utils/locationRouter";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +17,7 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    navigation_destination_unavailable: () => "Destination unavailable",
     my_eid_help: () => "my_eid_help",
     my_eid_niss_hint: () => "my_eid_niss_hint",
     my_eid_eid_hint: () => "my_eid_eid_hint",
@@ -126,6 +128,33 @@ describe("MyAccountPage", () => {
     });
   });
 
+  it("restores an OIDC account tab through navigation history", async () => {
+    const router = await renderLocation(
+      <MyAccountPage />,
+      "/me?tab=account",
+      createTestQueryClientWrapper(),
+    );
+    expect(await screen.findByRole("button", { name: "Delete my account" })).toBeVisible();
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Registrations" }));
+    await waitFor(() => expect(router.state.location.search.tab).toBe("registrations"));
+    router.history.back();
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "My Account" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+  });
+
+  it("explains unavailable account destinations", async () => {
+    await renderLocation(<MyAccountPage />, "/me?tab=volunteer", createTestQueryClientWrapper());
+    expect(await screen.findByText("Destination unavailable")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Registrations" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
   it("shows organizations for the same OIDC account as staff sections", async () => {
     let authorization: string | null = null;
     server.use(
@@ -137,7 +166,7 @@ describe("MyAccountPage", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await user.click(await screen.findByRole("tab", { name: "My organisations" }));
     expect(screen.getByText("Shared account house")).toBeVisible();
     expect(authorization).toBe("Bearer oidc-access-token");
@@ -171,7 +200,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(screen.getByText("Signed in as mock-user")).toBeInTheDocument();
     await openDeleteConfirm(user);
@@ -191,7 +220,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -207,7 +236,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -238,7 +267,7 @@ describe("MyAccountPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(screen.getByText("Keycloak is unreachable.")).toBeInTheDocument();
     // The page never forces sign-in (unlike the old design), so the
@@ -260,7 +289,7 @@ describe("MyAccountPage", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     expect(await screen.findByText("Could not load organizations")).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "My organisations" })).not.toBeInTheDocument();
@@ -272,7 +301,7 @@ describe("MyAccountPage", () => {
   });
 
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
     expect(await screen.findByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
@@ -306,7 +335,7 @@ describe("MyAccountPage", () => {
       ),
     );
 
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     await userEvent.setup().click(screen.getByRole("tab", { name: "My eID" }));
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
@@ -351,7 +380,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     await user.click(screen.getByRole("tab", { name: "My eID" }));
     expect(await screen.findByText("Update your eID document number")).toBeInTheDocument();
@@ -399,7 +428,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     await user.click(screen.getByRole("tab", { name: "My eID" }));
     const input = await screen.findByLabelText("New eID document number");
@@ -446,7 +475,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
 
     const registrationsTab = await screen.findByRole("tab", { name: "Registrations" });
     const volunteerTab = screen.getByRole("tab", { name: "My eID" });
@@ -525,7 +554,7 @@ describe("MyAccountPage", () => {
 
     async function openPoll() {
       const user = userEvent.setup();
-      render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+      await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
       await user.click(screen.getByRole("tab", { name: "My eID" }));
       return user;
     }
@@ -834,7 +863,7 @@ describe("MyAccountPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await renderLocation(<MyAccountPage />, "/me", createTestQueryClientWrapper());
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
 
     expect(logout).toHaveBeenCalledTimes(1);

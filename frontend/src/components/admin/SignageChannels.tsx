@@ -1,3 +1,4 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -156,7 +157,19 @@ export default function SignageChannels({
 }) {
   const client = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
-  const [channelId, setChannelId] = useState<string | null>(null);
+  const search = useSearch({ strict: false }) as Record<string, unknown>;
+  const navigate = useNavigate();
+  const requestedChannelId =
+    typeof search.signageChannel === "string" ? search.signageChannel : null;
+  const setChannelId = (id: string | null) => {
+    void navigate({
+      to: ".",
+      search: (previous: Record<string, unknown>) => ({
+        ...previous,
+        signageChannel: id ?? undefined,
+      }),
+    });
+  };
   const [channel, setChannel] = useState<ChannelDraft>(newChannel);
   const [channelOpen, setChannelOpen] = useState(false);
   const [channelInitial, setChannelInitial] = useState<ChannelDraft>(newChannel);
@@ -174,6 +187,9 @@ export default function SignageChannels({
     queryFn: ({ signal }) =>
       signageRequest<Channel[]>("channels", authHeaders(), "GET", undefined, signal),
   });
+  const channelId = channels.data?.some((item) => item.id === requestedChannelId)
+    ? requestedChannelId
+    : null;
   const slides = useQuery({
     queryKey: ["admin", "signage", "slides"],
     queryFn: ({ signal }) =>

@@ -1,3 +1,4 @@
+import { accountReturnTo } from "@/hooks/useLocationChoice";
 import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
   CalendarDaysIcon,
@@ -82,7 +83,7 @@ export default function MyRegistrationsPage({
   onEmailSessionChange,
 }: MyRegistrationsPageProps = {}) {
   const auth = useAuth();
-  const { token: rawToken } = useSearch({ from: "/me" });
+  const { token: rawToken, tab } = useSearch({ from: "/me" });
   const token = rawToken?.trim() ?? "";
   const navigate = useNavigate({ from: "/me" });
   const accessToken = auth.getAccessToken();
@@ -134,7 +135,10 @@ export default function MyRegistrationsPage({
   const [tokenAttempted, setTokenAttempted] = useState(false);
   const registrationsMutation = useMutation({
     mutationFn: async (lookupToken: string) => {
-      await navigate({ search: {}, replace: true });
+      await navigate({
+        search: (previous: { tab?: string }) => ({ tab: previous.tab }),
+        replace: true,
+      });
       return redeemVisitorMagicLink(lookupToken);
     },
     retry: false,
@@ -317,7 +321,10 @@ export default function MyRegistrationsPage({
     (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
 
   const resetToRequestForm = useCallback(() => {
-    void navigate({ search: {}, replace: true });
+    void navigate({
+      search: (previous: { tab?: string }) => ({ tab: previous.tab }),
+      replace: true,
+    });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);
@@ -431,8 +438,8 @@ export default function MyRegistrationsPage({
             onClick={() => {
               // Hand over what was typed so the IdP's email link can start from the same address.
               const loginHint = email.trim();
-              if (loginHint.includes("@")) auth.login("/me", { loginHint });
-              else auth.login("/me");
+              if (loginHint.includes("@")) auth.login(accountReturnTo(tab), { loginHint });
+              else auth.login(accountReturnTo(tab));
             }}
           >
             {m.my_registrations_sign_in_instead()}

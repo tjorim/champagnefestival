@@ -1,4 +1,5 @@
 {
+  "navigation_destination_unavailable": "Deze bestemming is niet beschikbaar voor je account. Een beschikbare pagina wordt getoond.",
   "admin_review_selected_bookings": "Geselecteerde boekingen bekijken ({count})",
   "admin_booking_allocation_error": "Kies voor elke toewijzing een tafel en een geldig aantal gasten.",
   "admin_booking_allocation_excess": "Er zijn meer zitplaatsen toegewezen dan gasten. Verlaag een toewijzing of verhoog het aantal gasten.",

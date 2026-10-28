@@ -1,4 +1,5 @@
 {
+  "navigation_destination_unavailable": "This destination is unavailable for your account. Showing an available page.",
   "admin_review_selected_bookings": "Review selected bookings ({count})",
   "admin_booking_allocation_error": "Choose a table and a valid guest count for each allocation.",
   "admin_booking_allocation_excess": "Allocated seats exceed the guest count. Reduce an allocation or increase the guest count.",
