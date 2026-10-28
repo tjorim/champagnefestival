@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { rehearsePreparation } from "./workspacePreparation";
 import en from "../messages/en.json" with { type: "json" };
 import nl from "../messages/nl.json" with { type: "json" };
 import fr from "../messages/fr.json" with { type: "json" };
@@ -51,6 +52,7 @@ for (const locale of ["nl", "fr", "en"] as const) {
 for (const width of [1280, 1366, 1440]) {
   for (const zoom of [1.25, 1.5]) {
     test(`workspace at ${width} reduced height and native zoom ${zoom}`, async ({ baseURL }) => {
+      test.setTimeout(90000);
       const { chromium } = await import("@playwright/test");
       const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");
       const { tmpdir } = await import("node:os");
@@ -101,6 +103,7 @@ for (const width of [1280, 1366, 1440]) {
         expect(
           await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
         ).toBe(true);
+        await rehearsePreparation(page, fr, true);
         const ownTasks = tasks.getByRole("link", { name: fr.workspace_volunteer, exact: true });
         await ownTasks.focus();
         await page.keyboard.press("Enter");

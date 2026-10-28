@@ -39,7 +39,10 @@ export default function StaffTasks({
     </ButtonLink>
   );
   return (
-    <nav aria-label={m.workspace_title()} className="mb-6 rounded border border-border p-4">
+    <nav
+      aria-label={m.workspace_title()}
+      className="mb-6 rounded border border-border p-4 text-foreground"
+    >
       <h2 className="text-xl font-semibold mb-3">{m.workspace_title()}</h2>
       {expanded && editionLabel && <p className="font-medium mb-4">{editionLabel}</p>}
       <div className={expanded ? "grid gap-6 md:grid-cols-2" : "flex flex-wrap gap-3"}>

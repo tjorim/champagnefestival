@@ -57,7 +57,7 @@ event-day edition default, so the list matches the counted predicate. Loading an
 error remain distinct from a successful zero; the error has an explicit retry.
 Other follow-up links open whole work lists and explicitly say so.
 
-Real IdP journeys and a full populated preparation rehearsal remain acceptance
+Real IdP journeys and a real-edition preparation rehearsal remain acceptance
 gates alongside #1420. Keep #1421 active until these are verified.
 
 ### Validation results
@@ -78,4 +78,58 @@ gates alongside #1420. Keep #1421 active until these are verified.
 
 The browser suite uses synthetic MSW data and seeded authentication, not separate
 real IdP accounts. These checks establish navigation and reflow; they do not
-complete the real-role and populated preparation acceptance gates above.
+complete the real-role and real-edition operational acceptance gates above.
+
+## Expanded local validation — 2026-10-28
+
+Separate seeded browser sessions now cover admin-only, volunteer-only, member-only,
+organisation-contact and combined roles. Members and organisation contacts see
+membership/self-service without staff shortcuts; organisation contact discovery uses
+the manager mock identity. These are frontend role-boundary checks, not evidence of
+real IdP role provisioning or token issuance.
+
+A populated, read-only preparation walkthrough follows My tasks → People → Members
+→ Reward policy → My tasks → Festival Editions → event products → My tasks →
+Venues & Rooms → My tasks → booking list. It checks actual synthetic rows and the
+product dialog, rather than just the presence of shortcut links. No booking,
+member, product or venue is saved during this walkthrough.
+
+The reward lifecycle browser test passes after opening the new Reward policy
+section: create/select type, filter rewards due, confirm hand-out, reverse it and
+retire the type. Existing dense seating tests also pass.
+
+WCAG 2.0/2.1 A/AA scans of `/admin` and `/me` pass in desktop light, desktop dark
+and 375px phone layouts. The initial scan discovered inherited public text colour
+on the dark admin home (edition label and loading status). The shared task nav now
+sets `text-foreground`, fixing both consumers through their semantic theme tokens.
+UI inventory and import checks pass. The expanded tests are retained in
+`workspace-journeys.authenticated.spec.ts` and the shared preparation helper.
+
+A real IdP return still requires an allowed callback origin and actual role
+accounts. The local mock preparation check does not establish readiness of a real
+edition or a complete create/configure/publish rehearsal.
+
+The full PostgreSQL 18 suite also passes: **1,976 passed, six skipped** (SQLite-only
+compatibility checks). This includes the concurrency, advisory-lock, migrations,
+ledger-trigger and LISTEN paths skipped by the SQLite run. The database was an
+isolated local container with `pg_trgm` and `unaccent`; it was removed afterwards.
+
+The populated walkthrough now passes in all **nine laptop combinations**: widths
+1280, 1366 and 1440, each at 100%, 125% and 150% native browser zoom, with 600px
+height before zoom. Zoom cases use French labels and keyboard activation; standard
+cases use English. The test opens the responsive navigation drawer below 992 CSS
+pixels and recognises booking cards as well as table rows. Pixel ratio and visual
+viewport checks confirm native zoom, not page scaling. All six zoom scenarios and
+three standard scenarios passed in the final clean run. The earlier 12 locale/
+viewport workspace cases, five role journeys, pending queue, reward lifecycle and
+six accessibility scans also pass across the validation runs. The existing dense
+seating suite passed all ten scenarios.
+
+Follow-up frontend checks pass: targeted workspace/membership tests (15), lint,
+formatting and UI policy checks. The only application change made by this extended
+validation is the semantic text-colour correction described above; test selectors
+were updated for the intentional reward disclosure and responsive layouts.
+
+Final typecheck, formatting and production build pass. The total bundle is now
+2,892.5 KiB after the contrast correction; the existing 2,870 KiB limit still
+fails, while entry/admin/eager limits pass. No bundle limit was changed.
