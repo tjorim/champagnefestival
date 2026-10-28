@@ -257,7 +257,7 @@ export default function MyAccountPage() {
               )}
               <Button
                 type="submit"
-                variant="outline-primary"
+                variant="outline"
                 size="sm"
                 disabled={correctionMutation.isPending}
               >
@@ -345,12 +345,7 @@ export default function MyAccountPage() {
                 {apiErrorMessage(registerMutation.error, m.my_eid_register_error())}
               </Alert>
             )}
-            <Button
-              type="submit"
-              variant="outline-primary"
-              size="sm"
-              disabled={registerMutation.isPending}
-            >
+            <Button type="submit" variant="outline" size="sm" disabled={registerMutation.isPending}>
               {registerMutation.isPending ? m.my_eid_submitting() : m.my_eid_register_button()}
             </Button>
           </form>

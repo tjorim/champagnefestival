@@ -51,6 +51,7 @@ export const exclusions = {
       "provider attribution",
   },
   "components/VenuePlanPage.tsx": {
+    "hidden lg:block": "Responsive CSS class list for the floor-plan table list",
     "translate(-50%, -50%) rotate(": "CSS transform",
     Bearer: "HTTP authorization scheme",
   },

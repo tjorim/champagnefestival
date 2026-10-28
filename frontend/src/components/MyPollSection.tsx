@@ -147,9 +147,11 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
               <p className="text-sm text-subtle mb-2">{m.volunteer_poll_event_notice()}</p>
             )}
             <Closing question={question} />
-            <p className="text-sm mb-2">
-              {question.kind === "free_text" ? m.my_poll_explicit() : m.my_poll_auto()}
-            </p>
+            {!question.closed && (
+              <p className="text-sm mb-2">
+                {question.kind === "free_text" ? m.my_poll_explicit() : m.my_poll_auto()}
+              </p>
+            )}
             <AnswerInput
               question={question}
               saving={saving}
@@ -165,6 +167,7 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
           <PublicField className="mb-2" controlId="my-poll-note">
             <PublicLabel>{m.my_poll_note_label()}</PublicLabel>
             <PublicTextarea
+              className="field-sizing-content"
               rows={2}
               maxLength={500}
               disabled={!noteOpen || saving}

@@ -42,6 +42,7 @@ const FIELDS: Record<ScalarQuestionKind, ComponentType<ScalarAnswerFieldsProps>>
     const Textarea = admin ? AdminTextarea : PublicTextarea;
     return (
       <Textarea
+        className="field-sizing-content"
         rows={3}
         maxLength={500}
         value={value.text ?? ""}
