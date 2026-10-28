@@ -1,4 +1,5 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
+import { ApiError } from "@/utils/apiErrors";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { queryKeys } from "@/utils/queryKeys";
@@ -13,27 +14,40 @@ export function useRegistrationAdminMutations({
   queryClient,
   authHeaders,
 }: UseRegistrationAdminMutationsOptions) {
-  const updateRegistrationMutation = useMutation({
-    mutationFn: ({
-      id,
-      payload,
+  const updateRegistration = ({
+    id,
+    payload,
+    fallbackMessage,
+  }: {
+    id: string;
+    payload: Record<string, unknown>;
+    fallbackMessage: string;
+  }) =>
+    fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      `/api/registrations/${id}`,
+      { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
       fallbackMessage,
-    }: {
-      id: string;
-      payload: Record<string, unknown>;
-      fallbackMessage: string;
-    }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/registrations/${id}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
-        fallbackMessage,
-      ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [
-        queryKeys.admin.registrations,
-        queryKeys.admin.editionStats,
-      ]);
+    );
+  const invalidateRegistrations = () => {
+    void invalidateAdmin(queryClient, [
+      queryKeys.admin.registrations,
+      queryKeys.admin.editionStats,
+    ]);
+  };
+  const updateRegistrationMutation = useMutation({
+    mutationFn: updateRegistration,
+    onSettled: invalidateRegistrations,
+    retry: false,
+  });
+  // Entrance decisions must fail live, never wait in an offline mutation queue.
+  const updateEntranceMutation = useMutation({
+    mutationFn: (variables: Parameters<typeof updateRegistration>[0]) => {
+      if (!navigator.onLine)
+        throw new ApiError("Entrance writes require a live connection.", { status: 0 });
+      return updateRegistration(variables);
     },
+    networkMode: "always",
+    onSettled: invalidateRegistrations,
     retry: false,
   });
 
@@ -70,5 +84,5 @@ export function useRegistrationAdminMutations({
     retry: false,
   });
 
-  return { updateRegistrationMutation, createPaymentTransactionMutation };
+  return { updateRegistrationMutation, updateEntranceMutation, createPaymentTransactionMutation };
 }

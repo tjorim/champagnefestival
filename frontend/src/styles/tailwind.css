@@ -301,6 +301,11 @@
 @custom-variant riviera (&:where(html[data-visual-theme="riviera"] *));
 
 @layer components {
+  /* Check-in must reflow below the themes' 320px body floor at 200% phone zoom. */
+  body:has(#check-in) {
+    min-width: 0;
+  }
+
   /* The fixed standalone navbar fills the body inset (--header-height), so no strip of page
      background shows between it and the content below. Themes may override this. */
   .standalone-navbar {

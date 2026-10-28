@@ -51,7 +51,15 @@ test("people table visibility persists and narrow layout shows cards", async ({ 
   await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
   await expect(page.getByRole("columnheader", { name: "Email", exact: true })).toHaveCount(0);
   const phone = page.locator("th").filter({ hasText: /^Phone Number$/ });
-  await expect(phone).toHaveCount(1);
+  await expect(phone).toHaveCount(0);
+  await page.getByRole("button", { name: "Columns", exact: true }).click();
+  const phoneChoice = page.getByRole("menuitemcheckbox", { name: "Phone Number", exact: true });
+  await expect(phoneChoice).not.toBeChecked();
+  await phoneChoice.click();
+  await page.keyboard.press("Escape");
+  await expect(phone).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
   await expect(phone).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("table")).toBeHidden();

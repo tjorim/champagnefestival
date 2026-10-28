@@ -30,6 +30,8 @@ vi.mock("@/paraglide/messages", () => ({
       `Stamps: ${count}/${total}`,
     stamp_reward_earned: () => "Reward earned!",
     checkin_title: () => "Check-in",
+    checkin_lookup_method: () => "Find a guest",
+    checkin_scan_method: () => "Scan a QR code",
     checkin_scan_prompt: () => "Scan a QR code to begin.",
     checkin_not_found: () => "Registration not found.",
     checkin_error: () => "Something went wrong.",
@@ -68,6 +70,8 @@ vi.mock("@/paraglide/messages", () => ({
     auth_error_title: () => "Authentication problem",
     admin_loading: () => "Loading…",
     admin_checked_in: () => "Checked in",
+    admin_status_confirmed: () => "Confirmed",
+    admin_status_pending: () => "Pending",
     admin_strap_issued: () => "Strap issued",
     admin_issue_strap: () => "Issue strap",
     admin_bottle_delivered: () => "Delivered",
@@ -308,12 +312,35 @@ describe("CheckInPage", () => {
     });
 
     fireEvent.click(screen.getByText(SEED_REG_NAME));
+    const entrance = screen.getByRole("button", { name: /check in now/i });
+    const fulfilment = screen.getByText("Order items");
+    expect(
+      entrance.compareDocumentPosition(fulfilment) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+    expect(screen.queryByText("Camera scanning isn't available.")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
 
     await waitFor(() => {
       expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
     });
+  });
+
+  it("returns from a selected guest to manual lookup before checking in", async () => {
+    await renderPage("/check-in");
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+    await waitFor(() => expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument());
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /scan next/i }));
+    expect(screen.getByLabelText("Guest name or email")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /check in now/i })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Scan a QR code" })).toHaveFocus(),
+    );
   });
 
   it("issues a strap after check-in from the card", async () => {
@@ -491,6 +518,22 @@ describe("CheckInPage", () => {
       Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
     });
 
+    it("does not queue a check-in while offline or replay it on reconnect", async () => {
+      const submit = vi.fn(() => HttpResponse.json({}, { status: 500 }));
+      server.use(http.post(`/api/check-in/${SEED_REG_ID}`, submit));
+      await renderPage();
+      const button = await screen.findByRole("button", { name: /check in now/i });
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+      fireEvent(window, new Event("offline"));
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+      fireEvent(window, new Event("online"));
+      await waitFor(() => expect(button).toBeEnabled());
+      expect(submit).not.toHaveBeenCalled();
+      expect(screen.queryByText("Checked in successfully!")).not.toBeInTheDocument();
+    });
+
     it("shows an offline banner when the connection drops and hides it when it returns", async () => {
       Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
 
@@ -516,6 +559,31 @@ describe("CheckInPage", () => {
         value: originalMediaDevices,
         configurable: true,
       });
+    });
+
+    it("stops the camera for manual lookup and restarts it only when scanning is chosen", async () => {
+      const track = { stop: vi.fn() };
+      const stream = new MediaStream();
+      Object.defineProperty(stream, "getTracks", { value: () => [track] });
+      const getUserMedia = vi.fn().mockResolvedValue(stream);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia },
+        configurable: true,
+      });
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+      await renderPage("/check-in");
+      await waitFor(() =>
+        expect(screen.getByText("Point the camera at the guest's QR code.")).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getAllByRole("button", { name: "Find guest manually" })[0]!);
+      await waitFor(() => expect(track.stop).toHaveBeenCalledOnce());
+      expect(document.querySelector("video")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Find guest manually" })[0]).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Scan a QR code" }));
+      await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(2));
     });
 
     it("looks up a registration decoded by the in-page scanner without navigating", async () => {

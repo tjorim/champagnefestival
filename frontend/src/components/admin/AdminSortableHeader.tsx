@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import type { Column, RowData } from "@tanstack/react-table";
 import type { AdminTableFeatures } from "@/hooks/useAdminTable";
@@ -17,7 +18,10 @@ export function AdminSortableHeader<T extends RowData>({
   const Icon = sorted === "asc" ? ArrowUpIcon : sorted === "desc" ? ArrowDownIcon : ArrowUpDownIcon;
   return (
     <TableHead
-      className={column.columnDef.meta?.tdClassName}
+      className={cn(
+        column.columnDef.meta?.tdClassName,
+        column.id === "actions" && "sticky right-0 z-10 bg-background",
+      )}
       aria-sort={
         canSort
           ? sorted === "asc"

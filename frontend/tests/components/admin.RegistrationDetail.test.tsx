@@ -694,3 +694,42 @@ it("prefills and saves order answers alongside the booking", async () => {
     ),
   );
 });
+
+it("explains invalid booking fields before allowing the existing save", async () => {
+  const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+  renderDetail({ onSaveBooking });
+  const guests = screen.getAllByRole("spinbutton", { name: "admin_guests_count" })[0]!;
+  const save = screen.getByRole("button", { name: "admin_booking_save_all" });
+  fireEvent.change(guests, { target: { value: "0" } });
+  expect(guests).toHaveAttribute("aria-invalid", "true");
+  expect(guests).toHaveAccessibleDescription("admin_registration_guests_invalid");
+  expect(save).toBeDisabled();
+  fireEvent.change(guests, { target: { value: "2" } });
+  const quantity = screen.getByRole("spinbutton", { name: "admin_booking_quantity Brut Reserve" });
+  fireEvent.change(quantity, { target: { value: "-1" } });
+  expect(quantity).toHaveAccessibleDescription("admin_registration_quantity_invalid");
+  expect(save).toBeDisabled();
+  expect(onSaveBooking).not.toHaveBeenCalled();
+  fireEvent.change(quantity, { target: { value: "3" } });
+  fireEvent.click(save);
+  await waitFor(() =>
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({ guestCount: 2, quantities: { "prod-1": 3 } }),
+    ),
+  );
+});
+
+it("makes booking save ownership distinct from seating and payments", () => {
+  renderDetail({ onSaveBooking: vi.fn() });
+  const seating = screen.getByRole("group", { name: "admin_action_assign_table" });
+  const payments = screen.getByRole("group", { name: "admin_booking_payments" });
+  expect(
+    within(seating).queryByRole("button", { name: "admin_booking_save_all" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(payments).queryByRole("button", { name: "admin_booking_save_all" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText("admin_booking_save_help")).toBeVisible();
+  expect(within(payments).getByText("admin_booking_payment_save_help")).toBeVisible();
+});

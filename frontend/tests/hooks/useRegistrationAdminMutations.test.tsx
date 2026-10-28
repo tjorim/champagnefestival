@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
@@ -55,3 +56,47 @@ describe("useRegistrationAdminMutations", () => {
     expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
   });
 });
+
+it.each([{ checked_in: true }, { checked_in: false }, { strap_issued: true }, { order_items: [] }])(
+  "rejects offline entrance writes without replay on reconnect: %j",
+  async (payload) => {
+    const originalOnline = navigator.onLine;
+    const request = vi.fn(() => HttpResponse.json({ id: "reg-1" }));
+    server.use(http.put("/api/registrations/reg-1", request));
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const { result, unmount } = renderHook(
+      () =>
+        useRegistrationAdminMutations({
+          queryClient,
+          authHeaders: () => ({}),
+          registrationsQueryKey: ["admin", "registrations"],
+        }),
+      { wrapper: Wrapper },
+    );
+    try {
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+      onlineManager.setOnline(false);
+      await act(async () => {
+        await expect(
+          result.current.updateEntranceMutation.mutateAsync({
+            id: "reg-1",
+            payload,
+            fallbackMessage: "Could not update attendance.",
+          }),
+        ).rejects.toThrow("live connection");
+      });
+      expect(result.current.updateEntranceMutation.isPaused).toBe(false);
+      expect(request).not.toHaveBeenCalled();
+      await act(async () => {
+        Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+        onlineManager.setOnline(true);
+      });
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      unmount();
+      queryClient.clear();
+      Object.defineProperty(navigator, "onLine", { value: originalOnline, configurable: true });
+      onlineManager.setOnline(true);
+    }
+  },
+);

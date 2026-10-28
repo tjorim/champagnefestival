@@ -273,3 +273,13 @@ it("returns focus to the result count when the focused row leaves the page", () 
   view.rerender(<AdminDataTable {...props} useDataSource={dataSource} />);
   expect(document.activeElement).toBe(screen.getByRole("status", { name: "" }));
 });
+
+it("applies secondary-column defaults without overriding saved choices", () => {
+  mount({ defaultColumnVisibility: { name: false } });
+  expect(screen.queryByRole("columnheader", { name: "Name" })).not.toBeInTheDocument();
+  cleanup();
+  localStorage.setItem("people-columns", JSON.stringify({ name: true }));
+  mount({ defaultColumnVisibility: { name: false } });
+  expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("people-columns")!)).toEqual({ name: true });
+});

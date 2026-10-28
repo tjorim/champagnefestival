@@ -23,9 +23,9 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   PublicDescription,
   PublicField,
@@ -37,6 +37,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -73,6 +74,7 @@ interface CheckInCardProps {
   success: boolean;
   isAlreadyCheckedIn: boolean;
   isCheckingIn: boolean;
+  isOnline: boolean;
   isUpdatingRegistration: boolean;
   canManageEntranceActions: boolean;
   onCheckIn: () => void;
@@ -87,6 +89,7 @@ function CheckInCard({
   success,
   isAlreadyCheckedIn,
   isCheckingIn,
+  isOnline,
   isUpdatingRegistration,
   canManageEntranceActions,
   onCheckIn,
@@ -96,7 +99,7 @@ function CheckInCard({
   onReturnToScanner,
 }: CheckInCardProps) {
   const isCancelled = registration.status === "cancelled";
-  const canUpdateEntrance = canManageEntranceActions && !isCancelled;
+  const canUpdateEntrance = canManageEntranceActions && !isCancelled && isOnline;
   return (
     <Card tone={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}>
       <CardHeader
@@ -110,13 +113,27 @@ function CheckInCard({
           {registration.name}
         </span>
         <div className="flex gap-2 flex-wrap">
-          {isCancelled && <Badge variant="danger">{m.admin_status_cancelled()}</Badge>}
-          {registration.checkedIn && (
-            <Badge variant="success">
-              <Icon icon={CircleCheckIcon} className="me-1" />
-              {m.admin_checked_in()}
-            </Badge>
+          {!success && (
+            <Button variant="outline" size="sm" onClick={onReturnToScanner}>
+              <ScanQrCodeIcon className="size-4" aria-hidden="true" />
+              {m.checkin_scan_next()}
+            </Button>
           )}
+          <Badge
+            variant={
+              isCancelled ? "danger" : registration.status === "confirmed" ? "success" : "warning"
+            }
+          >
+            {isCancelled
+              ? m.admin_status_cancelled()
+              : registration.status === "confirmed"
+                ? m.admin_status_confirmed()
+                : m.admin_status_pending()}
+          </Badge>
+          <Badge variant={registration.checkedIn ? "success" : "secondary"}>
+            {registration.checkedIn && <Icon icon={CircleCheckIcon} className="me-1" />}
+            {registration.checkedIn ? m.admin_checked_in() : m.checkin_manual_not_checked_in()}
+          </Badge>
           {registration.strapIssued && (
             <Badge variant="info">
               <Icon icon={ContactRoundIcon} className="me-1" />
@@ -194,6 +211,43 @@ function CheckInCard({
           )}
         </PresentationList>
 
+        {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
+          <div className="my-4 grid gap-2">
+            {!registration.checkedIn && (
+              <Button
+                variant="warning"
+                className="h-auto w-full whitespace-normal"
+                onClick={onCheckIn}
+                disabled={isCheckingIn || !isOnline}
+              >
+                {isCheckingIn ? (
+                  <Spinner size="sm" role="status" aria-hidden="true" />
+                ) : (
+                  <Icon icon={UserCheckIcon} />
+                )}
+                {m.checkin_do_checkin()}
+              </Button>
+            )}
+            {registration.checkedIn && !registration.strapIssued && (
+              <Button
+                variant="info"
+                className="h-auto w-full whitespace-normal"
+                onClick={onIssueStrap}
+                disabled={!canUpdateEntrance || isUpdatingRegistration}
+              >
+                {isUpdatingRegistration ? (
+                  <Spinner size="sm" role="status" aria-hidden="true" />
+                ) : (
+                  <Icon icon={ContactRoundIcon} />
+                )}
+                {m.admin_issue_strap()}
+              </Button>
+            )}
+            {!canManageEntranceActions && (
+              <div className="text-sm text-subtle">{m.checkin_actions_login_required()}</div>
+            )}
+          </div>
+        )}
         {registration.orderItems.length > 0 && (
           <div className="mt-4">
             <p className="font-semibold text-highlight mb-2">
@@ -288,44 +342,6 @@ function CheckInCard({
           </div>
         )}
       </CardContent>
-
-      {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
-        <CardFooter className="grid gap-2">
-          {!registration.checkedIn && (
-            <Button
-              variant="warning"
-              className="w-full"
-              onClick={onCheckIn}
-              disabled={isCheckingIn}
-            >
-              {isCheckingIn ? (
-                <Spinner size="sm" role="status" aria-hidden="true" />
-              ) : (
-                <Icon icon={UserCheckIcon} />
-              )}
-              {m.checkin_do_checkin()}
-            </Button>
-          )}
-          {registration.checkedIn && !registration.strapIssued && (
-            <Button
-              variant="info"
-              className="w-full"
-              onClick={onIssueStrap}
-              disabled={!canManageEntranceActions || isUpdatingRegistration}
-            >
-              {isUpdatingRegistration ? (
-                <Spinner size="sm" role="status" aria-hidden="true" />
-              ) : (
-                <Icon icon={ContactRoundIcon} />
-              )}
-              {m.admin_issue_strap()}
-            </Button>
-          )}
-          {!canManageEntranceActions && (
-            <div className="text-sm text-subtle">{m.checkin_actions_login_required()}</div>
-          )}
-        </CardFooter>
-      )}
     </Card>
   );
 }
@@ -334,6 +350,9 @@ export default function CheckInPage() {
   const queryClient = useQueryClient();
   const auth = useAuth();
   const isOnline = useOnlineStatus();
+  const lookupButtonRef = useRef<HTMLButtonElement>(null);
+  const scanButtonRef = useRef<HTMLButtonElement>(null);
+  const [lookupMode, setLookupMode] = useState<"scan" | "manual">("scan");
   const { id: urlRegistrationId } = useSearch({
     from: "/admin-layout/check-in",
   });
@@ -420,6 +439,7 @@ export default function CheckInPage() {
   const checkInMutation = useMutation({
     mutationFn: () => submitCheckIn(registrationId!, checkInToken!),
     retry: false,
+    networkMode: "always",
     onMutate: () => {
       setSuccess(false);
       setStampProgress(null);
@@ -442,6 +462,7 @@ export default function CheckInPage() {
   const volunteerCheckInMutation = useMutation({
     mutationFn: (regId: string) => submitVolunteerCheckIn(regId, authHeaders),
     retry: false,
+    networkMode: "always",
     onMutate: () => {
       setSuccess(false);
       setStampProgress(null);
@@ -476,6 +497,7 @@ export default function CheckInPage() {
     }) =>
       updateVolunteerRegistration(targetRegistration.id, { orderItems, strapIssued }, authHeaders),
     retry: false,
+    networkMode: "always",
     onSuccess: (updatedRegistration) => {
       setManualRegistration((prev) =>
         prev?.id === updatedRegistration.id ? updatedRegistration : prev,
@@ -524,17 +546,18 @@ export default function CheckInPage() {
   const shouldShowAuthLoadingGate = !hasQrCredentials && auth.isLoading;
 
   const handleCheckIn = useCallback(() => {
+    if (!isOnline) return;
     if (hasQrCredentials) {
       checkInMutation.mutate();
       return;
     }
     if (!manualRegistration) return;
     volunteerCheckInMutation.mutate(manualRegistration.id);
-  }, [checkInMutation, hasQrCredentials, manualRegistration, volunteerCheckInMutation]);
+  }, [checkInMutation, hasQrCredentials, isOnline, manualRegistration, volunteerCheckInMutation]);
 
   const handleSetOrderItemQuantity = useCallback(
     (productId: string, quantity: number) => {
-      if (!registration || !Number.isFinite(quantity)) return;
+      if (!isOnline || !registration || !Number.isFinite(quantity)) return;
       const updatedOrders = registration.orderItems.map((item) => {
         if (item.productId !== productId) return item;
         const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
@@ -550,7 +573,7 @@ export default function CheckInPage() {
         orderItems: updatedOrders,
       });
     },
-    [registration, updateRegistrationMutation],
+    [isOnline, registration, updateRegistrationMutation],
   );
 
   const handleAdjustOrderItem = useCallback(
@@ -564,9 +587,9 @@ export default function CheckInPage() {
   );
 
   const handleIssueStrap = useCallback(() => {
-    if (!registration) return;
+    if (!isOnline || !registration) return;
     updateRegistrationMutation.mutate({ targetRegistration: registration, strapIssued: true });
-  }, [registration, updateRegistrationMutation]);
+  }, [isOnline, registration, updateRegistrationMutation]);
 
   const handleSelectManualRegistration = useCallback((selected: CheckInData) => {
     setManualRegistration(selected);
@@ -581,16 +604,25 @@ export default function CheckInPage() {
   }, []);
 
   const handleReturnToScanner = useCallback(() => {
+    setLookupMode("scan");
+    setSearchOpen(true);
     setScannedCredentials(null);
     setFragmentCheckInToken(undefined);
     setManualRegistration(null);
     setSuccess(false);
     setStampProgress(null);
     setAlreadyCheckedIn(false);
+    requestAnimationFrame(() => scanButtonRef.current?.focus());
     if (urlRegistrationId) {
       void navigate({ search: {}, replace: true });
     }
   }, [navigate, urlRegistrationId]);
+
+  const guestWorkspaceRef = useRef<HTMLDivElement>(null);
+  const selectedGuestId = registration?.id;
+  useEffect(() => {
+    if (selectedGuestId) guestWorkspaceRef.current?.focus();
+  }, [selectedGuestId]);
 
   // Once nothing is left for the volunteer to do on this guest, clear the
   // card automatically so the next scan can start right away. A pending
@@ -625,7 +657,7 @@ export default function CheckInPage() {
           </Alert>
         )}
         {!isOnline && (
-          <Alert variant="danger" className="w-20 text-center" role="status">
+          <Alert variant="danger" className="w-full text-center" role="status">
             <Icon icon={WifiOffIcon} className="me-2" />
             {m.checkin_offline_banner()}
           </Alert>
@@ -650,21 +682,58 @@ export default function CheckInPage() {
         ) : (
           <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center">
             <div className="w-full site-sm:w-10/12 site-md:w-8/12 site-lg:w-6/12">
-              {!hasQrCredentials && (
+              {!hasQrCredentials && !registration && (
                 <>
-                  <CheckInScanner onDecode={handleScanDecode} />
+                  <ToggleGroup
+                    value={[lookupMode]}
+                    onValueChange={(values) => {
+                      const mode = values[0];
+                      if (mode !== "scan" && mode !== "manual") return;
+                      setLookupMode(mode);
+                      setSearchOpen(mode === "manual");
+                      if (mode === "manual")
+                        requestAnimationFrame(() => {
+                          const input = document.getElementById("manual-checkin-query");
+                          input?.focus();
+                          input?.scrollIntoView({ block: "nearest" });
+                        });
+                    }}
+                    variant="outline"
+                    className="mb-4 w-full"
+                    aria-label={m.checkin_lookup_method()}
+                  >
+                    <ToggleGroupItem
+                      ref={scanButtonRef}
+                      value="scan"
+                      className="h-auto w-full min-w-0 whitespace-normal aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-pressed:hover:text-background site-sm:w-auto site-sm:flex-1"
+                    >
+                      <ScanQrCodeIcon className="size-4 shrink-0" aria-hidden="true" />
+                      {m.checkin_scan_method()}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      ref={lookupButtonRef}
+                      value="manual"
+                      className="h-auto w-full min-w-0 whitespace-normal aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground aria-pressed:hover:text-background site-sm:w-auto site-sm:flex-1"
+                    >
+                      <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
+                      {m.checkin_manual_search_title()}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  {lookupMode === "scan" && <CheckInScanner onDecode={handleScanDecode} />}
 
-                  <Alert variant="warning" className="w-20 text-center">
-                    <Icon icon={InfoIcon} className="me-2" />
-                    {m.checkin_scan_prompt()}
-                  </Alert>
+                  {lookupMode === "scan" && (
+                    <Alert variant="warning" className="w-full text-center">
+                      <Icon icon={InfoIcon} className="me-2" />
+                      {m.checkin_scan_prompt()}
+                    </Alert>
+                  )}
 
                   <Collapsible open={searchOpen} onOpenChange={setSearchOpen}>
                     <Card tone="secondary" className="mb-4">
                       <CardHeader className="p-0">
                         <CollapsibleTrigger
                           render={<Button variant="ghost" />}
-                          className="flex w-full items-center justify-between p-4 text-left text-warning"
+                          className="flex h-auto w-full items-center justify-between p-4 text-left whitespace-normal text-warning"
                           aria-expanded={searchOpen}
                           aria-controls="manual-checkin-search"
                         >
@@ -714,6 +783,7 @@ export default function CheckInPage() {
                             <PublicLabel>{m.checkin_manual_search_label()}</PublicLabel>
                             <PublicInput
                               type="search"
+                              onFocus={() => setLookupMode("manual")}
                               value={searchTerm}
                               onChange={(event) => {
                                 setSearchTerm(event.currentTarget.value);
@@ -753,7 +823,10 @@ export default function CheckInPage() {
                                 ? m.checkin_manual_search_session_expired()
                                 : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
                                   ? m.checkin_manual_search_unauthorized()
-                                  : volunteerSearchQuery.error.message}
+                                  : apiErrorMessage(
+                                      volunteerSearchQuery.error,
+                                      m.checkin_search_error(),
+                                    )}
                             </Alert>
                           )}
 
@@ -816,19 +889,22 @@ export default function CheckInPage() {
               )}
 
               {registration && !isLoading && (
-                <CheckInCard
-                  registration={registration}
-                  success={success}
-                  isAlreadyCheckedIn={isAlreadyCheckedIn}
-                  isCheckingIn={isCheckingIn}
-                  isUpdatingRegistration={isUpdatingRegistration}
-                  canManageEntranceActions={canManageEntranceActions}
-                  onCheckIn={handleCheckIn}
-                  onAdjustOrderItem={handleAdjustOrderItem}
-                  onSetOrderItemQuantity={handleSetOrderItemQuantity}
-                  onIssueStrap={handleIssueStrap}
-                  onReturnToScanner={handleReturnToScanner}
-                />
+                <div ref={guestWorkspaceRef} tabIndex={-1} aria-label={registration.name}>
+                  <CheckInCard
+                    registration={registration}
+                    success={success}
+                    isAlreadyCheckedIn={isAlreadyCheckedIn}
+                    isCheckingIn={isCheckingIn}
+                    isOnline={isOnline}
+                    isUpdatingRegistration={isUpdatingRegistration}
+                    canManageEntranceActions={canManageEntranceActions}
+                    onCheckIn={handleCheckIn}
+                    onAdjustOrderItem={handleAdjustOrderItem}
+                    onSetOrderItemQuantity={handleSetOrderItemQuantity}
+                    onIssueStrap={handleIssueStrap}
+                    onReturnToScanner={handleReturnToScanner}
+                  />
+                </div>
               )}
             </div>
           </div>

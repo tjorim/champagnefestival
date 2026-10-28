@@ -13,7 +13,7 @@ import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import type { ItemDraft } from "./itemTypes";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -444,6 +444,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
+            <div className="mb-3 flex items-center gap-3 site-lg:hidden">
+              <SidebarTrigger className="size-11 border border-border bg-sidebar" />
+              <span className="text-sm text-foreground">{m.admin_toggle_navigation()}</span>
+            </div>
             <AdminCacheStatus />
             {activeEdition.id !== "" &&
               activeEdition.year > 0 &&

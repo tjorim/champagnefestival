@@ -1056,3 +1056,44 @@ is never replayed. Existing redirect/session operations
 remain **not automatically retry safe**: no write retry, token revocation retry
 or visitor-session sign-out retry was added. Sign-out still requires successful
 visitor-session revocation before wiping caches and starting the IdP redirect.
+
+
+## Admin attendance correction (#1427)
+
+The registration row menu's **Undo check-in** uses the existing registration
+`PUT` with the absolute payload `checked_in: false`; the entrance button sends
+`checked_in: true`. No toggle or automatic retry is introduced. Immediate repeats
+converge, including stamp removal and the cleared check-in timestamp. After an
+ambiguous timeout, reconcile live state before deciding whether to repeat: a
+stale correction could overwrite another operator's intentional attendance change.
+Undo preserves strap issuance and fulfilment; it does not undo those separate
+operations. Existing stamp reward restrictions can reject the correction, with a
+translated error and the original attendance retained. Backend coverage lives in
+`test_registrations_admin.py` and `test_stamp_cards.py`; frontend coverage in
+`useAdminRegistrationActions.errors.test.tsx` and the registration list tests.
+
+The web check-in page disables attendance/strap/fulfilment controls while offline
+and guards their handlers. Its three mutations use `networkMode: "always"` with
+`retry: false`: a connection lost after activation fails immediately rather than
+pausing a write for replay on reconnect. This changes no server retry strategy
+and adds no offline queue. Reconnecting requires a deliberate new action.
+
+The #1427 follow-up groups booking details, seating, the common booking-save
+control and separately saved payment transactions. Payloads and server retry
+strategies are unchanged. Field errors explain the existing guest/product limits;
+allocation guest counts are checked against the existing 0–20 API bound before
+submission. A failed/disabled validation does not submit a write. No automatic
+retry, draft restoration or payment-flow change is introduced here.
+
+Admin check-in/undo, strap issuance and fulfilment now use the dedicated
+`updateEntranceMutation`: `networkMode: "always"`, `retry: false`, and an explicit
+`navigator.onLine` guard before HTTP. An offline attempt rejects rather than
+becoming a paused mutation, so reconnect cannot replay an entrance decision.
+Buttons/quantity inputs disable offline in both registration rows and details;
+the mutation boundary still guards stale/programmatic activations. Ordinary
+booking edits and payment transactions retain their existing strategies.
+`handleCheckIn` returns an acknowledgement boolean for guest-specific visible/live
+feedback; refused or ambiguous failures never generate a success announcement.
+Tests cover all four absolute entrance payload forms with the Query online manager
+offline, prove no request/replay on reconnect, and verify the real browser controls
+and success/undo announcements.

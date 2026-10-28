@@ -66,9 +66,10 @@ describe("CheckInScanner", () => {
       configurable: true,
     });
 
-    render(<CheckInScanner onDecode={vi.fn()} />);
+    const { container } = render(<CheckInScanner onDecode={vi.fn()} />);
 
     expect(await screen.findByText("Camera access was denied.")).toBeInTheDocument();
+    expect(container.querySelector("video")?.parentElement).toHaveClass("hidden");
   });
 
   it("decodes a scanned check-in URL via the BarcodeDetector API and stops the camera", async () => {

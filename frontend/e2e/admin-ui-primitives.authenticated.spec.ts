@@ -66,6 +66,7 @@ for (const width of [1366, 390]) {
     await expect(page.locator('[data-slot="empty"]')).toHaveCount(0);
     if (width < 992) await trigger.click();
     await navigation.getByRole("button", { name: /^Registrations/ }).click();
+    await page.getByRole("button", { name: "Filters", exact: true }).click();
     const statuses = page.getByRole("group", { name: "Filter by status", exact: true });
     const pending = statuses.getByRole("button", { name: /^Pending/ });
     await pending.click();

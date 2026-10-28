@@ -32,6 +32,10 @@ import { toLocalDateKey } from "@/utils/dateUtils";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 
+function invalidProductQuantity(quantity: number): boolean {
+  return !Number.isInteger(quantity) || quantity < 0 || quantity > 1000;
+}
+
 export default function BookingEditor({
   registration,
   registrations = [],
@@ -190,11 +194,13 @@ export default function BookingEditor({
     ? allocations.length
     : allocations.reduce((sum, item) => sum + item.guestCount, 0);
   const allocationTotal = tableQuantity || guestCount;
+  const invalidGuestCount = !Number.isInteger(guestCount) || guestCount < 1 || guestCount > 20;
   const invalidAllocation = allocations.some(
     (item) =>
       !item.tableId ||
       !Number.isInteger(item.guestCount) ||
-      (tableQuantity === 0 && item.guestCount < 1),
+      item.guestCount < (tableQuantity ? 0 : 1) ||
+      item.guestCount > 20,
   );
 
   const changeAllocation = (index: number, patch: Partial<TableAllocation>) =>
@@ -203,9 +209,7 @@ export default function BookingEditor({
     );
   const allocationShortage = status !== "cancelled" && assigned > allocationTotal;
   const tableReleaseCount = allocations.length - tableQuantity;
-  const invalidQuantity = Object.values(quantities).some(
-    (quantity) => !Number.isInteger(quantity) || quantity < 0 || quantity > 1000,
-  );
+  const invalidQuantity = Object.values(quantities).some(invalidProductQuantity);
   const setProductQuantity = (productId: string, quantity: number) => {
     const next = { ...quantities, [productId]: quantity };
     const nextTableQuantity = products.reduce(
@@ -232,99 +236,123 @@ export default function BookingEditor({
 
   return (
     <section aria-labelledby="booking-editor-heading">
-      <h6 id="booking-editor-heading" className="text-highlight">
+      <h3 id="booking-editor-heading" className="text-base font-medium text-highlight">
         {m.admin_booking_editor()}
-      </h6>
-      <div className="flex flex-wrap -mx-2 *:w-full *:px-2 gap-y-4">
-        <AdminField className="site-sm:w-4/12">
-          <AdminLabel>{m.admin_guests_count()}</AdminLabel>
-          <form.Field name="guestCount">
-            {(field) => (
-              <AdminInput
-                aria-label={m.admin_guests_count()}
-                type="number"
-                min={1}
-                max={20}
-                value={field.value}
-                onChange={(event) => field.handleChange(Number(event.target.value))}
-                onBlur={field.handleBlur}
-              />
+      </h3>
+      <fieldset>
+        <legend className="mb-3 text-base font-medium">{m.admin_booking_details()}</legend>
+        <div className="flex flex-wrap -mx-2 *:w-full *:px-2 gap-y-4">
+          <AdminField className="site-sm:w-4/12">
+            <AdminLabel>{m.admin_guests_count()}</AdminLabel>
+            <form.Field name="guestCount">
+              {(field) => (
+                <AdminInput
+                  aria-label={m.admin_guests_count()}
+                  aria-invalid={invalidGuestCount}
+                  aria-describedby={invalidGuestCount ? "booking-guests-error" : undefined}
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={field.value}
+                  onChange={(event) => field.handleChange(Number(event.target.value))}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
+            {invalidGuestCount && (
+              <AdminDescription id="booking-guests-error" className="text-destructive">
+                {m.admin_registration_guests_invalid()}
+              </AdminDescription>
             )}
-          </form.Field>
-        </AdminField>
-        <AdminField className="site-sm:w-4/12">
-          <AdminLabel>{m.admin_status_label()}</AdminLabel>
-          <form.Field name="status">
-            {(field) => (
-              <AdminSelect
-                aria-label={m.admin_status_label()}
-                value={field.value}
-                onValueChange={(event) => field.handleChange(event as RegistrationStatus)}
-                onBlur={field.handleBlur}
-              >
-                <AdminOption value="pending">{m.admin_status_pending()}</AdminOption>
-                <AdminOption value="confirmed">{m.admin_status_confirmed()}</AdminOption>
-                <AdminOption value="cancelled">{m.admin_status_cancelled()}</AdminOption>
-              </AdminSelect>
-            )}
-          </form.Field>
-        </AdminField>
-        <div className="site-sm:w-4/12 text-sm self-end">
-          <div>
-            {m.admin_booking_total()}: €{amountDue.toFixed(2)}
-          </div>
-          <div>
-            {m.admin_inventory_paid()}: €{amountPaid.toFixed(2)}
-          </div>
-          <div>
-            {m.admin_inventory_refund()}: €{Math.max(0, amountPaid - amountDue).toFixed(2)}
-          </div>
-          {amountPaid < amountDue && (
-            <div>
-              {m.admin_booking_balance()}: €{(amountDue - amountPaid).toFixed(2)}
-            </div>
-          )}
-        </div>
-        {products.map((product) => (
-          <AdminField className="site-sm:w-6/12" key={product.id}>
-            <AdminLabel>
-              {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
-            </AdminLabel>
-            <AdminInput
-              aria-label={`${m.admin_booking_quantity()} ${product.name}`}
-              type="number"
-              min={0}
-              max={1000}
-              disabled={!product.purchasable && (purchased[product.id] ?? 0) <= 0}
-              value={quantities[product.id] ?? 0}
-              onChange={(event) => setProductQuantity(product.id, Number(event.target.value))}
-            />
           </AdminField>
-        ))}
-        <AdminField className="w-full">
-          <AdminLabel>{m.admin_notes()}</AdminLabel>
-          <form.Field name="notes">
-            {(field) => (
-              <AdminTextarea
-                rows={3}
-                value={field.value}
-                onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
-              />
+          <AdminField className="site-sm:w-4/12">
+            <AdminLabel>{m.admin_status_label()}</AdminLabel>
+            <form.Field name="status">
+              {(field) => (
+                <AdminSelect
+                  aria-label={m.admin_status_label()}
+                  value={field.value}
+                  onValueChange={(event) => field.handleChange(event as RegistrationStatus)}
+                  onBlur={field.handleBlur}
+                >
+                  <AdminOption value="pending">{m.admin_status_pending()}</AdminOption>
+                  <AdminOption value="confirmed">{m.admin_status_confirmed()}</AdminOption>
+                  <AdminOption value="cancelled">{m.admin_status_cancelled()}</AdminOption>
+                </AdminSelect>
+              )}
+            </form.Field>
+          </AdminField>
+          <div className="site-sm:w-4/12 text-sm self-end">
+            <div>
+              {m.admin_booking_total()}: €{amountDue.toFixed(2)}
+            </div>
+            <div>
+              {m.admin_inventory_paid()}: €{amountPaid.toFixed(2)}
+            </div>
+            <div>
+              {m.admin_inventory_refund()}: €{Math.max(0, amountPaid - amountDue).toFixed(2)}
+            </div>
+            {amountPaid < amountDue && (
+              <div>
+                {m.admin_booking_balance()}: €{(amountDue - amountPaid).toFixed(2)}
+              </div>
             )}
-          </form.Field>
-        </AdminField>
-      </div>
+          </div>
+          {products.map((product) => (
+            <AdminField className="site-sm:w-6/12" key={product.id}>
+              <AdminLabel>
+                {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
+              </AdminLabel>
+              <AdminInput
+                aria-label={`${m.admin_booking_quantity()} ${product.name}`}
+                aria-invalid={invalidProductQuantity(quantities[product.id] ?? 0)}
+                aria-describedby={
+                  invalidProductQuantity(quantities[product.id] ?? 0)
+                    ? `booking-quantity-${product.id}-error`
+                    : undefined
+                }
+                type="number"
+                min={0}
+                max={1000}
+                disabled={!product.purchasable && (purchased[product.id] ?? 0) <= 0}
+                value={quantities[product.id] ?? 0}
+                onChange={(event) => setProductQuantity(product.id, Number(event.target.value))}
+              />
+              {invalidProductQuantity(quantities[product.id] ?? 0) && (
+                <AdminDescription
+                  id={`booking-quantity-${product.id}-error`}
+                  className="text-destructive"
+                >
+                  {m.admin_registration_quantity_invalid()}
+                </AdminDescription>
+              )}
+            </AdminField>
+          ))}
+          <AdminField className="w-full">
+            <AdminLabel>{m.admin_notes()}</AdminLabel>
+            <form.Field name="notes">
+              {(field) => (
+                <AdminTextarea
+                  rows={3}
+                  value={field.value}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
+          </AdminField>
+        </div>
 
-      <OrderAnswerInputs
-        admin
-        questions={registration.event?.orderQuestions ?? []}
-        answers={orderAnswers}
-        onChange={(answers) => form.setFieldValue("orderAnswers", answers)}
-        disabled={pending}
-      />
-      <fieldset className="mt-4">
-        <legend className="text-base">{m.admin_action_assign_table()}</legend>
+        <OrderAnswerInputs
+          admin
+          questions={registration.event?.orderQuestions ?? []}
+          answers={orderAnswers}
+          onChange={(answers) => form.setFieldValue("orderAnswers", answers)}
+          disabled={pending}
+        />
+      </fieldset>
+      <fieldset id="registration-seating" tabIndex={-1} className="mt-4">
+        <legend className="text-base font-medium">{m.admin_action_assign_table()}</legend>
         <p className="text-sm">
           {m.admin_allocation_progress({
             assigned,
@@ -337,10 +365,20 @@ export default function BookingEditor({
             {m.admin_booking_release_tables({ count: tableReleaseCount })}
           </Alert>
         )}
+        {allocationShortage && tableQuantity === 0 && (
+          <Alert variant="warning">{m.admin_booking_allocation_excess()}</Alert>
+        )}
+        {invalidAllocation && (
+          <p id="booking-allocation-error" className="text-sm text-destructive">
+            {m.admin_booking_allocation_error()}
+          </p>
+        )}
         {allocations.map((entry, index) => (
-          <div key={`${entry.tableId}:${index}`} className="flex gap-2 mb-2 items-center">
+          <div key={`${entry.tableId}:${index}`} className="flex flex-wrap gap-2 mb-2 items-center">
             <AdminSelect
               aria-label={m.admin_inventory_unit_table()}
+              aria-invalid={!entry.tableId}
+              aria-describedby={invalidAllocation ? "booking-allocation-error" : undefined}
               value={entry.tableId}
               onValueChange={(event) => changeAllocation(index, { tableId: event })}
             >
@@ -366,6 +404,12 @@ export default function BookingEditor({
               min={tableQuantity ? 0 : 1}
               max={20}
               aria-label={m.admin_guests_count()}
+              aria-invalid={
+                !Number.isInteger(entry.guestCount) ||
+                entry.guestCount < (tableQuantity ? 0 : 1) ||
+                entry.guestCount > 20
+              }
+              aria-describedby={invalidAllocation ? "booking-allocation-error" : undefined}
               value={entry.guestCount}
               onChange={(event) =>
                 changeAllocation(index, { guestCount: Number(event.target.value) })
@@ -394,23 +438,31 @@ export default function BookingEditor({
         >
           {m.admin_allocation_add()}
         </Button>
+      </fieldset>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button
           disabled={
             pending ||
             invalidAllocation ||
             allocationShortage ||
             invalidQuantity ||
-            !Number.isInteger(guestCount) ||
-            guestCount < 1 ||
-            guestCount > 20
+            invalidGuestCount
           }
           onClick={() => void form.handleSubmit()}
         >
           {m.admin_booking_save_all()}
         </Button>
-      </fieldset>
+        <p className="mb-0 text-sm text-subtle">{m.admin_booking_save_help()}</p>
+      </div>
 
-      <fieldset className="mt-4">
+      <fieldset
+        id="registration-payments"
+        tabIndex={-1}
+        className="mt-6 border-t border-border pt-4"
+      >
+        <legend className="text-base font-medium">{m.admin_booking_payments()}</legend>
+        <p className="text-sm text-subtle">{m.admin_booking_payment_save_help()}</p>
         <Button variant="link" size="sm" className="px-0" onClick={() => setShowLedger((v) => !v)}>
           {showLedger ? m.admin_payment_history_hide() : m.admin_payment_history_show()}
         </Button>

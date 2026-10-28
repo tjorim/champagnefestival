@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import type { ColumnDef, RowData } from "@tanstack/react-table";
+import type { ColumnDef, ColumnVisibilityState, RowData } from "@tanstack/react-table";
 import { useAppTable, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import { readAdminTableState, type AdminTableState } from "@/utils/adminTableState";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import ConfirmModal from "@/components/ConfirmModal";
+import { AdminTableSortMenu } from "./AdminTableSortMenu";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { AdminTablePagination } from "./AdminTablePagination";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
@@ -54,6 +55,8 @@ export interface AdminDataTableProps<T extends RowData> {
   useDataSource: (state: AdminTableState) => AdminDataSourceResult<T>;
   filters?: readonly AdminTableFilter[];
   columnVisibilityKey: string;
+  /** Defaults apply only where the user has not saved a column choice. */
+  defaultColumnVisibility?: ColumnVisibilityState;
   getRowId: (row: T) => string;
   getRowLabel: (row: T) => string;
   getRowClassName?: (row: T) => string | undefined;
@@ -128,7 +131,11 @@ function AdminControlledTable<T extends RowData>({
                 <table.FlexRender header={header} />
               </AdminSortableHeader>
             ))}
-            {rowActions && <th scope="col">{actionsLabel}</th>}
+            {rowActions && (
+              <th scope="col" className="sticky right-0 z-10 bg-background">
+                {actionsLabel}
+              </th>
+            )}
           </TableRow>
         ))}
       </TableHeader>
@@ -157,11 +164,21 @@ function AdminControlledTable<T extends RowData>({
             }}
           >
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+              <TableCell
+                key={cell.id}
+                className={cn(
+                  cell.column.columnDef.meta?.tdClassName,
+                  cell.column.id === "actions" && "sticky right-0 z-10 bg-background",
+                )}
+              >
                 <table.FlexRender cell={cell} />
               </TableCell>
             ))}
-            {rowActions && <TableCell>{rowActions(row.original)}</TableCell>}
+            {rowActions && (
+              <TableCell className="sticky right-0 z-10 bg-background">
+                {rowActions(row.original)}
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>
@@ -175,6 +192,7 @@ function ServerAdminDataTable<T extends RowData>({
   useDataSource,
   filters: configuredFilters = [],
   columnVisibilityKey,
+  defaultColumnVisibility = {},
   getRowId,
   getRowLabel,
   getRowClassName,
@@ -210,13 +228,14 @@ function ServerAdminDataTable<T extends RowData>({
   });
   const [savedVisibility, setVisibility] = useState(() => loadColVis(columnVisibilityKey));
   const visibilityParam = search[`${key}_columns`];
-  const visibility =
+  const chosenVisibility =
     visibilityParam &&
     typeof visibilityParam === "object" &&
     !Array.isArray(visibilityParam) &&
     Object.values(visibilityParam).every((value) => typeof value === "boolean")
       ? (visibilityParam as Record<string, boolean>)
       : savedVisibility;
+  const visibility = { ...defaultColumnVisibility, ...chosenVisibility };
   const result = useDataSource(state);
   const filters = result.filters ?? configuredFilters;
   const total = result.data?.total ?? 0;
@@ -453,23 +472,8 @@ function ServerAdminDataTable<T extends RowData>({
           actionsLabel={labels.actions}
         />
       </div>
-      <div role="group" className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
-        {table
-          .getAllLeafColumns()
-          .filter((column) => column.getCanSort())
-          .map((column) => (
-            <Button
-              key={column.id}
-              variant="outline"
-              size="sm"
-              aria-pressed={Boolean(column.getIsSorted())}
-              onClick={column.getToggleSortingHandler()}
-            >
-              {labels.sort}:{" "}
-              {typeof column.columnDef.header === "string" ? column.columnDef.header : column.id}
-              {column.getIsSorted() === "desc" ? " ↓" : column.getIsSorted() === "asc" ? " ↑" : ""}
-            </Button>
-          ))}
+      <div className="md:hidden">
+        <AdminTableSortMenu table={table} />
       </div>
       <ul className="list-none space-y-2 p-0 md:hidden">
         {table.getRowModel().rows.map((row) => (
