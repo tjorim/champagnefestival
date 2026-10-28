@@ -112,7 +112,10 @@ function SidebarGroup({
 }: SidebarGroupProps) {
   return (
     <SidebarMenuItem>
-      <Collapsible open={expandedGroups.has(groupKey)} onOpenChange={() => toggleGroup(groupKey)}>
+      <Collapsible
+        open={expandedGroups.has(groupKey) || itemKeys.includes(activeKey)}
+        onOpenChange={() => toggleGroup(groupKey)}
+      >
         <CollapsibleTrigger
           render={
             <SidebarMenuButton
@@ -124,7 +127,11 @@ function SidebarGroup({
           <Icon icon={icon} />
           <span>{label}</span>
           <Icon
-            icon={expandedGroups.has(groupKey) ? ChevronUpIcon : ChevronDownIcon}
+            icon={
+              expandedGroups.has(groupKey) || itemKeys.includes(activeKey)
+                ? ChevronUpIcon
+                : ChevronDownIcon
+            }
             className="ml-auto"
           />
         </CollapsibleTrigger>
@@ -189,6 +196,12 @@ export default function AdminSidebar({
         <SidebarContent className="p-2">
           <nav aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
             <SidebarMenu>
+              <SidebarItem
+                itemKey="home"
+                icon={NotebookTextIcon}
+                label={m.workspace_title()}
+                {...itemProps}
+              />
               <SidebarItem
                 itemKey="registrations"
                 icon={CalendarCheckIcon}

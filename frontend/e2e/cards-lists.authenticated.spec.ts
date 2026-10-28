@@ -25,7 +25,7 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         const publicPath = testInfo.outputPath("public-cards.png");
         await page.screenshot({ path: publicPath });
         await testInfo.attach("public cards", { path: publicPath, contentType: "image/png" });
-        await page.goto("/admin");
+        await page.goto("/admin?section=registrations");
         await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
         await expect(page.locator('#admin [data-slot="card"]').first()).toBeVisible();
         await expect(page.locator(".card, .list-group, .list-group-item")).toHaveCount(0);

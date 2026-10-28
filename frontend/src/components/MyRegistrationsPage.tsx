@@ -1,3 +1,4 @@
+import { accountReturnTo } from "@/hooks/useLocationChoice";
 import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
   CalendarDaysIcon,
@@ -82,7 +83,7 @@ export default function MyRegistrationsPage({
   onEmailSessionChange,
 }: MyRegistrationsPageProps = {}) {
   const auth = useAuth();
-  const { token: rawToken } = useSearch({ from: "/me" });
+  const { token: rawToken, tab, edition } = useSearch({ from: "/me" });
   const token = rawToken?.trim() ?? "";
   const navigate = useNavigate({ from: "/me" });
   const accessToken = auth.getAccessToken();
@@ -92,7 +93,6 @@ export default function MyRegistrationsPage({
   const [isEmailInvalid, setIsEmailInvalid] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState<CommunicationLanguage>(getLocale());
   const [preferenceStatus, setPreferenceStatus] = useState<"" | "saving" | "saved" | "error">("");
-  const [isPreferenceLoading, setIsPreferenceLoading] = useState(false);
   const preferenceRequestId = useRef(0);
 
   // A returning visitor's passwordless session (#953) — checked once on
@@ -134,7 +134,10 @@ export default function MyRegistrationsPage({
   const [tokenAttempted, setTokenAttempted] = useState(false);
   const registrationsMutation = useMutation({
     mutationFn: async (lookupToken: string) => {
-      await navigate({ search: {}, replace: true });
+      await navigate({
+        search: (previous: { tab?: string }) => ({ tab: previous.tab }),
+        replace: true,
+      });
       return redeemVisitorMagicLink(lookupToken);
     },
     retry: false,
@@ -255,27 +258,30 @@ export default function MyRegistrationsPage({
     },
   });
 
+  const preferenceLoad = useMutation({
+    mutationFn: async ({ token, requestId }: { token: string; requestId: number }) => ({
+      language: await getCommunicationPreference(token),
+      requestId,
+    }),
+    retry: false,
+    onSuccess: ({ language, requestId }) => {
+      if (requestId === preferenceRequestId.current && language) setPreferredLanguage(language);
+    },
+    onError: (_error, { requestId }) => {
+      if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
+    },
+  });
+  const { mutate: loadPreference, reset: resetPreferenceLoad } = preferenceLoad;
+  const isPreferenceLoading = preferenceLoad.isPending;
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
-    const requestId = ++preferenceRequestId.current;
-    setIsPreferenceLoading(true);
-    void getCommunicationPreference(accessToken)
-      .then((language) => {
-        if (requestId !== preferenceRequestId.current) return;
-        if (language) setPreferredLanguage(language);
-      })
-      .catch(() => {
-        if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
-      })
-      .finally(() => {
-        if (requestId === preferenceRequestId.current) setIsPreferenceLoading(false);
-      });
-  }, [accessToken, auth.isAuthenticated, registrations]);
+    loadPreference({ token: accessToken, requestId: ++preferenceRequestId.current });
+  }, [accessToken, auth.isAuthenticated, registrations, loadPreference]);
 
   const savePreference = async () => {
     if (!accessToken) return;
     preferenceRequestId.current += 1;
-    setIsPreferenceLoading(false);
+    resetPreferenceLoad();
     setPreferenceStatus("saving");
     try {
       await updateCommunicationPreference(accessToken, preferredLanguage);
@@ -317,7 +323,10 @@ export default function MyRegistrationsPage({
     (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
 
   const resetToRequestForm = useCallback(() => {
-    void navigate({ search: {}, replace: true });
+    void navigate({
+      search: (previous: { tab?: string }) => ({ tab: previous.tab }),
+      replace: true,
+    });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);
@@ -431,8 +440,8 @@ export default function MyRegistrationsPage({
             onClick={() => {
               // Hand over what was typed so the IdP's email link can start from the same address.
               const loginHint = email.trim();
-              if (loginHint.includes("@")) auth.login("/me", { loginHint });
-              else auth.login("/me");
+              if (loginHint.includes("@")) auth.login(accountReturnTo(tab, edition), { loginHint });
+              else auth.login(accountReturnTo(tab, edition));
             }}
           >
             {m.my_registrations_sign_in_instead()}

@@ -343,6 +343,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 </AdminField>
               )}
             </form.Field>
+            <p className="text-sm text-subtle mb-4">{m.workspace_role_help()}</p>
             <AdminField className="mb-4" controlId="person-roles">
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_roles_label()}

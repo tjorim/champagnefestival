@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useMemo } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
+import { useNow } from "@/hooks/useNow";
 import { dayjs } from "@/utils/dateUtils";
 import { m } from "@/paraglide/messages";
 
@@ -56,153 +58,47 @@ type CountdownStatus = (typeof COUNTDOWN_STATUS)[keyof typeof COUNTDOWN_STATUS];
  * - Client-side only rendering to prevent hydration mismatches
  */
 const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfterDays = 30 }) => {
-  const [mounted, setMounted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>({});
-  const [status, setStatus] = useState<CountdownStatus>(COUNTDOWN_STATUS.upcoming);
-
-  // Convert string date to Date object if needed
-  // Wrapped in useMemo to avoid dependency changes on every render
+  const mounted = useHydrated();
+  const now = useNow(1000);
   const targetDateObj = useMemo(() => {
-    if (typeof targetDate === "string") {
-      const date = new Date(targetDate);
-      if (isNaN(date.getTime())) {
-        throw new Error(
-          `Invalid date provided to Countdown component: "${targetDate}". Please provide a valid date string or Date object.`,
-        );
-      }
-      return date;
-    }
-    return targetDate;
+    const date = typeof targetDate === "string" ? new Date(targetDate) : targetDate;
+    if (Number.isNaN(date.getTime())) throw new Error("Invalid countdown target date");
+    return date;
   }, [targetDate]);
-
-  // Use refs to avoid dependency cycles
-  interface TimeUnitsTranslations {
-    months: string;
-    days: string;
-    hours: string;
-    minutes: string;
-    seconds: string;
+  const t = {
+    months: m.countdown_months(),
+    days: m.countdown_days(),
+    hours: m.countdown_hours(),
+    minutes: m.countdown_minutes(),
+    seconds: m.countdown_seconds(),
+  };
+  type TimeUnitsTranslations = typeof t;
+  const timeLeft: TimeLeft = {};
+  const difference = targetDateObj.getTime() - now;
+  if (difference > 0) {
+    const target = dayjs(targetDateObj);
+    const nowDate = dayjs(now);
+    const months = target.diff(nowDate, "month");
+    const remaining = target.diff(nowDate.add(months, "month"), "millisecond");
+    const days = Math.floor(remaining / TIME_UNITS.day);
+    const hours = Math.floor((remaining % TIME_UNITS.day) / TIME_UNITS.hour);
+    const minutes = Math.floor((remaining % TIME_UNITS.hour) / TIME_UNITS.minute);
+    const seconds = Math.floor((remaining % TIME_UNITS.minute) / TIME_UNITS.second);
+    if (months > 0) Object.assign(timeLeft, { months, days, hours });
+    else if (days > 0) Object.assign(timeLeft, { days, hours, minutes });
+    else Object.assign(timeLeft, { hours, minutes, seconds });
   }
-
-  const targetDateObjRef = useRef(targetDateObj);
-
-  // Update refs when values change
-  useEffect(() => {
-    targetDateObjRef.current = targetDateObj;
-  }, [targetDateObj]);
-
-  // Static per render locale — no need for a ref/effect since it's a pure,
-  // synchronous computation available from the very first render.
-  const t: TimeUnitsTranslations = useMemo(
-    () => ({
-      months: m.countdown_months(),
-      days: m.countdown_days(),
-      hours: m.countdown_hours(),
-      minutes: m.countdown_minutes(),
-      seconds: m.countdown_seconds(),
-    }),
-    [],
-  );
-  // Set component as mounted after initial render
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Update countdown every second, but only after component is mounted and translations are loaded
-  useEffect(() => {
-    if (!mounted) return;
-
-    // Track the last minute when status was updated
-    let lastStatusUpdateMinute = -1;
-
-    // Helper function to calculate time left (moved inside effect)
-    const calculateTime = (): TimeLeft => {
-      const targetDate = targetDateObjRef.current;
-      const now = Date.now();
-      const difference = targetDate.getTime() - now;
-
-      if (difference > 0) {
-        // Calculate months using dayjs date arithmetic
-        const target = dayjs(targetDate);
-        const nowDayjs = dayjs(now);
-        const months = target.diff(nowDayjs, "month");
-        const afterMonths = nowDayjs.add(months, "month");
-
-        const remainingMs = target.diff(afterMonths, "millisecond");
-        const days = Math.floor(remainingMs / TIME_UNITS.day);
-        const hours = Math.floor((remainingMs % TIME_UNITS.day) / TIME_UNITS.hour);
-        const minutes = Math.floor((remainingMs % TIME_UNITS.hour) / TIME_UNITS.minute);
-        const seconds = Math.floor((remainingMs % TIME_UNITS.minute) / TIME_UNITS.second);
-
-        // Always show exactly 3 boxes for consistent layout
-        const result: TimeLeft = {};
-
-        if (months > 0) {
-          result.months = months;
-          result.days = days;
-          result.hours = hours;
-        } else if (days > 0) {
-          result.days = days;
-          result.hours = hours;
-          result.minutes = minutes;
-        } else {
-          result.hours = hours;
-          result.minutes = minutes;
-          result.seconds = seconds;
-        }
-
-        return result;
-      }
-
-      return {};
-    };
-
-    // Helper function to determine status (moved inside effect)
-    const calculateStatus = (): CountdownStatus => {
-      const now = new Date();
-      const festivalStart = targetDateObjRef.current;
-      const festivalEnd = new Date(endDate); // already at 23:59:59.999
-
-      if (now < festivalStart) {
-        return COUNTDOWN_STATUS.upcoming;
-      }
-
-      if (now >= festivalStart && now <= festivalEnd) {
-        return COUNTDOWN_STATUS.current;
-      }
-
-      const hideDate = new Date(festivalEnd);
-      hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
-
-      if (now <= hideDate) {
-        return COUNTDOWN_STATUS.concluded;
-      }
-
-      return COUNTDOWN_STATUS.hidden;
-    };
-
-    // Initial calculation and status determination
-    setTimeLeft(calculateTime());
-    setStatus(calculateStatus());
-    lastStatusUpdateMinute = new Date().getMinutes();
-
-    // Update timeLeft every second and status every minute
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTime());
-
-      // Update status when minute changes
-      const currentMinute = new Date().getMinutes();
-      if (currentMinute !== lastStatusUpdateMinute) {
-        setStatus(calculateStatus());
-        lastStatusUpdateMinute = currentMinute;
-      }
-    }, 1000);
-
-    // Clean up interval on unmount
-    return () => {
-      clearInterval(timer);
-    };
-  }, [mounted, autoHideAfterDays, endDate]);
+  const hideDate = new Date(endDate);
+  hideDate.setDate(hideDate.getDate() + autoHideAfterDays);
+  const status: CountdownStatus = !mounted
+    ? COUNTDOWN_STATUS.upcoming
+    : now < targetDateObj.getTime()
+      ? COUNTDOWN_STATUS.upcoming
+      : now <= endDate.getTime()
+        ? COUNTDOWN_STATUS.current
+        : now <= hideDate.getTime()
+          ? COUNTDOWN_STATUS.concluded
+          : COUNTDOWN_STATUS.hidden;
 
   // Map time units to display components
   const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (

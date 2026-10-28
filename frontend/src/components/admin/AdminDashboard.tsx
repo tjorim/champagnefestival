@@ -1,8 +1,10 @@
+import { useSearch } from "@tanstack/react-router";
+import { adminSections, useLocationChoice } from "@/hooks/useLocationChoice";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
 import { usePersonDuplicates } from "./PersonDuplicates";
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +16,7 @@ import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import type { ItemDraft } from "./itemTypes";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import StaffTasks from "@/components/StaffTasks";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -105,22 +108,57 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
-  const [filter, setFilter] = useState<"all" | RegistrationStatus>("all");
+  const [filterValue, setFilter] = useLocationChoice(
+    "registrationStatus",
+    ["all", "pending", "confirmed", "cancelled"],
+    "all",
+  );
+  const filter = filterValue as "all" | RegistrationStatus;
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
   // Sidebar navigation state
-  const [activeKey, setActiveKey] = useState("registrations");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["events", "content", "venue", "system"]),
-  );
+  const locationSearch = useSearch({ strict: false }) as Record<string, unknown>;
+  const [activeKey, setActiveKey] = useLocationChoice("section", adminSections, "home");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
 
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
   // instead of resetting `activeKey` itself in an effect, which loses one
   // render to a blank content pane before it takes effect.
-  const effectiveActiveKey = canManageAdminSections ? activeKey : "registrations";
+  const effectiveActiveKey =
+    canManageAdminSections || activeKey === "home" ? activeKey : "registrations";
+
+  useEffect(() => {
+    if (!visible || !isAuthenticated) return;
+    const labels: Record<string, string> = {
+      home: m.workspace_title(),
+      registrations: m.admin_registrations_tab(),
+      waitlist: m.admin_waitlist_section(),
+      scratchpad: m.admin_scratchpad_section(),
+      organizations: m.admin_content_organizations_section(),
+      editions: m.admin_content_editions_section(),
+      "floor-plans": m.admin_floor_plans_tab(),
+      venues: m.admin_venues_rooms_tab(),
+      people: m.admin_people_tab(),
+      analytics: m.admin_analytics_tab(),
+      "audit-log": m.admin_audit_log_tab(),
+      "event-categories": m.admin_event_categories_section(),
+      "product-categories": m.admin_product_categories_section(),
+      "email-categories": m.admin_email_categories_section(),
+      faq: m.admin_content_faq_section(),
+      "signage-channels": m.signage_channels_heading(),
+      announcements: m.admin_announcements_section(),
+      policies: m.admin_policies_section(),
+      settings: m.admin_content_settings_section(),
+      "contact-details": m.admin_contact_details_section(),
+      "contact-messages": m.admin_contact_messages_section(),
+    };
+    const label = labels[effectiveActiveKey];
+    if (label) document.title = `${label} — ${m.admin_title()}`;
+    document.getElementById("admin-content")?.focus({ preventScroll: true });
+  }, [effectiveActiveKey, visible, isAuthenticated]);
 
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -443,12 +481,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           />
 
           {/* Main content */}
-          <div className="admin-main" id="admin-content">
+          <div className="admin-main" id="admin-content" tabIndex={-1}>
             <div className="mb-3 flex items-center gap-3 site-lg:hidden">
               <SidebarTrigger className="size-11 border border-border bg-sidebar" />
               <span className="text-sm text-foreground">{m.admin_toggle_navigation()}</span>
             </div>
             <AdminCacheStatus />
+            {locationSearch.section !== undefined &&
+              (locationSearch.section !== activeKey || effectiveActiveKey !== activeKey) && (
+                <Alert variant="info" className="mb-4">
+                  {m.navigation_destination_unavailable()}
+                </Alert>
+              )}
             {activeEdition.id !== "" &&
               activeEdition.year > 0 &&
               ACTIVE_EDITION_SECTIONS.has(effectiveActiveKey) && (
@@ -499,10 +543,27 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Alert>
             )}
 
-            {isAnyPending && !cacheStatus.warmStart ? (
+            {isAnyPending && !cacheStatus.warmStart && effectiveActiveKey !== "home" ? (
               <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
               <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
+                {effectiveActiveKey === "home" && (
+                  <StaffTasks
+                    expanded
+                    pendingBookings={{
+                      count: registrationCountsQuery.data?.pending,
+                      loading: registrationCountsQuery.isPending,
+                      error: registrationCountsQuery.isError,
+                      retry: () => void registrationCountsQuery.refetch(),
+                    }}
+                    editionId={activeEdition.id || undefined}
+                    editionLabel={
+                      activeEdition.id
+                        ? `${activeEditionLabel(activeEdition)} · ${activeEdition.dates.map((date) => new Date(date).toLocaleDateString()).join(", ")}`
+                        : undefined
+                    }
+                  />
+                )}
                 {effectiveActiveKey === "registrations" && (
                   <RegistrationList
                     registrations={registrations}
@@ -519,6 +580,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onAddRegistration={handleAddRegistration}
                     authHeaders={authHeaders}
                     activeEdition={activeEdition}
+                    countedPendingQueue={locationSearch.workQueue === "pending"}
                     applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
                     sectionError={registrationError}
                     onClearSectionError={() => setRegistrationError("")}

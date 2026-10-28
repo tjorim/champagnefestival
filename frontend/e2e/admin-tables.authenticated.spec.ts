@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/admin");
+  await page.goto("/admin?section=registrations");
 });
 
 test("server table sorting, selection and dark column menu", async ({ page }) => {

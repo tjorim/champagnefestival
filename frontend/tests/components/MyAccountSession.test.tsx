@@ -89,6 +89,17 @@ function signedIn(registrations = bookings, managed = organizations) {
 }
 
 describe("one emailed account login", () => {
+  it("restores the email-session destination after session discovery", async () => {
+    signedIn();
+    const router = await renderPage("/me?tab=organizations");
+    expect(await screen.findByText("Managed business")).toBeVisible();
+    expect(router.state.location.search.tab).toBe("organizations");
+    await userEvent.setup().click(screen.getByRole("tab", { name: m.my_registrations_title() }));
+    await waitFor(() => expect(router.state.location.search.tab).toBe("registrations"));
+    router.history.back();
+    expect(await screen.findByText("Managed business")).toBeVisible();
+  });
+
   it("shows one login form and requests the existing shared magic link", async () => {
     let requests = 0;
     server.use(

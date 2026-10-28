@@ -27,11 +27,14 @@ interface RouterContext {
 }
 
 export interface CheckInSearch {
+  edition?: string;
   id?: string;
 }
 
 export interface MyRegistrationsSearch {
+  edition?: string;
   token?: string;
+  tab?: string;
 }
 export interface VenuePlanSearch {
   registration?: string;
@@ -41,6 +44,7 @@ export interface VenuePlanSearch {
 
 export function validateCheckInSearch(search: Record<string, unknown>): CheckInSearch {
   return {
+    edition: typeof search.edition === "string" ? search.edition : undefined,
     id: typeof search.id === "string" ? search.id : undefined,
   };
 }
@@ -49,6 +53,8 @@ export function validateMyRegistrationsSearch(
   search: Record<string, unknown>,
 ): MyRegistrationsSearch {
   return {
+    edition: typeof search.edition === "string" ? search.edition : undefined,
+    tab: typeof search.tab === "string" ? search.tab : undefined,
     token: typeof search.token === "string" ? search.token : undefined,
   };
 }

@@ -40,7 +40,7 @@ export function useAdminSessionRecovery({
   onSignOut,
 }: UseAdminSessionRecoveryOptions): UseAdminSessionRecoveryResult {
   const [isRenewingSession, setIsRenewingSession] = useState(false);
-  const [loadError, setLoadError] = useState<Error | null>(null);
+  const loadError = errors.find((error) => error !== null && !isUnauthorized(error)) ?? null;
   /** Guards against renewing in a loop when the refreshed token is rejected too. */
   const renewAttempted = useRef(false);
 
@@ -66,13 +66,9 @@ export function useAdminSessionRecovery({
       return;
     }
 
-    const firstError = errors.find((error) => error !== null);
-    if (firstError) {
-      setLoadError(firstError);
-    } else {
+    if (!errors.some((error) => error !== null)) {
       // Everything loaded: re-arm the renewal so a later expiry gets its own attempt.
       renewAttempted.current = false;
-      setLoadError(null);
     }
   }, [errors, renewSession, loadData, onSignOut]);
 

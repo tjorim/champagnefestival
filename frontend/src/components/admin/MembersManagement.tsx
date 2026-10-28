@@ -289,6 +289,11 @@ export default function MembersManagement({
         />
       )}
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
+      <details className="mb-6 rounded border border-border p-4">
+        <summary className="cursor-pointer font-semibold">{m.workspace_reward_policy()}</summary>
+        <p className="my-4">{m.stamp_eligibility_help()}</p>
+        <StampCardTypes authHeaders={authHeaders} />
+      </details>
       <Card tone="secondary">
         <CardHeader>{m.admin_members_tab()}</CardHeader>
 
@@ -364,8 +369,6 @@ export default function MembersManagement({
           />
         </CardContent>
       </Card>
-
-      <StampCardTypes authHeaders={authHeaders} />
 
       {deactivatingId && (
         <Dialog

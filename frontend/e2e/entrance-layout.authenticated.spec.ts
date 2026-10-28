@@ -43,7 +43,7 @@ for (const viewport of [
   }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
-    await page.goto("/admin");
+    await page.goto("/admin?section=registrations");
     await expect(page.getByText("alice@moet.com").first()).toBeVisible();
     await seedRegistrations(page);
     await page.getByRole("searchbox").fill("Review");
@@ -271,7 +271,7 @@ for (const zoom of [1.25, 1.5, 2]) {
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(metrics.width);
       if (zoom < 2) {
-        await page.goto(`${baseURL}/admin`);
+        await page.goto(`${baseURL}/admin?section=registrations`);
         await expect(page.getByText("alice@moet.com").first()).toBeVisible();
         await seedRegistrations(page);
         await page.getByRole("searchbox").fill("Review");
@@ -345,7 +345,7 @@ for (const [locale, messages] of Object.entries({ nl, fr })) {
       locale,
     );
     await page.setViewportSize({ width: 1280, height: 768 });
-    await page.goto("/admin");
+    await page.goto("/admin?section=registrations");
     await expect(page.getByText("alice@moet.com").first()).toBeVisible();
     await seedRegistrations(page);
     await page.getByRole("searchbox").fill("Review");
@@ -425,7 +425,7 @@ test("cross-page bulk confirmation names the affected guests and dated events be
   page,
 }) => {
   await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
-  await page.goto("/admin");
+  await page.goto("/admin?section=registrations");
   await expect(page.getByText("alice@moet.com").first()).toBeVisible();
   await seedRegistrations(page, 60);
   await page.getByRole("searchbox").fill("Review");
@@ -481,7 +481,7 @@ test("admin entrance actions stay live-only and announce successful guest change
   context,
 }) => {
   await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
-  await page.goto("/admin");
+  await page.goto("/admin?section=registrations");
   await expect(page.getByText("alice@moet.com").first()).toBeVisible();
   await seedRegistrations(page);
   await page.getByRole("searchbox").fill("Review");

@@ -17,16 +17,20 @@ const ADMIN_ROUTES: readonly {
   ready: string;
   settled: string;
 }[] = [
-  // The registrations table is the dashboard's default view; wait for its mock rows so the
-  // scan never runs against a half-loaded page.
+  // Scan both the task home and the registration workspace after their data settles.
   {
     path: "/admin",
+    ready: "section#admin.admin-authenticated",
+    settled: "text=/Pending bookings: [0-9]+/",
+  },
+  {
+    path: "/admin?section=registrations",
     ready: "section#admin.admin-authenticated",
     settled: "text=alice@moet.com",
   },
 ];
 
-// Only /admin exists today, so it is scanned in every visual theme.
+// Scan both admin destinations in every visual theme.
 for (const theme of AXE_THEMES) {
   for (const route of ADMIN_ROUTES) {
     test.describe(`axe: ${route.path} (authenticated) [${theme.value}]`, () => {
@@ -58,7 +62,7 @@ for (const scenario of AXE_SCENARIOS) {
     const menu = page.locator('[data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]');
 
     await prepareScenario(page, scenario);
-    await page.goto("/admin");
+    await page.goto("/admin?section=registrations");
     await expect(page.locator("section#admin.admin-authenticated")).toBeVisible();
     await expect(page.locator("text=alice@moet.com").first()).toBeVisible();
 
