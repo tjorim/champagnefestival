@@ -1,3 +1,4 @@
+import { useTodayKey } from "@/hooks/useTodayKey";
 import {
   AdminField,
   AdminLabel,
@@ -145,10 +146,11 @@ export default function EditionModal({
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
+  const currentYear = Number(useTodayKey().slice(0, 4));
   const defaultValues = useMemo(
     () => ({
       id: record?.id ?? "",
-      year: record?.year ?? new Date().getFullYear(),
+      year: record?.year ?? currentYear,
       month: record?.month ?? "",
       editionType: (record?.editionType ?? "festival") as EditionType,
       venueId: record?.venue?.id ?? fallbackVenueId,
@@ -164,7 +166,7 @@ export default function EditionModal({
         ),
       ) as Record<number, SponsorTier>,
     }),
-    [fallbackVenueId, record],
+    [fallbackVenueId, record, currentYear],
   );
 
   const form = useForm({

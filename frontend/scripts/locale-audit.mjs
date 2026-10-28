@@ -14,7 +14,7 @@ const machine = (text) =>
   ) ||
   /^\((?:prefers|min|max)-[\w-]+: [^)]+\)$/.test(text) ||
   // Day.js format tokens and separators; one linear pattern, no nested quantifiers.
-  /^[DMYHhmsZd][DMYHhmsZd ,:\-]*$/.test(text) ||
+  /^[DMYHhmsZd][DMYHhmsZd ,:-]*$/.test(text) ||
   text
     .split(/\s+/)
     .every(
@@ -138,17 +138,20 @@ export function sourceCandidates(source, file = "source.tsx", all = false) {
     else if (node.type === "JSXText") consider(node, ancestors, node.value, node.start);
     else if (node.type === "TemplateLiteral") {
       const single = node.quasis.length === 1;
-      for (const quasi of node.quasis)
+      for (const quasi of node.quasis) {
         // A template without substitutions behaves like a string literal; fragments of a substituted one are copy hints.
-        single
-          ? consider(node, ancestors, quasi.value.cooked ?? quasi.value.raw, quasi.start, false)
-          : consider(
-              quasi,
-              [node, ...ancestors],
-              quasi.value.cooked ?? quasi.value.raw,
-              quasi.start,
-              true,
-            );
+        if (single) {
+          consider(node, ancestors, quasi.value.cooked ?? quasi.value.raw, quasi.start, false);
+        } else {
+          consider(
+            quasi,
+            [node, ...ancestors],
+            quasi.value.cooked ?? quasi.value.raw,
+            quasi.start,
+            true,
+          );
+        }
+      }
     }
   });
   return result;

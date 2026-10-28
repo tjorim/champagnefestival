@@ -171,3 +171,68 @@ The shared-controls test now expects My tasks as the first focusable sidebar
 item and explicitly exercises the initially collapsed Content group with click,
 Space and Enter. Both 390px and 1366px cases pass without retries, including
 focus trapping/return, drawer dismissal, filtering and accessibility scans.
+
+### Broad CI-parity audit — 2026-10-28
+
+The complete PR Playwright selection now has **237 verified passing cases across
+the audit runs**, with retries disabled. The collected project/file/title results
+were compared with Playwright's JSON test list: zero uncovered cases. The separate
+production-worker/signage suite also passes both cases, including offline reload,
+clock synchronisation, cycle-boundary publication and wake-lock reacquisition.
+The full frontend unit suite passes **1,444 tests in 194 files**; the production
+build, locale audit, formatting and UI policy/tooling checks pass.
+
+The broader run exposed and fixed additional test issues:
+
+- The accessibility suite waited for a registration on the task home. It now
+  scans both home and the explicit registration route; all-section scans start
+  on registrations. Both destinations and every section pass light/dark/phone
+  accessibility checks.
+- History-changing role and volunteer fixtures could run before router startup.
+  They now wait for the actual Check-in component, not just document load/main.
+- A pending-state assertion depended on a 500ms response window. The mock now
+  waits for a test-controlled release after the disabled state is observed.
+
+Lint still reports **23 non-failing React purity/effect/ref/hook diagnostics** in
+existing application code. Three straightforward tooling/test warnings were
+fixed (a redundant regex escape, side-effect-only ternary and unsafe optional
+chain); locale-audit regression tests pass. No warning suppression was added.
+Runtime logs still include incomplete MSW fixtures (notably audit endpoints and
+some volunteer reads), expected negative-test failures, and dependency/tooling
+warnings. Passing tests do not establish warning-free logs or real IdP readiness.
+
+### Remaining-theme matrix — 2026-10-28
+
+All **284 non-default-theme cases** (Classic, Riviera, Cuvée, Remuage and
+Millésime) have passing results across the runs, verified against Playwright's
+project/file/title selection with zero uncovered cases. Retries were disabled.
+This covers the available public/admin theme matrices, including desktop/phone,
+light/dark preferences, forms, cards, layouts, runtime tokens, portals and the
+page-level accessibility scans. After the fix below, the complete themed admin
+selection passed in one clean run (128 cases including auth setup).
+
+The expanded registrations accessibility scan found a Cuvée contrast defect:
+`--surface-success-text: #2f7d4f` was about 4.04:1 against the `#efe6cd` parchment
+behind sticky action cells. Its Cuvée admin override is now `#286c43` (about
+5.1:1 on that surface). This corrects all consumers of that semantic text token;
+the success fill and separate dark-sidebar tokens are unchanged. Cuvée desktop
+and phone scans pass, with no accessibility exclusion added. UI policy and
+format checks pass. The earlier lint/mock/dependency warning inventory remains.
+
+### React lint cleanup — 2026-10-28
+
+The remaining React purity, effect, ref and dependency diagnostics have been
+addressed without disabling lint rules. Time-dependent rendering uses an explicit
+clock with timer cleanup and foreground refresh; client-only content uses an
+SSR-compatible hydration snapshot. Form timestamps are initialized once per
+session, registration selection uses reactive page data, and the layout drag
+modifier receives its mounted canvas through callback-ref state. Revision reads
+use session-scoped query keys and abort signals, with no automatic retry; closing
+the dialog discards that session. Existing write endpoints and retry policies
+are unchanged. Communication-preference reads retain their request-generation
+guard so a late read cannot overwrite a newer save.
+
+New regression coverage checks clock cadence and cleanup, foreground refresh,
+server/client hydration, responsive bubble density and stable rerenders, and
+countdown start/end/hide transitions. Existing revision-call assertions now
+include the cancellation signal.

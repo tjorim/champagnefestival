@@ -22,6 +22,7 @@ for (const roles of [
       }
     }, roles);
     await page.goto("/check-in");
+    await expect(page.locator("#check-in")).toBeVisible();
     await page.evaluate(async () => {
       const browserPath = "/src/mocks/browser.ts";
       const httpPath = "/node_modules/msw/lib/http/index.js";

@@ -93,7 +93,6 @@ export default function MyRegistrationsPage({
   const [isEmailInvalid, setIsEmailInvalid] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState<CommunicationLanguage>(getLocale());
   const [preferenceStatus, setPreferenceStatus] = useState<"" | "saving" | "saved" | "error">("");
-  const [isPreferenceLoading, setIsPreferenceLoading] = useState(false);
   const preferenceRequestId = useRef(0);
 
   // A returning visitor's passwordless session (#953) — checked once on
@@ -259,27 +258,30 @@ export default function MyRegistrationsPage({
     },
   });
 
+  const preferenceLoad = useMutation({
+    mutationFn: async ({ token, requestId }: { token: string; requestId: number }) => ({
+      language: await getCommunicationPreference(token),
+      requestId,
+    }),
+    retry: false,
+    onSuccess: ({ language, requestId }) => {
+      if (requestId === preferenceRequestId.current && language) setPreferredLanguage(language);
+    },
+    onError: (_error, { requestId }) => {
+      if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
+    },
+  });
+  const { mutate: loadPreference, reset: resetPreferenceLoad } = preferenceLoad;
+  const isPreferenceLoading = preferenceLoad.isPending;
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
-    const requestId = ++preferenceRequestId.current;
-    setIsPreferenceLoading(true);
-    void getCommunicationPreference(accessToken)
-      .then((language) => {
-        if (requestId !== preferenceRequestId.current) return;
-        if (language) setPreferredLanguage(language);
-      })
-      .catch(() => {
-        if (requestId === preferenceRequestId.current) setPreferenceStatus("error");
-      })
-      .finally(() => {
-        if (requestId === preferenceRequestId.current) setIsPreferenceLoading(false);
-      });
-  }, [accessToken, auth.isAuthenticated, registrations]);
+    loadPreference({ token: accessToken, requestId: ++preferenceRequestId.current });
+  }, [accessToken, auth.isAuthenticated, registrations, loadPreference]);
 
   const savePreference = async () => {
     if (!accessToken) return;
     preferenceRequestId.current += 1;
-    setIsPreferenceLoading(false);
+    resetPreferenceLoad();
     setPreferenceStatus("saving");
     try {
       await updateCommunicationPreference(accessToken, preferredLanguage);

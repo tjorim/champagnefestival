@@ -1,3 +1,4 @@
+import { useNow } from "@/hooks/useNow";
 import {
   AdminField,
   AdminLabel,
@@ -246,15 +247,19 @@ export default function AnnouncementManagement({
     },
     [items, authHeaders, refresh],
   );
+  const now = useNow();
   type AnnouncementStatus = "disabled" | "scheduled" | "expired" | "active";
-  const status = (item: Announcement): AnnouncementStatus =>
-    !item.active
-      ? "disabled"
-      : item.starts_at && new Date(item.starts_at) > new Date()
-        ? "scheduled"
-        : item.ends_at && new Date(item.ends_at) <= new Date()
-          ? "expired"
-          : "active";
+  const status = useCallback(
+    (item: Announcement): AnnouncementStatus =>
+      !item.active
+        ? "disabled"
+        : item.starts_at && new Date(item.starts_at).getTime() > now
+          ? "scheduled"
+          : item.ends_at && new Date(item.ends_at).getTime() <= now
+            ? "expired"
+            : "active",
+    [now],
+  );
   const statusLabel = (value: AnnouncementStatus) => {
     switch (value) {
       case "disabled":
@@ -376,7 +381,7 @@ export default function AnnouncementManagement({
         }),
         actionsColumn,
       ]),
-    [items, preview, move, actionsColumn],
+    [items, preview, move, actionsColumn, status],
   );
 
   const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));

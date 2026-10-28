@@ -1,3 +1,4 @@
+import { useNow } from "@/hooks/useNow";
 import StaffTasks from "@/components/StaffTasks";
 import {
   ArrowLeftIcon,
@@ -429,8 +430,9 @@ function App() {
     }
   }, []);
 
+  const nowTimestamp = useNow();
   const registrableEvents = useMemo(() => {
-    const now = new Date();
+    const now = new Date(nowTimestamp);
     return (
       edition.events
         // Registration is offered for events that require it (capacity-limited),
@@ -445,13 +447,13 @@ function App() {
           (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
         )
     );
-  }, [edition.events]);
+  }, [edition.events, nowTimestamp]);
 
   // When nothing is registrable yet, the earliest upcoming opening tells visitors when to come back.
   const locale = getLocale() as "en" | "fr" | "nl";
   const registrationOpensOn = useMemo(() => {
     if (registrableEvents.length > 0) return null;
-    const now = new Date();
+    const now = new Date(nowTimestamp);
     const openings = edition.events
       .filter((event) => event.registrationRequired || event.products.length > 0)
       .filter((event) => endOfDay(new Date(`${event.date}T00:00:00`)) >= now)
@@ -460,7 +462,7 @@ function App() {
       .sort((a, b) => a.getTime() - b.getTime());
     const first = openings[0];
     return first ? dayjs(first).locale(locale).format("D MMMM YYYY") : null;
-  }, [edition.events, registrableEvents.length, locale]);
+  }, [edition.events, registrableEvents.length, locale, nowTimestamp]);
 
   const { venueName, address, postalCode, city, country } = edition.venue;
   const venueLines = [address, [postalCode, city].filter(Boolean).join(" ")].filter(Boolean);

@@ -8,7 +8,7 @@ import { AdminEmptyState } from "./AdminEmptyState";
  * category that is still in use cannot be deleted, which the server enforces.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
@@ -120,7 +120,7 @@ export default function CategoryManagement({
   const config = KINDS[kind];
   const queryClient = useQueryClient();
   const query = useQuery(config.queryOptions);
-  const categories = query.data ?? [];
+  const categories = useMemo(() => query.data ?? [], [query.data]);
 
   const [showModal, setShowModal] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);

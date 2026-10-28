@@ -1,3 +1,4 @@
+import { useTodayKey } from "@/hooks/useTodayKey";
 import { Link } from "@tanstack/react-router";
 import { useNavigationItems } from "@/hooks/useNavigationItems";
 import { getLocale } from "@/paraglide/runtime";
@@ -6,7 +7,7 @@ import { m } from "@/paraglide/messages";
 
 const Footer = () => {
   const navigationItems = useNavigationItems();
-  const currentYear = new Date().getFullYear();
+  const currentYear = Number(useTodayKey().slice(0, 4));
 
   return (
     <footer className="site-footer">

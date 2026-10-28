@@ -275,11 +275,6 @@ export default function RegistrationList({
     retry: false,
   });
 
-  // Refs so column header/cell can read latest selection state without being in deps
-  const selectedIdsRef = useRef<Set<string>>(selectedIds);
-  selectedIdsRef.current = selectedIds;
-  const pageRegistrationsRef = useRef<Registration[]>([]);
-
   const allContactPersonIds = useMemo(
     () =>
       new Set(
@@ -501,19 +496,18 @@ export default function RegistrationList({
       columnHelper.display({
         id: "select",
         header: () => {
-          const allIds = pageRegistrationsRef.current.map((r) => r.id);
-          const allSelected =
-            allIds.length > 0 && allIds.every((id) => selectedIdsRef.current.has(id));
+          const allIds = pageRegistrations.map((r) => r.id);
+          const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
           return (
             <Checkbox
               checked={allSelected}
-              indeterminate={!allSelected && allIds.some((id) => selectedIdsRef.current.has(id))}
+              indeterminate={!allSelected && allIds.some((id) => selectedIds.has(id))}
               onCheckedChange={() => {
                 setSelectionRecords(
                   (previous) =>
                     new Map([
                       ...previous,
-                      ...pageRegistrationsRef.current.map((record) => [record.id, record] as const),
+                      ...pageRegistrations.map((record) => [record.id, record] as const),
                     ]),
                 );
                 setSelectAllMatchingActive(false);
@@ -552,7 +546,7 @@ export default function RegistrationList({
         ),
         meta: { tdClassName: "align-middle" },
       }),
-    [selectedIds],
+    [selectedIds, pageRegistrations],
   );
 
   const handleCheckIn = useCallback(
@@ -934,7 +928,6 @@ export default function RegistrationList({
       columnVisibility: state.columnVisibility,
     }),
   );
-  pageRegistrationsRef.current = table.getRowModel().rows.map((r) => r.original);
 
   // Built from every registration, not the current page: these counts are a
   // property of the event, so they must not shift when someone searches,
