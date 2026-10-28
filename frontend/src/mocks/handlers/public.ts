@@ -294,6 +294,10 @@ export const publicHandlers = [
     HttpResponse.json({ email: "visitor@example.com", categories: [] }),
   ),
 
+  /** GET /api/me/volunteer — no linked volunteer record by default; override
+   * with server.use for tests that exercise the signed-in identity. */
+  http.get("/api/me/volunteer", () => HttpResponse.json({ linked: false })),
+
   /** GET /api/me/volunteer/poll — an edition with no poll questions by
    * default; override with server.use for tests that exercise the poll. */
   http.get("/api/me/volunteer/poll", () =>
