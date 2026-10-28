@@ -40,8 +40,8 @@ describe("FaqManagement", () => {
 
     expect(await screen.findByText("Wanneer?")).toBeInTheDocument();
     expect(screen.getByText("Op 2 oktober.")).toBeInTheDocument();
-    expect(screen.getByText("NL")).not.toHaveClass("opacity-50");
-    expect(screen.getByText("FR")).toHaveClass("opacity-50");
+    expect(screen.getByText("NL")).toHaveAttribute("data-variant", "success");
+    expect(screen.getByText("FR")).toHaveAttribute("data-variant", "outline");
   });
 
   it("requires the Dutch question and answer", async () => {
