@@ -74,7 +74,7 @@ for (const width of [1366, 390]) {
     async function editVolunteer(label: string) {
       await page
         .getByRole("button", {
-          name: `Edit volunteer: ${label}`,
+          name: `Edit ${label}`,
           exact: true,
         })
         .click();

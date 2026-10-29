@@ -1,5 +1,7 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -11,7 +13,7 @@ import {
 import { PencilIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
@@ -100,7 +102,18 @@ export default function EventProductsModal({
   const queryClient = useQueryClient();
   const { data: categories = [] } = useProductCategories();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
+  const [textLanguage, setTextLanguage] = useState("nl");
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const [error, setError] = useState("");
+  const [textError, setTextError] = useState<"name" | "description" | null>(null);
+  useEffect(() => {
+    if (error)
+      document.getElementById("product-editor-error")?.scrollIntoView?.({ block: "nearest" });
+  }, [error, validationAttempt]);
+  // Runs after the Dutch tab is active, so the (kept-mounted) panel is no longer hidden.
+  useEffect(() => {
+    if (textError) document.getElementById(`product-${textError}-nl`)?.focus();
+  }, [textError, validationAttempt]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [preview, setPreview] = useState<{
@@ -194,7 +207,11 @@ export default function EventProductsModal({
     defaultValues: formDefaultValues,
     onSubmit: async ({ value }) => {
       setError("");
+      setValidationAttempt((attempt) => attempt + 1);
+      setTextError(null);
       if (!hasDutch(value.name)) {
+        setTextLanguage("nl");
+        setTextError("name");
         setError(m.admin_products_name_required());
         return;
       }
@@ -202,6 +219,8 @@ export default function EventProductsModal({
         (value.description.fr.trim() || value.description.en.trim()) &&
         !hasDutch(value.description)
       ) {
+        setTextLanguage("nl");
+        setTextError("description");
         setError(m.admin_products_description_required());
         return;
       }
@@ -272,21 +291,19 @@ export default function EventProductsModal({
     }
   }
 
-  // Seed the inline form from the record it's opened for. Reset during render
-  // (the same "adjusting state when a prop changes" pattern) since this only
-  // needs to react to the formOpen=false->true transition, not to every render —
-  // see VolunteerFormModal for why the reset value must match `formDefaultValues`.
-  const [wasFormOpen, setWasFormOpen] = useState(formOpen);
-  if (formOpen !== wasFormOpen) {
-    setWasFormOpen(formOpen);
-    if (formOpen) form.reset(formDefaultValues);
-  }
+  // Reset once when entering the editor. Form subscriptions may update other
+  // components, so seed in a layout effect rather than during render.
+  const seedForm = useEffectEvent(() => form.reset(formDefaultValues));
+  useLayoutEffect(() => {
+    if (formOpen) seedForm();
+  }, [formOpen]);
 
   // Any product can be a bundle target, purchasable or hidden — the server
   // only checks the complete graph for cycles.
   const bundleCandidates = products.filter((p) => p.id !== editingId);
 
   function openAdd() {
+    setTextLanguage("nl");
     setPreview(null);
     setEditingId(null);
     setFormOpen(true);
@@ -294,6 +311,7 @@ export default function EventProductsModal({
   }
 
   function openEdit(product: Product) {
+    setTextLanguage("nl");
     setPreview(null);
     setEditingId(product.id);
     setFormOpen(true);
@@ -328,34 +346,9 @@ export default function EventProductsModal({
           void form.handleSubmit();
         }}
         noValidate
-        className="border-t border-input pt-4 mt-2"
+        id="event-product-editor"
       >
-        <p className="text-sm text-subtle mb-4">{m.admin_products_text_help()}</p>
-        <form.Field name="name">
-          {(field) => (
-            <LocalizedInputs
-              idPrefix="product-name"
-              label={(language) => m.admin_products_name_in({ language })}
-              values={field.value}
-              onChange={(language, text) =>
-                field.handleChange({ ...field.value, [language]: text })
-              }
-            />
-          )}
-        </form.Field>
-        <form.Field name="description">
-          {(field) => (
-            <LocalizedInputs
-              idPrefix="product-description"
-              label={(language) => m.admin_products_description_in({ language })}
-              values={field.value}
-              maxLength={300}
-              onChange={(language, text) =>
-                field.handleChange({ ...field.value, [language]: text })
-              }
-            />
-          )}
-        </form.Field>
+        <h3 className="text-base font-medium mb-2">{m.admin_editor_availability()}</h3>
         <div className="flex gap-2 flex-wrap mb-2">
           <AdminField className="max-w-30" controlId="product-price">
             <AdminLabel className="text-subtle text-sm mb-1">{m.admin_products_price()}</AdminLabel>
@@ -366,7 +359,7 @@ export default function EventProductsModal({
                   min={0}
                   step="0.01"
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -382,7 +375,7 @@ export default function EventProductsModal({
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e)}
                   onBlur={field.handleBlur}
@@ -449,7 +442,7 @@ export default function EventProductsModal({
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
@@ -472,7 +465,7 @@ export default function EventProductsModal({
                   min={0}
                   step={1}
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -484,6 +477,47 @@ export default function EventProductsModal({
         <AdminDescription className="block mb-2">
           {m.admin_inventory_unlimited_help()}
         </AdminDescription>
+        <p className="text-sm text-subtle mb-4">{m.admin_products_text_help()}</p>
+        <Tabs value={textLanguage} onValueChange={(value) => setTextLanguage(String(value))}>
+          <TabsList aria-label={m.admin_editor_text()}>
+            {(["nl", "fr", "en"] as const).map((language) => (
+              <TabsTrigger key={language} value={language}>
+                {language.toUpperCase()}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {(["nl", "fr", "en"] as const).map((language) => (
+            <TabsContent key={language} value={language} keepMounted>
+              <form.Field name="name">
+                {(field) => (
+                  <LocalizedInputs
+                    language={language}
+                    idPrefix="product-name"
+                    label={(language) => m.admin_products_name_in({ language })}
+                    values={field.value}
+                    onChange={(language, text) =>
+                      field.handleChange({ ...field.value, [language]: text })
+                    }
+                  />
+                )}
+              </form.Field>
+              <form.Field name="description">
+                {(field) => (
+                  <LocalizedInputs
+                    language={language}
+                    idPrefix="product-description"
+                    label={(language) => m.admin_products_description_in({ language })}
+                    values={field.value}
+                    maxLength={300}
+                    onChange={(language, text) =>
+                      field.handleChange({ ...field.value, [language]: text })
+                    }
+                  />
+                )}
+              </form.Field>
+            </TabsContent>
+          ))}
+        </Tabs>
         <fieldset className="mb-4">
           <legend className="text-base font-medium leading-tight">
             {m.admin_inventory_inclusions()}
@@ -616,21 +650,6 @@ export default function EventProductsModal({
             <AdminDescription>{m.admin_inventory_keep_help()}</AdminDescription>
           </fieldset>
         )}
-
-        <div className="flex gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>
-            {m.close()}
-          </Button>
-          <Button
-            type="submit"
-            variant="warning"
-            size="sm"
-            disabled={saveMutation.isPending || previewPending}
-          >
-            <Icon icon={SaveIcon} />
-            {m.admin_save()}
-          </Button>
-        </div>
       </form>
     );
   }
@@ -704,7 +723,6 @@ export default function EventProductsModal({
             })}
           </div>
         )}
-        {isBeingEdited && !preview && renderForm()}
       </PresentationListItem>
     );
   }
@@ -717,24 +735,47 @@ export default function EventProductsModal({
           if (!open) onHide();
         }}
       >
-        <DialogContent admin size="lg">
-          <DialogHeader>
-            <DialogTitle>{m.admin_products_title({ event: event?.title ?? "" })}</DialogTitle>
+        <DialogContent admin size="lg" className="flex max-h-full min-h-0 flex-col">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>
+              {preview
+                ? m.admin_inventory_review()
+                : formOpen
+                  ? editingId
+                    ? m.admin_editor_product_edit()
+                    : m.admin_products_add()
+                  : m.admin_products_title({ event: event?.title ?? "" })}
+            </DialogTitle>
           </DialogHeader>
-          <DialogBody>
+          <DialogBody className="min-h-0 overflow-y-auto">
             {preview && (
               <section
                 className="rounded-md border border-border p-4 mb-4"
                 aria-label={m.admin_inventory_review()}
               >
                 <h3 className="text-base font-medium leading-tight">
-                  {m.admin_inventory_review()}
+                  {m.admin_inventory_existing_bookings()}
                 </h3>
                 <p>
                   {preview.payload.name.nl}: €{preview.payload.price.toFixed(2)};{" "}
                   {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
+                <div className="mb-4">
+                  <AdminCheck
+                    id="review-booked-contents"
+                    disabled
+                    checked={Boolean(preview.payload.updateExistingContents)}
+                    label={m.admin_inventory_update_contents()}
+                  />
+                  <AdminCheck
+                    id="review-booked-prices"
+                    disabled
+                    checked={Boolean(preview.payload.updateExistingPrices)}
+                    label={m.admin_inventory_update_prices()}
+                  />
+                  <AdminDescription>{m.admin_inventory_keep_help()}</AdminDescription>
+                </div>
                 {preview.result.bookings.map((b) => (
                   <div key={b.id} className="mb-2">
                     <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
@@ -760,82 +801,114 @@ export default function EventProductsModal({
                     onCheckedChange={(e) => setConfirmShortage(e)}
                   />
                 )}
-                <Button
-                  disabled={
-                    saveMutation.isPending ||
-                    (preview.result.shortages.length > 0 && !confirmShortage)
-                  }
-                  onClick={async () => {
-                    try {
-                      const saved = await saveMutation.mutateAsync({
-                        ...preview.payload,
-                        previewToken: preview.result.preview_token,
-                        confirmShortage,
-                      });
-                      updateQueryData(saved);
-                      setPreview(null);
-                      setFormOpen(false);
-                      setEditingId(null);
-                      onProductsChanged?.();
-                    } catch (err) {
-                      setError(apiErrorMessage(err, m.admin_content_error_save()));
-                      setPreview(null);
-                    }
-                  }}
-                >
-                  {m.admin_save()}
-                </Button>
-                <Button variant="outline" onClick={() => setPreview(null)}>
-                  {m.close()}
-                </Button>
               </section>
             )}
 
-            <p className="text-subtle text-sm mb-4">{m.admin_products_help()}</p>
+            {!formOpen && <p className="text-subtle text-sm mb-4">{m.admin_products_help()}</p>}
 
             {error && (
-              <Alert variant="danger" className="py-1 mb-2">
+              <Alert id="product-editor-error" variant="danger" className="py-1 mb-2">
                 {error}
               </Alert>
             )}
 
-            {productsQuery.isPending ? (
-              <div className="text-center py-4">
-                <Spinner label={m.admin_loading()} size="sm" variant="warning" />
-              </div>
-            ) : productsQuery.isError ? (
-              <Alert variant="danger" className="py-1 mb-2">
-                {m.admin_content_error_load()}
-              </Alert>
-            ) : (
-              <>
-                {products.length === 0 ? (
-                  <AdminEmptyState>{m.admin_products_empty()}</AdminEmptyState>
-                ) : (
-                  <PresentationList flush className="mb-2">
-                    {products.map((product) => renderRow(product))}
-                  </PresentationList>
+            {!formOpen &&
+              (productsQuery.isPending ? (
+                <div className="text-center py-4">
+                  <Spinner label={m.admin_loading()} size="sm" variant="warning" />
+                </div>
+              ) : productsQuery.isError ? (
+                <Alert variant="danger" className="py-1 mb-2">
+                  {m.admin_content_error_load()}
+                </Alert>
+              ) : (
+                <>
+                  {products.length === 0 ? (
+                    <AdminEmptyState>{m.admin_products_empty()}</AdminEmptyState>
+                  ) : (
+                    <PresentationList flush className="mb-2">
+                      {products.map((product) => renderRow(product))}
+                    </PresentationList>
+                  )}
+                </>
+              ))}
+            {formOpen && !preview
+              ? renderForm()
+              : !formOpen && (
+                  <AdminAddButton
+                    variant="outline"
+                    onClick={openAdd}
+                    disabled={productsQuery.isPending || productsQuery.isError || formOpen}
+                  >
+                    {m.admin_products_add()}
+                  </AdminAddButton>
                 )}
-              </>
-            )}
-
-            {formOpen && editingId === null && !preview ? (
-              renderForm()
-            ) : (
-              <AdminAddButton
-                variant="outline"
-                onClick={openAdd}
-                disabled={productsQuery.isPending || productsQuery.isError || formOpen}
-              >
-                {m.admin_products_add()}
-              </AdminAddButton>
-            )}
           </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
-              {m.close()}
-            </Button>
-          </DialogFooter>
+          {preview && (
+            <DialogFooter className="shrink-0">
+              <Button
+                disabled={
+                  saveMutation.isPending ||
+                  (preview.result.shortages.length > 0 && !confirmShortage)
+                }
+                onClick={async () => {
+                  try {
+                    const saved = await saveMutation.mutateAsync({
+                      ...preview.payload,
+                      previewToken: preview.result.preview_token,
+                      confirmShortage,
+                    });
+                    updateQueryData(saved);
+                    setPreview(null);
+                    setFormOpen(false);
+                    setEditingId(null);
+                    onProductsChanged?.();
+                  } catch (err) {
+                    setError(apiErrorMessage(err, m.admin_content_error_save()));
+                    setPreview(null);
+                  }
+                }}
+              >
+                {m.admin_save()}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={saveMutation.isPending}
+                onClick={() => setPreview(null)}
+              >
+                {m.admin_editor_back_product()}
+              </Button>
+            </DialogFooter>
+          )}
+          {formOpen && !preview && (
+            <DialogFooter className="shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={saveMutation.isPending || previewPending}
+                onClick={() => setFormOpen(false)}
+              >
+                {m.admin_action_cancel()}
+              </Button>
+              <Button
+                type="submit"
+                form="event-product-editor"
+                variant="warning"
+                size="sm"
+                disabled={saveMutation.isPending || previewPending}
+              >
+                <Icon icon={SaveIcon} />
+                {m.admin_save()}
+              </Button>
+            </DialogFooter>
+          )}
+          {!formOpen && (
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={onHide}>
+                {m.close()}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
       {confirmDialog}

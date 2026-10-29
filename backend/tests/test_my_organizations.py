@@ -25,7 +25,7 @@ async def manager(db_session, monkeypatch):
     db_session.add_all([person, other])
     await db_session.flush()
     rows = [
-        Organization(name="One", contact_person_id=person.id),
+        Organization(name="One", contact_person_id=person.id, image="/uploads/one.png"),
         Organization(name="Two", contact_person_id=person.id),
         Organization(name="Other", contact_person_id=other.id),
     ]
@@ -52,7 +52,9 @@ async def test_one_link_unlocks_own_bookings_and_organizations(client, db_sessio
     organizations = await client.get("/api/me/organizations")
     assert organizations.headers["cache-control"] == "no-store"
     assert [row["name"] for row in organizations.json()] == ["One", "Two"]
+    assert organizations.json()[0]["image"] == manager[1][0].image
     assert set(organizations.json()[0]) == {
+        "image",
         "id",
         "name",
         "type",

@@ -290,7 +290,9 @@ describe("LayoutEditor", () => {
         expect.objectContaining({ eventId: "event-1" }),
       ),
     );
-    await waitFor(() => expect(screen.getByText(fixture.tables[0]!.name)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getAllByText(fixture.tables[0]!.name)[0]!).toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
     const card = screen
       .getByText("admin_table_label: Table A")
@@ -320,8 +322,8 @@ describe("LayoutEditor", () => {
     renderLayoutEditor(realisticFixture());
     // "Main Hall" appears both in the room tab and the active-room header.
     expect(screen.getAllByText("Main Hall").length).toBeGreaterThan(0);
-    expect(screen.getByText("Table A")).toBeInTheDocument();
-    expect(screen.getByText("Table B")).toBeInTheDocument();
+    expect(screen.getAllByText("Table A")[0]!).toBeInTheDocument();
+    expect(screen.getAllByText("Table B")[0]!).toBeInTheDocument();
   });
 
   it("assigns an unallocated booking from the selected table on the plan", async () => {
@@ -375,12 +377,12 @@ describe("LayoutEditor", () => {
     renderLayoutEditor(fixture);
 
     // Room 1 (auto-selected) shows Table A, not Garden Table.
-    expect(screen.getByText("Table A")).toBeInTheDocument();
+    expect(screen.getAllByText("Table A")[0]!).toBeInTheDocument();
     expect(screen.queryByText("Garden Table")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Garden Room"));
 
-    expect(screen.getByText("Garden Table")).toBeInTheDocument();
+    expect(screen.getAllByText("Garden Table")[0]!).toBeInTheDocument();
     expect(screen.queryByText("Table A")).not.toBeInTheDocument();
   });
 
@@ -794,5 +796,28 @@ describe("LayoutEditor", () => {
         expect(callbacks.onRestoreRevision).toHaveBeenCalledWith("layout-1", 1, true),
       );
     });
+  });
+});
+
+describe("table locator", () => {
+  it("filters without clearing the selected table and uses existing write handlers", async () => {
+    const { callbacks } = renderLayoutEditor(realisticFixture());
+    const inspector = screen.getByRole("complementary", { name: "admin_layout_inspector" });
+    const search = within(inspector).getByRole("searchbox");
+    fireEvent.change(search, { target: { value: "table b" } });
+    fireEvent.click(within(inspector).getByRole("button", { name: "Table B" }));
+    expect(within(inspector).getByRole("button", { name: "Table B" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.change(search, { target: { value: "missing" } });
+    expect(within(inspector).getByDisplayValue("Table B")).toBeInTheDocument();
+    expect(within(inspector).getByRole("status")).toHaveTextContent(
+      "admin_layout_no_matching_tables",
+    );
+    expect(callbacks.onUpdateTable).not.toHaveBeenCalled();
+    expect(callbacks.onSaveAllocations).not.toHaveBeenCalled();
+    expect(callbacks.onMoveTable).not.toHaveBeenCalled();
+    expect(callbacks.onRotateTable).not.toHaveBeenCalled();
   });
 });

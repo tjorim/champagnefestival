@@ -598,6 +598,10 @@ export default function PeopleManagement({
 
       {/* Create / edit person modal */}
       <PersonFormModal
+        authHeaders={authHeaders}
+        onReuse={(person) => {
+          setEditingPerson(person);
+        }}
         show={showForm}
         person={editingPerson}
         onSave={handleSavePerson}

@@ -82,7 +82,7 @@ for (const config of cases) {
       const queryClient = setup();
       await screen.findByText("Saved text");
       expect(screen.queryByLabelText(config.field)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("button", { name: /^Edit/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit Saved text" }));
       expect(await screen.findByRole("dialog", { name: config.editTitle })).toBeInTheDocument();
       expect(screen.getByLabelText(config.field)).toHaveValue("Saved text");
       fireEvent.change(screen.getByLabelText(config.field), { target: { value: "Local changes" } });
@@ -104,7 +104,7 @@ for (const config of cases) {
         http.get(config.path, () => HttpResponse.json([{ ...config.saved, ...(submitted ?? {}) }])),
       );
       await screen.findByText("Saved text");
-      fireEvent.click(screen.getByRole("button", { name: /^Edit/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Edit Saved text" }));
       fireEvent.change(screen.getByLabelText(config.field), { target: { value: "Updated text" } });
       fireEvent.click(screen.getByRole("button", { name: "Save" }));
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());

@@ -4,7 +4,13 @@
  * Dutch (same rule for events, FAQ items, announcements, policies, products, ...).
  */
 
-import { AdminField, AdminInput, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminField,
+  AdminInput,
+  AdminLabel,
+  AdminTextarea,
+} from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
 import type { EventLanguage } from "@/types/event";
 
@@ -34,6 +40,7 @@ export function LocalizedInputs({
   multiline = false,
   maxLength,
   rows = 3,
+  language: selectedLanguage,
 }: {
   idPrefix: string;
   /** Label for the field in a language, e.g. `(name) => m.admin_event_title_label({ language: name })`. */
@@ -43,31 +50,34 @@ export function LocalizedInputs({
   multiline?: boolean;
   maxLength?: number;
   rows?: number;
+  language?: Language;
 }) {
   return (
     <>
-      {LANGUAGES.map(({ language, name }) => (
-        <AdminField key={language} className="mb-4" controlId={`${idPrefix}-${language}`}>
-          <AdminLabel>{label(name())}</AdminLabel>
-          {multiline ? (
-            <AdminTextarea
-              rows={rows}
-              maxLength={maxLength}
-              value={values[language]}
-              onChange={(event) => onChange(language, event.target.value)}
-              className="bg-muted text-content border-input"
-            />
-          ) : (
-            <AdminInput
-              type="text"
-              maxLength={maxLength}
-              value={values[language]}
-              onChange={(event) => onChange(language, event.target.value)}
-              className="bg-muted text-content border-input"
-            />
-          )}
-        </AdminField>
-      ))}
+      {LANGUAGES.filter(({ language }) => !selectedLanguage || language === selectedLanguage).map(
+        ({ language, name }) => (
+          <AdminField key={language} className="mb-4" controlId={`${idPrefix}-${language}`}>
+            <AdminLabel>{label(name())}</AdminLabel>
+            {multiline ? (
+              <AdminTextarea
+                rows={rows}
+                maxLength={maxLength}
+                value={values[language]}
+                onChange={(event) => onChange(language, event.target.value)}
+                className={ADMIN_CONTROL_CLASS}
+              />
+            ) : (
+              <AdminInput
+                type="text"
+                maxLength={maxLength}
+                value={values[language]}
+                onChange={(event) => onChange(language, event.target.value)}
+                className={ADMIN_CONTROL_CLASS}
+              />
+            )}
+          </AdminField>
+        ),
+      )}
     </>
   );
 }

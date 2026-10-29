@@ -1,12 +1,13 @@
 import type { ComponentType } from "react";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminInput,
   AdminLabel,
   AdminOption,
   AdminSelect,
   AdminTextarea,
-} from "./AdminFields";
+} from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
 import type { PollAttendance, PollOrders } from "@/utils/adminContentApi";
 import { MAX_POLL_PEOPLE, MAX_POLL_QUANTITY } from "@/utils/myVolunteerApi";
@@ -60,7 +61,7 @@ const yesNo: AnswerKind<YesNoDraft> = {
         </AdminLabel>
         <AdminSelect
           size="sm"
-          className="bg-muted text-content border-input"
+          className={ADMIN_CONTROL_CLASS}
           value={draft.choice}
           onValueChange={(value) => onChange({ ...draft, choice: value as AnswerChoice })}
         >

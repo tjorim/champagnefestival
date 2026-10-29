@@ -1109,3 +1109,33 @@ note drafts remain editable after failure and use their existing Save button to 
 the current draft. No automatic retry is enabled. A lost response can mean the write
 committed; repeating the same answer replacement is safe under the existing poll
 contract, subject to the server checking the deadline again.
+
+## Preparation editor layout (#1429)
+
+Event and product editors now group translations and keep their explicit actions
+outside the scrolling body. This changes presentation only: event creates/updates,
+product creates/updates, preview tokens and shortage confirmation keep their existing
+request payloads and retry policies. No autosave or automatic write retry is added.
+An ambiguous failure still requires reading current state before another save.
+
+### Organisation setup clarity (#1435)
+
+The explicit temporary-image action only sets the local draft's required `image`
+value to the shipped `/images/organization-placeholder.svg`; it sends no request.
+Saving still uses the existing non-retried organisation create/update operations
+above. Creating is not retry safe; refetch after an ambiguous result before
+creating again. Logo upload remains a separate operation after creation, with
+its existing lock, fresh-name and acceptance rules. Manager text submissions keep
+their existing submission ID and review contract. No automatic retry was added.
+
+### Admin directory field recovery (#1436)
+
+Person/member/volunteer create and update requests, including booking-person
+creation, retain their existing write contracts and `retry: false`. Validation
+failures focus the relevant input without clearing the draft; correcting and
+saving is a deliberate new attempt. Unexpected/outage failures retain the
+operation fallback and draft (the outcome may be uncertain). Existing-directory
+suggestions are authorised read-only searches. Choosing an existing person in
+People opens that record for editing; it does not create, merge, or retry a write.
+Shared-email creation remains allowed for non-members. No automatic retry or
+new idempotency guarantee is introduced.

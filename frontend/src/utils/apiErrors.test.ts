@@ -122,3 +122,21 @@ it.each(["nl", "fr", "en"] as const)("translates membership gates in %s", (local
     expect(message).not.toBe("Fallback");
   }
 });
+
+it("retains schema field locations without messages or submitted values", async () => {
+  const error = await apiErrorFromResponse(
+    jsonResponse(
+      {
+        detail: [
+          { loc: ["body", "email"], msg: "English", input: "private" },
+          { loc: ["query", "email"] },
+          null,
+        ],
+      },
+      422,
+    ),
+    "Fallback",
+  );
+  expect(error.fields).toEqual(["email"]);
+  expect(error.message).toBe("Fallback");
+});

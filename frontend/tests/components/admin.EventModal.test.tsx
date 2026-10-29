@@ -39,13 +39,13 @@ const existingEvent: Event = {
   products: [],
 };
 
-function mount(initial: Event | null, onSave = vi.fn()) {
+function mount(initial: Event | null, onSave = vi.fn(), selectedEdition = edition) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <EventModal
         show
-        edition={edition}
+        edition={selectedEdition}
         initial={initial}
         authHeaders={authHeaders}
         onSave={onSave}
@@ -73,6 +73,17 @@ afterEach(() => {
 });
 
 describe("EventModal translations", () => {
+  it("explains the editable date for the first standalone event", () => {
+    mount(null, vi.fn(), { ...edition, dates: [], editionType: "capsule_exchange" });
+    expect(screen.getByLabelText("Date")).not.toHaveAttribute("readonly");
+    expect(screen.getByText("Choose the date for this edition’s first event.")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "This event uses the edition date. To change it, edit the edition’s existing event.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("fills each language from the event", () => {
     mount(existingEvent);
 
@@ -87,11 +98,17 @@ describe("EventModal translations", () => {
 
     fillRequiredScheduleFields();
     await screen.findByText("Tasting"); // the first category is preselected once they load
+    fireEvent.click(screen.getByRole("tab", { name: "English" }));
     fireEvent.change(screen.getByLabelText("Title (English)"), { target: { value: "Opening" } });
     save();
 
     // Dutch is still empty.
     expect(await screen.findByText("Enter a title in Dutch.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Dutch" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("Title (Dutch)")).toHaveFocus();
+    fireEvent.click(screen.getByRole("tab", { name: "English" }));
+    save();
+    await waitFor(() => expect(screen.getByLabelText("Title (Dutch)")).toHaveFocus());
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -165,6 +182,8 @@ describe("EventModal translations", () => {
       }),
     );
     mount(existingEvent);
+
+    fireEvent.click(screen.getByRole("tab", { name: "English" }));
 
     // Only the pairs the service supports offer a draft: nl -> en, not French.
     const buttons = await screen.findAllByRole("button", { name: "Suggest translation" });

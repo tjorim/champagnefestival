@@ -10,7 +10,12 @@ import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Toggle } from "@/components/ui/toggle";
 import { AdminTablePagination } from "./AdminTablePagination";
-import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminSelect,
+  AdminOption,
+  AdminInput,
+} from "@/components/admin/AdminFields";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -723,7 +728,7 @@ export default function RegistrationList({
             ) : (
               <AdminSelect
                 size="sm"
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
                 value={reg.tableId ?? ""}
                 onValueChange={(e) => handleAssignTable(reg.id, e)}
                 aria-label={m.admin_action_assign_table()}

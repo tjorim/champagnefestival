@@ -8,30 +8,50 @@ vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
 }));
 
-function setup() {
+const existingOrganization = {
+  id: 1,
+  name: "Maison",
+  image: "/logo.svg",
+  description_nl: "Hallo",
+  description_fr: "Bonjour",
+  description_en: "Hello",
+};
+
+function setup(initial: typeof existingOrganization | null = existingOrganization) {
   const onSave = vi.fn();
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <ItemModal
-        show
-        initial={{
-          id: 1,
-          name: "Maison",
-          image: "/logo.svg",
-          description_nl: "Hallo",
-          description_fr: "Bonjour",
-          description_en: "Hello",
-        }}
-        authHeaders={() => ({})}
-        onSave={onSave}
-        onHide={vi.fn()}
-      />
+      <ItemModal show initial={initial} authHeaders={() => ({})} onSave={onSave} onHide={vi.fn()} />
     </QueryClientProvider>,
   );
   return onSave;
 }
 
 describe("organization description editor", () => {
+  it("starts a new organization without an image and refuses to save without one", async () => {
+    const onSave = setup(null);
+    expect(screen.getByLabelText("organization_image_label")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("admin_content_name_placeholder"), {
+      target: { value: "Nieuw" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() => expect(screen.getByText("admin_item_image_required")).toBeInTheDocument());
+    expect(onSave).not.toHaveBeenCalled();
+  });
+  it("requires an explicit temporary-image choice and saves it as public content", async () => {
+    const onSave = setup();
+    fireEvent.change(screen.getByLabelText("organization_image_label"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() => expect(screen.getByText("admin_item_image_required")).toBeInTheDocument());
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "organization_use_placeholder" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ image: "/images/organization-placeholder.svg" }),
+      ),
+    );
+  });
   it("loads and saves descriptions in every language", async () => {
     const onSave = setup();
     expect(screen.getByLabelText("admin_item_description_nl")).toHaveValue("Hallo");

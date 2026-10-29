@@ -1,8 +1,10 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
 import SignageChannels from "@/components/admin/SignageChannels";
 import { server } from "@/mocks/server";
+import { m } from "@/paraglide/messages";
 import { setLocale } from "@/paraglide/runtime";
 import { renderLocation } from "../utils/locationRouter";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -37,7 +39,7 @@ beforeEach(() => {
     http.get("/api/signage/slides", () => HttpResponse.json([])),
     http.get("/api/signage/templates", () => HttpResponse.json([])),
     http.get("/api/editions", () =>
-      HttpResponse.json([{ id: "march-2027", year: 2027, month: "March" }]),
+      HttpResponse.json([{ id: "march-2027", edition_type: "bourse", year: 2027, month: "March" }]),
     ),
   );
 });
@@ -54,6 +56,22 @@ describe("SignageChannels", () => {
 
     expect(await screen.findByRole("heading", { name: /Bar screen/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Preview playlist" })).toBeEnabled();
+  });
+
+  it("labels each edition option with its edition type", async () => {
+    await renderLocation(
+      <SignageChannels authHeaders={authHeaders} />,
+      "/admin?signageChannel=channel-a",
+      createTestQueryClientWrapper(),
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: m.signage_channels_new() }));
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: m.signage_channels_edition() }),
+    );
+    expect(
+      await screen.findByRole("option", { name: `${m.admin_edition_type_bourse()} · March 2027` }),
+    ).toBeVisible();
   });
 
   it("follows browser history between channels", async () => {
