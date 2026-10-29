@@ -1127,3 +1127,15 @@ above. Creating is not retry safe; refetch after an ambiguous result before
 creating again. Logo upload remains a separate operation after creation, with
 its existing lock, fresh-name and acceptance rules. Manager text submissions keep
 their existing submission ID and review contract. No automatic retry was added.
+
+### Admin directory field recovery (#1436)
+
+Person/member/volunteer create and update requests, including booking-person
+creation, retain their existing write contracts and `retry: false`. Validation
+failures focus the relevant input without clearing the draft; correcting and
+saving is a deliberate new attempt. Unexpected/outage failures retain the
+operation fallback and draft (the outcome may be uncertain). Existing-directory
+suggestions are authorised read-only searches. Choosing an existing person in
+People opens that record for editing; it does not create, merge, or retry a write.
+Shared-email creation remains allowed for non-members. No automatic retry or
+new idempotency guarantee is introduced.

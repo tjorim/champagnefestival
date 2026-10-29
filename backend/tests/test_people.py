@@ -1036,3 +1036,30 @@ async def test_national_register_number_hidden_from_list_and_single_get_but_visi
     r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json()["national_register_number"] == "85010112399"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("endpoint", ["people", "members"])
+async def test_admin_phone_validation_is_coded_and_correction_succeeds(client, endpoint):
+    payload = {"name": "Validation guest", "phone": "123"}
+    response = await client.post(f"/api/{endpoint}", json=payload, headers=ADMIN_HEADERS)
+    assert response.status_code == 422
+    assert response.json()["code"] == "person_invalid_phone"
+    payload["phone"] = "+32470111222"
+    response = await client.post(f"/api/{endpoint}", json=payload, headers=ADMIN_HEADERS)
+    assert response.status_code == 201
+
+
+@pytest.mark.anyio
+async def test_unsupported_email_and_shared_email_creation(client):
+    payload = {"name": "First guest", "email": "guest@example.test"}
+    response = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "email"]
+    payload["email"] = "guest@example.com"
+    first = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
+    assert first.status_code == 201
+    payload["name"] = "Second guest"
+    second = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
+    assert second.status_code == 201
+    assert first.json()["id"] != second.json()["id"]

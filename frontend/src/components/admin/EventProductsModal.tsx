@@ -1,6 +1,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -350,7 +351,7 @@ export default function EventProductsModal({
                   min={0}
                   step="0.01"
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -366,7 +367,7 @@ export default function EventProductsModal({
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e)}
                   onBlur={field.handleBlur}
@@ -433,7 +434,7 @@ export default function EventProductsModal({
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
@@ -456,7 +457,7 @@ export default function EventProductsModal({
                   min={0}
                   step={1}
                   size="sm"
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}

@@ -1973,5 +1973,12 @@
   "organization_use_placeholder": "Tijdelijke afbeelding gebruiken",
   "organization_current": "Opgeslagen openbare inhoud",
   "organization_no_description": "Geen beschrijving opgeslagen.",
-  "organization_no_website": "Geen website opgeslagen."
+  "organization_no_website": "Geen website opgeslagen.",
+  "admin_person_invalid_phone": "Voer een geldig telefoonnummer in, met landcode voor nummers buiten België.",
+  "admin_person_invalid_email": "Voer een geldig, ondersteund e-mailadres in.",
+  "admin_person_invalid_field": "Controleer deze waarde en probeer opnieuw.",
+  "admin_person_identity_conflict": "Dit identiteitsnummer is al gekoppeld aan een andere persoon. Controleer eerst de personenlijst.",
+  "admin_person_matches_help": "Mogelijk bestaande personen. Controleer of dit dezelfde persoon is.",
+  "admin_person_reuse": "Bestaande persoon gebruiken",
+  "admin_person_continue_help": "Voor een andere persoon gaat u verder met Opslaan. Een gedeeld e-mailadres is toegestaan."
 }

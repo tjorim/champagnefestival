@@ -120,74 +120,79 @@ test("wrong-clock screens synchronise and reload offline", async ({ browser }) =
 
 test("revisions wait for a cycle boundary and wake lock is reacquired", async ({ browser }) => {
   const context = await browser.newContext();
-  const page = await context.newPage();
-  const epoch = "2026-10-01T00:00:00Z";
-  await page.clock.install({ time: new Date(epoch) });
-  await page.clock.pauseAt(new Date(epoch));
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, "wakeLock", {
-      value: {
-        request: async () => {
-          const state = window as unknown as { wakeRequests: number };
-          state.wakeRequests = (state.wakeRequests ?? 0) + 1;
-          const sentinel = Object.assign(new EventTarget(), {
-            released: false,
-            release: async () => {},
-          });
-          (window as unknown as { releaseWake: () => void }).releaseWake = () => {
-            sentinel.released = true;
-            sentinel.dispatchEvent(new Event("release"));
-          };
-          return sentinel;
-        },
-      },
-    });
-  });
-  let revision = "v1";
-  let conditional = false;
-  await context.route("**/api/**", async (route) => {
-    if (route.request().url().endsWith("/time")) {
-      // Visibility changes trigger another sync. The mock server must advance with
-      // the controlled clock, including when a sync overlaps fastForward().
-      const serverTime = await page.evaluate(() => new Date().toISOString());
-      return route.fulfill({ json: { server_time: serverTime } });
-    }
-    if (route.request().url().includes("/playlist")) {
-      conditional ||= route.request().headers()["if-none-match"] === '"v1"';
-      return route.fulfill({
-        headers: { ETag: `"${revision}"` },
-        json: {
-          epoch,
-          revision,
-          slides: slides.map((slide) => ({
-            ...slide,
-            duration: 20,
-            text: `${revision}:${slide.id}`,
-          })),
+  try {
+    const page = await context.newPage();
+    const epoch = "2026-10-01T00:00:00Z";
+    await page.clock.install({ time: new Date(epoch) });
+    await page.clock.pauseAt(new Date(epoch));
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "wakeLock", {
+        value: {
+          request: async () => {
+            const state = window as unknown as { wakeRequests: number };
+            state.wakeRequests = (state.wakeRequests ?? 0) + 1;
+            const sentinel = Object.assign(new EventTarget(), {
+              released: false,
+              release: async () => {},
+            });
+            (window as unknown as { releaseWake: () => void }).releaseWake = () => {
+              sentinel.released = true;
+              sentinel.dispatchEvent(new Event("release"));
+            };
+            return sentinel;
+          },
         },
       });
-    }
-    return route.fulfill({ json: {} });
-  });
-  await page.goto("http://localhost:5178/signage/test");
-  await expect(page.getByText("v1:0", { exact: true })).toBeVisible();
-  await page.getByRole("button").click();
-  await expect
-    .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
-    .toBe(1);
-  revision = "v2";
-  await page.clock.fastForward(30_000);
-  await expect.poll(() => conditional).toBe(true);
-  await expect(page.getByText("v1:1", { exact: true })).toBeVisible();
-  await page.clock.fastForward(10_000);
-  await expect(page.getByText("v2:0", { exact: true })).toBeVisible();
-  // Exercise visibility-triggered resynchronization after the boundary assertions.
-  await page.evaluate(() => {
-    (window as unknown as { releaseWake: () => void }).releaseWake();
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await expect
-    .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
-    .toBe(2);
-  await context.close();
+    });
+    let revision = "v1";
+    let conditional = false;
+    await context.route("**/api/**", async (route) => {
+      if (route.request().url().endsWith("/time")) {
+        // Visibility changes trigger another sync. The mock server must advance with
+        // the controlled clock, including when a sync overlaps fastForward().
+        const serverTime = await page.evaluate(() => new Date().toISOString());
+        return route.fulfill({ json: { server_time: serverTime } });
+      }
+      if (route.request().url().includes("/playlist")) {
+        conditional ||= route.request().headers()["if-none-match"] === '"v1"';
+        return route.fulfill({
+          headers: { ETag: `"${revision}"` },
+          json: {
+            epoch,
+            revision,
+            slides: slides.map((slide) => ({
+              ...slide,
+              duration: 20,
+              text: `${revision}:${slide.id}`,
+            })),
+          },
+        });
+      }
+      return route.fulfill({ json: {} });
+    });
+    await page.goto("http://localhost:5178/signage/test");
+    await expect(page.getByText("v1:0", { exact: true })).toBeVisible();
+    await page.getByRole("button").click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
+      .toBe(1);
+    revision = "v2";
+    await page.clock.fastForward(30_000);
+    await expect.poll(() => conditional).toBe(true);
+    await expect(page.getByText("v1:1", { exact: true })).toBeVisible();
+    await page.clock.fastForward(10_000);
+    await expect(page.getByText("v2:0", { exact: true })).toBeVisible();
+    // Exercise visibility-triggered resynchronization after the boundary assertions.
+    await page.evaluate(() => {
+      (window as unknown as { releaseWake: () => void }).releaseWake();
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
+      .toBe(2);
+  } finally {
+    // Keep the page alive until time mocks finish their page.evaluate calls.
+    await context.unrouteAll({ behavior: "wait" });
+    await context.close();
+  }
 });

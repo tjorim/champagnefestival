@@ -50,7 +50,7 @@ import { signageIcons } from "@/signage/icons";
 import "@/signage/editor.css";
 import SignageVideoExports from "./SignageVideoExports";
 import AdminEditorDialog from "./AdminEditorDialog";
-import { editionDisplayName } from "@/utils/editionName";
+import { editionDisplayNameWithType } from "@/utils/editionName";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const channelPath = (slug: string) => `/signage/${slug}`;
@@ -237,11 +237,9 @@ export default function SignageChannels({
   const editions = useQuery({
     queryKey: ["admin", "signage", "editions"],
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<{ id: string; year: number; month: string }[]>(
-        "/api/editions",
-        { headers: authHeaders(), signal },
-        m.admin_error_load_data(),
-      ),
+      fetchJsonOrThrowWithUnauthorized<
+        { id: string; edition_type: string; year: number; month: string }[]
+      >("/api/editions", { headers: authHeaders(), signal }, m.admin_error_load_data()),
   });
   const rows = (slides.data ?? [])
     .filter((item) => item.channel_id === channelId)
@@ -576,7 +574,11 @@ export default function SignageChannels({
                     <AdminOption value="">—</AdminOption>
                     {editions.data?.map((item) => (
                       <AdminOption key={item.id} value={item.id}>
-                        {editionDisplayName(item)}
+                        {editionDisplayNameWithType({
+                          editionType: item.edition_type,
+                          year: item.year,
+                          month: item.month,
+                        })}
                       </AdminOption>
                     ))}
                   </AdminSelect>

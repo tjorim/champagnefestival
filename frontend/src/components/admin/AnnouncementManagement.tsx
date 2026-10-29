@@ -212,7 +212,7 @@ export default function AnnouncementManagement({
     async (item: Announcement) => {
       const confirmed = await confirm({
         title: m.admin_announcement_delete_title(),
-        body: m.admin_announcement_delete_confirm({ text: announcementName(item) }),
+        body: m.admin_announcement_delete_confirm({ text: (item.text_nl ?? "").trim() }),
         confirmLabel: m.admin_delete(),
         errorFallback: m.admin_error_delete_announcement(),
       });

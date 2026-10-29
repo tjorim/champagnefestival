@@ -3,6 +3,8 @@ import OrganizationTranslationSuggestion from "@/components/OrganizationTranslat
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
 import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
 import {
+  ADMIN_CONTROL_CLASS,
+  ADMIN_LABEL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -193,7 +195,7 @@ export default function ItemModal({
           <DialogBody>
             <p className="text-sm text-subtle mb-4">{m.organization_setup_help()}</p>
             <AdminField className="mb-4" controlId="item-name">
-              <AdminLabel className="text-subtle text-sm">
+              <AdminLabel className={ADMIN_LABEL_CLASS}>
                 {m.admin_content_name_placeholder()}
               </AdminLabel>
               <form.Field
@@ -210,7 +212,7 @@ export default function ItemModal({
                   return (
                     <>
                       <AdminInput
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         autoFocus
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -224,11 +226,11 @@ export default function ItemModal({
               </form.Field>
             </AdminField>
             <AdminField className="mb-4" controlId="item-type">
-              <AdminLabel className="text-subtle text-sm">{m.admin_item_type()}</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_item_type()}</AdminLabel>
               <form.Field name="type">
                 {(field) => (
                   <AdminSelect
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
@@ -241,9 +243,7 @@ export default function ItemModal({
               </form.Field>
             </AdminField>
             <AdminField controlId="item-contact-person">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_item_contact_person()}
-              </AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_item_contact_person()}</AdminLabel>
               <p className="text-sm text-muted-foreground">{m.manager_contact_hint()}</p>
               <form.Field name="contactOption">
                 {(field) => (
@@ -317,9 +317,7 @@ export default function ItemModal({
               {m.organization_use_placeholder()}
             </Button>
             <AdminField className="mb-4" controlId="item-image">
-              <AdminLabel className="text-subtle text-sm">
-                {m.organization_image_label()}
-              </AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.organization_image_label()}</AdminLabel>
               <form.Field
                 name="image"
                 validators={[
@@ -335,7 +333,7 @@ export default function ItemModal({
                   return (
                     <>
                       <AdminInput
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -348,7 +346,7 @@ export default function ItemModal({
               </form.Field>
             </AdminField>
             <AdminField className="mb-4" controlId="item-website">
-              <AdminLabel className="text-subtle text-sm">{m.admin_item_website_url()}</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_item_website_url()}</AdminLabel>
               <form.Field
                 name="website"
                 validators={[
@@ -367,7 +365,7 @@ export default function ItemModal({
                     <>
                       <AdminInput
                         type="url"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         placeholder="https://…"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
