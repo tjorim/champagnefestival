@@ -25,7 +25,7 @@ async def manager(db_session, monkeypatch):
     db_session.add_all([person, other])
     await db_session.flush()
     rows = [
-        Organization(name="One", contact_person_id=person.id),
+        Organization(name="One", contact_person_id=person.id, image="/uploads/one.png"),
         Organization(name="Two", contact_person_id=person.id),
         Organization(name="Other", contact_person_id=other.id),
     ]

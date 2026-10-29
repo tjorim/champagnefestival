@@ -211,7 +211,10 @@ export default function VolunteerFormModal({
                   <AdminInput
                     type="text"
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) => {
+                      fieldErrors.clearField("name");
+                      field.handleChange(e.target.value);
+                    }}
                     onBlur={field.handleBlur}
                     className={ADMIN_CONTROL_CLASS}
                     required
@@ -234,7 +237,10 @@ export default function VolunteerFormModal({
                   <AdminInput
                     type="text"
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) => {
+                      fieldErrors.clearField("address");
+                      field.handleChange(e.target.value);
+                    }}
                     onBlur={field.handleBlur}
                     className={ADMIN_CONTROL_CLASS}
                     maxLength={300}
@@ -257,7 +263,10 @@ export default function VolunteerFormModal({
                       <AdminInput
                         type="text"
                         value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
+                        onChange={(e) => {
+                          fieldErrors.clearField("national_register_number");
+                          field.handleChange(e.target.value.slice(0, 20));
+                        }}
                         onBlur={field.handleBlur}
                         className={ADMIN_CONTROL_CLASS}
                         maxLength={20}
@@ -279,7 +288,10 @@ export default function VolunteerFormModal({
                       <AdminInput
                         type="text"
                         value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          fieldErrors.clearField("eid_document_number");
+                          field.handleChange(e.target.value);
+                        }}
                         onBlur={field.handleBlur}
                         className={ADMIN_CONTROL_CLASS}
                         maxLength={50}

@@ -149,7 +149,10 @@ export default function RegistrationNewPersonPanel({
           value={name}
           required
           aria-invalid={attempted && nameMissing}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => {
+            fieldErrors.clearField("name");
+            setName(event.target.value);
+          }}
         />
         {attempted && nameMissing && (
           <AdminError>{m.admin_registration_new_person_name_required()}</AdminError>
@@ -168,7 +171,10 @@ export default function RegistrationNewPersonPanel({
             maxLength={200}
             value={email}
             aria-invalid={emailInvalid}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              fieldErrors.clearField("email");
+              setEmail(event.target.value);
+            }}
           />
           {emailInvalid && <AdminError>{m.registration_errors_email_invalid()}</AdminError>}
         </AdminField>
@@ -182,7 +188,10 @@ export default function RegistrationNewPersonPanel({
             type="tel"
             maxLength={50}
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => {
+              fieldErrors.clearField("phone");
+              setPhone(event.target.value);
+            }}
           />
         </AdminField>
         <AdminField className="flex-1 min-w-48" controlId="registration-new-person-language">

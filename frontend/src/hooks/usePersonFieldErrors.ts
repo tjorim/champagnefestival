@@ -7,6 +7,13 @@ export function usePersonFieldErrors(prefix: string) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   return {
     clear: () => setErrors({}),
+    /** Editing a field drops only its own server message; other fields keep theirs. */
+    clearField: (name: string) =>
+      setErrors((current) => {
+        if (!(name in current)) return current;
+        const { [name]: _removed, ...rest } = current;
+        return rest;
+      }),
     field: (name: string) => errors[name],
     capture: (error: unknown) => {
       if (!(error instanceof ApiError)) return;

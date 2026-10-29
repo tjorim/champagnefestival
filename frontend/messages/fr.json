@@ -1980,5 +1980,6 @@
   "admin_person_identity_conflict": "Ce numéro d’identité est déjà lié à une autre personne. Vérifiez d’abord le répertoire.",
   "admin_person_matches_help": "Personnes existantes possibles. Vérifiez s’il s’agit de la même personne.",
   "admin_person_reuse": "Utiliser cette personne",
-  "admin_person_continue_help": "Pour une autre personne, continuez avec Enregistrer. Les adresses e-mail partagées sont autorisées."
+  "admin_person_continue_help": "Pour une autre personne, continuez avec Enregistrer. Les adresses e-mail partagées sont autorisées.",
+  "admin_person_matches_unavailable": "Les personnes existantes n’ont pas pu être vérifiées. Recherchez dans l’annuaire avant de créer une nouvelle personne."
 }

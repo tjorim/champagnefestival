@@ -16,6 +16,7 @@ async function editors(page: Page) {
   await expect(editionDialog.getByText(en.admin_edition_id_help, { exact: true })).toBeVisible();
   await expect(editionDialog.getByText(en.admin_edition_month_help, { exact: true })).toBeVisible();
   await expect(editionDialog.getByLabel("ID", { exact: true })).toHaveAttribute("required", "");
+  await expect(editionDialog.getByLabel("Month", { exact: true })).toHaveAttribute("required", "");
   await editionDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.getByRole("button", { name: "March 2027", exact: true }).click();
   await page
@@ -72,6 +73,9 @@ async function editors(page: Page) {
     "aria-selected",
     "true",
   );
+  // Draft text in the other languages survives the failed save and the tab switch.
+  await dialog.getByRole("tab", { name: "FR", exact: true }).click();
+  await expect(dialog.getByLabel("Name (French)")).toHaveValue("Produit traduit");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(
     dialog.getByRole("button", { name: en.admin_products_add, exact: true }),
@@ -90,6 +94,13 @@ async function editors(page: Page) {
     dialog.getByRole("heading", { name: en.admin_inventory_review, exact: true }).first(),
   ).toBeVisible();
   await expect(dialog.getByText("booking-11", { exact: true })).toBeVisible();
+  const booking = dialog.locator("div.mb-2").filter({ hasText: "booking-11" });
+  await expect(booking).toContainText("€50.00 → €100.00");
+  await expect(booking).toContainText(`${en.admin_inventory_paid} €60.00`);
+  await expect(booking).toContainText(`${en.admin_inventory_refund} €0.00`);
+  await expect(booking).toContainText(
+    "Original package: 1 → Changed package with a long translated name: 2",
+  );
   const confirm = dialog.getByRole("checkbox", {
     name: en.admin_inventory_confirm_shortage,
     exact: true,
@@ -98,6 +109,7 @@ async function editors(page: Page) {
   await confirm.focus();
   await page.keyboard.press("Space");
   await expect(confirm).toBeChecked();
+  await expect(dialog.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
   const checkboxBox = await confirm.boundingBox();
   const footerBox = await dialog.locator('[data-slot="dialog-footer"]').boundingBox();
   expect(checkboxBox!.y + checkboxBox!.height).toBeLessThanOrEqual(footerBox!.y);

@@ -213,7 +213,10 @@ export default function MemberFormModal({
                         className={ADMIN_CONTROL_CLASS}
                         maxLength={200}
                         value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          fieldErrors.clearField("name");
+                          field.handleChange(e.target.value);
+                        }}
                         onBlur={field.handleBlur}
                         aria-invalid={showErr}
                       />
@@ -249,7 +252,10 @@ export default function MemberFormModal({
                             className={ADMIN_CONTROL_CLASS}
                             maxLength={200}
                             value={field.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
+                            onChange={(e) => {
+                              fieldErrors.clearField("email");
+                              field.handleChange(e.target.value);
+                            }}
                             onBlur={field.handleBlur}
                             aria-invalid={showErr}
                           />
@@ -270,7 +276,10 @@ export default function MemberFormModal({
                         className={ADMIN_CONTROL_CLASS}
                         maxLength={50}
                         value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          fieldErrors.clearField("phone");
+                          field.handleChange(e.target.value);
+                        }}
                         onBlur={field.handleBlur}
                       />
                     )}
@@ -327,7 +336,10 @@ export default function MemberFormModal({
                     className={ADMIN_CONTROL_CLASS}
                     maxLength={300}
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) => {
+                      fieldErrors.clearField("address");
+                      field.handleChange(e.target.value);
+                    }}
                     onBlur={field.handleBlur}
                   />
                 )}
@@ -370,7 +382,10 @@ export default function MemberFormModal({
                     className={ADMIN_CONTROL_CLASS}
                     maxLength={2000}
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) => {
+                      fieldErrors.clearField("notes");
+                      field.handleChange(e.target.value);
+                    }}
                     onBlur={field.handleBlur}
                   />
                 )}

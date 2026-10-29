@@ -99,7 +99,9 @@ export default function ConfirmModal({
           >
             <XIcon />
           </AlertDialogCancel>
-          <AlertDialogDescription render={<div />}>{body}</AlertDialogDescription>
+          <AlertDialogDescription render={<div />} className="wrap-break-word">
+            {body}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         {error && (
           <div

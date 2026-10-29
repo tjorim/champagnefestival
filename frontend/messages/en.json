@@ -1980,5 +1980,6 @@
   "admin_person_identity_conflict": "This identity number is already linked to another person. Check the directory before continuing.",
   "admin_person_matches_help": "Possible existing people. Check whether this is the same person.",
   "admin_person_reuse": "Use existing person",
-  "admin_person_continue_help": "For a different person, continue with Save. Shared email addresses are allowed."
+  "admin_person_continue_help": "For a different person, continue with Save. Shared email addresses are allowed.",
+  "admin_person_matches_unavailable": "Existing people could not be checked. Search the directory before creating a new person."
 }
