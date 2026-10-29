@@ -11,12 +11,17 @@ import { m } from "@/paraglide/messages";
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  readonly fields: readonly string[];
 
-  constructor(message: string, options: { status: number; code?: string }) {
+  constructor(
+    message: string,
+    options: { status: number; code?: string; fields?: readonly string[] },
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = options.status;
     this.code = options.code;
+    this.fields = options.fields ?? [];
   }
 }
 
@@ -113,5 +118,15 @@ export async function apiErrorFromResponse(
   return new ApiError(typeof detail === "string" ? detail : fallbackMessage, {
     status: response.status,
     code: codeFromErrorBody(body),
+    fields:
+      response.status === 422 && Array.isArray(detail)
+        ? detail.flatMap((issue: unknown) => {
+            if (!issue || typeof issue !== "object" || !("loc" in issue)) return [];
+            const loc = issue.loc;
+            return Array.isArray(loc) && loc[0] === "body" && typeof loc[1] === "string"
+              ? [loc[1]]
+              : [];
+          })
+        : [],
   });
 }

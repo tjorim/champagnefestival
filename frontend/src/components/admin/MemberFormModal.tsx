@@ -26,6 +26,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
+import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
@@ -59,6 +60,7 @@ export default function MemberFormModal({
   onHide,
   limitReached = false,
 }: MemberFormModalProps) {
+  const fieldErrors = usePersonFieldErrors("member");
   const [error, setError] = useState<string | null>(null);
   // The record as it was when the editor opened, so a background refresh neither
   // rewrites untouched fields nor moves the baseline for the discard prompt.
@@ -100,6 +102,7 @@ export default function MemberFormModal({
     defaultValues,
     onSubmit: async ({ value }) => {
       setError(null);
+      fieldErrors.clear();
       try {
         await onSave({
           name: value.name.trim(),
@@ -114,6 +117,7 @@ export default function MemberFormModal({
         });
         onHide();
       } catch (err) {
+        fieldErrors.capture(err);
         devError("Member save error:", err);
         setError(
           apiErrorMessage(
@@ -135,7 +139,10 @@ export default function MemberFormModal({
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) setError(null);
+    if (show) {
+      setError(null);
+      fieldErrors.clear();
+    }
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
@@ -179,7 +186,11 @@ export default function MemberFormModal({
               </Alert>
             )}
 
-            <AdminField className="mb-4" controlId="member-name">
+            <AdminField
+              className="mb-4"
+              controlId="member-name"
+              serverError={fieldErrors.field("name")}
+            >
               <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
               <form.Field
                 name="name"
@@ -213,7 +224,7 @@ export default function MemberFormModal({
 
             <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
               <div className="w-full site-md:w-6/12">
-                <AdminField controlId="member-email">
+                <AdminField controlId="member-email" serverError={fieldErrors.field("email")}>
                   <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
                   <form.Field
                     name="email"
@@ -248,7 +259,7 @@ export default function MemberFormModal({
                 </AdminField>
               </div>
               <div className="w-full site-md:w-6/12">
-                <AdminField controlId="member-phone">
+                <AdminField controlId="member-phone" serverError={fieldErrors.field("phone")}>
                   <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
@@ -301,7 +312,11 @@ export default function MemberFormModal({
               </form.Field>
             </AdminField>
 
-            <AdminField className="mb-4" controlId="member-address">
+            <AdminField
+              className="mb-4"
+              controlId="member-address"
+              serverError={fieldErrors.field("address")}
+            >
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_address_label()}
               </AdminLabel>
@@ -342,7 +357,11 @@ export default function MemberFormModal({
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="mb-4" controlId="member-notes">
+            <AdminField
+              className="mb-4"
+              controlId="member-notes"
+              serverError={fieldErrors.field("notes")}
+            >
               <AdminLabel className="text-subtle text-sm">{m.registration_notes()}</AdminLabel>
               <form.Field name="notes">
                 {(field) => (

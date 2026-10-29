@@ -30,6 +30,7 @@ from app.audit import write_audit_entry
 from app.dependencies import SortDirection
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
+from app.services.errors import ApiHTTPException
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
@@ -61,7 +62,8 @@ async def ensure_unique_fields(
             stmt = stmt.where(Person.id != exclude_id)
         existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
-            raise HTTPException(
+            raise ApiHTTPException(
+                code="person_niss_conflict",
                 status_code=409,
                 detail="Person with this national register number already exists.",
             )
@@ -72,7 +74,8 @@ async def ensure_unique_fields(
             stmt = stmt.where(Person.id != exclude_id)
         existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
-            raise HTTPException(
+            raise ApiHTTPException(
+                code="person_eid_conflict",
                 status_code=409,
                 detail="Person with this eID document number already exists.",
             )
@@ -210,7 +213,8 @@ async def create_volunteer(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_identity_conflict",
             status_code=409,
             detail="Person with this national register number or eID document number already exists.",
         ) from exc
@@ -266,7 +270,8 @@ async def apply_volunteer_update(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_identity_conflict",
             status_code=409,
             detail="Person with this national register number, eID document number, or OIDC identity link already exists.",
         ) from exc

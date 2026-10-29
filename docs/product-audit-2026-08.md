@@ -91,6 +91,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1436](https://github.com/tjorim/champagnefestival/issues/1436) | Repository implementation complete | 2026-10-29 | Backend directory API and frontend field-recovery/directory-suggestion regression tests; [implementation record](#admin-directory-recovery-follow-up-1436-2026-10-29) | Translated structured field errors with focus and draft retention, authorised existing-person suggestions, and deliberate reuse/separate creation. Shared-email and merge policies are unchanged; manual browser validation was not run. |
 | [#1430](https://github.com/tjorim/champagnefestival/issues/1430) | Repository implementation complete | 2026-10-29 | [Acceptance record](decisions/1430-floor-plan-workspace.md); floor-plan editor component and authenticated Chromium tests | Adjacent independently scrolling map/inspector on laptops, stacked narrow layout, retained keyboard table search, explicit save guidance and all-layout room-count wording. Synthetic dense plan and long allocations verified at three laptop sizes, native 100%/125%/150% zoom and narrow sizes. Existing write, geometry, capacity and revision contracts retained. |
 | [#1429](https://github.com/tjorim/champagnefestival/issues/1429) | Repository implementation complete | 2026-10-29 | [Acceptance record](decisions/1429-preparation-editors.md); preparation-editors authenticated browser matrix and event/product component tests | Core scheduling/access and price/stock precede mounted locale-tabbed text. Fixed editor/review actions, separate product list/edit modes, explicit booking-impact scope and shortage review, contextual first-event date guidance and required edition ID/month help. Verified populated synthetic data, long French drafts, keyboard navigation and native 100%/125%/150% zoom at all three target laptop sizes. Backend/payment/retry contracts unchanged. |
 | [#1424](https://github.com/tjorim/champagnefestival/issues/1424) | Repository implementation complete | 2026-10-28 | [Acceptance record](decisions/1424-volunteer-plan-navigation.md); venue-plan component and authenticated browser tests | Search, combined room/event/date filters, structured textual statuses, map/list navigation, selected/missing-table focus, skip link and registration return path. Dummy-data coverage includes 1/24/96 tables, long labels, phone/laptop and reduced-height layouts, two-axis wheel and keyboard scrolling, axe and real 125%/150%/200% browser zoom. Owner confirmed dummy data is sufficient for implementation validation; actual venue/hardware rehearsal is not claimed. Admin workspace is covered separately by the completed #1430 entry. |
@@ -324,3 +325,17 @@ manager-only summary/long-translation checks pass. Component and API tests cover
 proposal submission, acceptance/rejection, access isolation and logo storage.
 Acceptance remains open pending a single combined real-backend browser rehearsal
 of create → contact → proposal → acceptance/rejection. File storage and side-by-side review contracts are unchanged.
+
+### Admin directory recovery follow-up (#1436, 2026-10-29)
+
+Implemented translated server-field recovery in person, member, volunteer and
+booking-person forms: structured schema locations and stable phone/identity
+codes identify the input, set accessible error associations and focus it while
+retaining the draft. People creation uses bounded authorised directory search
+to offer opening an existing record, or deliberately saving a separate person.
+Shared-email creation, duplicate-row warnings, merge keeper/swap and merge
+contracts are preserved. No merge consequence claims or retry-policy changes.
+Regression coverage includes correction, unsupported email input, shared email
+creation and existing-person suggestions. Manual browser validation was not run
+for this change; #1422 outage retention and #1423 self-service scope remain
+unchanged.

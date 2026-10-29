@@ -26,17 +26,25 @@ import { cn } from "@/lib/utils";
 
 // Associations survive TanStack render props without coupling presentation to
 // form state. Unnamed groups receive an ID, just like explicitly named fields.
+const ServerFieldError = createContext<string | undefined>(undefined);
+
 const FieldId = createContext<string | undefined>(undefined);
 
 export function AdminField({
   controlId,
+  serverError,
   className,
   ...props
-}: ComponentProps<typeof Field> & { controlId?: string }) {
+}: ComponentProps<typeof Field> & { controlId?: string; serverError?: string }) {
   const generatedId = useId();
   return (
     <FieldId.Provider value={controlId ?? generatedId}>
-      <Field className={cn("gap-2", className)} {...props} />
+      <ServerFieldError.Provider value={serverError}>
+        <Field className={cn("gap-2", className)} {...props}>
+          {props.children}
+          {serverError && <AdminError>{serverError}</AdminError>}
+        </Field>
+      </ServerFieldError.Provider>
     </FieldId.Provider>
   );
 }
@@ -58,6 +66,8 @@ export function AdminError(props: ComponentProps<typeof FieldError>) {
 
 function useAssociation(id: string | undefined, invalid?: boolean) {
   const fieldId = useContext(FieldId);
+  const serverError = useContext(ServerFieldError);
+  invalid = invalid || !!serverError;
   const resolvedId = id ?? fieldId;
   return {
     id: resolvedId,
@@ -73,8 +83,13 @@ export function AdminInput({ id, size, className, ...props }: InputProps) {
   const association = useAssociation(id, props["aria-invalid"] === true);
   return (
     <Input
-      {...association}
       {...props}
+      {...association}
+      aria-invalid={association["aria-invalid"] ?? props["aria-invalid"]}
+      aria-describedby={
+        [props["aria-describedby"], association["aria-describedby"]].filter(Boolean).join(" ") ||
+        undefined
+      }
       className={cn("text-foreground", size === "sm" && "h-8 text-sm", className)}
     />
   );
@@ -89,8 +104,13 @@ export function AdminTextarea({
   const association = useAssociation(id, props["aria-invalid"] === true);
   return (
     <Textarea
-      {...association}
       {...props}
+      {...association}
+      aria-invalid={association["aria-invalid"] ?? props["aria-invalid"]}
+      aria-describedby={
+        [props["aria-describedby"], association["aria-describedby"]].filter(Boolean).join(" ") ||
+        undefined
+      }
       className={cn("text-foreground", size === "sm" && "text-sm", className)}
     />
   );

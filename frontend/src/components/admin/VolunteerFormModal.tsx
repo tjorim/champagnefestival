@@ -18,6 +18,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
+import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
 import { AdminAddButton } from "./RowActions";
@@ -61,6 +62,7 @@ export default function VolunteerFormModal({
   onSave,
   onHide,
 }: VolunteerFormModalProps) {
+  const fieldErrors = usePersonFieldErrors("volunteer");
   const [error, setError] = useState<string | null>(null);
   // The record as it was when the editor opened, so a background refresh neither
   // rewrites untouched fields nor moves the baseline for the discard prompt.
@@ -114,6 +116,7 @@ export default function VolunteerFormModal({
       }
 
       setError(null);
+      fieldErrors.clear();
       try {
         await onSave({
           name: value.name.trim(),
@@ -124,6 +127,7 @@ export default function VolunteerFormModal({
         });
         onHide();
       } catch (err) {
+        fieldErrors.capture(err);
         setError(
           apiErrorMessage(
             err,
@@ -144,7 +148,10 @@ export default function VolunteerFormModal({
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) setError(null);
+    if (show) {
+      setError(null);
+      fieldErrors.clear();
+    }
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
@@ -188,7 +195,11 @@ export default function VolunteerFormModal({
             <p className="mb-4 text-sm text-subtle">{m.admin_volunteers_optional_details()}</p>
             <form.Field name="name">
               {(field) => (
-                <AdminField className="mb-4" controlId="volunteer-name">
+                <AdminField
+                  className="mb-4"
+                  controlId="volunteer-name"
+                  serverError={fieldErrors.field("name")}
+                >
                   <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
                   <AdminInput
                     type="text"
@@ -205,7 +216,11 @@ export default function VolunteerFormModal({
 
             <form.Field name="address">
               {(field) => (
-                <AdminField className="mb-4" controlId="volunteer-address">
+                <AdminField
+                  className="mb-4"
+                  controlId="volunteer-address"
+                  serverError={fieldErrors.field("address")}
+                >
                   <AdminLabel className="text-subtle text-sm">
                     {m.admin_people_address_label()}
                   </AdminLabel>
@@ -225,7 +240,10 @@ export default function VolunteerFormModal({
               <div className="w-full site-md:w-6/12">
                 <form.Field name="nationalRegisterNumber">
                   {(field) => (
-                    <AdminField controlId="volunteer-national-register-number">
+                    <AdminField
+                      controlId="volunteer-national-register-number"
+                      serverError={fieldErrors.field("national_register_number")}
+                    >
                       <AdminLabel className="text-subtle text-sm">
                         {m.admin_people_national_register_number_label()}
                       </AdminLabel>
@@ -244,7 +262,10 @@ export default function VolunteerFormModal({
               <div className="w-full site-md:w-6/12">
                 <form.Field name="eidDocumentNumber">
                   {(field) => (
-                    <AdminField controlId="volunteer-eid-document-number">
+                    <AdminField
+                      controlId="volunteer-eid-document-number"
+                      serverError={fieldErrors.field("eid_document_number")}
+                    >
                       <AdminLabel className="text-subtle text-sm">
                         {m.admin_people_eid_document_number_label()}
                       </AdminLabel>
