@@ -2,7 +2,8 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const budgets = { total: 2910, entry: 325, admin: 450, eager: 665 };
+// #1440 / PR #1466: production measurements and review in docs/ui-maintenance.md.
+export const budgets = { total: 2920, entry: 335, admin: 450, eager: 670 };
 
 export async function measureBundle(directory) {
   const manifest = JSON.parse(await readFile(resolve(directory, ".vite/manifest.json"), "utf8"));
