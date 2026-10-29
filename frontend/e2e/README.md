@@ -25,11 +25,10 @@ authenticated specs. The `E2E Tests (Chromium)` job aggregates all of them, so t
 required check name is unchanged and fails if any shard or the signage run failed,
 was cancelled or did not run.
 
-Each shard uploads a blob report (`playwright-blob-N`); the `Merge E2E reports` job
-combines them into the single `playwright-report` artifact. The signage run uploads
-its own `playwright-report-signage` with traces for failures. Changing the shard
-count means editing the matrix, the `--shard=N/4` flags and the job name in
-`.github/workflows/frontend-ci.yml`.
+Each shard uploads its own HTML report (`playwright-report-N`, with traces for retried
+tests) and the signage run uploads `playwright-report-signage`. There is no merged report: a
+failing shard's job names the report to open. Changing the shard count means editing the
+matrix, the `--shard=N/4` flags and the job name in `.github/workflows/frontend-ci.yml`.
 
 Pull requests and pushes to `main` run the default theme only; the other themes are
 temporary and only manual runs (`workflow_dispatch`) cover all of them (553 tests, about
