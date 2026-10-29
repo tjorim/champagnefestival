@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
@@ -101,7 +101,7 @@ describe("ContentManagement", () => {
     await screen.findByText("Maison Moët & Chandon");
 
     const archiveButton = screen.getByRole("button", {
-      name: "admin_content_archive Maison Moët & Chandon",
+      name: "admin_content_archive: Maison Moët & Chandon",
     });
     fireEvent.click(archiveButton);
 
@@ -118,6 +118,52 @@ describe("ContentManagement", () => {
     const row = archivedRow.closest('[data-slot="presentation-list-item"]');
     expect(row).not.toBeNull();
     expect(row).toHaveClass("opacity-50");
+  });
+
+  it("asks before deleting an archived organization, naming it, and only then sends the DELETE", async () => {
+    const deleted: string[] = [];
+    server.use(
+      http.put("/api/organizations/:id", ({ params }) =>
+        HttpResponse.json({
+          id: Number(params.id),
+          name: "Maison Moët & Chandon",
+          image: "/images/moet.png",
+          website: "https://www.moet.com",
+          active: false,
+          type: "producer",
+          contact_person_id: null,
+          contact_person: null,
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-02T00:00:00Z",
+        }),
+      ),
+      http.delete("/api/organizations/:id", ({ params }) => {
+        deleted.push(String(params.id));
+        return HttpResponse.json({ deleted: true, id: Number(params.id) });
+      }),
+    );
+    renderContentManagement();
+    await screen.findByText("Maison Moët & Chandon");
+    fireEvent.click(
+      screen.getByRole("button", { name: "admin_content_archive: Maison Moët & Chandon" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "admin_content_archived_section" }));
+
+    const deleteName = 'admin_delete_item({"name":"Maison Moët & Chandon"})';
+    fireEvent.click(await screen.findByRole("button", { name: deleteName }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(
+      dialog.getByText('admin_item_delete_confirm({"name":"Maison Moët & Chandon"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(deleted).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: deleteName }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "admin_delete" }),
+    );
+    await waitFor(() => expect(deleted).toHaveLength(1));
   });
 
   it("takes the session fence before the write request and hands it to the saved callback", async () => {
@@ -146,7 +192,7 @@ describe("ContentManagement", () => {
     const { onOrganizationSaved } = renderContentManagement(captureOrganizationsFence);
     await screen.findByText("Maison Moët & Chandon");
     fireEvent.click(
-      screen.getByRole("button", { name: "admin_content_archive Maison Moët & Chandon" }),
+      screen.getByRole("button", { name: "admin_content_archive: Maison Moët & Chandon" }),
     );
 
     await waitFor(() => expect(onOrganizationSaved).toHaveBeenCalled());

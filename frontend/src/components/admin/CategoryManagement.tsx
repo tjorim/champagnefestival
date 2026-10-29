@@ -32,7 +32,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
-import { Icon } from "@/components/Icon";
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
@@ -43,7 +42,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
-import { AdminAddButton } from "./RowActions";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 export type CategoryKind = "event" | "product";
 
@@ -255,28 +254,24 @@ export default function CategoryManagement({
                     ))}
                     <TableCell>{category.sortOrder}</TableCell>
                     <TableCell className="w-px whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
+                      <RowActions
+                        destructive={
+                          <RowActionButton
+                            destructive
+                            icon={TrashIcon}
+                            label={m.admin_delete_item({ name: category.label })}
+                            disabled={busy}
+                            onClick={() => handleDelete(category)}
+                          />
+                        }
+                      >
+                        <RowActionButton
+                          icon={PencilIcon}
+                          label={m.admin_edit_item({ name: category.label })}
                           disabled={busy}
                           onClick={() => openEdit(category)}
-                          aria-label={`${m.admin_edit()} ${category.key}`}
-                          title={m.admin_edit()}
-                        >
-                          <Icon icon={PencilIcon} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          disabled={busy}
-                          onClick={() => handleDelete(category)}
-                          aria-label={`${m.admin_delete()} ${category.key}`}
-                          title={m.admin_delete()}
-                        >
-                          <Icon icon={TrashIcon} />
-                        </Button>
-                      </div>
+                        />
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))}

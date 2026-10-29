@@ -47,7 +47,7 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Event, Product, ProductInclusion } from "@/types/event";
-import { AdminAddButton } from "./RowActions";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 interface EventProductsModalProps {
   show: boolean;
@@ -676,26 +676,25 @@ export default function EventProductsModal({
             )}
             <span className="text-subtle text-sm">€{product.price.toFixed(2)}</span>
           </span>
-          <span className="flex gap-1 shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
+          <RowActions
+            className="shrink-0"
+            destructive={
+              <RowActionButton
+                destructive
+                icon={TrashIcon}
+                label={m.admin_delete_item({ name: product.name })}
+                onClick={() => handleDelete(product)}
+                disabled={formOpen}
+              />
+            }
+          >
+            <RowActionButton
+              icon={PencilIcon}
+              label={m.admin_edit_item({ name: product.name })}
               onClick={() => openEdit(product)}
               disabled={formOpen && !isBeingEdited}
-              aria-label={m.admin_edit_item({ name: product.name })}
-            >
-              <Icon icon={PencilIcon} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              onClick={() => handleDelete(product)}
-              disabled={formOpen}
-              aria-label={`${m.admin_delete()} ${product.name}`}
-            >
-              <Icon icon={TrashIcon} />
-            </Button>
-          </span>
+            />
+          </RowActions>
         </div>
         {includedTarget && product.includedPerGuests && (
           <div className="text-subtle text-xs">

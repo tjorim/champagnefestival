@@ -316,7 +316,7 @@ describe("EventProductsModal", () => {
     ).toBeTruthy();
 
     expect(screen.getByLabelText('admin_edit_item({"name":"Cheese Platter"})')).toBeDisabled();
-    expect(screen.getByLabelText("admin_delete Cheese Platter")).toBeDisabled();
+    expect(screen.getByLabelText('admin_delete_item({"name":"Cheese Platter"})')).toBeDisabled();
     expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
   });
 
@@ -558,7 +558,7 @@ describe("EventProductsModal", () => {
       }),
     );
 
-    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText('admin_delete_item({"name":"Champagne Bottle"})'));
     await screen.findByText("admin_products_delete_title");
     expect(
       screen.getByText('admin_products_delete_confirm({"name":"Champagne Bottle"})'),
@@ -571,7 +571,7 @@ describe("EventProductsModal", () => {
     expect(deleteCalled).toBe(false);
     expect(screen.getByText("Champagne Bottle")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText('admin_delete_item({"name":"Champagne Bottle"})'));
     await screen.findByText("admin_products_delete_title");
     fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 

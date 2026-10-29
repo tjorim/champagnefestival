@@ -116,7 +116,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     );
     mount();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit gala" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Gala" }));
     const key = await screen.findByLabelText("Key");
     expect(key).toHaveAttribute("readonly");
     fireEvent.change(screen.getByLabelText("Label (French)"), { target: { value: "Gala FR" } });
@@ -142,7 +142,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     );
     mount();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete gala" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Gala" }));
     fireEvent.click(await screen.findByRole("button", { name: /^(Delete|Confirm|Yes)/ }));
 
     // The interface shows the translation of the code, never the English detail.
