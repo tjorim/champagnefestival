@@ -1150,3 +1150,13 @@ channel. Cancel returns to the unchanged slide draft. There is no automatic
 retry, upload, or additional server write in this path; ambiguous failures retain
 the existing template-creation recovery rule above. Sample artwork is a static
 preview-only asset and never enters the uploaded-file storage lifecycle.
+
+### Public offline mode (#1440)
+
+The public service worker caches only GET responses for its built shell and an
+explicit public-information API allowlist. It never caches, queues or replays
+writes. Registration, contact and waitlist submissions refuse known-offline
+attempts before fetch with translated guidance; the public page also blocks form
+submission while offline. Reconnecting does not submit any retained draft.
+Existing submission IDs and ambiguous-failure recovery rules still apply when
+a connection fails during an online submission. No automatic write retry is added.

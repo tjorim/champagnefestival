@@ -1,3 +1,4 @@
+import { PublicOfflineNotice } from "@/components/PublicOfflineNotice";
 import { useNow } from "@/hooks/useNow";
 import StaffTasks from "@/components/StaffTasks";
 import {
@@ -520,6 +521,7 @@ function App() {
 
       {/* Header & Navigation */}
       {variant === "classic" ? <HeaderClassic /> : <Header onBrandClick={handleBrandClick} />}
+      <PublicOfflineNotice />
       <AnnouncementBanner />
       <EventStructuredData />
 

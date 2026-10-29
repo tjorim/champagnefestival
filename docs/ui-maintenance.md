@@ -239,3 +239,18 @@ code was removed to meet the size check.
 Entry (270.3 / 325 KiB), AdminDashboard (426.7 / 450 KiB) and eager graph
 (664.1 / 665 KiB) retain their existing limits. In particular, the eager graph
 remains tight and must be reviewed before adding another eager dependency.
+
+
+### Public offline feature budget review — 2026-10-29 (#1440 / PR #1466)
+
+CI run 40912655767 and the local production build both measured total JavaScript
+2,915.7 KiB, entry 333.7 KiB, AdminDashboard 425.0 KiB and eager graph 666.4 KiB.
+The offline notice, cache-timestamp lookup, public write guards and NL/FR/EN
+messages add application behaviour without introducing dependencies. The worker
+itself is emitted separately as `sw.js`, outside the measured application graph.
+
+Raise total 2,910 → 2,920 KiB, entry 325 → 335 KiB and eager 665 → 670 KiB.
+These limits leave 4.3, 1.3 and 3.6 KiB of headroom respectively. AdminDashboard
+retains its 450 KiB limit. Keep all four checks, eager dependency traversal and
+OIDC isolation enforcement enabled. The failed CI job passed every earlier step;
+the correction changes only the reviewed limits, with no runtime changes.

@@ -492,6 +492,7 @@ export async function submitRegistration(
   payload: RegistrationFormData,
   accessToken?: string | null,
 ): Promise<{ id: string }> {
+  if (!navigator.onLine) throw new RegistrationSubmitError(m.public_offline_write());
   const response = await fetch("/api/registrations", {
     method: "POST",
     headers: {
@@ -546,6 +547,7 @@ export async function submitWaitlistEntry(
   payload: WaitlistJoinPayload,
   submissionId: string,
 ): Promise<void> {
+  if (!navigator.onLine) throw new RegistrationSubmitError(m.public_offline_write());
   const response = await fetch("/api/waitlist", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
