@@ -40,6 +40,21 @@ afterEach(() => {
 });
 
 describe("organization proposals", () => {
+  it("shows saved content before editing and keeps the pending proposal separate", async () => {
+    server.use(http.get("/api/me/organizations/42/changes", () => HttpResponse.json([change])));
+    mount(
+      <MyOrganizationsSection
+        organizations={[{ ...row, image: "/saved.svg" }]}
+        headers={() => ({})}
+      />,
+    );
+    expect(screen.getByText("Saved public content")).toBeInTheDocument();
+    expect(screen.getByText("Live Dutch")).toBeInTheDocument();
+    expect(screen.getByText("https://old.example")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "House" })).toHaveAttribute("src", "/saved.svg");
+    expect(await screen.findByText("Awaiting review")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Website URL" })).not.toBeInTheDocument();
+  });
   it.each([409, 500])("explains manager submission errors for HTTP %s", async (status) => {
     server.use(
       http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),

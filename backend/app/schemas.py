@@ -3162,6 +3162,7 @@ class ComposedMessageScheduleRequest(RequestModel):
 
 
 class ManagedOrganizationOut(OrganizationDescription):
+    image: str
     id: int
     name: str
     type: str

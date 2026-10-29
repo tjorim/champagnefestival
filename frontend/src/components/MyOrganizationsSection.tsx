@@ -1,3 +1,6 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ResponsiveImage from "@/components/ResponsiveImage";
+import { getLocale } from "@/paraglide/runtime";
 import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
 import OrganizationLogoPreview from "@/components/OrganizationLogoPreview";
@@ -22,6 +25,7 @@ export interface ManagedOrganization {
   name: string;
   type: string;
   website: string;
+  image?: string;
   active: boolean;
   description_nl?: string | null;
   description_fr?: string | null;
@@ -105,28 +109,41 @@ function ProposalForm({
         />
       </PublicField>
       <p className="text-sm text-subtle">{m.admin_item_description_help()}</p>
-      {(["nl", "fr", "en"] as const).map((language) => {
-        const field = `description_${language}` as const;
-        return (
-          <PublicField key={field}>
-            <PublicLabel>{organizationFieldLabel(field)}</PublicLabel>
-            <PublicTextarea
-              maxLength={600}
-              value={values[field] ?? ""}
-              onChange={(event) => setValues({ ...values, [field]: event.target.value })}
-            />
-            <OrganizationTranslationSuggestion
-              url={`/api/me/organizations/${row.id}/translation`}
-              headers={headers}
-              source="nl"
-              target={language}
-              text={values.description_nl ?? ""}
-              targetText={values[field] ?? ""}
-              onDraft={(text) => setValues((current) => ({ ...current, [field]: text }))}
-            />
-          </PublicField>
-        );
-      })}
+      <Tabs defaultValue="nl">
+        <TabsList aria-label={m.admin_editor_text()}>
+          {(["nl", "fr", "en"] as const).map((language) => (
+            <TabsTrigger key={language} value={language}>
+              {{ nl: m.admin_language_nl, fr: m.admin_language_fr, en: m.admin_language_en }[
+                language
+              ]()}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {(["nl", "fr", "en"] as const).map((language) => {
+          const field = `description_${language}` as const;
+          return (
+            <TabsContent key={field} value={language} keepMounted>
+              <PublicField>
+                <PublicLabel>{organizationFieldLabel(field)}</PublicLabel>
+                <PublicTextarea
+                  maxLength={600}
+                  value={values[field] ?? ""}
+                  onChange={(event) => setValues({ ...values, [field]: event.target.value })}
+                />
+                <OrganizationTranslationSuggestion
+                  url={`/api/me/organizations/${row.id}/translation`}
+                  headers={headers}
+                  source="nl"
+                  target={language}
+                  text={values.description_nl ?? ""}
+                  targetText={values[field] ?? ""}
+                  onDraft={(text) => setValues((current) => ({ ...current, [field]: text }))}
+                />
+              </PublicField>
+            </TabsContent>
+          );
+        })}
+      </Tabs>
       {validation && (
         <Alert variant="danger" role="alert">
           {validation}
@@ -172,14 +189,20 @@ function ManagedOrganizationEditor({
     <article className="rounded-lg border border-subtle p-4 flex flex-col gap-4">
       <h3 className="text-lg font-medium">{row.name}</h3>
       {history.isError && <Alert variant="danger">{m.manager_error()}</Alert>}
-      <OrganizationLogoUpload
-        url={`/api/me/organizations/${row.id}/logo`}
-        headers={headers}
-        onSaved={() => {
-          setEditing(false);
-          void history.refetch();
-        }}
-      />
+      <section className="flex flex-col gap-2 break-words">
+        <h4 className="font-medium">{m.organization_current()}</h4>
+        {currentRow.image && (
+          <ResponsiveImage src={currentRow.image} alt={row.name} className="w-24" />
+        )}
+        <p>{currentRow.website || m.organization_no_website()}</p>
+        <p className="whitespace-pre-wrap">
+          {currentRow[
+            `description_${getLocale()}` as "description_nl" | "description_fr" | "description_en"
+          ] ||
+            currentRow.description_nl ||
+            m.organization_no_description()}
+        </p>
+      </section>
       {pending?.proposed.image && (
         <OrganizationLogoPreview
           key={pending.id}
@@ -224,6 +247,14 @@ function ManagedOrganizationEditor({
           {m.admin_action_cancel()}
         </Button>
       )}
+      <OrganizationLogoUpload
+        url={`/api/me/organizations/${row.id}/logo`}
+        headers={headers}
+        onSaved={() => {
+          setEditing(false);
+          void history.refetch();
+        }}
+      />
     </article>
   );
 }

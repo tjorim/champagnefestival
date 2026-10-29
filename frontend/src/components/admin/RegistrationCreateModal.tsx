@@ -1,6 +1,8 @@
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import type { OrderAnswer } from "@/utils/orderQuestions";
 import {
+  ADMIN_CONTROL_CLASS,
+  ADMIN_LABEL_CLASS,
   AdminCheck,
   AdminError,
   AdminField,
@@ -366,7 +368,7 @@ export default function RegistrationCreateModal({
               )}
 
               <AdminField className="mb-4" controlId="registration-event">
-                <AdminLabel className="text-subtle text-sm">{m.admin_event_label()} *</AdminLabel>
+                <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_event_label()} *</AdminLabel>
                 {loadingEvents ? (
                   <div className="text-subtle text-sm">
                     <Spinner size="sm" className="me-2" />
@@ -390,7 +392,7 @@ export default function RegistrationCreateModal({
                     {(field) => (
                       <>
                         <AdminSelect
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           value={field.value}
                           aria-invalid={showIssues && Boolean(issues.event)}
                           onValueChange={(e) => {
@@ -421,7 +423,7 @@ export default function RegistrationCreateModal({
                 ) : (
                   <AdminSelect
                     value=""
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     disabled
                     aria-label={m.admin_event_label()}
                   >
@@ -446,9 +448,7 @@ export default function RegistrationCreateModal({
                 />
               ) : (
                 <AdminField className="mb-4" controlId="registration-person">
-                  <AdminLabel className="text-subtle text-sm">
-                    {m.admin_person_label()} *
-                  </AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_person_label()} *</AdminLabel>
                   <form.Field name="personOption">
                     {(field) => (
                       <Combobox
@@ -551,14 +551,14 @@ export default function RegistrationCreateModal({
               <form.Field name="guestCount">
                 {(field) => (
                   <AdminField className="mb-4" controlId="registration-guest-count">
-                    <AdminLabel className="text-subtle text-sm">
+                    <AdminLabel className={ADMIN_LABEL_CLASS}>
                       {m.admin_guests_count()} *
                     </AdminLabel>
                     <AdminInput
                       type="number"
                       min={1}
                       max={20}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       value={field.value}
                       aria-invalid={showIssues && Boolean(issues.guests)}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
@@ -599,7 +599,7 @@ export default function RegistrationCreateModal({
                               type="number"
                               min={0}
                               max={1000}
-                              className="bg-muted text-content border-input"
+                              className={ADMIN_CONTROL_CLASS}
                               value={quantities[product.id] ?? 0}
                               aria-invalid={showIssues && Boolean(issues.products)}
                               onChange={(e) => setQuantity(product.id, Number(e.target.value))}
@@ -637,10 +637,10 @@ export default function RegistrationCreateModal({
               <form.Field name="notes">
                 {(field) => (
                   <AdminField controlId="registration-notes">
-                    <AdminLabel className="text-subtle text-sm">{m.admin_notes()}</AdminLabel>
+                    <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_notes()}</AdminLabel>
                     <AdminTextarea
                       rows={2}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}

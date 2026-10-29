@@ -39,6 +39,7 @@ from app.live import notify_live_event
 from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import email_consent_service
+from app.services.errors import ApiHTTPException
 from app.services.member_email import (
     check_email_integrity,
     commit_member_changes,
@@ -88,12 +89,14 @@ def parse_phone(raw: str | None) -> str:
     try:
         parsed = phonenumbers.parse(raw, "BE")
     except phonenumbers.NumberParseException as exc:
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_invalid_phone",
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Invalid phone number: {exc}",
         ) from exc
     if not phonenumbers.is_valid_number(parsed):
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_invalid_phone",
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Invalid phone number.",
         )
@@ -101,7 +104,8 @@ def parse_phone(raw: str | None) -> str:
 
 
 def raise_identity_conflict() -> NoReturn:
-    raise HTTPException(
+    raise ApiHTTPException(
+        code="person_identity_conflict",
         status_code=409,
         detail="Person with this national register number or eID document number already exists.",
     )

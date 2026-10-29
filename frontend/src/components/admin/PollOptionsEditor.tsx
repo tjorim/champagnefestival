@@ -3,7 +3,13 @@ import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { AdminEmptyState } from "./AdminEmptyState";
-import { AdminCheck, AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminCheck,
+  AdminField,
+  AdminInput,
+  AdminLabel,
+} from "@/components/admin/AdminFields";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +70,7 @@ function OptionFields({
             </AdminLabel>
             <AdminInput
               size="sm"
-              className="bg-muted text-content border-input"
+              className={ADMIN_CONTROL_CLASS}
               value={value[field]}
               maxLength={200}
               onChange={(event) => onChange({ ...value, [field]: event.target.value })}

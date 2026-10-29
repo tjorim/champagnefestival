@@ -293,9 +293,7 @@ describe("admin edit modals prefill from the record being edited", () => {
         "Maison Moët & Chandon",
       );
     });
-    expect(screen.getByLabelText("admin_content_image_url_placeholder")).toHaveValue(
-      "/img/moet.png",
-    );
+    expect(screen.getByLabelText("organization_image_label")).toHaveValue("/img/moet.png");
     expect(screen.getByLabelText("admin_item_type")).toHaveTextContent("admin_item_producer");
     expect(screen.getByRole("combobox", { name: "admin_item_contact_person" })).toHaveValue(
       "Alice Dupont",

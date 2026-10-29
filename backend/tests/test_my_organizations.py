@@ -52,7 +52,9 @@ async def test_one_link_unlocks_own_bookings_and_organizations(client, db_sessio
     organizations = await client.get("/api/me/organizations")
     assert organizations.headers["cache-control"] == "no-store"
     assert [row["name"] for row in organizations.json()] == ["One", "Two"]
+    assert organizations.json()[0]["image"] == manager[1][0].image
     assert set(organizations.json()[0]) == {
+        "image",
         "id",
         "name",
         "type",
