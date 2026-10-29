@@ -52,6 +52,7 @@ function contactErrorMessage(result: unknown): string {
 }
 
 async function submitContactForm(form: FormData, submissionId: string): Promise<void> {
+  if (!navigator.onLine) throw new ContactSubmissionError(m.public_offline_write());
   const response = await fetch("/api/contact", {
     method: "POST",
     headers: {

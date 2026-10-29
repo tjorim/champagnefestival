@@ -29,8 +29,14 @@ test("creates a layered template, validates bindings and preserves edits through
     /linear-gradient/,
   );
   await select("Preview slide type", "Image");
+  await expect(page.locator(".site-signage-stage img")).toHaveAttribute(
+    "src",
+    "/signage-sample.svg",
+  );
   await expect(
-    page.getByText("No existing sample content for this type. Add content to preview its data."),
+    page.getByText(
+      "Representative sample data is shown because no existing content is available for this type.",
+    ),
   ).toBeVisible();
   await select("Preview slide type", "Producers and sponsors");
   for (const binding of ["Logo", "Name", "Sponsor"]) {

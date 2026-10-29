@@ -170,28 +170,32 @@ export default function SignageTemplates({
   );
 }
 
-function TemplateEditor({
+export function TemplateEditor({
   authHeaders,
   template,
   onClose,
   onSaved,
+  initialKind,
 }: {
   authHeaders: () => Record<string, string>;
   template: Template | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (template: Template) => void;
+  initialKind?: TemplateKind;
 }) {
   const [initial] = useState<TemplateDraft>(() =>
     template
       ? { name: template.name, background: template.background, layers: template.layers }
-      : emptyTemplate(),
+      : initialKind
+        ? addMissingBindings(emptyTemplate(), initialKind)
+        : emptyTemplate(),
   );
   const [draft, setDraft] = useState<TemplateDraft>(initial);
   const id = template?.id;
   const [selected, setSelected] = useState<string | null>(null);
   const [past, setPast] = useState<TemplateDraft[]>([]);
   const [future, setFuture] = useState<TemplateDraft[]>([]);
-  const [kind, setKind] = useState<TemplateKind>("organizations");
+  const [kind, setKind] = useState<TemplateKind>(initialKind ?? "organizations");
   const [sample, setSample] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -276,7 +280,7 @@ function TemplateEditor({
     setBusy(true);
     setError("");
     try {
-      await fetchJsonOrThrowWithUnauthorized<Template>(
+      const saved = await fetchJsonOrThrowWithUnauthorized<Template>(
         `/api/signage/templates${id ? `/${id}` : ""}`,
         {
           method: id ? "PUT" : "POST",
@@ -285,7 +289,7 @@ function TemplateEditor({
         },
         m.signage_editor_error(),
       );
-      onSaved();
+      onSaved(saved);
     } catch (cause) {
       setError(apiErrorMessage(cause, m.signage_editor_error()));
     } finally {
@@ -343,11 +347,18 @@ function TemplateEditor({
           sponsor: org.type === "sponsor",
           description: org[`description_${locale}`] || org.description_nl,
         }
-      : null,
-    title: content?.title || null,
-    text: content?.text || null,
-    icon: content?.icon ?? null,
-    image: kind === "image" ? (content?.image ?? null) : null,
+      : kind === "organizations"
+        ? {
+            name: m.signage_sample_title(),
+            description: m.signage_sample_text(),
+            logo: "/signage-sample.svg",
+            sponsor: true,
+          }
+        : null,
+    title: content ? content.title : m.signage_sample_title(),
+    text: content ? content.text : m.signage_sample_text(),
+    icon: content ? content.icon : "info",
+    image: kind === "image" ? (content?.image ?? "/signage-sample.svg") : null,
   };
   const missing = missingBindings(draft, kind);
   const isText =
@@ -452,12 +463,17 @@ function TemplateEditor({
       dirty={JSON.stringify(draft) !== JSON.stringify(initial)}
       onClose={onClose}
       footer={
-        <Button
-          disabled={busy || !validTemplate(draft) || missing.length > 0}
-          onClick={() => void save()}
-        >
-          {m.signage_editor_save()}
-        </Button>
+        <>
+          {(!validTemplate(draft) || missing.length > 0) && (
+            <p>{m.signage_template_requirements()}</p>
+          )}
+          <Button
+            disabled={busy || !validTemplate(draft) || missing.length > 0}
+            onClick={() => void save()}
+          >
+            {m.signage_editor_save()}
+          </Button>
+        </>
       }
     >
       <div className="flex flex-col gap-4">
@@ -490,7 +506,7 @@ function TemplateEditor({
               setKind(value as TemplateKind);
               setSample("");
             },
-            false,
+            Boolean(initialKind),
             {
               organizations: m.signage_editor_organisations(),
               notice: m.signage_editor_notice(),

@@ -1981,5 +1981,15 @@
   "admin_person_matches_help": "Mogelijk bestaande personen. Controleer of dit dezelfde persoon is.",
   "admin_person_reuse": "Bestaande persoon gebruiken",
   "admin_person_continue_help": "Voor een andere persoon gaat u verder met Opslaan. Een gedeeld e-mailadres is toegestaan.",
+  "signage_channel_requirements": "Naam, openbare linknaam en editie zijn verplicht. Gebruik kleine letters, cijfers en enkele koppeltekens voor de openbare linknaam.",
+  "signage_slide_requirements": "Kies een compatibel sjabloon, stel een duur van 1 tot 3600 seconden in en voeg waar nodig berichttekst of een afbeelding toe. Als beide planningsdatums zijn ingesteld, moet het einde na het begin liggen.",
+  "signage_create_template_here": "Sjabloon voor deze dia maken",
+  "signage_template_return_help": "Je diaconcept blijft open. Sla het sjabloon op om het te selecteren en hier terug te keren, of annuleer om terug te keren zonder de dia te wijzigen.",
+  "signage_template_requirements": "Voer een sjabloonnaam in en voeg de vereiste placeholders toe voordat je opslaat. Afbeeldingssjablonen mogen leeg zijn; de dia levert de afbeelding.",
+  "signage_sample_title": "Welkom op het festival",
+  "signage_sample_text": "Voorbeeldinhoud: ontdek onze producenten en geniet van het festival. Deze tekst wordt alleen in het sjabloonvoorbeeld gebruikt.",
+  "public_offline_notice": "Je bent offline. Opgeslagen informatie kan verouderd zijn. Inschrijvingen, contactberichten en wachtlijstaanvragen kunnen niet worden verstuurd. Er wordt niets in een wachtrij geplaatst; herstel de verbinding voordat je verstuurt.",
+  "public_offline_updated": "Laatst bijgewerkt: {time}.",
+  "public_offline_write": "Je bent offline. Herstel de verbinding voordat je dit formulier verstuurt. Er is niets in een wachtrij geplaatst.",
   "admin_person_matches_unavailable": "Bestaande personen konden niet worden gecontroleerd. Zoek in de personenlijst voordat u een nieuwe persoon aanmaakt."
 }

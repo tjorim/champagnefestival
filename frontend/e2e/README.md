@@ -106,3 +106,12 @@ leaves the default `refresh` theme at every width and colour scheme. Pushes to `
 runs (`gh workflow run frontend-ci.yml --ref <branch>`) run all themes, so run that before merging
 a change to themes, CSS layers or shared UI. Name theme-specific test titles after the theme so
 the filter applies to them. A job-level timeout stops a run that hangs.
+
+## Public offline mode
+
+`pnpm exec playwright test --config playwright.signage.config.ts public-offline.spec.ts`
+builds the production app and exercises its real service worker, independently
+of MSW. One online visit warms the shell and public information; Playwright then
+sets the context offline and reloads, checking FAQ, schedule, venue, contact,
+cache timestamp and refused form submission. The production-worker CI job runs
+this alongside signage playback.

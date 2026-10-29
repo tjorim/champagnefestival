@@ -93,6 +93,8 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1440](https://github.com/tjorim/champagnefestival/issues/1440) | Repository implementation complete | 2026-10-29 | Production-worker offline Chromium test and cache lifecycle unit tests; [acceptance record](#public-offline-information-1440) | Content-derived shell cache, allowlisted stale-while-revalidate public information, translated offline timestamp and refused writes; signage cache remains independent. |
+| [#1433](https://github.com/tjorim/champagnefestival/issues/1433) | Repository implementation complete | 2026-10-29 | [Acceptance record](#first-time-signage-setup-1433-2026-10-29); signage onboarding/editor/channel authenticated Chromium tests | Compatible starter templates open inside the slide dialog, preserve its draft on cancel/save and select the saved template. Labelled representative previews remove the first-content dependency. Required channel/slide inputs and disabled-action guidance are translated; #1420 channel URL context, explicit activation and venue timing are retained. |
 | [#1436](https://github.com/tjorim/champagnefestival/issues/1436) | Repository implementation complete | 2026-10-29 | Backend directory API and frontend field-recovery/directory-suggestion regression tests; [implementation record](#admin-directory-recovery-follow-up-1436-2026-10-29) | Translated structured field errors with focus and draft retention, authorised existing-person suggestions, and deliberate reuse/separate creation. Shared-email and merge policies are unchanged; manual browser validation was not run. |
 | [#1430](https://github.com/tjorim/champagnefestival/issues/1430) | Repository implementation complete | 2026-10-29 | [Acceptance record](decisions/1430-floor-plan-workspace.md); floor-plan editor component and authenticated Chromium tests | Adjacent independently scrolling map/inspector on laptops, stacked narrow layout, retained keyboard table search, explicit save guidance and all-layout room-count wording. Synthetic dense plan and long allocations verified at three laptop sizes, native 100%/125%/150% zoom and narrow sizes. Existing write, geometry, capacity and revision contracts retained. |
 | [#1429](https://github.com/tjorim/champagnefestival/issues/1429) | Repository implementation complete | 2026-10-29 | [Acceptance record](decisions/1429-preparation-editors.md); preparation-editors authenticated browser matrix and event/product component tests | Core scheduling/access and price/stock precede mounted locale-tabbed text. Fixed editor/review actions, separate product list/edit modes, explicit booking-impact scope and shortage review, contextual first-event date guidance and required edition ID/month help. Verified populated synthetic data, long French drafts, keyboard navigation and native 100%/125%/150% zoom at all three target laptop sizes. Backend/payment/retry contracts unchanged. |
@@ -341,3 +343,46 @@ Regression coverage includes correction, unsupported email input, shared email
 creation and existing-person suggestions. Manual browser validation was not run
 for this change; #1422 outage retention and #1423 self-service scope remain
 unchanged.
+
+## First-time signage setup (#1433, 2026-10-29)
+
+Sub-issue of #1426; original browser findings and boundaries remain in
+[#1433](https://github.com/tjorim/champagnefestival/issues/1433). The setup path is
+in [signage setup](signage-setup.md#first-channel-and-notice-1433).
+
+- [x] Channel name, valid public link name and edition requirements are stated next to the fields; edition is also programmatically required. Invalid channel/slide requirements explain disabled Save/Preview actions.
+- [x] The existing template editor opens inside the slide dialog with the selected slide type fixed and required placeholders already separated on the canvas. Organisation and notice compatibility still uses the existing required-binding validation; image templates may be empty because the slide supplies the artwork.
+- [x] Template previews use labelled representative notice text, organisation data/logo or image artwork before real content exists. The static sample asset is preview-only, never uploaded or persisted into slides/templates.
+- [x] Creating or cancelling a template returns to the retained slide draft. Saving selects the returned template without saving the slide or changing channel activity.
+- [x] Existing #1420 URL state retains the selected channel across Templates/Channels. Nested template creation retains the slide context without a tab change.
+- [x] Existing translated guidance distinguishes unsaved preview, saved publishing, channel/slide activity and schedules, 30-second venue polling and cycle-boundary propagation. No automatic activation was added.
+- [x] Synthetic clean first-notice keyboard journeys and axe scans cover 1280×800, 1366×768 and 1440×900 in Dutch, French and English. Existing template editing/required-binding/dirty-dismiss and channel/reordering browser tests remain covered. These are local mocked-data checks; venue/device, sync, offline and export rehearsal remains separate under #1260.
+
+The frontend unit suite, lint, formatting, typecheck/build and message parity
+checks accompany this change. [Retry safety](retry-safety.md#first-use-signage-template-creation-1433)
+retains explicit, non-retried template creation; uploaded-file storage and advisory
+locks are unchanged.
+
+Stacked PR validation on #1461 passes the production build, frontend lint,
+formatting and 19 targeted signage unit tests. Bundle size is 2913.0 KiB total
+against a 2910 KiB budget; entry/admin/eager remain within budget. No budget
+was raised.
+
+
+### Public offline information (#1440)
+
+The installable public site previously failed on an offline reload. A production
+worker now precaches the built shell and static assets with a content-derived
+revision, and warms the active festival, FAQ, announcements and public settings.
+Successful public responses retain their retrieval timestamp; stale responses
+revalidate in the background. The offline notice uses the oldest saved response
+timestamp, and explains that information may be outdated. External map tiles
+still require connectivity; the saved venue address remains available.
+
+- [x] One online visit enables offline reload with schedule, FAQ and venue details.
+- [x] Offline public form submissions are refused with translated guidance; nothing is queued.
+- [x] Changed build content changes the cache revision; activation deletes older public caches only (unit tested).
+- [x] Playwright offline mode exercises the production worker, independently of MSW.
+
+The signage cache has its own lifecycle. Authenticated APIs and all writes remain
+outside the public cache; existing retry contracts remain in force.

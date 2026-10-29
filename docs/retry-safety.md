@@ -1139,3 +1139,24 @@ suggestions are authorised read-only searches. Choosing an existing person in
 People opens that record for editing; it does not create, merge, or retry a write.
 Shared-email creation remains allowed for non-members. No automatic retry or
 new idempotency guarantee is introduced.
+
+### First-use signage template creation (#1433)
+
+The slide dialog can open the existing template editor with compatible starter
+placeholders. Saving still uses the explicit, non-retried `POST
+/api/signage/templates`; it allocates an identity and is not retry-safe. The
+returned template is selected locally without saving the slide or activating the
+channel. Cancel returns to the unchanged slide draft. There is no automatic
+retry, upload, or additional server write in this path; ambiguous failures retain
+the existing template-creation recovery rule above. Sample artwork is a static
+preview-only asset and never enters the uploaded-file storage lifecycle.
+
+### Public offline mode (#1440)
+
+The public service worker caches only GET responses for its built shell and an
+explicit public-information API allowlist. It never caches, queues or replays
+writes. Registration, contact and waitlist submissions refuse known-offline
+attempts before fetch with translated guidance; the public page also blocks form
+submission while offline. Reconnecting does not submit any retained draft.
+Existing submission IDs and ambiguous-failure recovery rules still apply when
+a connection fails during an online submission. No automatic write retry is added.

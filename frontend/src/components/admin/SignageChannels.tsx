@@ -1,3 +1,4 @@
+import { TemplateEditor } from "./SignageTemplates";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -185,6 +186,7 @@ export default function SignageChannels({
   const [slideInitial, setSlideInitial] = useState<SlideDraft | null>(null);
   const [slideId, setSlideId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SlideDraft | null>(null);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
@@ -219,6 +221,7 @@ export default function SignageChannels({
     if (JSON.stringify(channel) !== JSON.stringify(target)) {
       setChannel(target);
       setDraft(null);
+      setCreatingTemplate(false);
       setSlideId(null);
       setError("");
       resetPreview();
@@ -325,6 +328,7 @@ export default function SignageChannels({
   }
   function edit(item?: Slide) {
     if (!channelId) return;
+    setCreatingTemplate(false);
     setSlideId(item?.id ?? null);
     const next = item
       ? { ...item, content: { ...item.content } }
@@ -385,6 +389,11 @@ export default function SignageChannels({
           }}
         />
       </Field>
+      {(!channelValid || Boolean(draft && !valid)) && (
+        <p role="status">
+          {!channelValid ? m.signage_channel_requirements() : m.signage_slide_requirements()}
+        </p>
+      )}
       <Button
         className="hover:bg-primary"
         disabled={!channelValid || Boolean(draft && !valid)}
@@ -540,6 +549,7 @@ export default function SignageChannels({
                   });
                 }}
               >
+                <p>{m.signage_channel_requirements()}</p>
                 <Field label={m.signage_editor_name()}>
                   <AdminInput
                     required
@@ -565,6 +575,7 @@ export default function SignageChannels({
                 </Field>
                 <Field label={m.signage_channels_edition()}>
                   <AdminSelect
+                    required
                     value={channel.edition_id}
                     onValueChange={(value) => {
                       setChannel({ ...channel, edition_id: value ?? "" });
@@ -655,6 +666,23 @@ export default function SignageChannels({
                 {error || apiErrorMessage(queryError, m.admin_error_load_data())}
               </Alert>
             )}
+            {creatingTemplate && (
+              <TemplateEditor
+                authHeaders={authHeaders}
+                template={null}
+                initialKind={draft.kind}
+                onClose={() => setCreatingTemplate(false)}
+                onSaved={(template) => {
+                  client.setQueryData<Template[]>(["admin", "signage", "templates"], (items) => [
+                    ...(items ?? []),
+                    template,
+                  ]);
+                  changeSlide({ ...draft, template_id: template.id });
+                  setCreatingTemplate(false);
+                  void templates.refetch();
+                }}
+              />
+            )}
             <fieldset disabled={busy} className="space-y-4">
               <form
                 id="signage-slide-form"
@@ -728,6 +756,11 @@ export default function SignageChannels({
                   </AdminSelect>
                 </Field>
                 <p>{m.signage_channels_templates_help()}</p>
+                <Button variant="outline" onClick={() => setCreatingTemplate(true)}>
+                  {m.signage_create_template_here()}
+                </Button>
+                <p>{m.signage_template_return_help()}</p>
+                {!valid && <p role="status">{m.signage_slide_requirements()}</p>}
                 <Field label={m.signage_channels_duration()}>
                   <AdminInput
                     required

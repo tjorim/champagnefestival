@@ -1981,5 +1981,15 @@
   "admin_person_matches_help": "Possible existing people. Check whether this is the same person.",
   "admin_person_reuse": "Use existing person",
   "admin_person_continue_help": "For a different person, continue with Save. Shared email addresses are allowed.",
+  "signage_channel_requirements": "Name, public link name and edition are required. Use lowercase letters, numbers and single hyphens for the public link name.",
+  "signage_slide_requirements": "Choose a compatible template, set a duration from 1 to 3600 seconds, and add notice text or an image as appropriate. If both schedule dates are set, the end must follow the start.",
+  "signage_create_template_here": "Create template for this slide",
+  "signage_template_return_help": "Your slide draft stays open. Save the template to select it and return here, or cancel to return without changing the slide.",
+  "signage_template_requirements": "Enter a template name and add the required placeholders before saving. Image templates may have no layers; the slide supplies the image.",
+  "signage_sample_title": "Welcome to the festival",
+  "signage_sample_text": "Sample content: discover our producers and enjoy the festival. This text is only used in the template preview.",
+  "public_offline_notice": "You're offline. Saved information may be out of date. Registration, contact and waiting list forms cannot be sent. Nothing is queued; reconnect before submitting.",
+  "public_offline_updated": "Last updated: {time}.",
+  "public_offline_write": "You're offline. Reconnect before sending this form. Nothing has been queued.",
   "admin_person_matches_unavailable": "Existing people could not be checked. Search the directory before creating a new person."
 }
