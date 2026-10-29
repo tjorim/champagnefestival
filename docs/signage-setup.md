@@ -23,6 +23,30 @@ reconnect periodically to correct oscillator drift. Updates are polled every
 30 seconds and applied at the current playlist's next cycle boundary. Clock
 sampling repeats every three minutes and on return to the tab or network.
 
+## First channel and notice (#1433)
+
+In **Content → Screen channels**, add a channel with a name, public link name
+(lowercase letters, numbers and single hyphens) and edition. Leave **Active** off
+while preparing it. Save the channel, then choose **Add slide → Notice** and
+enter the notice text.
+
+Choose **Create template for this slide** to open a starter with the required
+placeholders already separated on the canvas. Give it a name and save it; the
+slide draft stays open and selects the new template. Cancel returns to the
+unchanged slide. The same path supports producer/sponsor and image slides; image
+slides supply their own artwork and can use a template without layers.
+
+Before real content exists, the template editor labels its representative sample
+text/artwork. These samples are preview-only and are never saved into a slide.
+The standalone Templates tab still supports custom templates and reports missing
+required placeholders. Returning to Channels retains the selected channel in the
+URL, as defined by #1420.
+
+**Preview** includes unsaved edits and works while the channel is inactive. It
+respects each slide's active flag and schedule at the selected time. Save the
+slide to publish its content; activate the channel explicitly when ready for
+venue use. Screens poll every 30 seconds and switch at a cycle boundary.
+
 ## Rehearsal (required before event use)
 
 - [ ] Load the same channel on at least two mains-powered laptops; press Start screen.
