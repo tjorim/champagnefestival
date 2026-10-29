@@ -6,10 +6,10 @@ import nl from "../messages/nl.json" with { type: "json" };
 import fr from "../messages/fr.json" with { type: "json" };
 
 for (const [locale, t] of Object.entries({ en, nl, fr })) {
+  // Every locale runs at desktop width; the narrow layout is locale-independent, so English covers it.
   for (const viewport of [
     { width: 1280, height: 800 },
-    { width: 1366, height: 768 },
-    { width: 1440, height: 900 },
+    ...(locale === "en" ? [{ width: 390, height: 844 }] : []),
   ]) {
     test(`first notice keeps its draft through template creation at ${viewport.width}px (${locale})`, async ({
       page,

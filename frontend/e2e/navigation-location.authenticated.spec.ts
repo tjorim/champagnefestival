@@ -2,8 +2,6 @@ import { test, expect } from "@playwright/test";
 
 for (const viewport of [
   { width: 1280, height: 800 },
-  { width: 1366, height: 768 },
-  { width: 1440, height: 900 },
   { width: 390, height: 700 },
 ]) {
   test(`restores People location and keyboard navigation at ${viewport.width}`, async ({

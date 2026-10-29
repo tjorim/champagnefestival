@@ -66,7 +66,7 @@ for (const roles of [
   });
 }
 
-for (const width of [1280, 1366, 1440]) {
+for (const width of [1280]) {
   test(`populated preparation task rehearsal at ${width}`, async ({ page }) => {
     test.setTimeout(90000);
     await page.setViewportSize({ width, height: 600 });

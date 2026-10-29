@@ -2,15 +2,11 @@ import { test, expect } from "@playwright/test";
 import en from "../messages/en.json" with { type: "json" };
 
 for (const [width, height, zoom] of [
-  [1280, 800, 1],
-  [1366, 768, 1],
-  [1440, 900, 1],
-  [1280, 800, 1.25],
-  [1366, 768, 1.25],
-  [1440, 900, 1.25],
+  // One corner per width and zoom (narrowest and widest effective viewports included):
+  // 1280/1366/1440 share one layout, so the full width × zoom grid repeats the same checks.
   [1280, 800, 1.5],
-  [1366, 768, 1.5],
-  [1440, 900, 1.5],
+  [1366, 768, 1.25],
+  [1440, 900, 1],
   [853, 512, 1],
   [390, 844, 1],
 ]) {

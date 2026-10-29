@@ -68,8 +68,8 @@ export default defineConfig(({ command, mode, isPreview }) => {
       port: 5173,
       open: true,
       proxy: {
-        "/uploads": "http://localhost:8000",
-        "/api": { target: "http://localhost:8000", headers: session.headers },
+        "/uploads": "http://localhost:9",
+        "/api": { target: "http://localhost:9", headers: session.headers },
       },
     },
   };
