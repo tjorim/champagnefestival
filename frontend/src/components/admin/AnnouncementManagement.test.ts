@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { iso, localDate } from "./AnnouncementManagement";
+import { announcementName, iso, localDate } from "./AnnouncementManagement";
 
 describe("announcement datetime-local conversion", () => {
   it("round-trips a UTC timestamp through local wall time without shifting the instant", () => {
@@ -13,5 +13,13 @@ describe("announcement datetime-local conversion", () => {
   it("keeps missing timestamps empty", () => {
     expect(localDate(null)).toBe("");
     expect(iso(null)).toBeNull();
+  });
+});
+
+describe("announcementName", () => {
+  it("shortens long Dutch text and collapses whitespace", () => {
+    expect(announcementName({ text_nl: "  Korte\n tekst " })).toBe("Korte tekst");
+    expect(announcementName({ text_nl: "x".repeat(80) })).toBe(`${"x".repeat(57)}…`);
+    expect(announcementName({ text_nl: null })).toBe("");
   });
 });

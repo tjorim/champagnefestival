@@ -13,6 +13,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EyeIcon, EyeOffIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -64,6 +66,12 @@ const empty: Draft = {
   link_label_en: "",
   link_label_fr: "",
 };
+
+/** What an announcement is called in row actions and confirmations: its Dutch text, shortened. */
+export function announcementName(item: { text_nl: string | null }): string {
+  const text = (item.text_nl ?? "").trim().replace(/\s+/g, " ");
+  return text.length > 60 ? `${text.slice(0, 57)}…` : text;
+}
 
 export function localDate(value: string | null, timezoneOffsetMinutes?: number) {
   if (!value) return "";
@@ -201,13 +209,14 @@ export default function AnnouncementManagement({
   // Stable mutation callbacks keep table action buttons mounted for focus return.
   const deleteAnnouncement = remove.mutate;
   const handleDelete = useCallback(
-    async (id: string) => {
+    async (item: Announcement) => {
       const confirmed = await confirm({
         title: m.admin_announcement_delete_title(),
-        body: m.admin_announcement_delete_confirm(),
+        body: m.admin_announcement_delete_confirm({ text: announcementName(item) }),
+        confirmLabel: m.admin_delete(),
         errorFallback: m.admin_error_delete_announcement(),
       });
-      if (confirmed) deleteAnnouncement(id);
+      if (confirmed) deleteAnnouncement(item.id);
     },
     [confirm, deleteAnnouncement],
   );
@@ -282,14 +291,30 @@ export default function AnnouncementManagement({
         meta: { tdClassName: "whitespace-nowrap" },
         cell: ({ row }) => {
           const item = row.original;
+          const name = announcementName(item);
           return (
-            <>
-              <Button size="sm" onClick={() => openEditor(item)}>
-                {m.admin_edit()}
-              </Button>{" "}
-              <Button
-                size="sm"
-                variant="warning"
+            <RowActions
+              destructive={
+                <RowActionButton
+                  destructive
+                  icon={TrashIcon}
+                  label={m.admin_delete_item({ name })}
+                  onClick={() => void handleDelete(item)}
+                />
+              }
+            >
+              <RowActionButton
+                icon={PencilIcon}
+                label={m.admin_edit_item({ name })}
+                onClick={() => openEditor(item)}
+              />
+              <RowActionButton
+                icon={item.active ? EyeOffIcon : EyeIcon}
+                label={
+                  item.active
+                    ? m.admin_announcement_disable_named({ name })
+                    : m.admin_announcement_publish_named({ name })
+                }
                 onClick={() =>
                   void update(item, { active: !item.active })
                     .then(refresh)
@@ -297,15 +322,8 @@ export default function AnnouncementManagement({
                       setError(apiErrorMessage(reason, m.admin_error_update_announcement())),
                     )
                 }
-              >
-                {item.active
-                  ? m.admin_announcement_disable_action()
-                  : m.admin_announcement_publish_action()}
-              </Button>{" "}
-              <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
-                {m.admin_delete()}
-              </Button>
-            </>
+              />
+            </RowActions>
           );
         },
       }),
@@ -392,7 +410,7 @@ export default function AnnouncementManagement({
         <h2 className="text-xl font-medium leading-tight mb-0">
           {m.admin_announcements_section()}
         </h2>
-        <Button onClick={() => openEditor()}>{m.admin_announcement_new()}</Button>
+        <AdminAddButton onClick={() => openEditor()}>{m.admin_announcement_new()}</AdminAddButton>
       </CardHeader>
       <CardContent>
         {(error || query.error) && (

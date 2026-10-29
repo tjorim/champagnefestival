@@ -2,6 +2,7 @@ import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
 import { fetchEditions } from "@/utils/adminContentApi";
 import { ApiError } from "@/utils/apiErrors";
 import { m } from "@/paraglide/messages";
+import { editionDisplayName } from "@/utils/editionName";
 
 // Kept apart from `venuePlanApi`, which the router imports eagerly: these helpers belong to the
 // lazily loaded venue plan page and pull in the admin and error-code modules.
@@ -17,7 +18,7 @@ function editionChoice(edition: {
   year: number;
   venue: { name: string };
 }): VenuePlanEditionChoice {
-  return { id: edition.id, label: `${edition.month} ${edition.year} · ${edition.venue.name}` };
+  return { id: edition.id, label: `${editionDisplayName(edition)} · ${edition.venue.name}` };
 }
 
 /**

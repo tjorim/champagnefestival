@@ -141,7 +141,7 @@ describe("EmailCategoryManagement", () => {
     mount();
 
     fireEvent.click(await screen.findByRole("button", { name: "Delete new_editions" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText(/The application uses this email category/)).toBeInTheDocument();
   });

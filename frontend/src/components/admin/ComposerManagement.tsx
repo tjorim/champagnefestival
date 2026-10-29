@@ -42,6 +42,8 @@ import {
 } from "@/utils/composedMessage";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { PencilIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 type Draft = Pick<
   ComposedMessage,
@@ -354,10 +356,12 @@ export default function ComposerManagement({
             const item = row.original;
             return (
               item.state === "draft" && (
-                <div className="flex gap-2 justify-end">
-                  <Button size="sm" variant="outline" onClick={() => openEditor(item)}>
-                    {m.admin_composer_edit_button()}
-                  </Button>
+                <RowActions className="justify-end">
+                  <RowActionButton
+                    icon={PencilIcon}
+                    label={m.admin_edit_item({ name: item.title_nl ?? "" })}
+                    onClick={() => openEditor(item)}
+                  />
                   <Button
                     size="sm"
                     variant="warning"
@@ -366,7 +370,7 @@ export default function ComposerManagement({
                   >
                     {m.admin_composer_send_button()}
                   </Button>
-                </div>
+                </RowActions>
               )
             );
           },
@@ -381,7 +385,7 @@ export default function ComposerManagement({
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_composer_section()}</h2>
-        <Button onClick={() => openEditor()}>{m.admin_composer_new()}</Button>
+        <AdminAddButton onClick={() => openEditor()}>{m.admin_composer_new()}</AdminAddButton>
       </CardHeader>
       <CardContent>
         {(error || query.error) && (

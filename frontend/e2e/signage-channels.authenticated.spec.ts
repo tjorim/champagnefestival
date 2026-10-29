@@ -40,8 +40,8 @@ test("edits channels and playlists, previews drafts and supports accessible reor
     await page.getByRole("option", { name: option, exact: true }).click();
   }
   await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "New channel", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "New channel", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add channel", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Add channel", exact: true })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill("Hall five");
   await page.getByLabel("Public link name").fill("hall-five");
   await page.getByRole("combobox", { name: "Edition", exact: true }).click();

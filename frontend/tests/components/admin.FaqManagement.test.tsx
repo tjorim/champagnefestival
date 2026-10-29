@@ -77,7 +77,7 @@ describe("FaqManagement", () => {
     );
     mount();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Edit/ }));
     fireEvent.change(await screen.findByLabelText("Question (French)"), {
       target: { value: "Quand ?" },
     });

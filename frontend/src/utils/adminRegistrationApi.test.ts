@@ -53,7 +53,7 @@ describe("fetchAdminPersonRegistrations", () => {
         amountPaid: 150,
         amountDue: 150,
         editionId: "edition-2026",
-        editionLabel: "2026 march",
+        editionLabel: "March 2026",
       },
     ]);
   });

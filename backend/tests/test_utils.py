@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.utils import csv_safe, registration_to_guest_dict
+from app.utils import csv_safe, edition_display_name, registration_to_guest_dict
 
 
 @pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r", "\n"])
@@ -17,6 +17,15 @@ def test_csv_safe_normalizes_other_cell_values():
     assert csv_safe(None) == ""
     assert csv_safe(42) == "42"
     assert csv_safe("Alice") == "Alice"
+
+
+@pytest.mark.parametrize(
+    ("month", "year", "expected"),
+    [("march", 2027, "March 2027"), (" maart ", 2026, "Maart 2026"), ("", 2027, "2027")],
+)
+def test_edition_display_name_matches_the_frontend_helper(month: str, year: int, expected: str):
+    edition = SimpleNamespace(month=month, year=year)
+    assert edition_display_name(edition) == expected  # ty: ignore[invalid-argument-type]
 
 
 def _make_registration():

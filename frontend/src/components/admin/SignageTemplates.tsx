@@ -36,6 +36,7 @@ import type { Layer, PublicSlide } from "@/signage/types";
 import "@/signage/editor.css";
 import AdminEditorDialog from "./AdminEditorDialog";
 import SignageLayerPanel from "./SignageLayerPanel";
+import { AdminAddButton } from "./RowActions";
 
 const labels = () => ({
   name: m.signage_editor_name(),
@@ -127,14 +128,14 @@ export default function SignageTemplates({
       <h2 className="text-xl font-semibold">{m.signage_editor_heading()}</h2>
       {templates.error && <Alert variant="danger">{m.admin_error_load_data()}</Alert>}
       {saved && <p role="status">{m.signage_editor_saved()}</p>}
-      <Button
+      <AdminAddButton
         onClick={() => {
           setSaved(false);
           setEditing(null);
         }}
       >
         {m.signage_editor_new()}
-      </Button>
+      </AdminAddButton>
       <ul className="space-y-2">
         {templates.data?.map((template) => (
           <li key={template.id} className="flex items-center justify-between gap-2">

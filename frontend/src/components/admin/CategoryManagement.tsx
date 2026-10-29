@@ -10,7 +10,7 @@ import { AdminEmptyState } from "./AdminEmptyState";
 
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -43,6 +43,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { AdminAddButton } from "./RowActions";
 
 export type CategoryKind = "event" | "product";
 
@@ -192,6 +193,7 @@ export default function CategoryManagement({
       const confirmed = await confirm({
         title: m.admin_category_delete_title(),
         body: config.deleteConfirm(category.label),
+        confirmLabel: m.admin_delete(),
         errorFallback: m.admin_error_delete_category(),
       });
       if (!confirmed) return;
@@ -212,10 +214,7 @@ export default function CategoryManagement({
       <Card tone="secondary">
         <CardHeader className="flex items-center justify-between">
           <span className="font-semibold">{config.section()}</span>
-          <Button variant="outline-warning" size="sm" onClick={openAdd}>
-            <Icon icon={PlusIcon} />
-            {m.admin_add_category()}
-          </Button>
+          <AdminAddButton onClick={openAdd}>{m.admin_add_category()}</AdminAddButton>
         </CardHeader>
         <CardContent className="p-0">
           {rowError && (

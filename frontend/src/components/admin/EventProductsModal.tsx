@@ -8,7 +8,7 @@ import {
   AdminCheck,
   AdminDescription,
 } from "@/components/admin/AdminFields";
-import { PencilIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
@@ -47,6 +47,7 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Event, Product, ProductInclusion } from "@/types/event";
+import { AdminAddButton } from "./RowActions";
 
 interface EventProductsModalProps {
   show: boolean;
@@ -303,6 +304,7 @@ export default function EventProductsModal({
     const confirmed = await confirm({
       title: m.admin_products_delete_title(),
       body: m.admin_products_delete_confirm({ name: product.name }),
+      confirmLabel: m.admin_delete(),
       errorFallback: m.admin_error_delete_product(),
     });
     if (!confirmed) return;
@@ -821,15 +823,13 @@ export default function EventProductsModal({
             {formOpen && editingId === null && !preview ? (
               renderForm()
             ) : (
-              <Button
+              <AdminAddButton
                 variant="outline"
-                size="sm"
                 onClick={openAdd}
                 disabled={productsQuery.isPending || productsQuery.isError || formOpen}
               >
-                <Icon icon={PlusIcon} />
                 {m.admin_products_add()}
-              </Button>
+              </AdminAddButton>
             )}
           </DialogBody>
           <DialogFooter>

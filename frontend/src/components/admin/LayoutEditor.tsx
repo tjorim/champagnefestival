@@ -17,7 +17,6 @@ import {
   CalendarIcon,
   Grid3x3Icon,
   InfoIcon,
-  PlusIcon,
   RotateCcwClockIcon,
   RotateCcwIcon,
   RotateCwIcon,
@@ -68,6 +67,7 @@ import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
 import LayoutRevisionsModal from "./LayoutRevisionsModal";
+import { AdminAddButton } from "./RowActions";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
@@ -986,22 +986,17 @@ export default function LayoutEditor({
               </ToggleGroupItem>
             </ToggleGroup>
             {layer === "seating" ? (
-              <Button
-                variant="outline-warning"
-                size="sm"
+              <AdminAddButton
                 onClick={() => {
                   setAddTableError(null);
                   setShowAddTable(true);
                 }}
                 disabled={!activeLayoutId}
               >
-                <Icon icon={PlusIcon} />
                 {m.admin_add_table()}
-              </Button>
+              </AdminAddButton>
             ) : (
-              <Button
-                variant="outline-info"
-                size="sm"
+              <AdminAddButton
                 onClick={() => {
                   setAddAreaError(null);
                   setNewArea({
@@ -1016,9 +1011,8 @@ export default function LayoutEditor({
                 }}
                 disabled={!activeLayoutId}
               >
-                <Icon icon={PlusIcon} />
                 {m.admin_layout_add_area()}
-              </Button>
+              </AdminAddButton>
             )}
           </div>
         </CardHeader>
@@ -1063,8 +1057,10 @@ export default function LayoutEditor({
                           size="sm"
                           variant="outline-danger"
                           onClick={() => setConfirmDeleteLayoutId(layout.id)}
-                          title={m.admin_delete()}
-                          aria-label={m.admin_delete()}
+                          title={m.admin_delete_item({ name: getDayLabel(layout, dayOptions) })}
+                          aria-label={m.admin_delete_item({
+                            name: getDayLabel(layout, dayOptions),
+                          })}
                           className="rounded-tl-none rounded-bl-none border-l-0"
                         >
                           <Icon icon={XIcon} />
@@ -1074,19 +1070,16 @@ export default function LayoutEditor({
                     {roomLayouts.length === 0 && (
                       <span className="text-subtle text-sm">{m.admin_no_layouts()}</span>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline-success"
+                    <AdminAddButton
+                      variant="outline"
                       onClick={() => {
                         setAddLayoutError(null);
                         setNewLayout(getInitialNewLayoutState(dayOptions));
                         setShowAddLayout(true);
                       }}
-                      title={m.admin_add_layout()}
                     >
-                      <Icon icon={PlusIcon} />
                       {m.admin_add_layout()}
-                    </Button>
+                    </AdminAddButton>
                     {roomLayouts.length > 1 && (
                       <Button
                         size="sm"
@@ -1200,9 +1193,9 @@ export default function LayoutEditor({
                 title={
                   selectedTableData.registrationIds.length > 0
                     ? m.admin_layout_table_delete_blocked()
-                    : m.admin_delete()
+                    : m.admin_delete_item({ name: selectedTableData.name })
                 }
-                aria-label={m.admin_delete()}
+                aria-label={m.admin_delete_item({ name: selectedTableData.name })}
               >
                 <Icon icon={TrashIcon} />
               </Button>
@@ -1475,8 +1468,8 @@ export default function LayoutEditor({
                 variant="outline-danger"
                 size="sm"
                 onClick={() => setConfirmDeleteAreaId(selectedAreaData.id)}
-                title={m.admin_delete()}
-                aria-label={m.admin_delete()}
+                title={m.admin_delete_item({ name: selectedAreaData.label })}
+                aria-label={m.admin_delete_item({ name: selectedAreaData.label })}
               >
                 <Icon icon={TrashIcon} />
               </Button>
@@ -1969,7 +1962,13 @@ export default function LayoutEditor({
           admin
           show
           title={m.admin_layout_delete_title()}
-          body={m.admin_layout_delete_confirm()}
+          body={m.admin_layout_delete_confirm({
+            name: (() => {
+              const layout = layouts.find((candidate) => candidate.id === confirmDeleteLayoutId);
+              return layout ? getDayLabel(layout, dayOptions) : "";
+            })(),
+          })}
+          confirmLabel={m.admin_delete()}
           errorFallback={m.admin_error_delete_layout()}
           onConfirm={() => handleDeleteLayout(confirmDeleteLayoutId)}
           onHide={() => setConfirmDeleteLayoutId(null)}
@@ -1980,7 +1979,10 @@ export default function LayoutEditor({
           admin
           show
           title={m.admin_layout_table_delete_title()}
-          body={m.admin_layout_table_delete_confirm()}
+          body={m.admin_layout_table_delete_confirm({
+            name: tables.find((table) => table.id === confirmDeleteTableId)?.name ?? "",
+          })}
+          confirmLabel={m.admin_delete()}
           errorFallback={m.admin_content_error_save()}
           onConfirm={() => handleDeleteTable(confirmDeleteTableId)}
           onHide={() => setConfirmDeleteTableId(null)}
@@ -1991,7 +1993,10 @@ export default function LayoutEditor({
           admin
           show
           title={m.admin_layout_area_delete_title()}
-          body={m.admin_layout_area_delete_confirm()}
+          body={m.admin_layout_area_delete_confirm({
+            name: canvasAreas.find((area) => area.id === confirmDeleteAreaId)?.label ?? "",
+          })}
+          confirmLabel={m.admin_delete()}
           errorFallback={m.admin_content_error_save()}
           onConfirm={() => handleDeleteArea(confirmDeleteAreaId)}
           onHide={() => setConfirmDeleteAreaId(null)}

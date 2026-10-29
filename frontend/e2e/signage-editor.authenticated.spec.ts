@@ -12,8 +12,8 @@ test("creates a layered template, validates bindings and preserves edits through
   await page.getByRole("button", { name: "Screen channels", exact: true }).click();
   await page.getByRole("tab", { name: "Templates" }).click();
   await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "New template", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "New template", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Add template", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Add template", exact: true })).toBeVisible();
   const save = page.getByRole("button", { name: "Save template", exact: true });
   await page.getByLabel("Name", { exact: true }).first().fill("Festival template");
   await expect(save).toBeDisabled();
@@ -149,8 +149,8 @@ for (const viewport of [
     );
     const navigationAudit = await new AxeBuilder({ page }).include('[role="tablist"]').analyze();
     expect(navigationAudit.violations).toEqual([]);
-    await page.getByRole("button", { name: "New template", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "New template", exact: true });
+    await page.getByRole("button", { name: "Add template", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Add template", exact: true });
     const list = dialog.getByRole("list", { name: "Layers (front to back)", exact: true });
     const rows = list.locator(":scope > li");
     const properties = dialog.getByRole("region", { name: "Layer properties" });

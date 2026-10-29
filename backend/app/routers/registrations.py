@@ -58,6 +58,7 @@ from app.services.users_service import get_or_create_user, verified_email_from_c
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
     csv_safe,
+    edition_display_name,
     make_id,
     order_answer_text,
     registration_to_dict,
@@ -524,7 +525,7 @@ async def _stream_ledger_csv(
                         "payment" if txn.amount > 0 else "refund",
                         registration.id,
                         event.title,
-                        f"{edition.year} {edition.month}" if edition else "",
+                        edition_display_name(edition) if edition else "",
                         person.name,
                         str(txn.amount),
                         txn.recorded_by,

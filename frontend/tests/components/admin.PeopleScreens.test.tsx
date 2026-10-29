@@ -138,7 +138,7 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
       within(row("Person 00")).getByRole("button", {
-        name: new RegExp(`^admin_${kind}_edit_title`),
+        name: 'admin_edit_item({"name":"Person 00"})',
       }),
     );
     const dialog = await screen.findByRole("dialog");
@@ -163,8 +163,8 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
       within(row("Person 00")).getByRole("button", {
         name:
           kind === "people"
-            ? "admin_people_delete_title: Person 00"
-            : `admin_${kind}_deactivate_title`,
+            ? 'admin_delete_item({"name":"Person 00"})'
+            : `admin_${kind}_deactivate_title: Person 00`,
       }),
     );
     const dialog = await screen.findByRole("dialog");
@@ -181,7 +181,7 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
             ? "admin_members_deactivate_title"
             : kind === "people"
               ? "admin_delete"
-              : "admin_action_confirm",
+              : "admin_volunteers_deactivate_title",
       }),
     );
     // An unknown code shows the translated operation fallback, never the English detail.

@@ -573,7 +573,7 @@ describe("EventProductsModal", () => {
 
     fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
     await screen.findByText("admin_products_delete_title");
-    fireEvent.click(screen.getByRole("button", { name: "admin_action_confirm" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(deleteCalled).toBe(true));
     await waitFor(() => expect(screen.queryByText("Champagne Bottle")).not.toBeInTheDocument());

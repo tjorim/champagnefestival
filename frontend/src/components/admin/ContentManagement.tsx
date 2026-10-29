@@ -8,7 +8,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PencilIcon,
-  PlusIcon,
   RotateCcwIcon,
   TrashIcon,
   UserIcon,
@@ -52,6 +51,8 @@ import {
   saveContentSectionItem,
   updateContentSectionItemActive,
 } from "@/utils/adminContentApi";
+import { editionDisplayName } from "@/utils/editionName";
+import { AdminAddButton } from "./RowActions";
 
 function typeBadgeVariant(type: string | undefined): BadgeVariant {
   switch (type) {
@@ -152,7 +153,7 @@ export function ContentSection({
     const editions = editionsQuery.data ?? [];
     const map = new Map<number, string[]>();
     for (const edition of editions) {
-      const label = `${edition.year} – ${edition.month}`;
+      const label = editionDisplayName(edition);
       for (const item of [
         ...(edition.producers ?? []),
         ...(edition.sponsors ?? []),
@@ -494,10 +495,7 @@ export function ContentSection({
             </Badge>
           )}
         </h2>
-        <Button variant="outline-primary" size="sm" onClick={openAdd}>
-          <Icon icon={PlusIcon} />
-          {m.admin_content_add_item()}
-        </Button>
+        <AdminAddButton onClick={openAdd}>{m.admin_content_add_item()}</AdminAddButton>
       </div>
       <div className="flex flex-wrap gap-2 items-center mb-2">
         <ToggleGroup
@@ -735,10 +733,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
             ))}
           </ToggleGroup>
         </div>
-        <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
-          <Icon icon={PlusIcon} />
+        <AdminAddButton onClick={() => setAddModalOpen(true)}>
           {m.admin_content_edition_add()}
-        </Button>
+        </AdminAddButton>
       </div>
 
       {editionsQuery.isPending && (

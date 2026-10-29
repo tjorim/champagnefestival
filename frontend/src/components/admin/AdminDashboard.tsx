@@ -41,6 +41,7 @@ import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
 import AdminSectionPane from "./AdminSectionPane";
+import { editionDisplayNameWithType } from "@/utils/editionName";
 
 // Keep secondary tools out of the initial registrations download.
 const OrganizationChangeReview = React.lazy(() => import("./OrganizationChangeReview"));
@@ -76,18 +77,6 @@ const ACTIVE_EDITION_SECTIONS: ReadonlySet<string> = new Set([
   "floor-plans",
   "analytics",
 ]);
-
-function activeEditionLabel(edition: { editionType: string; year: number }): string {
-  // The admin strip follows whichever edition is next, so it can't assume festival.
-  switch (edition.editionType) {
-    case "bourse":
-      return `${m.admin_edition_type_bourse()} ${edition.year}`;
-    case "capsule_exchange":
-      return `${m.admin_edition_type_capsule_exchange()} ${edition.year}`;
-    default:
-      return `${m.festival_name()} ${edition.year}`;
-  }
-}
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -517,7 +506,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   }}
                   aria-label={m.admin_active_edition_apply_filter()}
                 >
-                  <span className="font-semibold">{activeEditionLabel(activeEdition)}</span>
+                  <span className="font-semibold">{editionDisplayNameWithType(activeEdition)}</span>
                   {isActiveEditionDay && (
                     <span className="text-highlight">
                       {m.admin_active_edition_day_progress({
@@ -571,7 +560,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     editionId={activeEdition.id || undefined}
                     editionLabel={
                       activeEdition.id
-                        ? `${activeEditionLabel(activeEdition)} · ${activeEdition.dates.map((date) => new Date(date).toLocaleDateString()).join(", ")}`
+                        ? `${editionDisplayNameWithType(activeEdition)} · ${activeEdition.dates.map((date) => new Date(date).toLocaleDateString()).join(", ")}`
                         : undefined
                     }
                   />

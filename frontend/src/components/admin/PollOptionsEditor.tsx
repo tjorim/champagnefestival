@@ -204,6 +204,7 @@ export default function PollOptionsEditor({
           )}
         </>
       ),
+      confirmLabel: m.admin_delete(),
       errorFallback: m.admin_content_error_save(),
       variant: "danger",
     });

@@ -1,6 +1,7 @@
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailCheckIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, RotateCcwIcon, ShieldCheckIcon, UserMinusIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import { Icon } from "@/components/Icon";
 import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -52,6 +53,7 @@ export default function VolunteersManagement({
   const [editingVolunteer, setEditingVolunteer] = useState<Person | null>(null);
   const [consentPerson, setConsentPerson] = useState<Person | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivatingName, setDeactivatingName] = useState("");
   const [deactivating, setDeactivating] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
   const [reactivateSuccess, setReactivateSuccess] = useState(false);
@@ -170,53 +172,43 @@ export default function VolunteersManagement({
           cell: ({ row }) => {
             const volunteer = row.original;
             return (
-              <div className="flex flex-wrap gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
+              <RowActions
+                destructive={
+                  isRoleActive(volunteer, "volunteer") ? (
+                    <RowActionButton
+                      destructive
+                      icon={UserMinusIcon}
+                      label={`${m.admin_volunteers_deactivate_title()}: ${volunteer.name}`}
+                      onClick={() => {
+                        setDeactivatingId(volunteer.id);
+                        setDeactivatingName(volunteer.name);
+                        setDeactivateError("");
+                      }}
+                    />
+                  ) : undefined
+                }
+              >
+                <RowActionButton
+                  icon={ShieldCheckIcon}
+                  label={`${m.admin_email_consents()}: ${volunteer.name}`}
                   onClick={() => setConsentPerson(volunteer)}
-                  title={m.admin_email_consents()}
-                  aria-label={`${m.admin_email_consents()}: ${volunteer.name}`}
-                >
-                  <Icon icon={MailCheckIcon} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
+                />
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name: volunteer.name })}
                   onClick={() => {
                     setEditingVolunteer(volunteer);
                     setShowForm(true);
                   }}
-                  title={m.admin_volunteers_edit_title()}
-                  aria-label={`${m.admin_volunteers_edit_title()}: ${volunteer.name}`}
-                >
-                  <Icon icon={PencilIcon} />
-                </Button>
-                {isRoleActive(volunteer, "volunteer") ? (
-                  <Button
-                    size="sm"
-                    variant="outline-danger"
-                    onClick={() => {
-                      setDeactivatingId(volunteer.id);
-                      setDeactivateError("");
-                    }}
-                    title={m.admin_volunteers_deactivate_title()}
-                    aria-label={m.admin_volunteers_deactivate_title()}
-                  >
-                    <Icon icon={TrashIcon} />
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
+                />
+                {!isRoleActive(volunteer, "volunteer") && (
+                  <RowActionButton
+                    icon={RotateCcwIcon}
+                    label={`${m.admin_volunteers_reactivate_title()}: ${volunteer.name}`}
                     onClick={() => void handleReactivate(volunteer.id)}
-                    title={m.admin_volunteers_reactivate_title()}
-                    aria-label={`${m.admin_volunteers_reactivate_title()}: ${volunteer.name}`}
-                  >
-                    <Icon icon={RotateCcwIcon} />
-                  </Button>
+                  />
                 )}
-              </div>
+              </RowActions>
             );
           },
         }),
@@ -287,15 +279,15 @@ export default function VolunteersManagement({
               setShowForm(true);
             }}
             primaryAction={
-              <Button
-                variant="outline-primary"
+              <AdminAddButton
+                size="default"
                 onClick={() => {
                   setEditingVolunteer(null);
                   setShowForm(true);
                 }}
               >
                 {m.admin_volunteers_add()}
-              </Button>
+              </AdminAddButton>
             }
           />
         </CardContent>
@@ -311,13 +303,13 @@ export default function VolunteersManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="text-destructive">
-                <Icon icon={TrashIcon} className="me-2" />
+                <Icon icon={UserMinusIcon} className="me-2" />
                 {m.admin_volunteers_deactivate_title()}
               </DialogTitle>
             </DialogHeader>
             <DialogBody>
               {deactivateError && <Alert variant="danger">{deactivateError}</Alert>}
-              <p>{m.admin_volunteers_deactivate_confirm()}</p>
+              <p>{m.admin_volunteers_deactivate_confirm({ name: deactivatingName })}</p>
             </DialogBody>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setDeactivatingId(null)}>
@@ -329,8 +321,8 @@ export default function VolunteersManagement({
                 onClick={handleDeactivateConfirm}
                 disabled={deactivating}
               >
-                {deactivating ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
-                {m.admin_action_confirm()}
+                {deactivating ? <Spinner size="sm" /> : <Icon icon={UserMinusIcon} />}
+                {m.admin_volunteers_deactivate_title()}
               </Button>
             </DialogFooter>
           </DialogContent>

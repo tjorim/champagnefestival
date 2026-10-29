@@ -7,7 +7,8 @@ import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailCheckIcon, MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { MailIcon, PencilIcon, RotateCcwIcon, ShieldCheckIcon, UserMinusIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import { Icon } from "@/components/Icon";
 import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -74,6 +75,7 @@ export default function MembersManagement({
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Person | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivatingName, setDeactivatingName] = useState("");
   const [deactivating, setDeactivating] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
   const [reactivateSuccess, setReactivateSuccess] = useState(false);
@@ -191,7 +193,22 @@ export default function MembersManagement({
           cell: ({ row }) => {
             const member = row.original;
             return (
-              <div className="flex flex-wrap gap-1">
+              <RowActions
+                destructive={
+                  isRoleActive(member, "member") ? (
+                    <RowActionButton
+                      destructive
+                      icon={UserMinusIcon}
+                      label={`${m.admin_members_deactivate_title()}: ${member.name}`}
+                      onClick={() => {
+                        setDeactivatingId(member.id);
+                        setDeactivatingName(member.name);
+                        setDeactivateError("");
+                      }}
+                    />
+                  ) : undefined
+                }
+              >
                 <Button
                   size="sm"
                   variant="outline"
@@ -200,19 +217,10 @@ export default function MembersManagement({
                 >
                   {m.stamp_cards()}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setConsentPerson(member)}
-                  title={m.admin_email_consents()}
-                  aria-label={`${m.admin_email_consents()}: ${member.name}`}
-                >
-                  <Icon icon={MailCheckIcon} />
-                </Button>
                 {member.email && (
-                  <Button
-                    size="sm"
-                    variant="outline-warning"
+                  <RowActionButton
+                    icon={MailIcon}
+                    label={m.admin_email_compose_for({ name: member.name })}
                     onClick={() =>
                       setEmailDraft(
                         buildMemberEmailDraft(
@@ -222,49 +230,29 @@ export default function MembersManagement({
                         ),
                       )
                     }
-                    title={m.admin_email_compose_for({ name: member.name })}
-                    aria-label={m.admin_email_compose_for({ name: member.name })}
-                  >
-                    <Icon icon={MailIcon} />
-                  </Button>
+                  />
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
+                <RowActionButton
+                  icon={ShieldCheckIcon}
+                  label={`${m.admin_email_consents()}: ${member.name}`}
+                  onClick={() => setConsentPerson(member)}
+                />
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name: member.name })}
                   onClick={() => {
                     setEditingMember(member);
                     setShowForm(true);
                   }}
-                  title={m.admin_members_edit_title()}
-                  aria-label={`${m.admin_members_edit_title()}: ${member.name}`}
-                >
-                  <Icon icon={PencilIcon} />
-                </Button>
-                {isRoleActive(member, "member") ? (
-                  <Button
-                    size="sm"
-                    variant="outline-danger"
-                    onClick={() => {
-                      setDeactivatingId(member.id);
-                      setDeactivateError("");
-                    }}
-                    title={m.admin_members_deactivate_title()}
-                    aria-label={m.admin_members_deactivate_title()}
-                  >
-                    <Icon icon={TrashIcon} />
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
+                />
+                {!isRoleActive(member, "member") && (
+                  <RowActionButton
+                    icon={RotateCcwIcon}
+                    label={`${m.admin_members_reactivate_title()}: ${member.name}`}
                     onClick={() => void handleReactivate(member.id)}
-                    title={m.admin_members_reactivate_title()}
-                    aria-label={`${m.admin_members_reactivate_title()}: ${member.name}`}
-                  >
-                    <Icon icon={RotateCcwIcon} />
-                  </Button>
+                  />
                 )}
-              </div>
+              </RowActions>
             );
           },
         }),
@@ -356,15 +344,15 @@ export default function MembersManagement({
               setShowForm(true);
             }}
             primaryAction={
-              <Button
-                variant="outline-primary"
+              <AdminAddButton
+                size="default"
                 onClick={() => {
                   setEditingMember(null);
                   setShowForm(true);
                 }}
               >
                 {m.admin_members_add()}
-              </Button>
+              </AdminAddButton>
             }
           />
         </CardContent>
@@ -390,7 +378,7 @@ export default function MembersManagement({
                   {deactivateError}
                 </Alert>
               )}
-              <p>{m.admin_members_deactivate_confirm()}</p>
+              <p>{m.admin_members_deactivate_confirm({ name: deactivatingName })}</p>
             </DialogBody>
             <DialogFooter>
               <Button
@@ -408,7 +396,7 @@ export default function MembersManagement({
                   </>
                 ) : (
                   <>
-                    <Icon icon={TrashIcon} className="me-1" />
+                    <Icon icon={UserMinusIcon} className="me-1" />
                     {m.admin_members_deactivate_title()}
                   </>
                 )}

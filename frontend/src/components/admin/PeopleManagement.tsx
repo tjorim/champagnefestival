@@ -1,4 +1,5 @@
 import { AdminEmptyState } from "./AdminEmptyState";
+import { RowActionButton, RowActions } from "./RowActions";
 import { PersonDuplicates } from "./PersonDuplicates";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import {
   CircleCheckIcon,
   EyeIcon,
   FileSpreadsheetIcon,
-  MailCheckIcon,
+  ShieldCheckIcon,
   MailIcon,
   NotebookTextIcon,
   PencilIcon,
@@ -54,6 +55,7 @@ import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
 import EmailComposeModal from "./EmailComposeModal";
+import { AdminAddButton } from "./RowActions";
 
 const columnHelper = createAppColumnHelper<Person>();
 
@@ -313,20 +315,23 @@ export default function PeopleManagement({
           cell: ({ row }) => {
             const person = row.original;
             return (
-              <div className="flex flex-wrap gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setConsentPerson(person)}
-                  title={m.admin_email_consents()}
-                  aria-label={`${m.admin_email_consents()}: ${person.name}`}
-                >
-                  <Icon icon={MailCheckIcon} />
-                </Button>
+              <RowActions
+                destructive={
+                  <RowActionButton
+                    destructive
+                    icon={TrashIcon}
+                    label={m.admin_delete_item({ name: person.name })}
+                    onClick={() => {
+                      setDeletingPerson(person);
+                      setDeleteError("");
+                    }}
+                  />
+                }
+              >
                 {person.email && (
-                  <Button
-                    size="sm"
-                    variant="outline-warning"
+                  <RowActionButton
+                    icon={MailIcon}
+                    label={m.admin_email_compose_for({ name: person.name })}
                     onClick={() =>
                       setEmailDraft(
                         buildMemberEmailDraft(
@@ -336,38 +341,23 @@ export default function PeopleManagement({
                         ),
                       )
                     }
-                    title={m.admin_email_compose_for({ name: person.name })}
-                    aria-label={m.admin_email_compose_for({ name: person.name })}
-                  >
-                    <Icon icon={MailIcon} />
-                  </Button>
+                  />
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
+                <RowActionButton
+                  icon={ShieldCheckIcon}
+                  label={`${m.admin_email_consents()}: ${person.name}`}
+                  onClick={() => setConsentPerson(person)}
+                />
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name: person.name })}
                   onClick={() => {
                     setEditingPerson(person);
                     setShowForm(true);
                   }}
-                  title={m.admin_people_edit_title()}
-                  aria-label={`${m.admin_people_edit_title()}: ${person.name}`}
-                >
-                  <Icon icon={PencilIcon} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => {
-                    setDeletingPerson(person);
-                    setDeleteError("");
-                  }}
-                  title={m.admin_people_delete_title()}
-                  aria-label={`${m.admin_people_delete_title()}: ${person.name}`}
-                >
-                  <Icon icon={TrashIcon} />
-                </Button>
+                />
                 <PersonDuplicates person={person} authHeaders={authHeaders} onMerge={openMerge} />
-              </div>
+              </RowActions>
             );
           },
         }),
@@ -452,15 +442,15 @@ export default function PeopleManagement({
               setShowForm(true);
             }}
             primaryAction={
-              <Button
-                variant="outline-primary"
+              <AdminAddButton
+                size="default"
                 onClick={() => {
                   setEditingPerson(null);
                   setShowForm(true);
                 }}
               >
                 {m.admin_people_add_person()}
-              </Button>
+              </AdminAddButton>
             }
           />
         </CardContent>

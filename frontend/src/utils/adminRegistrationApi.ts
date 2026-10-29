@@ -4,6 +4,7 @@ import { apiErrorFromResponse } from "@/utils/apiErrors";
 import { apiToEvent, type Event } from "@/types/event";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
+import { editionDisplayName } from "@/utils/editionName";
 
 export interface PersonOption {
   value: string;
@@ -196,7 +197,7 @@ export async function fetchAdminPersonRegistrations(
       amountPaid: Number(registration.amount_paid ?? 0),
       amountDue: registration.amount_due == null ? null : Number(registration.amount_due),
       editionId: registration.edition_id ?? edition?.id ?? "",
-      editionLabel: edition ? `${edition.year} ${edition.month}` : "",
+      editionLabel: edition ? editionDisplayName(edition) : "",
     };
   });
 }

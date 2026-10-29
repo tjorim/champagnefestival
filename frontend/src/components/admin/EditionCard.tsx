@@ -1,11 +1,13 @@
 import { AdminEmptyState } from "./AdminEmptyState";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
+import ConfirmModal from "@/components/ConfirmModal";
+import { editionDisplayName } from "@/utils/editionName";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
   CoffeeIcon,
   MapPinIcon,
   PencilIcon,
-  PlusIcon,
   ShoppingBasketIcon,
   TrashIcon,
   TriangleAlertIcon,
@@ -70,8 +72,6 @@ export default function EditionCard({
   const [open, setOpen] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
   const [editionModalOpen, setEditionModalOpen] = useState(false);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -120,6 +120,7 @@ export default function EditionCard({
   const endDateIso = dates.length > 0 ? dates[dates.length - 1] : undefined;
   const endDate = endDateIso ? parseEditionDate(endDateIso) : null;
   const typeDisplay = editionTypeBadge(edition.editionType);
+  const displayName = editionDisplayName(edition);
 
   function openAddEvent() {
     setEditingEvent(null);
@@ -160,17 +161,8 @@ export default function EditionCard({
   }
 
   async function handleDelete() {
-    setDeleting(true);
-    setDeleteError("");
-    try {
-      await deleteEditionMutation.mutateAsync();
-      setConfirmDelete(false);
-      onDeleted(edition.id);
-    } catch (error) {
-      setDeleteError(apiErrorMessage(error, m.admin_content_error_save()));
-    } finally {
-      setDeleting(false);
-    }
+    await deleteEditionMutation.mutateAsync();
+    onDeleted(edition.id);
   }
 
   return (
@@ -186,7 +178,7 @@ export default function EditionCard({
             }
           >
             <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} />
-            {edition.id}
+            {displayName}
           </CollapsibleTrigger>
           <span className="flex items-center gap-2 flex-wrap">
             <Badge variant={typeDisplay.bg}>{typeDisplay.label}</Badge>
@@ -228,51 +220,27 @@ export default function EditionCard({
               {saveError}
             </span>
           )}
-          {deleteError && (
-            <span className="text-destructive text-sm">
-              <Icon icon={TriangleAlertIcon} className="me-1" />
-              {deleteError}
-            </span>
-          )}
-          {confirmDelete ? (
-            <span className="flex items-center gap-1">
-              <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
-                {deleting && <Spinner size="sm" role="status" aria-hidden="true" />}
-                {m.admin_action_confirm()}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
-                {m.admin_action_cancel()}
-              </Button>
-            </span>
-          ) : (
-            <span className="flex gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setPollOptionsModalOpen(true)}
-                aria-label={m.admin_poll_modal_title({ edition: edition.id })}
-                title={m.admin_poll_modal_title({ edition: edition.id })}
-              >
-                <Icon icon={CoffeeIcon} />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditionModalOpen(true)}
-                aria-label={`${m.admin_edit()} ${edition.id}`}
-              >
-                <Icon icon={PencilIcon} />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-danger"
+          <RowActions
+            destructive={
+              <RowActionButton
+                destructive
+                icon={TrashIcon}
+                label={m.admin_delete_item({ name: displayName })}
                 onClick={() => setConfirmDelete(true)}
-                aria-label={`${m.admin_delete()} ${edition.id}`}
-              >
-                <Icon icon={TrashIcon} />
-              </Button>
-            </span>
-          )}
+              />
+            }
+          >
+            <RowActionButton
+              icon={CoffeeIcon}
+              label={m.admin_poll_modal_title({ edition: displayName })}
+              onClick={() => setPollOptionsModalOpen(true)}
+            />
+            <RowActionButton
+              icon={PencilIcon}
+              label={m.admin_edit_item({ name: displayName })}
+              onClick={() => setEditionModalOpen(true)}
+            />
+          </RowActions>
         </CardHeader>
 
         <CollapsibleContent render={<CardContent className="pt-2 pb-2" />}>
@@ -294,10 +262,9 @@ export default function EditionCard({
 
           <div className="flex justify-between items-center mb-1">
             <h6 className="text-highlight mb-0 text-sm">{m.admin_content_edition_schedule()}</h6>
-            <Button size="sm" variant="outline" onClick={openAddEvent}>
-              <Icon icon={PlusIcon} />
+            <AdminAddButton variant="outline" onClick={openAddEvent}>
               {m.admin_content_edition_add_event()}
-            </Button>
+            </AdminAddButton>
           </div>
 
           {eventsQuery.isPending ? (
@@ -404,6 +371,18 @@ export default function EditionCard({
           onHide={() => setPollOptionsModalOpen(false)}
         />
       </Card>
+      {confirmDelete && (
+        <ConfirmModal
+          admin
+          show
+          title={m.admin_edition_delete_title()}
+          body={m.admin_edition_delete_confirm({ name: displayName })}
+          confirmLabel={m.admin_delete()}
+          errorFallback={m.admin_edition_delete_failed()}
+          onConfirm={handleDelete}
+          onHide={() => setConfirmDelete(false)}
+        />
+      )}
     </Collapsible>
   );
 }

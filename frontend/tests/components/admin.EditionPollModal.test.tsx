@@ -297,7 +297,7 @@ describe("EditionPollModal questions", () => {
     expect(
       await screen.findByText('admin_poll_question_delete_body({"title":"Eten op zondag?"})'),
     ).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
+    await user.click(await screen.findByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(deleteUrl).not.toBe(""));
     expect(deleteUrl).not.toContain("confirm_answers");
@@ -324,7 +324,7 @@ describe("EditionPollModal questions", () => {
         'admin_poll_question_delete_body_in_use({"title":"Eten op zondag?","answered":4})',
       ),
     ).toBeInTheDocument();
-    await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
+    await user.click(await screen.findByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(deleteUrl).toContain("confirm_answers=true"));
     expect(deleteUrl).toContain("notify=true");
@@ -341,7 +341,7 @@ describe("EditionPollModal questions", () => {
 
     await screen.findByRole("region", { name: "Eten op zondag?" });
     await user.click(screen.getByRole("button", { name: "admin_delete" }));
-    await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
+    await user.click(await screen.findByRole("button", { name: "admin_delete" }));
 
     expect(await screen.findByText("api_error_poll_question_closed")).toBeInTheDocument();
   });
@@ -530,7 +530,7 @@ describe("EditionPollModal meal options", () => {
     const notify = screen.getByRole("checkbox", { name: 'admin_poll_notify_removed({"count":3})' });
     expect(notify).toBeChecked();
     await user.click(notify);
-    await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
+    await user.click(await screen.findByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(deleteUrl).toContain("confirm_selections=true"));
     expect(deleteUrl).toContain("notify=false");

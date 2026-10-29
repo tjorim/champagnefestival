@@ -11,7 +11,7 @@ into another planning file.
 | Write retries and delivery operations | [Retry safety](retry-safety.md), [outbox worker](outbox-worker.md) |
 | Authorization and external integrations | [Authorization model](authorization-model.md), [operational lookup](integrations/OPERATIONAL_LOOKUP.md), [local MCP server](integrations/LOCAL_MCP_SERVER.md) |
 | Organisation self-service and review API | [manager login](decisions/1192-organization-manager-login.md), [proposals and review](organization-change-review.md) |
-| Frontend primitives, themes and accessibility | [Frontend UI guide](frontend-ui.md) |
+| Frontend primitives, themes, accessibility and admin action patterns | [Frontend UI guide](frontend-ui.md) |
 | Signage channels, templates and public playlists | [Signage API](signage-api.md) |
 | Signage template layers and editor | [Layer contract](signage-layer-contract.md) |
 | Floor-plan geometry | [Coordinate contract](floor-plan-coordinates.md) |
