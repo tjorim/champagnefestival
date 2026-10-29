@@ -71,9 +71,11 @@ function detectWithJsQr(video: HTMLVideoElement, canvas: HTMLCanvasElement): str
 
 interface CheckInScannerProps {
   onDecode: (result: ScannedCheckInCredentials) => void;
+  /** Reports whether the camera cannot be used, so the page can drop guidance that repeats the scanner's own alert. */
+  onUnavailableChange?: (unavailable: boolean) => void;
 }
 
-export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
+export default function CheckInScanner({ onDecode, onUnavailableChange }: CheckInScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onDecodeRef = useRef(onDecode);
@@ -89,6 +91,13 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
   const [status, setStatus] = useState<ScannerStatus>(() =>
     isCameraSupported() ? "starting" : "unsupported",
   );
+  const unavailable =
+    status === "permission-denied" || status === "error" || status === "unsupported";
+
+  useEffect(() => {
+    onUnavailableChange?.(unavailable);
+    return () => onUnavailableChange?.(false);
+  }, [unavailable, onUnavailableChange]);
 
   useEffect(() => {
     if (!isCameraSupported()) {

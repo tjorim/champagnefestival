@@ -43,6 +43,12 @@ test("books two required tickets, shows the total and continues to payment and s
   await expect(
     page.getByRole("spinbutton", { name: /Purchased quantity Entry ticket/ }),
   ).toHaveValue("2");
+
+  // A new seating row starts with the guests still to seat, not a single guest.
+  await page.getByRole("button", { name: "Add table", exact: true }).click();
+  await expect(page.getByRole("spinbutton", { name: "Guests", exact: true }).last()).toHaveValue(
+    "2",
+  );
 });
 
 test("asks for confirmation before creating a booking without the required ticket", async ({

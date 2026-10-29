@@ -178,11 +178,14 @@ for (const [locale, messages] of Object.entries({ en, nl, fr })) {
     await expect(page.getByText(messages.checkin_scanner_permission_denied)).toBeVisible();
     const video = page.locator("video");
     await expect(video.locator("..")).toBeHidden();
-    const prompt = page.getByText(messages.checkin_scan_prompt);
-    expect((await prompt.boundingBox())!.width).toBeGreaterThan(250);
-    await expect(
-      page.getByRole("button", { name: messages.checkin_manual_search_title }).first(),
-    ).toBeInViewport();
+    // The scanner's own alert already says what to do, so the generic prompt is not repeated.
+    await expect(page.getByText(messages.checkin_scan_prompt)).toHaveCount(0);
+    const denied = page.getByText(messages.checkin_scanner_permission_denied);
+    expect((await denied.boundingBox())!.width).toBeGreaterThan(250);
+    // One control carries the manual-search name; the collapsible heading uses its own wording.
+    const manual = page.getByRole("button", { name: messages.checkin_manual_search_title });
+    await expect(manual).toHaveCount(1);
+    await expect(manual).toBeInViewport();
     await seedRegistrations(page);
     await page.evaluate(async () => {
       const path = "/src/mocks/data/registrations.ts";
@@ -314,7 +317,9 @@ for (const zoom of [1.25, 1.5, 2]) {
           expect(
             await page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
           ).toBeLessThanOrEqual(1);
-          const prompt = await page.getByText(messages.checkin_scan_prompt).boundingBox();
+          const prompt = await page
+            .getByText(messages.checkin_scanner_permission_denied)
+            .boundingBox();
           expect(prompt!.x + prompt!.width).toBeLessThanOrEqual(
             await page.evaluate(() => innerWidth),
           );

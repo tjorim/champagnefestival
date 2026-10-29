@@ -432,7 +432,7 @@ export default function BookingEditor({
           onClick={() =>
             form.pushFieldValue("allocations", {
               tableId: "",
-              guestCount: tableQuantity ? 0 : 1,
+              guestCount: tableQuantity ? 0 : Math.max(1, allocationTotal - assigned),
               exclusive: tableQuantity > 0,
             })
           }

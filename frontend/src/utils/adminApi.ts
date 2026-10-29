@@ -22,7 +22,8 @@ export async function requestApi(url: string, options: RequestInit): Promise<Res
   try {
     return await fetch(url, options);
   } catch (error) {
-    console.error("Admin API network request failed", { url, error });
+    // A request the caller cancelled (navigation, a newer query) is not a network failure.
+    if (!options.signal?.aborted) console.error("Admin API network request failed", { url, error });
     throw new ApiError(m.admin_error_network(), { status: 0, code: "network_error" });
   }
 }

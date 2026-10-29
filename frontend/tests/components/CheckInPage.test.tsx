@@ -49,6 +49,7 @@ vi.mock("@/paraglide/messages", () => ({
     checkin_actions_unauthorized: () => "Unauthorized entrance action.",
     checkin_actions_session_expired: () => "Volunteer session expired for entrance actions.",
     checkin_manual_search_title: () => "Find guest manually",
+    checkin_manual_search_heading: () => "Search by name or email",
     checkin_manual_search_login_required: () => "Volunteer login required.",
     checkin_manual_search_label: () => "Guest name or email",
     checkin_manual_search_placeholder: () => "Search by guest name or email…",
@@ -169,7 +170,9 @@ describe("CheckInPage", () => {
   it("does not accept a check-in credential from the query string", async () => {
     await renderPage(`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`);
 
-    expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+    // Without a camera the scanner's own alert explains the fallback; the generic prompt is not repeated.
+    expect(screen.getByText("Camera scanning isn't available.")).toBeInTheDocument();
+    expect(screen.queryByText("Scan a QR code to begin.")).not.toBeInTheDocument();
   });
 
   it("submits check-in via the mutation", async () => {
@@ -211,7 +214,9 @@ describe("CheckInPage", () => {
   it("searches and selects a registration when the QR code is unavailable", async () => {
     await renderPage("/check-in");
 
-    expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+    // Without a camera the scanner's own alert explains the fallback; the generic prompt is not repeated.
+    expect(screen.getByText("Camera scanning isn't available.")).toBeInTheDocument();
+    expect(screen.queryByText("Scan a QR code to begin.")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Guest name or email"), {
       target: { value: SEED_REG_NAME },

@@ -377,6 +377,7 @@ export default function CheckInPage() {
   const [stampProgress, setStampProgress] = useState<StampProgress | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
+  const [scannerUnavailable, setScannerUnavailable] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [manualRegistration, setManualRegistration] = useState<CheckInData | null>(null);
@@ -723,9 +724,14 @@ export default function CheckInPage() {
                       {m.checkin_manual_search_title()}
                     </ToggleGroupItem>
                   </ToggleGroup>
-                  {lookupMode === "scan" && <CheckInScanner onDecode={handleScanDecode} />}
-
                   {lookupMode === "scan" && (
+                    <CheckInScanner
+                      onDecode={handleScanDecode}
+                      onUnavailableChange={setScannerUnavailable}
+                    />
+                  )}
+
+                  {lookupMode === "scan" && !scannerUnavailable && (
                     <Alert variant="warning" className="w-full text-center">
                       <Icon icon={InfoIcon} className="me-2" />
                       {m.checkin_scan_prompt()}
@@ -743,7 +749,7 @@ export default function CheckInPage() {
                         >
                           <span>
                             <SearchIcon className="mr-2 inline size-4" aria-hidden="true" />
-                            {m.checkin_manual_search_title()}
+                            {m.checkin_manual_search_heading()}
                           </span>
                           {searchOpen ? (
                             <ChevronUpIcon aria-hidden="true" className="size-4" />
