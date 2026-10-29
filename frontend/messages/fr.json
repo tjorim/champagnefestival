@@ -1987,5 +1987,8 @@
   "signage_template_return_help": "Votre brouillon reste ouvert. Enregistrez le modèle pour le sélectionner et revenir ici, ou annulez pour revenir sans modifier la diapositive.",
   "signage_template_requirements": "Saisissez un nom et ajoutez les champs requis avant d’enregistrer. Les modèles d’image peuvent être vides : la diapositive fournit l’image.",
   "signage_sample_title": "Bienvenue au festival",
-  "signage_sample_text": "Exemple : découvrez nos producteurs et profitez du festival. Ce texte est uniquement utilisé dans l’aperçu du modèle."
+  "signage_sample_text": "Exemple : découvrez nos producteurs et profitez du festival. Ce texte est uniquement utilisé dans l’aperçu du modèle.",
+  "public_offline_notice": "Vous êtes hors ligne. Les informations enregistrées peuvent être obsolètes. Les inscriptions, messages et demandes de liste d’attente ne peuvent pas être envoyés. Rien n’est mis en attente ; reconnectez-vous avant d’envoyer.",
+  "public_offline_updated": "Dernière mise à jour : {time}.",
+  "public_offline_write": "Vous êtes hors ligne. Reconnectez-vous avant d’envoyer ce formulaire. Rien n’a été mis en attente."
 }

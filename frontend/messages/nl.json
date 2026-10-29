@@ -1987,5 +1987,8 @@
   "signage_template_return_help": "Je diaconcept blijft open. Sla het sjabloon op om het te selecteren en hier terug te keren, of annuleer om terug te keren zonder de dia te wijzigen.",
   "signage_template_requirements": "Voer een sjabloonnaam in en voeg de vereiste placeholders toe voordat je opslaat. Afbeeldingssjablonen mogen leeg zijn; de dia levert de afbeelding.",
   "signage_sample_title": "Welkom op het festival",
-  "signage_sample_text": "Voorbeeldinhoud: ontdek onze producenten en geniet van het festival. Deze tekst wordt alleen in het sjabloonvoorbeeld gebruikt."
+  "signage_sample_text": "Voorbeeldinhoud: ontdek onze producenten en geniet van het festival. Deze tekst wordt alleen in het sjabloonvoorbeeld gebruikt.",
+  "public_offline_notice": "Je bent offline. Opgeslagen informatie kan verouderd zijn. Inschrijvingen, contactberichten en wachtlijstaanvragen kunnen niet worden verstuurd. Er wordt niets in een wachtrij geplaatst; herstel de verbinding voordat je verstuurt.",
+  "public_offline_updated": "Laatst bijgewerkt: {time}.",
+  "public_offline_write": "Je bent offline. Herstel de verbinding voordat je dit formulier verstuurt. Er is niets in een wachtrij geplaatst."
 }

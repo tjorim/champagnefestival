@@ -1987,5 +1987,8 @@
   "signage_template_return_help": "Your slide draft stays open. Save the template to select it and return here, or cancel to return without changing the slide.",
   "signage_template_requirements": "Enter a template name and add the required placeholders before saving. Image templates may have no layers; the slide supplies the image.",
   "signage_sample_title": "Welcome to the festival",
-  "signage_sample_text": "Sample content: discover our producers and enjoy the festival. This text is only used in the template preview."
+  "signage_sample_text": "Sample content: discover our producers and enjoy the festival. This text is only used in the template preview.",
+  "public_offline_notice": "You're offline. Saved information may be out of date. Registration, contact and waiting list forms cannot be sent. Nothing is queued; reconnect before submitting.",
+  "public_offline_updated": "Last updated: {time}.",
+  "public_offline_write": "You're offline. Reconnect before sending this form. Nothing has been queued."
 }

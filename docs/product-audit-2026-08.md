@@ -91,6 +91,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1440](https://github.com/tjorim/champagnefestival/issues/1440) | Repository implementation complete | 2026-10-29 | Production-worker offline Chromium test and cache lifecycle unit tests; [acceptance record](#public-offline-information-1440) | Content-derived shell cache, allowlisted stale-while-revalidate public information, translated offline timestamp and refused writes; signage cache remains independent. |
 | [#1433](https://github.com/tjorim/champagnefestival/issues/1433) | Repository implementation complete | 2026-10-29 | [Acceptance record](#first-time-signage-setup-1433-2026-10-29); signage onboarding/editor/channel authenticated Chromium tests | Compatible starter templates open inside the slide dialog, preserve its draft on cancel/save and select the saved template. Labelled representative previews remove the first-content dependency. Required channel/slide inputs and disabled-action guidance are translated; #1420 channel URL context, explicit activation and venue timing are retained. |
 | [#1436](https://github.com/tjorim/champagnefestival/issues/1436) | Repository implementation complete | 2026-10-29 | Backend directory API and frontend field-recovery/directory-suggestion regression tests; [implementation record](#admin-directory-recovery-follow-up-1436-2026-10-29) | Translated structured field errors with focus and draft retention, authorised existing-person suggestions, and deliberate reuse/separate creation. Shared-email and merge policies are unchanged; manual browser validation was not run. |
 | [#1430](https://github.com/tjorim/champagnefestival/issues/1430) | Repository implementation complete | 2026-10-29 | [Acceptance record](decisions/1430-floor-plan-workspace.md); floor-plan editor component and authenticated Chromium tests | Adjacent independently scrolling map/inspector on laptops, stacked narrow layout, retained keyboard table search, explicit save guidance and all-layout room-count wording. Synthetic dense plan and long allocations verified at three laptop sizes, native 100%/125%/150% zoom and narrow sizes. Existing write, geometry, capacity and revision contracts retained. |
@@ -364,3 +365,22 @@ Stacked PR validation on #1461 passes the production build, frontend lint,
 formatting and 19 targeted signage unit tests. Bundle size is 2913.0 KiB total
 against a 2910 KiB budget; entry/admin/eager remain within budget. No budget
 was raised.
+
+
+### Public offline information (#1440)
+
+The installable public site previously failed on an offline reload. A production
+worker now precaches the built shell and static assets with a content-derived
+revision, and warms the active festival, FAQ, announcements and public settings.
+Successful public responses retain their retrieval timestamp; stale responses
+revalidate in the background. The offline notice uses the oldest saved response
+timestamp, and explains that information may be outdated. External map tiles
+still require connectivity; the saved venue address remains available.
+
+- [x] One online visit enables offline reload with schedule, FAQ and venue details.
+- [x] Offline public form submissions are refused with translated guidance; nothing is queued.
+- [x] Changed build content changes the cache revision; activation deletes older public caches only (unit tested).
+- [x] Playwright offline mode exercises the production worker, independently of MSW.
+
+The signage cache has its own lifecycle. Authenticated APIs and all writes remain
+outside the public cache; existing retry contracts remain in force.
