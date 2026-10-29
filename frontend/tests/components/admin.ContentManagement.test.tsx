@@ -4,6 +4,7 @@ import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import ContentManagement from "@/components/admin/ContentManagement";
+import { seedOrganizations } from "@/mocks/data/organizations";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -163,7 +164,7 @@ describe("ContentManagement", () => {
     fireEvent.click(
       within(await screen.findByRole("alertdialog")).getByRole("button", { name: "admin_delete" }),
     );
-    await waitFor(() => expect(deleted).toHaveLength(1));
+    await waitFor(() => expect(deleted).toEqual([String(seedOrganizations[0]?.id)]));
   });
 
   it("takes the session fence before the write request and hands it to the saved callback", async () => {
