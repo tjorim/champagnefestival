@@ -39,7 +39,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAllRegistrationPages } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { withTableOccupancy } from "@/state/tableOccupancy";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { RestrictToElement } from "@dnd-kit/dom/modifiers";
@@ -256,6 +256,7 @@ function DraggableTable({
   return (
     <div
       ref={ref}
+      data-plan-table={table.id}
       onClick={(e) => {
         if (!isInteractive) return;
         e.stopPropagation();
@@ -488,7 +489,7 @@ function RoomCanvas({
   const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
 
   return (
-    <div className="overflow-auto pb-2">
+    <div className="overflow-auto pb-2" role="region" aria-label={room.name} tabIndex={0}>
       <p className="text-subtle text-sm mb-1">
         {m.admin_room_size({ width: room.widthM, length: room.lengthM })}
         <span className="ms-2">
@@ -629,9 +630,19 @@ export default function LayoutEditor({
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const [showCompareLayouts, setShowCompareLayouts] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
+  const inspectorRef = useRef<HTMLElement>(null);
+  const [tableSearch, setTableSearch] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
+  useEffect(() => {
+    const inspector = inspectorRef.current;
+    if (!inspector || (!selectedTable && !selectedArea)) return;
+    inspector.scrollTop = 0;
+    if (window.matchMedia("(max-width: 1199px), (max-height: 599px)").matches) {
+      inspector.scrollIntoView?.({ block: "nearest" });
+    }
+  }, [selectedTable, selectedArea]);
 
   const activeLayout = layouts.find((layout) => layout.id === activeLayoutId);
   const historicalEventId =
@@ -917,251 +928,598 @@ export default function LayoutEditor({
 
   return (
     <div>
-      {/* Tab bar: one tab per room */}
-      <Card tone="secondary" className="mb-4">
-        <CardHeader className="flex items-center justify-between flex-wrap gap-2">
-          {activeLayoutDateLabel && (
-            <span className="text-subtle text-sm hidden site-md:inline">
-              <Icon icon={CalendarIcon} className="me-1" />
-              {activeLayoutDateLabel}
-            </span>
-          )}
-          <ToggleGroup
-            variant="outline"
-            size="sm"
-            value={[activeRoomId ?? ""]}
-            onValueChange={(values) => {
-              if (values[0]) handleSelectRoom(values[0]);
-            }}
-            aria-label={m.admin_rooms_tab()}
-          >
-            {rooms.map((room) => {
-              const roomTableCount = layouts
-                .filter((l) => l.roomId === room.id)
-                .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
-              return (
-                <ToggleGroupItem key={room.id} value={room.id}>
-                  <span
-                    className="mr-1 inline-block size-2.5 rounded-full"
-
-                    /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                    style={{
-                      background: safeRoomColor(room.color),
-                    }}
-                    /* oxlint-enable shadcn/no-inline-styles */
-                    aria-hidden="true"
-                  />
-                  {room.name}
-                  <span className="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">
-                    {roomTableCount}
-                  </span>
-                </ToggleGroupItem>
-              );
-            })}
-          </ToggleGroup>
-          <div className="flex gap-2 items-center">
+      <div className="admin-plan-workspace">
+        {/* Tab bar: one tab per room */}
+        <Card tone="secondary" className="min-w-0 mb-4">
+          <CardHeader className="flex items-center justify-between flex-wrap gap-2">
+            {activeLayoutDateLabel && (
+              <span className="text-subtle text-sm hidden site-md:inline">
+                <Icon icon={CalendarIcon} className="me-1" />
+                {activeLayoutDateLabel}
+              </span>
+            )}
             <ToggleGroup
               variant="outline"
               size="sm"
-              aria-label={m.admin_layout_layer_aria()}
-              value={[layer]}
+              value={[activeRoomId ?? ""]}
               onValueChange={(values) => {
-                if (values[0] === "seating") {
-                  setLayer("seating");
-                  setSelectedArea(null);
-                } else if (values[0] === "areas") {
-                  setLayer("areas");
-                  setSelectedTable(null);
-                }
+                if (values[0]) handleSelectRoom(values[0]);
               }}
+              aria-label={m.admin_rooms_tab()}
             >
-              <ToggleGroupItem value="seating">
-                <Icon icon={UsersIcon} />
-                {m.admin_layout_seating()}
-              </ToggleGroupItem>
-              <ToggleGroupItem value="areas">
-                <Icon icon={StoreIcon} />
-                {m.admin_layout_areas()}
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {layer === "seating" ? (
-              <AdminAddButton
-                onClick={() => {
-                  setAddTableError(null);
-                  setShowAddTable(true);
-                }}
-                disabled={!activeLayoutId}
-              >
-                {m.admin_add_table()}
-              </AdminAddButton>
-            ) : (
-              <AdminAddButton
-                onClick={() => {
-                  setAddAreaError(null);
-                  setNewArea({
-                    label: "",
-                    icon: "bi-shop",
-                    widthM: 1.5,
-                    lengthM: 1.0,
-                    assignedType: "",
-                    assignedId: 0,
-                  });
-                  setShowAddArea(true);
-                }}
-                disabled={!activeLayoutId}
-              >
-                {m.admin_layout_add_area()}
-              </AdminAddButton>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-2">
-          {rooms.length === 0 ? (
-            <AdminEmptyState>
-              <Icon icon={InfoIcon} className="me-1" />
-              {m.admin_floor_plan_no_rooms({ section: m.admin_venues_rooms_tab() })}
-            </AdminEmptyState>
-          ) : activeRoom ? (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-2 font-semibold">
-                    {/* The saved room colour is a swatch, not the text colour: any chosen colour can fail contrast against the admin background. */}
+              {rooms.map((room) => {
+                const roomTableCount = layouts
+                  .filter((l) => l.roomId === room.id)
+                  .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
+                return (
+                  <ToggleGroupItem key={room.id} value={room.id}>
                     <span
-                      aria-hidden="true"
-                      className="size-3 shrink-0 rounded-full border border-border" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                      style={{ backgroundColor: safeRoomColor(activeRoom.color, "transparent") }}
-                      /* oxlint-enable shadcn/no-inline-styles */
-                    />
-                    <Icon icon={BuildingIcon} className="me-1" />
-                    {activeRoom.name}
-                  </span>
-                  {/* Day / layout selector */}
-                  <div className="flex flex-wrap gap-1 items-center">
-                    {roomLayouts.map((layout) => (
-                      <div key={layout.id} className="flex items-center gap-0">
-                        <Button
-                          size="sm"
-                          variant={activeLayoutId === layout.id ? "warning" : "outline"}
-                          onClick={() => {
-                            setActiveLayoutId(layout.id);
-                            setSelectedTable(null);
-                          }}
-                          className="rounded-tr-none rounded-br-none"
-                        >
-                          {getDayLabel(layout, dayOptions)}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          onClick={() => setConfirmDeleteLayoutId(layout.id)}
-                          title={m.admin_delete_item({ name: getDayLabel(layout, dayOptions) })}
-                          aria-label={m.admin_delete_item({
-                            name: getDayLabel(layout, dayOptions),
-                          })}
-                          className="rounded-tl-none rounded-bl-none border-l-0"
-                        >
-                          <Icon icon={TrashIcon} />
-                        </Button>
-                      </div>
-                    ))}
-                    {roomLayouts.length === 0 && (
-                      <span className="text-subtle text-sm">{m.admin_no_layouts()}</span>
-                    )}
-                    <AdminAddButton
-                      variant="outline"
-                      onClick={() => {
-                        setAddLayoutError(null);
-                        setNewLayout(getInitialNewLayoutState(dayOptions));
-                        setShowAddLayout(true);
+                      className="mr-1 inline-block size-2.5 rounded-full"
+
+                      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                      style={{
+                        background: safeRoomColor(room.color),
                       }}
-                    >
-                      {m.admin_add_layout()}
-                    </AdminAddButton>
-                    {roomLayouts.length > 1 && (
-                      <Button
-                        size="sm"
-                        variant="outline-info"
-                        onClick={() => setShowCompareLayouts(true)}
-                        title={m.admin_layout_compare_title()}
-                      >
-                        <Icon icon={ArrowLeftRightIcon} />
-                        {m.admin_layout_compare_title()}
-                      </Button>
-                    )}
-                    {activeLayoutId && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setShowRevisions(true)}
-                        title={m.admin_layout_revisions_button()}
-                      >
-                        <Icon icon={RotateCcwClockIcon} />
-                        {m.admin_layout_revisions_button()}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {activeLayoutId ? (
-                <RoomCanvas
-                  room={activeRoom}
-                  roomTables={canvasTables}
-                  roomAreas={canvasAreas}
-                  tableTypes={tableTypes}
-                  registrations={registrations}
-                  organizations={organizations}
-                  layer={layer}
-                  selectedTable={selectedTable}
-                  selectedArea={selectedArea}
-                  onSelectTable={setSelectedTable}
-                  onSelectArea={setSelectedArea}
-                  onMoveTable={onMoveTable}
-                  onMoveArea={onMoveArea}
-                />
+                      /* oxlint-enable shadcn/no-inline-styles */
+                      aria-hidden="true"
+                    />
+                    {room.name}
+                    <span className="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">
+                      {m.admin_layout_all_layouts_count({ count: roomTableCount })}
+                    </span>
+                  </ToggleGroupItem>
+                );
+              })}
+            </ToggleGroup>
+            <div className="flex gap-2 items-center">
+              <ToggleGroup
+                variant="outline"
+                size="sm"
+                aria-label={m.admin_layout_layer_aria()}
+                value={[layer]}
+                onValueChange={(values) => {
+                  if (values[0] === "seating") {
+                    setLayer("seating");
+                    setSelectedArea(null);
+                  } else if (values[0] === "areas") {
+                    setLayer("areas");
+                    setSelectedTable(null);
+                  }
+                }}
+              >
+                <ToggleGroupItem value="seating">
+                  <Icon icon={UsersIcon} />
+                  {m.admin_layout_seating()}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="areas">
+                  <Icon icon={StoreIcon} />
+                  {m.admin_layout_areas()}
+                </ToggleGroupItem>
+              </ToggleGroup>
+              {layer === "seating" ? (
+                <AdminAddButton
+                  onClick={() => {
+                    setAddTableError(null);
+                    setShowAddTable(true);
+                  }}
+                  disabled={!activeLayoutId}
+                >
+                  {m.admin_add_table()}
+                </AdminAddButton>
               ) : (
-                <AdminEmptyState>{m.admin_no_layouts()}</AdminEmptyState>
+                <AdminAddButton
+                  onClick={() => {
+                    setAddAreaError(null);
+                    setNewArea({
+                      label: "",
+                      icon: "bi-shop",
+                      widthM: 1.5,
+                      lengthM: 1.0,
+                      assignedType: "",
+                      assignedId: 0,
+                    });
+                    setShowAddArea(true);
+                  }}
+                  disabled={!activeLayoutId}
+                >
+                  {m.admin_layout_add_area()}
+                </AdminAddButton>
               )}
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+          </CardHeader>
 
-      {/* Selected table detail */}
-      {selectedTableData && (
-        <Card tone="warning" className="mb-4">
-          <CardHeader className="flex items-center justify-between border-warning">
-            <span className="font-semibold">
-              <Icon icon={TableIcon} className="me-2" />
-              {m.admin_table_label()}: {selectedTableData.name}
-            </span>
-            <div className="flex gap-2 items-center">
-              <Badge variant="secondary">
-                {selectedTableData.capacity} {m.admin_guests_count()}
-              </Badge>
-              {selectedType && (
-                <Badge variant="secondary" className="text-content">
-                  {selectedType.name}
-                </Badge>
-              )}
-              {selectedType && (
-                <Badge
-                  variant={selectedType.heightType === "high" ? "info" : "dark"}
-                  className="border border-subtle"
-                >
-                  {selectedType.heightType === "high"
-                    ? m.admin_table_height_type_high()
-                    : m.admin_table_height_type_low()}
-                </Badge>
-              )}
-              {selectedType?.shape !== "round" && (
-                <>
+          <CardContent className="p-2">
+            {rooms.length === 0 ? (
+              <AdminEmptyState>
+                <Icon icon={InfoIcon} className="me-1" />
+                {m.admin_floor_plan_no_rooms({ section: m.admin_venues_rooms_tab() })}
+              </AdminEmptyState>
+            ) : activeRoom ? (
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 font-semibold">
+                      {/* The saved room colour is a swatch, not the text colour: any chosen colour can fail contrast against the admin background. */}
+                      <span
+                        aria-hidden="true"
+                        className="size-3 shrink-0 rounded-full border border-border" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                        style={{ backgroundColor: safeRoomColor(activeRoom.color, "transparent") }}
+                        /* oxlint-enable shadcn/no-inline-styles */
+                      />
+                      <Icon icon={BuildingIcon} className="me-1" />
+                      {activeRoom.name}
+                    </span>
+                    {/* Day / layout selector */}
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {roomLayouts.map((layout) => (
+                        <div key={layout.id} className="flex items-center gap-0">
+                          <Button
+                            size="sm"
+                            variant={activeLayoutId === layout.id ? "warning" : "outline"}
+                            onClick={() => {
+                              setActiveLayoutId(layout.id);
+                              setSelectedTable(null);
+                            }}
+                            className="rounded-tr-none rounded-br-none"
+                          >
+                            {getDayLabel(layout, dayOptions)}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            onClick={() => setConfirmDeleteLayoutId(layout.id)}
+                            title={m.admin_delete_item({ name: getDayLabel(layout, dayOptions) })}
+                            aria-label={m.admin_delete_item({
+                              name: getDayLabel(layout, dayOptions),
+                            })}
+                            className="rounded-tl-none rounded-bl-none border-l-0"
+                          >
+                            <Icon icon={TrashIcon} />
+                          </Button>
+                        </div>
+                      ))}
+                      {roomLayouts.length === 0 && (
+                        <span className="text-subtle text-sm">{m.admin_no_layouts()}</span>
+                      )}
+                      <AdminAddButton
+                        variant="outline"
+                        onClick={() => {
+                          setAddLayoutError(null);
+                          setNewLayout(getInitialNewLayoutState(dayOptions));
+                          setShowAddLayout(true);
+                        }}
+                      >
+                        {m.admin_add_layout()}
+                      </AdminAddButton>
+                      {roomLayouts.length > 1 && (
+                        <Button
+                          size="sm"
+                          variant="outline-info"
+                          onClick={() => setShowCompareLayouts(true)}
+                          title={m.admin_layout_compare_title()}
+                        >
+                          <Icon icon={ArrowLeftRightIcon} />
+                          {m.admin_layout_compare_title()}
+                        </Button>
+                      )}
+                      {activeLayoutId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowRevisions(true)}
+                          title={m.admin_layout_revisions_button()}
+                        >
+                          <Icon icon={RotateCcwClockIcon} />
+                          {m.admin_layout_revisions_button()}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {activeLayoutId ? (
+                  <RoomCanvas
+                    room={activeRoom}
+                    roomTables={canvasTables}
+                    roomAreas={canvasAreas}
+                    tableTypes={tableTypes}
+                    registrations={registrations}
+                    organizations={organizations}
+                    layer={layer}
+                    selectedTable={selectedTable}
+                    selectedArea={selectedArea}
+                    onSelectTable={setSelectedTable}
+                    onSelectArea={setSelectedArea}
+                    onMoveTable={onMoveTable}
+                    onMoveArea={onMoveArea}
+                  />
+                ) : (
+                  <AdminEmptyState>{m.admin_no_layouts()}</AdminEmptyState>
+                )}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <aside
+          ref={inspectorRef}
+          className="admin-plan-inspector text-content"
+          aria-label={m.admin_layout_inspector()}
+        >
+          <h3 className="font-semibold mb-2">{m.admin_layout_inspector()}</h3>
+          <p className="text-sm text-subtle mb-3">{m.admin_layout_save_behaviour()}</p>
+          {activeLayoutId && (
+            <div className="mb-4">
+              <AdminField controlId="plan-table-search">
+                <AdminLabel className="text-content" htmlFor="plan-table-search">
+                  {m.admin_layout_find_table()}
+                </AdminLabel>
+                <AdminInput
+                  id="plan-table-search"
+                  type="search"
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                />
+              </AdminField>
+              <div
+                className="max-h-40 overflow-auto flex flex-col gap-1 mt-2"
+                aria-label={m.admin_layout_find_table()}
+              >
+                {canvasTables
+                  .filter((table) =>
+                    table.name.toLocaleLowerCase().includes(tableSearch.toLocaleLowerCase()),
+                  )
+                  .map((table) => (
+                    <Button
+                      key={table.id}
+                      variant={selectedTable === table.id ? "secondary" : "outline"}
+                      className="justify-start whitespace-normal text-left"
+                      aria-pressed={selectedTable === table.id}
+                      onClick={() => {
+                        setSelectedTable(table.id);
+                        setSelectedArea(null);
+                        setLayer("seating");
+                        document
+                          .querySelector(`[data-plan-table="${CSS.escape(table.id)}"]`)
+                          ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+                      }}
+                    >
+                      {table.name}
+                    </Button>
+                  ))}
+                {!canvasTables.some((table) =>
+                  table.name.toLocaleLowerCase().includes(tableSearch.toLocaleLowerCase()),
+                ) && (
+                  <p className="text-subtle" role="status">
+                    {m.admin_layout_no_matching_tables()}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          {!selectedTableData && !selectedAreaData && (
+            <AdminEmptyState>{m.admin_layout_select_object()}</AdminEmptyState>
+          )}
+          {/* Selected table detail */}
+          {selectedTableData && (
+            <Card tone="warning" className="mb-4">
+              <CardHeader className="flex flex-wrap gap-2 items-center justify-between border-warning">
+                <span className="font-semibold">
+                  <Icon icon={TableIcon} className="me-2" />
+                  {m.admin_table_label()}: {selectedTableData.name}
+                </span>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Badge variant="secondary">
+                    {selectedTableData.capacity} {m.admin_guests_count()}
+                  </Badge>
+                  {selectedType && (
+                    <Badge variant="secondary" className="text-content">
+                      {selectedType.name}
+                    </Badge>
+                  )}
+                  {selectedType && (
+                    <Badge
+                      variant={selectedType.heightType === "high" ? "info" : "dark"}
+                      className="border border-subtle"
+                    >
+                      {selectedType.heightType === "high"
+                        ? m.admin_table_height_type_high()
+                        : m.admin_table_height_type_low()}
+                    </Badge>
+                  )}
+                  {selectedType?.shape !== "round" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)
+                        }
+                        title={m.admin_layout_rotate_ccw()}
+                        aria-label={m.admin_layout_rotate_ccw()}
+                      >
+                        <Icon icon={RotateCcwIcon} />
+                      </Button>
+                      <span className="text-subtle text-sm min-w-14 text-center">
+                        {Math.round(selectedTableData.rotation)}°
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)
+                        }
+                        title={m.admin_layout_rotate_cw()}
+                        aria-label={m.admin_layout_rotate_cw()}
+                      >
+                        <Icon icon={RotateCwIcon} />
+                      </Button>
+                    </>
+                  )}
+                  <RowActionDivider />
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => setConfirmDeleteTableId(selectedTableData.id)}
+                    disabled={selectedTableData.registrationIds.length > 0}
+                    title={
+                      selectedTableData.registrationIds.length > 0
+                        ? m.admin_layout_table_delete_blocked()
+                        : m.admin_delete_item({ name: selectedTableData.name })
+                    }
+                    aria-label={m.admin_delete_item({ name: selectedTableData.name })}
+                  >
+                    <Icon icon={TrashIcon} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {updateTableError && (
+                  <Alert
+                    role="alert"
+                    aria-live="assertive"
+                    variant="danger"
+                    className="py-1 mb-2 text-sm"
+                  >
+                    {updateTableError}
+                  </Alert>
+                )}
+                {allocationError && (
+                  <Alert role="alert" variant="danger" className="py-1 mb-2 text-sm">
+                    {allocationError}
+                  </Alert>
+                )}
+                <AdminField className="mb-4" controlId="table-name-edit">
+                  <AdminLabel className="text-subtle text-sm">{m.admin_table_name()}</AdminLabel>
+                  <AdminInput
+                    size="sm"
+                    type="text"
+                    className="bg-muted text-content border-input"
+                    defaultValue={selectedTableData.name}
+                    onBlur={async (e) => {
+                      const val = e.target.value.trim();
+                      if (val && val !== selectedTableData.name) {
+                        setUpdateTableError(null);
+                        try {
+                          await onUpdateTable(selectedTableData.id, val);
+                        } catch (err) {
+                          setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
+                        }
+                      }
+                    }}
+                    key={`name-${selectedTableData.id}`}
+                  />
+                </AdminField>
+                <AdminField className="mb-4" controlId="table-type-select">
+                  <AdminLabel className="text-subtle text-sm">
+                    {m.admin_layout_table_type_label()}
+                  </AdminLabel>
+                  <AdminSelect
+                    size="sm"
+                    className="bg-muted text-content border-input"
+                    value={selectedTableData.tableTypeId}
+                    onValueChange={async (e) => {
+                      setUpdateTableError(null);
+                      try {
+                        await onChangeTableType(selectedTableData.id, e);
+                      } catch (err) {
+                        setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
+                      }
+                    }}
+                    key={`type-${selectedTableData.id}`}
+                  >
+                    {tableTypes
+                      .filter(
+                        (tt) =>
+                          (tt.venueId === activeRoom?.venueId ||
+                            tt.id === selectedTableData.tableTypeId) &&
+                          (tt.active || tt.id === selectedTableData.tableTypeId),
+                      )
+                      .map((tt) => (
+                        <AdminOption key={tt.id} value={tt.id} disabled={!tt.active}>
+                          {tt.name}
+                        </AdminOption>
+                      ))}
+                  </AdminSelect>
+                </AdminField>
+                {selectedRegistrations.length === 0 ? (
+                  <p className="text-subtle mb-0">{m.admin_unassigned()}</p>
+                ) : (
+                  <PresentationList flush className="mb-4">
+                    {selectedRegistrations.map((r) => (
+                      <PresentationListItem key={r.id} className="border-border">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold me-auto">{r.person.name}</span>
+                          {(() => {
+                            const allocation = r.allocations?.find(
+                              (item) => item.tableId === selectedTableData.id,
+                            );
+                            if (!allocation) return null;
+                            return (
+                              <>
+                                <AdminInput
+                                  aria-label={`${m.admin_guests_count()} ${r.person.name}`}
+                                  type="number"
+                                  min={allocation.exclusive ? 0 : 1}
+                                  max={20}
+                                  defaultValue={allocation.guestCount}
+                                  disabled={allocationPending || allocation.exclusive}
+                                  className="bg-muted text-content border-input w-20"
+
+                                  onBlur={(event) => {
+                                    const guestCount = Number(event.currentTarget.value);
+                                    if (
+                                      Number.isInteger(guestCount) &&
+                                      guestCount >= 1 &&
+                                      guestCount !== allocation.guestCount
+                                    ) {
+                                      void savePlanAllocations(
+                                        r,
+                                        (r.allocations ?? []).map((item) =>
+                                          item.tableId === selectedTableData.id
+                                            ? { ...item, guestCount }
+                                            : item,
+                                        ),
+                                      );
+                                    }
+                                  }}
+                                />
+                                <AdminSelect
+                                  aria-label={`${m.admin_layout_move_booking()} ${r.person.name}`}
+                                  size="sm"
+                                  value={selectedTableData.id}
+                                  disabled={allocationPending}
+                                  onValueChange={(event) =>
+                                    void savePlanAllocations(
+                                      r,
+                                      (r.allocations ?? []).map((item) =>
+                                        item.tableId === selectedTableData.id
+                                          ? { ...item, tableId: event }
+                                          : item,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  {eventTables
+                                    .filter(
+                                      (table) =>
+                                        table.id === selectedTableData.id ||
+                                        !(r.allocations ?? []).some(
+                                          (item) => item.tableId === table.id,
+                                        ),
+                                    )
+                                    .map((table) => (
+                                      <AdminOption key={table.id} value={table.id}>
+                                        {table.name}
+                                      </AdminOption>
+                                    ))}
+                                </AdminSelect>
+                                <Button
+                                  size="sm"
+                                  variant="outline-danger"
+                                  disabled={allocationPending}
+                                  onClick={() =>
+                                    void savePlanAllocations(
+                                      r,
+                                      (r.allocations ?? []).filter(
+                                        (item) => item.tableId !== selectedTableData.id,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  {m.admin_layout_remove_booking()}
+                                </Button>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </PresentationListItem>
+                    ))}
+                  </PresentationList>
+                )}
+                <div className="border-t border-subtle pt-4 mt-4">
+                  <AdminLabel className="text-subtle text-sm">
+                    {m.admin_layout_assign_booking()}
+                  </AdminLabel>
+                  <div className="flex flex-wrap gap-2">
+                    <AdminSelect
+                      aria-label={m.admin_layout_assign_booking()}
+                      value={bookingToAssign}
+                      disabled={allocationPending || assignableRegistrations.length === 0}
+                      onValueChange={(event) => {
+                        const id = event;
+                        const booking = assignableRegistrations.find((item) => item.id === id);
+                        const alreadyAssigned =
+                          booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ??
+                          0;
+                        setBookingToAssign(id);
+                        setGuestsToAssign(
+                          booking?.bookedTableQuantity
+                            ? 0
+                            : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
+                        );
+                      }}
+                    >
+                      <AdminOption value="">{m.admin_layout_choose_booking()}</AdminOption>
+                      {assignableRegistrations.map((registration) => (
+                        <AdminOption key={registration.id} value={registration.id}>
+                          {registration.person.name} · {registration.id}
+                        </AdminOption>
+                      ))}
+                    </AdminSelect>
+                    <AdminInput
+                      aria-label={m.admin_guests_count()}
+                      type="number"
+                      min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
+                      max={20}
+                      value={guestsToAssign}
+                      disabled={
+                        allocationPending ||
+                        !bookingToAssign ||
+                        Boolean(selectedBookingToAssign?.bookedTableQuantity)
+                      }
+                      onChange={(event) => setGuestsToAssign(Number(event.target.value))}
+                      className="w-24"
+                    />
+                    <Button
+                      variant="warning"
+                      disabled={allocationPending || !selectedBookingToAssign}
+                      onClick={async () => {
+                        if (!selectedBookingToAssign) return;
+                        await savePlanAllocations(selectedBookingToAssign, [
+                          ...(selectedBookingToAssign.allocations ?? []),
+                          {
+                            tableId: selectedTableData.id,
+                            guestCount: selectedBookingToAssign.bookedTableQuantity
+                              ? 0
+                              : guestsToAssign,
+                            exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
+                          },
+                        ]);
+                        setBookingToAssign("");
+                      }}
+                    >
+                      {m.admin_layout_assign_booking()}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Selected area detail */}
+          {selectedAreaData && (
+            <Card tone="info" className="mb-4">
+              <CardHeader className="flex flex-wrap gap-2 items-center justify-between border-info">
+                <span className="font-semibold">
+                  <AreaIcon name={selectedAreaData.icon} className="me-2" />
+                  {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
+                </span>
+                <div className="flex gap-2 items-center">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)
+                      onRotateArea(selectedAreaData.id, selectedAreaData.rotation - 15)
                     }
                     title={m.admin_layout_rotate_ccw()}
                     aria-label={m.admin_layout_rotate_ccw()}
@@ -1169,508 +1527,227 @@ export default function LayoutEditor({
                     <Icon icon={RotateCcwIcon} />
                   </Button>
                   <span className="text-subtle text-sm min-w-14 text-center">
-                    {Math.round(selectedTableData.rotation)}°
+                    {Math.round(selectedAreaData.rotation)}°
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)
+                      onRotateArea(selectedAreaData.id, selectedAreaData.rotation + 15)
                     }
                     title={m.admin_layout_rotate_cw()}
                     aria-label={m.admin_layout_rotate_cw()}
                   >
                     <Icon icon={RotateCwIcon} />
                   </Button>
-                </>
-              )}
-              <RowActionDivider />
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={() => setConfirmDeleteTableId(selectedTableData.id)}
-                disabled={selectedTableData.registrationIds.length > 0}
-                title={
-                  selectedTableData.registrationIds.length > 0
-                    ? m.admin_layout_table_delete_blocked()
-                    : m.admin_delete_item({ name: selectedTableData.name })
-                }
-                aria-label={m.admin_delete_item({ name: selectedTableData.name })}
-              >
-                <Icon icon={TrashIcon} />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {updateTableError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-2 text-sm"
-              >
-                {updateTableError}
-              </Alert>
-            )}
-            {allocationError && (
-              <Alert role="alert" variant="danger" className="py-1 mb-2 text-sm">
-                {allocationError}
-              </Alert>
-            )}
-            <AdminField className="mb-4" controlId="table-name-edit">
-              <AdminLabel className="text-subtle text-sm">{m.admin_table_name()}</AdminLabel>
-              <AdminInput
-                size="sm"
-                type="text"
-                className="bg-muted text-content border-input"
-                defaultValue={selectedTableData.name}
-                onBlur={async (e) => {
-                  const val = e.target.value.trim();
-                  if (val && val !== selectedTableData.name) {
-                    setUpdateTableError(null);
-                    try {
-                      await onUpdateTable(selectedTableData.id, val);
-                    } catch (err) {
-                      setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
-                    }
-                  }
-                }}
-                key={`name-${selectedTableData.id}`}
-              />
-            </AdminField>
-            <AdminField className="mb-4" controlId="table-type-select">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_layout_table_type_label()}
-              </AdminLabel>
-              <AdminSelect
-                size="sm"
-                className="bg-muted text-content border-input"
-                value={selectedTableData.tableTypeId}
-                onValueChange={async (e) => {
-                  setUpdateTableError(null);
-                  try {
-                    await onChangeTableType(selectedTableData.id, e);
-                  } catch (err) {
-                    setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
-                  }
-                }}
-                key={`type-${selectedTableData.id}`}
-              >
-                {tableTypes
-                  .filter(
-                    (tt) =>
-                      (tt.venueId === activeRoom?.venueId ||
-                        tt.id === selectedTableData.tableTypeId) &&
-                      (tt.active || tt.id === selectedTableData.tableTypeId),
-                  )
-                  .map((tt) => (
-                    <AdminOption key={tt.id} value={tt.id} disabled={!tt.active}>
-                      {tt.name}
-                    </AdminOption>
-                  ))}
-              </AdminSelect>
-            </AdminField>
-            {selectedRegistrations.length === 0 ? (
-              <p className="text-subtle mb-0">{m.admin_unassigned()}</p>
-            ) : (
-              <PresentationList flush className="mb-4">
-                {selectedRegistrations.map((r) => (
-                  <PresentationListItem key={r.id} className="border-border">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold me-auto">{r.person.name}</span>
-                      {(() => {
-                        const allocation = r.allocations?.find(
-                          (item) => item.tableId === selectedTableData.id,
-                        );
-                        if (!allocation) return null;
-                        return (
-                          <>
-                            <AdminInput
-                              aria-label={`${m.admin_guests_count()} ${r.person.name}`}
-                              type="number"
-                              min={allocation.exclusive ? 0 : 1}
-                              max={20}
-                              defaultValue={allocation.guestCount}
-                              disabled={allocationPending || allocation.exclusive}
-                              className="bg-muted text-content border-input w-20"
-
-                              onBlur={(event) => {
-                                const guestCount = Number(event.currentTarget.value);
-                                if (
-                                  Number.isInteger(guestCount) &&
-                                  guestCount >= 1 &&
-                                  guestCount !== allocation.guestCount
-                                ) {
-                                  void savePlanAllocations(
-                                    r,
-                                    (r.allocations ?? []).map((item) =>
-                                      item.tableId === selectedTableData.id
-                                        ? { ...item, guestCount }
-                                        : item,
-                                    ),
-                                  );
-                                }
-                              }}
-                            />
-                            <AdminSelect
-                              aria-label={`${m.admin_layout_move_booking()} ${r.person.name}`}
-                              size="sm"
-                              value={selectedTableData.id}
-                              disabled={allocationPending}
-                              onValueChange={(event) =>
-                                void savePlanAllocations(
-                                  r,
-                                  (r.allocations ?? []).map((item) =>
-                                    item.tableId === selectedTableData.id
-                                      ? { ...item, tableId: event }
-                                      : item,
-                                  ),
-                                )
-                              }
-                            >
-                              {eventTables
-                                .filter(
-                                  (table) =>
-                                    table.id === selectedTableData.id ||
-                                    !(r.allocations ?? []).some(
-                                      (item) => item.tableId === table.id,
-                                    ),
-                                )
-                                .map((table) => (
-                                  <AdminOption key={table.id} value={table.id}>
-                                    {table.name}
-                                  </AdminOption>
-                                ))}
-                            </AdminSelect>
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              disabled={allocationPending}
-                              onClick={() =>
-                                void savePlanAllocations(
-                                  r,
-                                  (r.allocations ?? []).filter(
-                                    (item) => item.tableId !== selectedTableData.id,
-                                  ),
-                                )
-                              }
-                            >
-                              {m.admin_layout_remove_booking()}
-                            </Button>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </PresentationListItem>
-                ))}
-              </PresentationList>
-            )}
-            <div className="border-t border-subtle pt-4 mt-4">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_layout_assign_booking()}
-              </AdminLabel>
-              <div className="flex flex-wrap gap-2">
-                <AdminSelect
-                  aria-label={m.admin_layout_assign_booking()}
-                  value={bookingToAssign}
-                  disabled={allocationPending || assignableRegistrations.length === 0}
-                  onValueChange={(event) => {
-                    const id = event;
-                    const booking = assignableRegistrations.find((item) => item.id === id);
-                    const alreadyAssigned =
-                      booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ?? 0;
-                    setBookingToAssign(id);
-                    setGuestsToAssign(
-                      booking?.bookedTableQuantity
-                        ? 0
-                        : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
-                    );
-                  }}
-                >
-                  <AdminOption value="">{m.admin_layout_choose_booking()}</AdminOption>
-                  {assignableRegistrations.map((registration) => (
-                    <AdminOption key={registration.id} value={registration.id}>
-                      {registration.person.name} · {registration.id}
-                    </AdminOption>
-                  ))}
-                </AdminSelect>
-                <AdminInput
-                  aria-label={m.admin_guests_count()}
-                  type="number"
-                  min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
-                  max={20}
-                  value={guestsToAssign}
-                  disabled={
-                    allocationPending ||
-                    !bookingToAssign ||
-                    Boolean(selectedBookingToAssign?.bookedTableQuantity)
-                  }
-                  onChange={(event) => setGuestsToAssign(Number(event.target.value))}
-                  className="w-24"
-                />
-                <Button
-                  variant="warning"
-                  disabled={allocationPending || !selectedBookingToAssign}
-                  onClick={async () => {
-                    if (!selectedBookingToAssign) return;
-                    await savePlanAllocations(selectedBookingToAssign, [
-                      ...(selectedBookingToAssign.allocations ?? []),
-                      {
-                        tableId: selectedTableData.id,
-                        guestCount: selectedBookingToAssign.bookedTableQuantity
-                          ? 0
-                          : guestsToAssign,
-                        exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
-                      },
-                    ]);
-                    setBookingToAssign("");
-                  }}
-                >
-                  {m.admin_layout_assign_booking()}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Selected area detail */}
-      {selectedAreaData && (
-        <Card tone="info" className="mb-4">
-          <CardHeader className="flex items-center justify-between border-info">
-            <span className="font-semibold">
-              <AreaIcon name={selectedAreaData.icon} className="me-2" />
-              {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
-            </span>
-            <div className="flex gap-2 items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation - 15)}
-                title={m.admin_layout_rotate_ccw()}
-                aria-label={m.admin_layout_rotate_ccw()}
-              >
-                <Icon icon={RotateCcwIcon} />
-              </Button>
-              <span className="text-subtle text-sm min-w-14 text-center">
-                {Math.round(selectedAreaData.rotation)}°
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation + 15)}
-                title={m.admin_layout_rotate_cw()}
-                aria-label={m.admin_layout_rotate_cw()}
-              >
-                <Icon icon={RotateCwIcon} />
-              </Button>
-              <RowActionDivider />
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={() => setConfirmDeleteAreaId(selectedAreaData.id)}
-                title={m.admin_delete_item({ name: selectedAreaData.label })}
-                aria-label={m.admin_delete_item({ name: selectedAreaData.label })}
-              >
-                <Icon icon={TrashIcon} />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {assignAreaError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-2 text-sm"
-                onClose={() => setAssignAreaError(null)}
-              >
-                {assignAreaError}
-              </Alert>
-            )}
-            {resizeAreaError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-2 text-sm"
-                onClose={() => setResizeAreaError(null)}
-              >
-                {resizeAreaError}
-              </Alert>
-            )}
-            <AdminField className="mb-4" controlId="area-label">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_layout_area_form_label()}
-              </AdminLabel>
-              <AdminInput
-                size="sm"
-                type="text"
-                className="bg-muted text-content border-input"
-                defaultValue={selectedAreaData.label}
-                onBlur={(e) => {
-                  const newLabel = e.target.value.trim();
-                  if (newLabel && newLabel !== selectedAreaData.label) {
-                    onUpdateAreaLabel(selectedAreaData.id, newLabel);
-                  }
-                }}
-                key={selectedAreaData.id}
-              />
-            </AdminField>
-            <div className="flex gap-2 mb-4">
-              <AdminField controlId="area-width" className="flex-1">
-                <AdminLabel className="text-subtle text-sm">
-                  {m.admin_layout_area_width_m()}
-                </AdminLabel>
-                <AdminInput
-                  size="sm"
-                  type="number"
-                  min={0.1}
-                  max={50}
-                  step={0.1}
-                  className="bg-muted text-content border-input"
-                  defaultValue={selectedAreaData.widthM}
-                  onBlur={async (e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
-                      setResizeAreaError(null);
-                      try {
-                        await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
-                      } catch (err) {
-                        setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
+                  <RowActionDivider />
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => setConfirmDeleteAreaId(selectedAreaData.id)}
+                    title={m.admin_delete_item({ name: selectedAreaData.label })}
+                    aria-label={m.admin_delete_item({ name: selectedAreaData.label })}
+                  >
+                    <Icon icon={TrashIcon} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {assignAreaError && (
+                  <Alert
+                    role="alert"
+                    aria-live="assertive"
+                    variant="danger"
+                    className="py-1 mb-2 text-sm"
+                    onClose={() => setAssignAreaError(null)}
+                  >
+                    {assignAreaError}
+                  </Alert>
+                )}
+                {resizeAreaError && (
+                  <Alert
+                    role="alert"
+                    aria-live="assertive"
+                    variant="danger"
+                    className="py-1 mb-2 text-sm"
+                    onClose={() => setResizeAreaError(null)}
+                  >
+                    {resizeAreaError}
+                  </Alert>
+                )}
+                <AdminField className="mb-4" controlId="area-label">
+                  <AdminLabel className="text-subtle text-sm">
+                    {m.admin_layout_area_form_label()}
+                  </AdminLabel>
+                  <AdminInput
+                    size="sm"
+                    type="text"
+                    className="bg-muted text-content border-input"
+                    defaultValue={selectedAreaData.label}
+                    onBlur={(e) => {
+                      const newLabel = e.target.value.trim();
+                      if (newLabel && newLabel !== selectedAreaData.label) {
+                        onUpdateAreaLabel(selectedAreaData.id, newLabel);
                       }
-                    }
-                  }}
-                  key={`w-${selectedAreaData.id}`}
-                />
-              </AdminField>
-              <AdminField controlId="area-length" className="flex-1">
-                <AdminLabel className="text-subtle text-sm">
-                  {m.admin_layout_area_length_m()}
-                </AdminLabel>
-                <AdminInput
-                  size="sm"
-                  type="number"
-                  min={0.1}
-                  max={50}
-                  step={0.1}
-                  className="bg-muted text-content border-input"
-                  defaultValue={selectedAreaData.lengthM}
-                  onBlur={async (e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
-                      setResizeAreaError(null);
-                      try {
-                        await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
-                      } catch (err) {
-                        setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
-                      }
-                    }
-                  }}
-                  key={`l-${selectedAreaData.id}`}
-                />
-              </AdminField>
-            </div>
-            <AdminField className="mb-4" controlId="area-icon">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_layout_area_form_icon()}
-              </AdminLabel>
-              <div className="flex gap-2 items-center">
-                <AreaIcon name={selectedAreaData.icon} className="text-primary" />
-                <AdminSelect
-                  size="sm"
-                  className="bg-muted text-content border-input"
-                  value={selectedAreaData.icon || "bi-shop"}
-                  onValueChange={async (e) => {
-                    const newIcon = e;
-                    setAssignAreaError(null);
-                    try {
-                      await onAssignAreaToItem(
-                        selectedAreaData.id,
-                        selectedAreaData.organizationId,
-                        undefined,
-                        newIcon,
-                      );
-                    } catch (err) {
-                      setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
-                    }
-                  }}
-                  key={`icon-${selectedAreaData.id}`}
-                >
-                  {getAreaIcons().map((ic) => (
-                    <AdminOption key={ic.value} value={ic.value}>
-                      {ic.label}
-                    </AdminOption>
-                  ))}
-                </AdminSelect>
-              </div>
-            </AdminField>
-            <AdminField controlId="area-assign-item">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_layout_area_assigned_to()}
-              </AdminLabel>
-              <AdminSelect
-                size="sm"
-                className="bg-muted text-content border-input"
-                value={
-                  selectedAreaData.organizationId ? `e:${selectedAreaData.organizationId}` : ""
-                }
-                onValueChange={async (ev) => {
-                  const val = ev;
-                  setAssignAreaError(null);
-                  try {
-                    let eId: number | null = null;
-                    if (val.startsWith("e:")) {
-                      eId = Number(val.slice(2));
-                    }
-                    await onAssignAreaToItem(selectedAreaData.id, eId);
-                  } catch (err) {
-                    setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
-                  }
-                }}
-              >
-                <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
-                {organizations.filter((e) => e.active).length > 0 && (
-                  <AdminOptionGroup label={m.admin_layout_area_organizations_group()}>
-                    {organizations
-                      .filter((e) => e.active)
-                      .map((e) => (
-                        <AdminOption key={e.id} value={`e:${e.id}`}>
-                          {e.name}
+                    }}
+                    key={selectedAreaData.id}
+                  />
+                </AdminField>
+                <div className="flex gap-2 mb-4">
+                  <AdminField controlId="area-width" className="flex-1">
+                    <AdminLabel className="text-subtle text-sm">
+                      {m.admin_layout_area_width_m()}
+                    </AdminLabel>
+                    <AdminInput
+                      size="sm"
+                      type="number"
+                      min={0.1}
+                      max={50}
+                      step={0.1}
+                      className="bg-muted text-content border-input"
+                      defaultValue={selectedAreaData.widthM}
+                      onBlur={async (e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
+                          setResizeAreaError(null);
+                          try {
+                            await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                          } catch (err) {
+                            setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
+                          }
+                        }
+                      }}
+                      key={`w-${selectedAreaData.id}`}
+                    />
+                  </AdminField>
+                  <AdminField controlId="area-length" className="flex-1">
+                    <AdminLabel className="text-subtle text-sm">
+                      {m.admin_layout_area_length_m()}
+                    </AdminLabel>
+                    <AdminInput
+                      size="sm"
+                      type="number"
+                      min={0.1}
+                      max={50}
+                      step={0.1}
+                      className="bg-muted text-content border-input"
+                      defaultValue={selectedAreaData.lengthM}
+                      onBlur={async (e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
+                          setResizeAreaError(null);
+                          try {
+                            await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                          } catch (err) {
+                            setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
+                          }
+                        }
+                      }}
+                      key={`l-${selectedAreaData.id}`}
+                    />
+                  </AdminField>
+                </div>
+                <AdminField className="mb-4" controlId="area-icon">
+                  <AdminLabel className="text-subtle text-sm">
+                    {m.admin_layout_area_form_icon()}
+                  </AdminLabel>
+                  <div className="flex gap-2 items-center">
+                    <AreaIcon name={selectedAreaData.icon} className="text-primary" />
+                    <AdminSelect
+                      size="sm"
+                      className="bg-muted text-content border-input"
+                      value={selectedAreaData.icon || "bi-shop"}
+                      onValueChange={async (e) => {
+                        const newIcon = e;
+                        setAssignAreaError(null);
+                        try {
+                          await onAssignAreaToItem(
+                            selectedAreaData.id,
+                            selectedAreaData.organizationId,
+                            undefined,
+                            newIcon,
+                          );
+                        } catch (err) {
+                          setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
+                        }
+                      }}
+                      key={`icon-${selectedAreaData.id}`}
+                    >
+                      {getAreaIcons().map((ic) => (
+                        <AdminOption key={ic.value} value={ic.value}>
+                          {ic.label}
                         </AdminOption>
                       ))}
-                  </AdminOptionGroup>
+                    </AdminSelect>
+                  </div>
+                </AdminField>
+                <AdminField controlId="area-assign-item">
+                  <AdminLabel className="text-subtle text-sm">
+                    {m.admin_layout_area_assigned_to()}
+                  </AdminLabel>
+                  <AdminSelect
+                    size="sm"
+                    className="bg-muted text-content border-input"
+                    value={
+                      selectedAreaData.organizationId ? `e:${selectedAreaData.organizationId}` : ""
+                    }
+                    onValueChange={async (ev) => {
+                      const val = ev;
+                      setAssignAreaError(null);
+                      try {
+                        let eId: number | null = null;
+                        if (val.startsWith("e:")) {
+                          eId = Number(val.slice(2));
+                        }
+                        await onAssignAreaToItem(selectedAreaData.id, eId);
+                      } catch (err) {
+                        setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
+                      }
+                    }}
+                  >
+                    <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
+                    {organizations.filter((e) => e.active).length > 0 && (
+                      <AdminOptionGroup label={m.admin_layout_area_organizations_group()}>
+                        {organizations
+                          .filter((e) => e.active)
+                          .map((e) => (
+                            <AdminOption key={e.id} value={`e:${e.id}`}>
+                              {e.name}
+                            </AdminOption>
+                          ))}
+                      </AdminOptionGroup>
+                    )}
+                  </AdminSelect>
+                </AdminField>
+                {tablesInSelectedArea.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-subtle">
+                    <p className="text-subtle text-sm mb-2">
+                      <Icon icon={Grid3x3Icon} className="me-1" />
+                      {m.admin_layout_tables_in_stand()}{" "}
+                      <Badge variant="info">{tablesInSelectedArea.length}</Badge>
+                      <span className="ms-2 text-subtle">
+                        {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)}{" "}
+                        {m.admin_layout_places_total()}
+                      </span>
+                    </p>
+                    <PresentationList flush>
+                      {tablesInSelectedArea.map((t) => (
+                        <PresentationListItem key={t.id} className="py-1 px-2 text-sm">
+                          <Icon icon={Grid3x3Icon} className="me-1 text-muted-foreground" />
+                          {t.name}
+                          <Badge variant="secondary" className="ms-2 text-micro">
+                            {t.capacity} {m.admin_layout_capacity_abbrev()}
+                          </Badge>
+                        </PresentationListItem>
+                      ))}
+                    </PresentationList>
+                  </div>
                 )}
-              </AdminSelect>
-            </AdminField>
-            {tablesInSelectedArea.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-subtle">
-                <p className="text-subtle text-sm mb-2">
-                  <Icon icon={Grid3x3Icon} className="me-1" />
-                  {m.admin_layout_tables_in_stand()}{" "}
-                  <Badge variant="info">{tablesInSelectedArea.length}</Badge>
-                  <span className="ms-2 text-subtle">
-                    {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)}{" "}
-                    {m.admin_layout_places_total()}
-                  </span>
-                </p>
-                <PresentationList flush>
-                  {tablesInSelectedArea.map((t) => (
-                    <PresentationListItem key={t.id} className="py-1 px-2 text-sm">
-                      <Icon icon={Grid3x3Icon} className="me-1 text-muted-foreground" />
-                      {t.name}
-                      <Badge variant="secondary" className="ms-2 text-micro">
-                        {t.capacity} {m.admin_layout_capacity_abbrev()}
-                      </Badge>
-                    </PresentationListItem>
-                  ))}
-                </PresentationList>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
+              </CardContent>
+            </Card>
+          )}
+        </aside>
+      </div>
       {/* Add Layout Modal */}
       <Dialog
         open={showAddLayout}

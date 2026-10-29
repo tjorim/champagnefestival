@@ -1960,5 +1960,11 @@
   "admin_editor_availability": "Price and availability",
   "admin_editor_back_product": "Back to product",
   "admin_edition_id_help": "Required. Choose a unique, permanent ID, for example 2027-march.",
-  "admin_edition_month_help": "Required. Enter the month label, for example march. Add events after saving the edition to set its dates."
+  "admin_edition_month_help": "Required. Enter the month label, for example march. Add events after saving the edition to set its dates.",
+  "admin_layout_all_layouts_count": "All layouts: {count}",
+  "admin_layout_inspector": "Selected object",
+  "admin_layout_find_table": "Find a table",
+  "admin_layout_select_object": "Select a table or area on the plan, or choose a table above to inspect and edit it.",
+  "admin_layout_save_behaviour": "Names, dimensions and guest counts save when you leave the field. Type, rotation, move and removal controls apply immediately. Choose a booking and press Assign to allocate it. Booking changes affect this event; revisions restore geometry only.",
+  "admin_layout_no_matching_tables": "No matching tables."
 }

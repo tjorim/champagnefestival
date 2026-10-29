@@ -1960,5 +1960,11 @@
   "admin_editor_availability": "Prijs en beschikbaarheid",
   "admin_editor_back_product": "Terug naar product",
   "admin_edition_id_help": "Verplicht. Kies een unieke, vaste ID, bijvoorbeeld 2027-march.",
-  "admin_edition_month_help": "Verplicht. Vul de maandnaam in, bijvoorbeeld maart. Voeg na het opslaan van de editie evenementen toe om de datums in te stellen."
+  "admin_edition_month_help": "Verplicht. Vul de maandnaam in, bijvoorbeeld maart. Voeg na het opslaan van de editie evenementen toe om de datums in te stellen.",
+  "admin_layout_all_layouts_count": "Alle indelingen: {count}",
+  "admin_layout_inspector": "Geselecteerd object",
+  "admin_layout_find_table": "Tafel zoeken",
+  "admin_layout_select_object": "Selecteer een tafel of zone op het plan, of kies hierboven een tafel om deze te bekijken en bewerken.",
+  "admin_layout_save_behaviour": "Namen, afmetingen en gastenaantallen worden opgeslagen wanneer je het veld verlaat. Type, rotatie, verplaatsing en verwijdering worden direct toegepast. Kies een boeking en druk op Toewijzen om deze toe te wijzen. Boekingswijzigingen gelden voor dit evenement; revisies herstellen alleen de geometrie.",
+  "admin_layout_no_matching_tables": "Geen overeenkomende tafels."
 }

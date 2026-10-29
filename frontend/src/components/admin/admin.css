@@ -204,3 +204,25 @@
     );
   }
 }
+
+@layer components {
+  .admin-plan-workspace {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+  }
+  .admin-plan-inspector {
+    min-width: 0;
+  }
+  @media (min-width: 1200px) and (min-height: 600px) {
+    .admin-plan-workspace {
+      grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.8fr);
+    }
+    .admin-plan-workspace > .admin-plan-inspector,
+    .admin-plan-workspace > [data-slot="card"] {
+      max-height: 65vh;
+      overflow: auto;
+      scrollbar-gutter: stable;
+    }
+  }
+}

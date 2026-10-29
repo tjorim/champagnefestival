@@ -1960,5 +1960,11 @@
   "admin_editor_availability": "Prix et disponibilité",
   "admin_editor_back_product": "Retour au produit",
   "admin_edition_id_help": "Obligatoire. Choisissez un identifiant unique et permanent, par exemple 2027-march.",
-  "admin_edition_month_help": "Obligatoire. Indiquez le mois, par exemple mars. Ajoutez des événements après avoir enregistré l’édition pour définir ses dates."
+  "admin_edition_month_help": "Obligatoire. Indiquez le mois, par exemple mars. Ajoutez des événements après avoir enregistré l’édition pour définir ses dates.",
+  "admin_layout_all_layouts_count": "Toutes les dispositions : {count}",
+  "admin_layout_inspector": "Objet sélectionné",
+  "admin_layout_find_table": "Rechercher une table",
+  "admin_layout_select_object": "Sélectionnez une table ou une zone sur le plan, ou choisissez une table ci-dessus pour la consulter et la modifier.",
+  "admin_layout_save_behaviour": "Les noms, dimensions et nombres de convives sont enregistrés en quittant le champ. Le type, la rotation, le déplacement et le retrait sont appliqués immédiatement. Choisissez une réservation et appuyez sur Attribuer pour l’attribuer. Les modifications concernent cet événement ; les révisions restaurent uniquement la géométrie.",
+  "admin_layout_no_matching_tables": "Aucune table correspondante."
 }
