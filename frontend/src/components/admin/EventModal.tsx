@@ -1,3 +1,4 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderQuestionsEditor from "@/components/admin/OrderQuestionsEditor";
 import {
   AdminField,
@@ -148,12 +149,20 @@ export default function EventModal({
     [derivedStandaloneDate, edition.id, edition.dates, firstCategory, record, isFestival],
   );
 
+  const [textLanguage, setTextLanguage] = useState("nl");
+  const [textErrorAttempt, setTextErrorAttempt] = useState(0);
   const [textError, setTextError] = useState<"title" | "description" | null>(null);
+
+  useEffect(() => {
+    if (textError) document.getElementById(`event-${textError}-nl`)?.focus();
+  }, [textError, textErrorAttempt]);
 
   const form = useForm({
     defaultValues,
     onSubmit: ({ value }) => {
       if (!value.titleNl.trim()) {
+        setTextLanguage("nl");
+        setTextErrorAttempt((attempt) => attempt + 1);
         setTextError("title");
         return;
       }
@@ -161,6 +170,8 @@ export default function EventModal({
         value.descriptionFr.trim() || value.descriptionEn.trim(),
       );
       if (hasTranslatedDescription && !value.descriptionNl.trim()) {
+        setTextLanguage("nl");
+        setTextErrorAttempt((attempt) => attempt + 1);
         setTextError("description");
         return;
       }
@@ -183,6 +194,7 @@ export default function EventModal({
   if (sessionId !== seenSession) {
     setSeenSession(sessionId);
     setTextError(null);
+    setTextLanguage("nl");
   }
 
   // Keep standalone date field in sync with derived date
@@ -212,8 +224,8 @@ export default function EventModal({
         if (!open) void requestClose();
       }}
     >
-      <DialogContent admin size="lg">
-        <DialogHeader>
+      <DialogContent admin size="lg" className="flex max-h-full min-h-0 flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>
             {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
           </DialogTitle>
@@ -223,10 +235,11 @@ export default function EventModal({
             e.preventDefault();
             void form.handleSubmit();
           }}
+          className="flex min-h-0 flex-col"
           noValidate
         >
-          <DialogBody>
-            <p className="text-sm text-subtle mb-4">{m.admin_event_text_help()}</p>
+          <DialogBody className="min-h-0 overflow-y-auto">
+            <h3 className="text-base font-medium mb-2">{m.admin_editor_schedule()}</h3>
             <div className="flex gap-2 flex-wrap mb-4">
               <AdminField controlId="event-category" className="min-w-40 grow-1 basis-40">
                 <AdminLabel className="text-subtle text-sm mb-1">
@@ -265,45 +278,6 @@ export default function EventModal({
                 </form.Field>
               </AdminField>
             </div>
-            {textError === "title" && (
-              <AdminError>{m.admin_event_title_original_required()}</AdminError>
-            )}
-            {TEXT_LANGUAGES.map(({ language, title, label }) => (
-              <AdminField key={language} controlId={`event-title-${language}`} className="mb-4">
-                <AdminLabel className="text-subtle text-sm mb-1">
-                  {m.admin_event_title_label({ language: label() })}
-                </AdminLabel>
-                <form.Field name={title}>
-                  {(field) => (
-                    <AdminInput
-                      size="sm"
-                      className="bg-muted text-content border-input"
-                      maxLength={200}
-                      autoFocus={language === "nl"}
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-                <form.Subscribe selector={(state) => state.values}>
-                  {(values) => (
-                    <OrganizationTranslationSuggestion
-                      key={`${show}-${initial?.id ?? "new"}-title-${language}`}
-                      url="/api/events/translation"
-                      headers={authHeaders}
-                      maxLength={EVENT_TRANSLATION_LIMIT}
-                      source="nl"
-                      target={language}
-                      text={values.titleNl}
-                      targetText={values[title]}
-                      onDraft={(text) => form.setFieldValue(title, text.slice(0, 200))}
-                    />
-                  )}
-                </form.Subscribe>
-              </AdminField>
-            ))}
-
             <div className="flex gap-2 flex-wrap mb-4">
               <AdminField controlId="event-date" className="max-w-45">
                 <AdminLabel className="text-subtle text-sm mb-1">{m.admin_event_date()}</AdminLabel>
@@ -336,6 +310,13 @@ export default function EventModal({
                   }}
                 </form.Field>
               </AdminField>
+              {!isFestival && (
+                <p className="text-subtle text-sm basis-full">
+                  {derivedStandaloneDate
+                    ? m.admin_event_standalone_help()
+                    : m.admin_event_first_date_help()}
+                </p>
+              )}
               <AdminField controlId="event-start-time" className="max-w-35">
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_start_time()}
@@ -388,50 +369,7 @@ export default function EventModal({
               </AdminField>
             </div>
 
-            {textError === "description" && (
-              <AdminError>{m.admin_event_description_original_required()}</AdminError>
-            )}
-            {TEXT_LANGUAGES.map(({ language, description, label }) => (
-              <AdminField
-                key={language}
-                controlId={`event-description-${language}`}
-                className="mb-4"
-              >
-                <AdminLabel className="text-subtle text-sm mb-1">
-                  {m.admin_event_description_label({ language: label() })}
-                </AdminLabel>
-                <form.Field name={description}>
-                  {(field) => (
-                    <AdminTextarea
-                      size="sm"
-                      rows={2}
-                      className="bg-muted text-content border-input"
-                      maxLength={10000}
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-                <form.Subscribe selector={(state) => state.values}>
-                  {(values) => (
-                    <OrganizationTranslationSuggestion
-                      key={`${show}-${initial?.id ?? "new"}-description-${language}`}
-                      url="/api/events/translation"
-                      headers={authHeaders}
-                      maxLength={EVENT_TRANSLATION_LIMIT}
-                      source="nl"
-                      target={language}
-                      text={values.descriptionNl}
-                      targetText={values[description]}
-                      onDraft={(text) => form.setFieldValue(description, text)}
-                    />
-                  )}
-                </form.Subscribe>
-              </AdminField>
-            ))}
-            <p className="text-sm text-subtle mb-4">{m.admin_event_translation_limit()}</p>
-
+            <h3 className="text-base font-medium mb-2">{m.admin_editor_access()}</h3>
             <form.Field name="volunteersOnly">
               {(field) => (
                 <AdminCheck
@@ -507,9 +445,93 @@ export default function EventModal({
               </div>
             )}
 
-            {!isFestival && (
-              <div className="text-subtle text-sm mt-2">{m.admin_event_standalone_help()}</div>
+            <p className="text-sm text-subtle mb-4">{m.admin_event_text_help()}</p>
+            {textError && (
+              <AdminError>
+                {textError === "title"
+                  ? m.admin_event_title_original_required()
+                  : m.admin_event_description_original_required()}
+              </AdminError>
             )}
+            <Tabs value={textLanguage} onValueChange={(value) => setTextLanguage(String(value))}>
+              <TabsList aria-label={m.admin_editor_text()}>
+                {TEXT_LANGUAGES.map(({ language, label }) => (
+                  <TabsTrigger key={language} value={language}>
+                    {label()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {TEXT_LANGUAGES.map(({ language, title, description, label }) => (
+                <TabsContent key={language} value={language} keepMounted>
+                  <AdminField controlId={`event-title-${language}`} className="mb-4">
+                    <AdminLabel className="text-subtle text-sm mb-1">
+                      {m.admin_event_title_label({ language: label() })}
+                    </AdminLabel>
+                    <form.Field name={title}>
+                      {(field) => (
+                        <AdminInput
+                          size="sm"
+                          className="bg-muted text-content border-input"
+                          maxLength={200}
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                    <form.Subscribe selector={(state) => state.values}>
+                      {(values) => (
+                        <OrganizationTranslationSuggestion
+                          key={`${show}-${initial?.id ?? "new"}-title-${language}`}
+                          url="/api/events/translation"
+                          headers={authHeaders}
+                          maxLength={EVENT_TRANSLATION_LIMIT}
+                          source="nl"
+                          target={language}
+                          text={values.titleNl}
+                          targetText={values[title]}
+                          onDraft={(text) => form.setFieldValue(title, text.slice(0, 200))}
+                        />
+                      )}
+                    </form.Subscribe>
+                  </AdminField>
+                  <AdminField controlId={`event-description-${language}`} className="mb-4">
+                    <AdminLabel className="text-subtle text-sm mb-1">
+                      {m.admin_event_description_label({ language: label() })}
+                    </AdminLabel>
+                    <form.Field name={description}>
+                      {(field) => (
+                        <AdminTextarea
+                          size="sm"
+                          rows={2}
+                          className="bg-muted text-content border-input"
+                          maxLength={10000}
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                    <form.Subscribe selector={(state) => state.values}>
+                      {(values) => (
+                        <OrganizationTranslationSuggestion
+                          key={`${show}-${initial?.id ?? "new"}-description-${language}`}
+                          url="/api/events/translation"
+                          headers={authHeaders}
+                          maxLength={EVENT_TRANSLATION_LIMIT}
+                          source="nl"
+                          target={language}
+                          text={values.descriptionNl}
+                          targetText={values[description]}
+                          onDraft={(text) => form.setFieldValue(description, text)}
+                        />
+                      )}
+                    </form.Subscribe>
+                  </AdminField>
+                </TabsContent>
+              ))}
+            </Tabs>
+            <p className="text-sm text-subtle mb-4">{m.admin_event_translation_limit()}</p>
             {initial?.id && (
               // The editor saves through its own button; Enter must not submit the event form.
               <div
@@ -527,11 +549,11 @@ export default function EventModal({
               </div>
             )}
           </DialogBody>
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.close()}
             </Button>
-            <Button type="submit" variant="warning" size="sm">
+            <Button type="submit" variant="warning" size="sm" disabled={saving}>
               <Icon icon={SaveIcon} />
               {m.admin_save()}
             </Button>

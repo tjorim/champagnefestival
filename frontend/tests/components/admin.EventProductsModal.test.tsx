@@ -264,11 +264,7 @@ describe("EventProductsModal", () => {
     expect(screen.getByText("admin_products_required_needs_purchasable")).toBeInTheDocument();
   });
 
-  it("opens the edit form next to the row being edited and locks other rows against it", async () => {
-    // Editing a product no longer opens a form pinned below the whole list —
-    // it appears inline under that product's own row, and every other row's
-    // Edit/Delete is disabled so a second click can't silently discard the
-    // in-progress edit.
+  it("opens a dedicated editor and returns to the list on Close", async () => {
     renderModal([
       {
         id: "prod-bottle",
@@ -303,21 +299,12 @@ describe("EventProductsModal", () => {
 
     const nameField = screen.getByLabelText(nameIn("nl")) as HTMLInputElement;
     expect(nameField.value).toBe("Champagne Bottle");
-    // The form sits inside the same row as the product it edits — after
-    // Champagne Bottle's own text, but before the next row (Cheese Platter),
-    // not pinned below the whole list.
-    expect(
-      screen.getByText("Champagne Bottle").compareDocumentPosition(nameField) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      nameField.compareDocumentPosition(screen.getByText("Cheese Platter")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-
-    expect(screen.getByLabelText('admin_edit_item({"name":"Cheese Platter"})')).toBeDisabled();
-    expect(screen.getByLabelText('admin_delete_item({"name":"Cheese Platter"})')).toBeDisabled();
-    expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
+    expect(screen.queryByText("Cheese Platter")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "admin_products_add" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "admin_editor_product_edit" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_cancel" }));
+    expect(await screen.findByText("Cheese Platter")).toBeInTheDocument();
+    expect(screen.queryByLabelText(nameIn("nl"))).not.toBeInTheDocument();
   });
 
   it("shows the bundle note for a product that includes another", async () => {

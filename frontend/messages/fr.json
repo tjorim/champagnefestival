@@ -855,7 +855,7 @@
   "admin_edition_co_organizer_help": "Crédite une organisation comme co-organisatrice. Distincte des participants au festival et disponible pour chaque type d’édition.",
   "admin_edition_venue_placeholder": "Sélectionner une salle",
   "admin_edition_date_handling": "gestion des dates",
-  "admin_edition_dates_info": "Les dates sont déterminées par les enregistrements d'événements.",
+  "admin_edition_dates_info": "Ajoutez ou modifiez les événements ci-dessous pour définir les dates de l’édition.",
   "admin_edition_update_event_dates": "Mettez à jour les dates dans la section Événements sous chaque carte d'édition.",
   "admin_edition_create_first_then_events": "Créez d'abord l'édition, puis ajoutez des événements pour définir ses dates.",
   "admin_edition_dates_defined_by_events": "Dates définies par les événements",
@@ -875,7 +875,7 @@
   "registration_edition_type_standalone": "Autonome",
   "registration_edition_type_festival": "Festival",
   "admin_event_date": "Date",
-  "admin_event_standalone_help": "Les événements d'édition autonome héritent de la date de l'édition; modifiez la date en éditant l'événement autonome existant.",
+  "admin_event_standalone_help": "Cet événement utilise la date de l’édition. Modifiez l’événement existant de l’édition pour la changer.",
   "admin_error_server_transient": "Serveur temporairement indisponible. Veuillez réessayer.",
   "admin_error_server_transient_refresh": "Serveur temporairement indisponible. Veuillez actualiser ou vous reconnecter.",
   "admin_error_auto_auth_failed": "Échec de l'authentification. Veuillez vous connecter manuellement.",
@@ -1951,5 +1951,14 @@
   "stamp_eligibility_help": "Une carte commence automatiquement lors d’un enregistrement éligible à un échange de capsules pour un membre actif. Les réservations au festival ne donnent pas de tampons. La politique s’applique à tous les membres.",
   "workspace_reward_policy": "Politique de récompenses",
   "membership_load_error": "Impossible de charger votre adhésion. Réessayez.",
-  "workspace_pending_bookings": "Réservations en attente : {count}"
+  "workspace_pending_bookings": "Réservations en attente : {count}",
+  "admin_editor_text": "Textes des événements et produits",
+  "admin_editor_product_edit": "Modifier le produit",
+  "admin_event_first_date_help": "Choisissez la date du premier événement de cette édition.",
+  "admin_editor_schedule": "Programme",
+  "admin_editor_access": "Accès et inscription",
+  "admin_editor_availability": "Prix et disponibilité",
+  "admin_editor_back_product": "Retour au produit",
+  "admin_edition_id_help": "Obligatoire. Choisissez un identifiant unique et permanent, par exemple 2027-march.",
+  "admin_edition_month_help": "Obligatoire. Indiquez le mois, par exemple mars. Ajoutez des événements après avoir enregistré l’édition pour définir ses dates."
 }

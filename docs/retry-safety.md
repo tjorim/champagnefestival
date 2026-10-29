@@ -1109,3 +1109,11 @@ note drafts remain editable after failure and use their existing Save button to 
 the current draft. No automatic retry is enabled. A lost response can mean the write
 committed; repeating the same answer replacement is safe under the existing poll
 contract, subject to the server checking the deadline again.
+
+## Preparation editor layout (#1429)
+
+Event and product editors now group translations and keep their explicit actions
+outside the scrolling body. This changes presentation only: event creates/updates,
+product creates/updates, preview tokens and shortage confirmation keep their existing
+request payloads and retry policies. No autosave or automatic write retry is added.
+An ambiguous failure still requires reading current state before another save.

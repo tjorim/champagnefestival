@@ -855,7 +855,7 @@
   "admin_edition_co_organizer_help": "Vermeldt een organisatie als mede-organisator. Los van de festivaldeelnemers en beschikbaar voor elk editietype.",
   "admin_edition_venue_placeholder": "Selecteer een locatie",
   "admin_edition_date_handling": "datumbeheer",
-  "admin_edition_dates_info": "Datums worden bepaald door de gekoppelde evenementen.",
+  "admin_edition_dates_info": "Voeg hieronder evenementen toe of bewerk ze om de datums van de editie in te stellen.",
   "admin_edition_update_event_dates": "Pas de datums aan via de sectie Evenementen onder elke editiekaart.",
   "admin_edition_create_first_then_events": "Maak eerst de editie aan, voeg daarna evenementen toe om de datums te bepalen.",
   "admin_edition_dates_defined_by_events": "Datums bepaald door evenementen",
@@ -875,7 +875,7 @@
   "registration_edition_type_standalone": "Losstaand",
   "registration_edition_type_festival": "Festival",
   "admin_event_date": "Datum",
-  "admin_event_standalone_help": "Standalone-editie evenementen erven de editiedatum; wijzig de datum door het bestaande standalone evenement te bewerken.",
+  "admin_event_standalone_help": "Dit evenement gebruikt de editiedatum. Bewerk het bestaande evenement van de editie om die te wijzigen.",
   "admin_error_server_transient": "Server tijdelijk niet beschikbaar. Probeer het opnieuw.",
   "admin_error_server_transient_refresh": "Server tijdelijk niet beschikbaar. Vernieuw de pagina of probeer opnieuw in te loggen.",
   "admin_error_auto_auth_failed": "Authenticatie mislukt. Log handmatig in.",
@@ -1951,5 +1951,14 @@
   "stamp_eligibility_help": "Een stempelkaart begint automatisch bij een in aanmerking komende check-in op een capsulebeurs voor een actief lid. Festivalboekingen leveren geen stempels op. Het beloningsbeleid geldt voor alle leden.",
   "workspace_reward_policy": "Beloningsbeleid",
   "membership_load_error": "Je lidmaatschap kon niet worden geladen. Probeer het opnieuw.",
-  "workspace_pending_bookings": "Boekingen in afwachting: {count}"
+  "workspace_pending_bookings": "Boekingen in afwachting: {count}",
+  "admin_editor_text": "Evenement- en productteksten",
+  "admin_editor_product_edit": "Product bewerken",
+  "admin_event_first_date_help": "Kies de datum voor het eerste evenement van deze editie.",
+  "admin_editor_schedule": "Planning",
+  "admin_editor_access": "Toegang en inschrijving",
+  "admin_editor_availability": "Prijs en beschikbaarheid",
+  "admin_editor_back_product": "Terug naar product",
+  "admin_edition_id_help": "Verplicht. Kies een unieke, vaste ID, bijvoorbeeld 2027-march.",
+  "admin_edition_month_help": "Verplicht. Vul de maandnaam in, bijvoorbeeld maart. Voeg na het opslaan van de editie evenementen toe om de datums in te stellen."
 }

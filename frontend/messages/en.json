@@ -855,7 +855,7 @@
   "admin_edition_co_organizer_help": "Credits an organisation as co-organiser. Separate from the festival lineup, and available on every edition type.",
   "admin_edition_venue_placeholder": "Select a venue",
   "admin_edition_date_handling": "date handling",
-  "admin_edition_dates_info": "Dates are driven by the relational event records.",
+  "admin_edition_dates_info": "Add or edit events below to set the edition’s dates.",
   "admin_edition_update_event_dates": "Update event dates from the Events section below each edition card.",
   "admin_edition_create_first_then_events": "Create the edition first, then add events to define its dates.",
   "admin_edition_dates_defined_by_events": "Dates defined by events",
@@ -875,7 +875,7 @@
   "registration_edition_type_standalone": "Standalone",
   "registration_edition_type_festival": "Festival",
   "admin_event_date": "Date",
-  "admin_event_standalone_help": "Standalone edition events inherit the edition date; change the edition date by editing the existing standalone event.",
+  "admin_event_standalone_help": "This event uses the edition date. To change it, edit the edition’s existing event.",
   "admin_error_server_transient": "Server temporarily unavailable. Please try again.",
   "admin_error_server_transient_refresh": "Server temporarily unavailable. Please refresh or try logging in again.",
   "admin_error_auto_auth_failed": "Failed to authenticate. Please log in manually.",
@@ -1951,5 +1951,14 @@
   "stamp_eligibility_help": "A stamp card starts automatically at an eligible capsule-exchange check-in for an active member. Festival bookings do not earn stamps. Reward policy applies to all members.",
   "workspace_reward_policy": "Reward policy",
   "membership_load_error": "Could not load your membership. Try again.",
-  "workspace_pending_bookings": "Pending bookings: {count}"
+  "workspace_pending_bookings": "Pending bookings: {count}",
+  "admin_editor_text": "Event and product text",
+  "admin_editor_product_edit": "Edit product",
+  "admin_event_first_date_help": "Choose the date for this edition’s first event.",
+  "admin_editor_schedule": "Schedule",
+  "admin_editor_access": "Access and registration",
+  "admin_editor_availability": "Price and availability",
+  "admin_editor_back_product": "Back to product",
+  "admin_edition_id_help": "Required. Choose a unique, permanent ID, for example 2027-march.",
+  "admin_edition_month_help": "Required. Enter the month label, for example march. Add events after saving the edition to set its dates."
 }

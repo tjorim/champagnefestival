@@ -1,5 +1,6 @@
 import { useTodayKey } from "@/hooks/useTodayKey";
 import {
+  AdminDescription,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -350,6 +351,7 @@ export default function EditionModal({
                     return (
                       <>
                         <AdminInput
+                          required
                           className="bg-muted text-content border-input"
                           placeholder={m.admin_edition_id_placeholder()}
                           autoFocus
@@ -363,6 +365,7 @@ export default function EditionModal({
                     );
                   }}
                 </form.Field>
+                <AdminDescription>{m.admin_edition_id_help()}</AdminDescription>
               </AdminField>
             )}
 
@@ -402,6 +405,7 @@ export default function EditionModal({
                     return (
                       <>
                         <AdminInput
+                          required
                           className="bg-muted text-content border-input"
                           placeholder={m.admin_edition_month_placeholder()}
                           value={field.value}
@@ -414,6 +418,7 @@ export default function EditionModal({
                     );
                   }}
                 </form.Field>
+                <AdminDescription>{m.admin_edition_month_help()}</AdminDescription>
               </AdminField>
               <AdminField className="min-w-45 grow-1 shrink-1 basis-45" controlId="edition-type">
                 <AdminLabel className="text-subtle text-sm mb-1">
