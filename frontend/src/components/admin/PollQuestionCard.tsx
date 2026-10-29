@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminInput,
   AdminLabel,
@@ -66,7 +67,7 @@ export function QuestionTextFields({
             </AdminLabel>
             <AdminInput
               size="sm"
-              className="bg-muted text-content border-input"
+              className={ADMIN_CONTROL_CLASS}
               value={value[title]}
               maxLength={200}
               onChange={(event) => onChange({ ...value, [title]: event.target.value })}
@@ -78,7 +79,7 @@ export function QuestionTextFields({
             </AdminLabel>
             <AdminInput
               size="sm"
-              className="bg-muted text-content border-input"
+              className={ADMIN_CONTROL_CLASS}
               value={value[description]}
               maxLength={500}
               onChange={(event) => onChange({ ...value, [description]: event.target.value })}
@@ -319,7 +320,7 @@ export default function PollQuestionCard({
           <AdminInput
             type="datetime-local"
             size="sm"
-            className="bg-muted text-content border-input"
+            className={ADMIN_CONTROL_CLASS}
             value={closesAtInput}
             onChange={(event) =>
               setClosingDraft({ saved: question.closesAt, value: event.target.value })

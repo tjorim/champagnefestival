@@ -31,7 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminField,
+  AdminInput,
+  AdminLabel,
+} from "@/components/admin/AdminFields";
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
@@ -307,7 +312,7 @@ export default function CategoryManagement({
                 readOnly={Boolean(editingKey)}
                 maxLength={50}
                 onChange={(e) => setForm((previous) => ({ ...previous, key: e.target.value }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               />
               <p className="text-sm text-subtle mt-1 mb-0">{config.keyHelp()}</p>
             </AdminField>
@@ -325,7 +330,7 @@ export default function CategoryManagement({
                   onChange={(e) =>
                     setForm((previous) => ({ ...previous, [field]: e.target.value }))
                   }
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                 />
               </AdminField>
             ))}
@@ -338,7 +343,7 @@ export default function CategoryManagement({
                 onChange={(e) =>
                   setForm((previous) => ({ ...previous, sortOrder: e.target.value }))
                 }
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               />
             </AdminField>
           </DialogBody>

@@ -1,5 +1,6 @@
 import { useTodayKey } from "@/hooks/useTodayKey";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminDescription,
   AdminField,
   AdminLabel,
@@ -352,7 +353,7 @@ export default function EditionModal({
                       <>
                         <AdminInput
                           required
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           placeholder={m.admin_edition_id_placeholder()}
                           autoFocus
                           value={field.value}
@@ -378,7 +379,7 @@ export default function EditionModal({
                   {(field) => (
                     <AdminInput
                       type="number"
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       value={field.value}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
                       onBlur={field.handleBlur}
@@ -406,7 +407,7 @@ export default function EditionModal({
                       <>
                         <AdminInput
                           required
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           placeholder={m.admin_edition_month_placeholder()}
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -435,7 +436,7 @@ export default function EditionModal({
                         }
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                     >
                       <AdminOption value="festival">{m.admin_edition_type_festival()}</AdminOption>
                       <AdminOption value="bourse">{m.admin_edition_type_bourse()}</AdminOption>
@@ -478,7 +479,7 @@ export default function EditionModal({
                   return (
                     <>
                       <AdminSelect
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         value={field.value}
                         onValueChange={(e) => field.handleChange(e)}
                         onBlur={field.handleBlur}
@@ -518,7 +519,7 @@ export default function EditionModal({
                       <AdminInput
                         type="date"
                         value={previewDates[index] ?? ""}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         readOnly
                         disabled={!previewDates[index]}
                       />
@@ -533,7 +534,7 @@ export default function EditionModal({
                   <AdminInput
                     type="date"
                     value={previewDates[0] ?? ""}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     readOnly
                     disabled={!previewDates[0]}
                   />
@@ -553,7 +554,7 @@ export default function EditionModal({
               <form.Field name="coOrganizerId">
                 {(field) => (
                   <AdminSelect
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}

@@ -18,6 +18,7 @@ describe("RowActions", () => {
       "Delete March 2027",
     ]);
     expect(buttons[1]).toHaveAttribute("title", "Delete March 2027");
+    expect(buttons[1]).toHaveAttribute("data-variant", "outline-danger");
     expect(buttons[1]?.parentElement?.querySelector("span[aria-hidden]")).not.toBeNull();
   });
 
@@ -34,6 +35,8 @@ describe("RowActions", () => {
 describe("AdminAddButton", () => {
   it("is a labelled button", () => {
     render(<AdminAddButton>Add venue</AdminAddButton>);
-    expect(screen.getByRole("button", { name: "Add venue" })).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: "Add venue" });
+    expect(button).toHaveAttribute("data-variant", "outline-primary");
+    expect(button.querySelector("svg.lucide-plus")).not.toBeNull();
   });
 });

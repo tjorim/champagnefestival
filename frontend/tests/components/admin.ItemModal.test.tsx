@@ -32,6 +32,20 @@ function setup() {
 }
 
 describe("organization description editor", () => {
+  it("requires an explicit temporary-image choice and saves it as public content", async () => {
+    const onSave = setup();
+    fireEvent.change(screen.getByLabelText("organization_image_label"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() => expect(screen.getByText("admin_item_image_required")).toBeInTheDocument());
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "organization_use_placeholder" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ image: "/images/organization-placeholder.svg" }),
+      ),
+    );
+  });
   it("loads and saves descriptions in every language", async () => {
     const onSave = setup();
     expect(screen.getByLabelText("admin_item_description_nl")).toHaveValue("Hallo");

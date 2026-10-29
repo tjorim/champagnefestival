@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { AdminField, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminField,
+  AdminLabel,
+  AdminTextarea,
+} from "@/components/admin/AdminFields";
 import {
   ANSWER_FIELDS,
   type AnswerDraft,
@@ -143,7 +148,7 @@ export default function VolunteerPollOrderDialog({
               size="sm"
               rows={2}
               maxLength={500}
-              className="bg-muted text-content border-input"
+              className={ADMIN_CONTROL_CLASS}
               value={note}
               onChange={(event) => setNote(event.target.value)}
             />

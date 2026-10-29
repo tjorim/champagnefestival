@@ -20,6 +20,7 @@ import {
   fetchAdminPersonOptions,
   type PersonOption,
 } from "@/utils/adminRegistrationApi";
+import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { queryKeys } from "@/utils/queryKeys";
 
@@ -49,6 +50,7 @@ export default function RegistrationNewPersonPanel({
   onUseExisting,
   onCancel,
 }: RegistrationNewPersonPanelProps) {
+  const fieldErrors = usePersonFieldErrors("registration-new-person");
   const queryClient = useQueryClient();
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState("");
@@ -94,6 +96,7 @@ export default function RegistrationNewPersonPanel({
         authHeaders,
       ),
     retry: false,
+    onError: fieldErrors.capture,
     onSuccess: async (person) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.admin.personOptionsRoot }),
@@ -106,6 +109,7 @@ export default function RegistrationNewPersonPanel({
   const submit = () => {
     setAttempted(true);
     if (nameMissing || emailInvalid || createPerson.isPending) return;
+    fieldErrors.clear();
     createPerson.mutate();
   };
 
@@ -134,7 +138,11 @@ export default function RegistrationNewPersonPanel({
         </Alert>
       )}
 
-      <AdminField className="mb-3" controlId="registration-new-person-name">
+      <AdminField
+        className="mb-3"
+        controlId="registration-new-person-name"
+        serverError={fieldErrors.field("name")}
+      >
         <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
         <AdminInput
           maxLength={200}
@@ -149,7 +157,11 @@ export default function RegistrationNewPersonPanel({
       </AdminField>
 
       <div className="flex flex-wrap gap-3 mb-3">
-        <AdminField className="flex-1 min-w-48" controlId="registration-new-person-email">
+        <AdminField
+          className="flex-1 min-w-48"
+          controlId="registration-new-person-email"
+          serverError={fieldErrors.field("email")}
+        >
           <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
           <AdminInput
             type="email"
@@ -160,7 +172,11 @@ export default function RegistrationNewPersonPanel({
           />
           {emailInvalid && <AdminError>{m.registration_errors_email_invalid()}</AdminError>}
         </AdminField>
-        <AdminField className="flex-1 min-w-48" controlId="registration-new-person-phone">
+        <AdminField
+          className="flex-1 min-w-48"
+          controlId="registration-new-person-phone"
+          serverError={fieldErrors.field("phone")}
+        >
           <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
           <AdminInput
             type="tel"

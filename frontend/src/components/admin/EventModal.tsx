@@ -1,6 +1,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrderQuestionsEditor from "@/components/admin/OrderQuestionsEditor";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -260,7 +261,7 @@ export default function EventModal({
                       <>
                         <AdminSelect
                           size="sm"
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           aria-invalid={showErr}
                           value={field.value}
                           onValueChange={(value) => field.handleChange(value)}
@@ -297,7 +298,7 @@ export default function EventModal({
                         <AdminInput
                           type="date"
                           size="sm"
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           readOnly={!isFestival && Boolean(derivedStandaloneDate)}
                           aria-invalid={showErr}
                           value={effectiveDate}
@@ -338,7 +339,7 @@ export default function EventModal({
                         <AdminInput
                           type="time"
                           size="sm"
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
@@ -359,7 +360,7 @@ export default function EventModal({
                     <AdminInput
                       type="time"
                       size="sm"
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -417,7 +418,7 @@ export default function EventModal({
                       <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -434,7 +435,7 @@ export default function EventModal({
                       <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -471,7 +472,7 @@ export default function EventModal({
                       {(field) => (
                         <AdminInput
                           size="sm"
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           maxLength={200}
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -504,7 +505,7 @@ export default function EventModal({
                         <AdminTextarea
                           size="sm"
                           rows={2}
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                           maxLength={10000}
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}

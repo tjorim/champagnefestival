@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
+from app.services.errors import ApiHTTPException
 from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
@@ -56,7 +57,8 @@ async def ensure_unique_fields(
         with db.no_autoflush:
             existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
-            raise HTTPException(
+            raise ApiHTTPException(
+                code="person_niss_conflict",
                 status_code=409,
                 detail="Person with this national register number already exists.",
             )
@@ -68,7 +70,8 @@ async def ensure_unique_fields(
         with db.no_autoflush:
             existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
-            raise HTTPException(
+            raise ApiHTTPException(
+                code="person_eid_conflict",
                 status_code=409,
                 detail="Person with this eID document number already exists.",
             )
@@ -121,7 +124,8 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
     except IntegrityError as exc:
         await db.rollback()
         check_email_integrity(exc)
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_identity_conflict",
             status_code=409,
             detail="Person with this national register number or eID document number already exists.",
         ) from exc
@@ -189,7 +193,8 @@ async def apply_member_update(
     except IntegrityError as exc:
         await db.rollback()
         check_email_integrity(exc)
-        raise HTTPException(
+        raise ApiHTTPException(
+            code="person_identity_conflict",
             status_code=409,
             detail="Person with this national register number or eID document number already exists.",
         ) from exc
