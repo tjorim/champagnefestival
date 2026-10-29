@@ -149,12 +149,14 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
     // The mock server follows the controlled page clock. It is tracked here, not read with
     // page.evaluate() inside the handler, which can outlive the request and the page.
     let serverNow = Date.parse(epoch);
+    let timeRequests = 0;
     const fastForward = async (ms: number) => {
       await page.clock.fastForward(ms);
       serverNow += ms;
     };
     await context.route("**/api/**", (route) => {
       if (route.request().url().endsWith("/time")) {
+        timeRequests++;
         return route.fulfill({ json: { server_time: new Date(serverNow).toISOString() } });
       }
       if (route.request().url().includes("/playlist")) {
@@ -187,6 +189,7 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
     await fastForward(10_000);
     await expect(page.getByText("v2:0", { exact: true })).toBeVisible();
     // Exercise visibility-triggered resynchronization after the boundary assertions.
+    const syncedRequests = timeRequests;
     await page.evaluate(() => {
       (window as unknown as { releaseWake: () => void }).releaseWake();
       document.dispatchEvent(new Event("visibilitychange"));
@@ -194,8 +197,9 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
       .toBe(2);
+    // Let the five-sample resynchronization finish so no request outlives the routes.
+    await expect.poll(() => timeRequests).toBe(syncedRequests + 5);
   } finally {
-    // The visibility sync may still be fetching when the assertions finish.
     await context.unrouteAll({ behavior: "ignoreErrors" });
     await context.close();
   }
