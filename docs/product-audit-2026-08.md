@@ -312,3 +312,15 @@ The synchronized HTML and PNG exports remain independent of this service.
 The full scope and acceptance criteria remain in #1349. This section records
 partial delivery and does not mark the video feature complete or change #1265's
 original HTML/PNG scope.
+
+### Organisation preparation follow-up (#1435, 2026-10-29)
+
+Partial implementation: organisation-specific labels, identity/type/contact first,
+explicit public temporary-image choice (not a private draft), upload-after-save
+guidance, mounted language tabs and a saved-content manager overview precede the
+existing proposal and separate logo upload. Verified-account guidance explicitly
+excludes staff privileges. Laptop (1366×768) and phone (390×844) Chromium setup/contact/save and
+manager-only summary/long-translation checks pass. Component and API tests cover
+proposal submission, acceptance/rejection, access isolation and logo storage.
+Acceptance remains open pending a single combined real-backend browser rehearsal
+of create → contact → proposal → acceptance/rejection. File storage and side-by-side review contracts are unchanged.

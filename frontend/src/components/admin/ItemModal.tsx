@@ -1,3 +1,4 @@
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
 import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
@@ -176,7 +177,7 @@ export default function ItemModal({
         if (!open) void requestClose();
       }}
     >
-      <DialogContent admin size="lg">
+      <DialogContent admin size="lg" aria-busy={saving}>
         <DialogHeader>
           <DialogTitle>
             {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
@@ -190,6 +191,7 @@ export default function ItemModal({
           noValidate
         >
           <DialogBody>
+            <p className="text-sm text-subtle mb-4">{m.organization_setup_help()}</p>
             <AdminField className="mb-4" controlId="item-name">
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_content_name_placeholder()}
@@ -221,130 +223,6 @@ export default function ItemModal({
                 }}
               </form.Field>
             </AdminField>
-            {initial?.id ? (
-              <OrganizationLogoUpload
-                key={initial.id}
-                admin
-                url={`/api/organizations/${initial.id}/logo`}
-                headers={authHeaders}
-                onSaved={(result) => {
-                  if (result.image) form.setFieldValue("image", result.image);
-                  const isCurrent = captureAdminOrganizationsFence();
-                  if (isCurrent())
-                    void queryClient.invalidateQueries({
-                      queryKey: ["admin", "content-management"],
-                    });
-                }}
-              />
-            ) : null}
-            <AdminField className="mb-4" controlId="item-image">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_content_image_url_placeholder()}
-              </AdminLabel>
-              <form.Field
-                name="image"
-                validators={[
-                  {
-                    run: ({ value }) =>
-                      !value?.trim() ? m.admin_item_image_required() : undefined,
-                    triggers: ["change"],
-                  },
-                ]}
-              >
-                {(field) => {
-                  const showErr = field.meta.isTouched && field.errors.length > 0;
-                  return (
-                    <>
-                      <AdminInput
-                        className="bg-muted text-content border-input"
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        aria-invalid={showErr}
-                      />
-                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
-                    </>
-                  );
-                }}
-              </form.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="item-website">
-              <AdminLabel className="text-subtle text-sm">{m.admin_item_website_url()}</AdminLabel>
-              <form.Field
-                name="website"
-                validators={[
-                  {
-                    run: ({ value }) =>
-                      value && !/^https?:\/\/.+/.test(value)
-                        ? m.admin_item_url_invalid()
-                        : undefined,
-                    triggers: ["change"],
-                  },
-                ]}
-              >
-                {(field) => {
-                  const showErr = field.meta.isTouched && field.errors.length > 0;
-                  return (
-                    <>
-                      <AdminInput
-                        type="url"
-                        className="bg-muted text-content border-input"
-                        placeholder="https://…"
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        aria-invalid={showErr}
-                      />
-                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
-                    </>
-                  );
-                }}
-              </form.Field>
-            </AdminField>
-            <p className="text-sm text-subtle mb-4">{m.admin_item_description_help()}</p>
-            {descriptionError && (
-              <AdminError>{m.admin_item_description_original_required()}</AdminError>
-            )}
-            {(["nl", "fr", "en"] as const).map((language) => (
-              <AdminField
-                key={language}
-                className="mb-4"
-                controlId={`item-description-${language}`}
-              >
-                <AdminLabel>
-                  {{
-                    nl: m.admin_item_description_nl,
-                    fr: m.admin_item_description_fr,
-                    en: m.admin_item_description_en,
-                  }[language]()}
-                </AdminLabel>
-                <form.Field name={`description_${language}`}>
-                  {(field) => (
-                    <AdminTextarea
-                      maxLength={600}
-                      value={field.value}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-                <form.Subscribe selector={(state) => state.values}>
-                  {(values) => (
-                    <OrganizationTranslationSuggestion
-                      key={`${show}-${initial?.id ?? "new"}-${language}`}
-                      url="/api/organizations/translation"
-                      headers={authHeaders}
-                      source="nl"
-                      target={language}
-                      text={values.description_nl}
-                      targetText={values[`description_${language}`]}
-                      onDraft={(text) => form.setFieldValue(`description_${language}`, text)}
-                      admin
-                    />
-                  )}
-                </form.Subscribe>
-              </AdminField>
-            ))}
             <AdminField className="mb-4" controlId="item-type">
               <AdminLabel className="text-subtle text-sm">{m.admin_item_type()}</AdminLabel>
               <form.Field name="type">
@@ -414,12 +292,153 @@ export default function ItemModal({
                 )}
               </form.Field>
             </AdminField>
+            {initial?.id ? (
+              <OrganizationLogoUpload
+                key={initial.id}
+                admin
+                url={`/api/organizations/${initial.id}/logo`}
+                headers={authHeaders}
+                onSaved={(result) => {
+                  if (result.image) form.setFieldValue("image", result.image);
+                  const isCurrent = captureAdminOrganizationsFence();
+                  if (isCurrent())
+                    void queryClient.invalidateQueries({
+                      queryKey: ["admin", "content-management"],
+                    });
+                }}
+              />
+            ) : null}
+            <p className="text-sm text-subtle mb-4">{m.organization_image_help()}</p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => form.setFieldValue("image", "/images/organization-placeholder.svg")}
+            >
+              {m.organization_use_placeholder()}
+            </Button>
+            <AdminField className="mb-4" controlId="item-image">
+              <AdminLabel className="text-subtle text-sm">
+                {m.organization_image_label()}
+              </AdminLabel>
+              <form.Field
+                name="image"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.admin_item_image_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <AdminInput
+                        className="bg-muted text-content border-input"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        aria-invalid={showErr}
+                      />
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </AdminField>
+            <AdminField className="mb-4" controlId="item-website">
+              <AdminLabel className="text-subtle text-sm">{m.admin_item_website_url()}</AdminLabel>
+              <form.Field
+                name="website"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      value && !/^https?:\/\/.+/.test(value)
+                        ? m.admin_item_url_invalid()
+                        : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <AdminInput
+                        type="url"
+                        className="bg-muted text-content border-input"
+                        placeholder="https://…"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        aria-invalid={showErr}
+                      />
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </AdminField>
+            <p className="text-sm text-subtle mb-4">{m.admin_item_description_help()}</p>
+            {descriptionError && (
+              <AdminError>{m.admin_item_description_original_required()}</AdminError>
+            )}
+            <Tabs key={sessionId} defaultValue="nl">
+              <TabsList aria-label={m.admin_editor_text()}>
+                {(["nl", "fr", "en"] as const).map((language) => (
+                  <TabsTrigger key={language} value={language}>
+                    {{ nl: m.admin_language_nl, fr: m.admin_language_fr, en: m.admin_language_en }[
+                      language
+                    ]()}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {(["nl", "fr", "en"] as const).map((language) => (
+                <TabsContent key={language} value={language} keepMounted>
+                  <AdminField className="mb-4" controlId={`item-description-${language}`}>
+                    <AdminLabel>
+                      {{
+                        nl: m.admin_item_description_nl,
+                        fr: m.admin_item_description_fr,
+                        en: m.admin_item_description_en,
+                      }[language]()}
+                    </AdminLabel>
+                    <form.Field name={`description_${language}`}>
+                      {(field) => (
+                        <AdminTextarea
+                          maxLength={600}
+                          value={field.value}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                    <form.Subscribe selector={(state) => state.values}>
+                      {(values) => (
+                        <OrganizationTranslationSuggestion
+                          key={`${show}-${initial?.id ?? "new"}-${language}`}
+                          url="/api/organizations/translation"
+                          headers={authHeaders}
+                          source="nl"
+                          target={language}
+                          text={values.description_nl}
+                          targetText={values[`description_${language}`]}
+                          onDraft={(text) => form.setFieldValue(`description_${language}`, text)}
+                          admin
+                        />
+                      )}
+                    </form.Subscribe>
+                  </AdminField>
+                </TabsContent>
+              ))}
+            </Tabs>
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.close()}
             </Button>
-            <Button type="submit" variant="warning" size="sm">
+            <Button type="submit" variant="warning" size="sm" disabled={saving}>
               <Icon icon={SaveIcon} />
               {m.admin_save()}
             </Button>

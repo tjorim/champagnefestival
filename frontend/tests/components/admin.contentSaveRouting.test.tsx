@@ -53,7 +53,7 @@ describe("new content items are created, not updated", () => {
     fireEvent.change(screen.getByLabelText("admin_content_name_placeholder"), {
       target: { value: "New Vendor" },
     });
-    fireEvent.change(screen.getByLabelText("admin_content_image_url_placeholder"), {
+    fireEvent.change(screen.getByLabelText("organization_image_label"), {
       target: { value: "/img/new.png" },
     });
     fireEvent.click(screen.getByRole("button", { name: /admin_save/ }));

@@ -1117,3 +1117,13 @@ outside the scrolling body. This changes presentation only: event creates/update
 product creates/updates, preview tokens and shortage confirmation keep their existing
 request payloads and retry policies. No autosave or automatic write retry is added.
 An ambiguous failure still requires reading current state before another save.
+
+### Organisation setup clarity (#1435)
+
+The explicit temporary-image action only sets the local draft's required `image`
+value to the shipped `/images/organization-placeholder.svg`; it sends no request.
+Saving still uses the existing non-retried organisation create/update operations
+above. Creating is not retry safe; refetch after an ambiguous result before
+creating again. Logo upload remains a separate operation after creation, with
+its existing lock, fresh-name and acceptance rules. Manager text submissions keep
+their existing submission ID and review contract. No automatic retry was added.

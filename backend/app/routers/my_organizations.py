@@ -38,6 +38,7 @@ async def my_organizations(
         {
             "id": row.id,
             "name": row.name,
+            "image": row.image,
             "type": row.type,
             "website": row.website,
             "active": row.active,
