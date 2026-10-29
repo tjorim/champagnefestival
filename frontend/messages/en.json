@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producers and sponsors",
   "signage_editor_notice": "Notice",
   "signage_editor_sample": "Preview with existing content",
-  "signage_editor_no_samples": "No existing sample content for this type. Add content to preview its data.",
+  "signage_editor_no_samples": "Representative sample data is shown because no existing content is available for this type.",
   "signage_editor_missing": "Required visible placeholders missing:",
   "signage_editor_move": "Move layer (arrow keys; Shift for larger steps)",
   "signage_editor_resize": "Resize layer (or use width and height fields)",

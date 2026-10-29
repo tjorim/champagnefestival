@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producenten en sponsors",
   "signage_editor_notice": "Mededeling",
   "signage_editor_sample": "Voorbeeld met bestaande inhoud",
-  "signage_editor_no_samples": "Geen bestaande voorbeeldinhoud voor dit type. Voeg inhoud toe om de gegevens te bekijken.",
+  "signage_editor_no_samples": "Er wordt voorbeeldinhoud getoond omdat er voor dit type nog geen bestaande inhoud is.",
   "signage_editor_missing": "Verplichte zichtbare gegevensvelden ontbreken:",
   "signage_editor_move": "Laag verplaatsen (pijltjestoetsen; Shift voor grotere stappen)",
   "signage_editor_resize": "Laag schalen (of gebruik breedte en hoogte)",

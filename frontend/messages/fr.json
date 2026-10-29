@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producteurs et sponsors",
   "signage_editor_notice": "Annonce",
   "signage_editor_sample": "Prévisualiser avec du contenu existant",
-  "signage_editor_no_samples": "Aucun exemple existant pour ce type. Ajoutez du contenu pour prévisualiser les données.",
+  "signage_editor_no_samples": "Un exemple représentatif est affiché, car aucun contenu existant n'est disponible pour ce type.",
   "signage_editor_missing": "Champs visibles obligatoires manquants :",
   "signage_editor_move": "Déplacer le calque (flèches ; Maj pour de plus grands pas)",
   "signage_editor_resize": "Redimensionner le calque (ou utiliser les champs largeur et hauteur)",
