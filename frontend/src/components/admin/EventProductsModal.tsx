@@ -8,7 +8,7 @@ import {
   AdminCheck,
   AdminDescription,
 } from "@/components/admin/AdminFields";
-import { PencilIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
@@ -47,6 +47,7 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Event, Product, ProductInclusion } from "@/types/event";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 interface EventProductsModalProps {
   show: boolean;
@@ -303,6 +304,7 @@ export default function EventProductsModal({
     const confirmed = await confirm({
       title: m.admin_products_delete_title(),
       body: m.admin_products_delete_confirm({ name: product.name }),
+      confirmLabel: m.admin_delete(),
       errorFallback: m.admin_error_delete_product(),
     });
     if (!confirmed) return;
@@ -674,26 +676,25 @@ export default function EventProductsModal({
             )}
             <span className="text-subtle text-sm">€{product.price.toFixed(2)}</span>
           </span>
-          <span className="flex gap-1 shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
+          <RowActions
+            className="shrink-0"
+            destructive={
+              <RowActionButton
+                destructive
+                icon={TrashIcon}
+                label={m.admin_delete_item({ name: product.name })}
+                onClick={() => handleDelete(product)}
+                disabled={formOpen}
+              />
+            }
+          >
+            <RowActionButton
+              icon={PencilIcon}
+              label={m.admin_edit_item({ name: product.name })}
               onClick={() => openEdit(product)}
               disabled={formOpen && !isBeingEdited}
-              aria-label={m.admin_edit_item({ name: product.name })}
-            >
-              <Icon icon={PencilIcon} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              onClick={() => handleDelete(product)}
-              disabled={formOpen}
-              aria-label={`${m.admin_delete()} ${product.name}`}
-            >
-              <Icon icon={TrashIcon} />
-            </Button>
-          </span>
+            />
+          </RowActions>
         </div>
         {includedTarget && product.includedPerGuests && (
           <div className="text-subtle text-xs">
@@ -821,15 +822,13 @@ export default function EventProductsModal({
             {formOpen && editingId === null && !preview ? (
               renderForm()
             ) : (
-              <Button
+              <AdminAddButton
                 variant="outline"
-                size="sm"
                 onClick={openAdd}
                 disabled={productsQuery.isPending || productsQuery.isError || formOpen}
               >
-                <Icon icon={PlusIcon} />
                 {m.admin_products_add()}
-              </Button>
+              </AdminAddButton>
             )}
           </DialogBody>
           <DialogFooter>

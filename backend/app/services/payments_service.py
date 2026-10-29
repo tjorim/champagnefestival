@@ -42,7 +42,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id
+from app.utils import edition_display_name, make_id
 
 PAYMENT_TRANSACTION_SCOPE = "payments.record_transaction"
 
@@ -181,7 +181,7 @@ def ledger_row_to_dict(txn: PaymentTransaction, registration: Registration, pers
         **payment_transaction_to_dict(txn),
         "person_name": person.name,
         "event_title": event.title,
-        "edition_label": f"{edition.year} {edition.month}" if edition else "",
+        "edition_label": edition_display_name(edition) if edition else "",
     }
 
 

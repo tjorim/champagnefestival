@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole("button", { name: /^Registrations(?:\s|\d|$)/ }).click();
   // The toolbar sits partly under the fixed header at this size (list layout: #1427), so a
   // pointer click is intercepted; activate the button directly.
-  await page.getByRole("button", { name: "Add Registration" }).dispatchEvent("click");
+  await page.getByRole("button", { name: "Add registration" }).dispatchEvent("click");
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 

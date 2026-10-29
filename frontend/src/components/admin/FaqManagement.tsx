@@ -1,4 +1,5 @@
 import { AdminEmptyState } from "./AdminEmptyState";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import { Button } from "@/components/ui/button";
 import {
   ChevronDownIcon,
@@ -6,7 +7,6 @@ import {
   EyeIcon,
   EyeOffIcon,
   PencilIcon,
-  PlusIcon,
   TrashIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -205,7 +205,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     async (item: FaqItem) => {
       const confirmed = await confirm({
         title: m.admin_faq_delete_title(),
-        body: m.admin_faq_delete_confirm(),
+        body: m.admin_faq_delete_confirm({ question: dutchText(item).question }),
+        confirmLabel: m.admin_delete(),
         errorFallback: m.admin_error_delete_faq_item(),
       });
       if (!confirmed) return;
@@ -277,8 +278,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 className="p-0 text-content"
                 disabled={row.index === 0 || isMutating}
                 onClick={() => handleMove(row.original, "up")}
-                aria-label={m.admin_faq_move_up()}
-                title={m.admin_faq_move_up()}
+                aria-label={m.admin_faq_move_up_named({ name: dutchText(row.original).question })}
+                title={m.admin_faq_move_up_named({ name: dutchText(row.original).question })}
               >
                 <Icon icon={ChevronUpIcon} />
               </Button>
@@ -288,8 +289,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 className="p-0 text-content"
                 disabled={row.index === sortedItems.length - 1 || isMutating}
                 onClick={() => handleMove(row.original, "down")}
-                aria-label={m.admin_faq_move_down()}
-                title={m.admin_faq_move_down()}
+                aria-label={m.admin_faq_move_down_named({ name: dutchText(row.original).question })}
+                title={m.admin_faq_move_down_named({ name: dutchText(row.original).question })}
               >
                 <Icon icon={ChevronDownIcon} />
               </Button>
@@ -309,7 +310,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   {original.question}
                   {!item.active && (
                     <Badge variant="secondary" className="ms-2 text-tiny">
-                      {m.admin_venue_archived_badge()}
+                      {m.admin_faq_hidden_badge()}
                     </Badge>
                   )}
                   {languageBadge("NL", Boolean(item.questionNl && item.answerNl))}
@@ -327,39 +328,34 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           enableSorting: false,
           cell: ({ row }) => {
             const item = row.original;
+            const name = dutchText(item).question;
             return (
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
+              <RowActions
+                destructive={
+                  <RowActionButton
+                    destructive
+                    icon={TrashIcon}
+                    label={m.admin_delete_item({ name })}
+                    disabled={isMutating}
+                    onClick={() => handleDelete(item)}
+                  />
+                }
+              >
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name })}
                   disabled={isMutating}
                   onClick={() => openEdit(item)}
-                  aria-label={m.admin_edit()}
-                  title={m.admin_edit()}
-                >
-                  <Icon icon={PencilIcon} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
+                />
+                <RowActionButton
+                  icon={item.active ? EyeOffIcon : EyeIcon}
+                  label={
+                    item.active ? m.admin_faq_hide_item({ name }) : m.admin_faq_show_item({ name })
+                  }
                   disabled={isMutating}
                   onClick={() => handleToggleActive(item)}
-                  aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
-                  title={item.active ? m.admin_content_archive() : m.admin_content_restore()}
-                >
-                  <Icon icon={item.active ? EyeOffIcon : EyeIcon} />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  disabled={isMutating}
-                  onClick={() => handleDelete(item)}
-                  aria-label={m.admin_delete()}
-                  title={m.admin_delete()}
-                >
-                  <Icon icon={TrashIcon} />
-                </Button>
-              </div>
+                />
+              </RowActions>
             );
           },
         }),
@@ -374,10 +370,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       <Card tone="secondary">
         <CardHeader className="flex items-center justify-between">
           <span className="font-semibold">{m.admin_content_faq_section()}</span>
-          <Button variant="outline-warning" size="sm" onClick={openAdd}>
-            <Icon icon={PlusIcon} />
-            {m.admin_add_faq_item()}
-          </Button>
+          <AdminAddButton onClick={openAdd}>{m.admin_add_faq_item()}</AdminAddButton>
         </CardHeader>
         <CardContent className="p-0">
           {rowError && (

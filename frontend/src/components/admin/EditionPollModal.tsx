@@ -35,6 +35,7 @@ import PollOrdersTable from "./PollOrdersTable";
 import PollQuestionCard, { QuestionTextFields, PollEventField } from "./PollQuestionCard";
 import VolunteerPollOrderDialog from "./VolunteerPollOrderDialog";
 import type { Edition } from "./editionTypes";
+import { editionDisplayName } from "@/utils/editionName";
 
 interface EditionPollModalProps {
   show: boolean;
@@ -186,6 +187,7 @@ export default function EditionPollModal({
           )}
         </>
       ),
+      confirmLabel: m.admin_delete(),
       errorFallback: m.admin_content_error_save(),
       variant: "danger",
     });
@@ -218,7 +220,9 @@ export default function EditionPollModal({
     >
       <DialogContent admin size="lg">
         <DialogHeader>
-          <DialogTitle>{m.admin_poll_modal_title({ edition: edition?.id ?? "" })}</DialogTitle>
+          <DialogTitle>
+            {m.admin_poll_modal_title({ edition: edition ? editionDisplayName(edition) : "" })}
+          </DialogTitle>
         </DialogHeader>
         <DialogBody>
           <p className="text-sm text-subtle">{m.admin_poll_modal_description()}</p>

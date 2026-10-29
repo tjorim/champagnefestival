@@ -11,6 +11,10 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ## [Unreleased]
 
+### Changed
+
+- Admin screens follow one action pattern (#1439, guide in `docs/frontend-ui.md`): row actions are icon buttons named after the action and the row, with Delete last behind a divider; "Add …" is one outlined button style and wording everywhere; editions are shown as "March 2027" instead of `2027-march` (also in ledger rows and the payments CSV); the sidebar header no longer repeats "Admin Dashboard". Every delete confirmation names the item, says what is refused or lost, and its button says "Delete" instead of "Confirm". The venue and layout confirmations no longer claim that rooms and tables are deleted along with them: the API refuses until none remain. Deleting a room now asks first.
+
 ### Fixed
 
 - The cascade layer order is declared before the first `@layer components` rule in `index.html`. The inline style that hides the server fragment mentioned `components` first, which put the runtime themes below Tailwind's preflight: the fixed header covered the top of the page, and theme headings and spacing were reset. The mobile sort controls of admin tables are exposed as a labelled group.

@@ -24,6 +24,7 @@ import {
   AdminOption,
 } from "./AdminFields";
 import AdminEditorDialog from "./AdminEditorDialog";
+import { AdminAddButton } from "./RowActions";
 
 const empty: StampCardTypeWrite = {
   name_nl: "",
@@ -262,9 +263,9 @@ export default function StampCardTypes({
             ))}
           </>
         )}
-        <Button variant="outline-primary" onClick={() => setEditing(null)}>
+        <AdminAddButton size="default" onClick={() => setEditing(null)}>
           {m.stamp_add_type()}
-        </Button>
+        </AdminAddButton>
         {editing !== undefined && (
           <TypeEditor
             value={editing}

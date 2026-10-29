@@ -21,7 +21,6 @@ import {
   EuroIcon,
   FileSpreadsheetIcon,
   LogInIcon,
-  PlusIcon,
   PencilIcon,
   QrCodeIcon,
   ShoppingCartIcon,
@@ -77,6 +76,8 @@ import { toLocalDateKey } from "@/utils/dateUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { devError } from "@/utils/devLog";
+import { editionDisplayNameWithType } from "@/utils/editionName";
+import { AdminAddButton } from "./RowActions";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
@@ -1132,10 +1133,9 @@ export default function RegistrationList({
                 )}
                 {m.admin_export_csv()}
               </Button>
-              <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-                <Icon icon={PlusIcon} />
+              <AdminAddButton onClick={() => setShowCreateModal(true)}>
                 {m.admin_add_registration()}
-              </Button>
+              </AdminAddButton>
             </div>
           </div>
           <AdminInput
@@ -1211,13 +1211,8 @@ export default function RegistrationList({
                       pressed={activeEditionOnly}
                       onPressedChange={toggleActiveEditionOnly}
                     >
-                      {m.admin_filter_active_edition()}:{" "}
-                      {activeEdition.editionType === "festival"
-                        ? m.festival_name()
-                        : activeEdition.editionType === "bourse"
-                          ? m.admin_edition_type_bourse()
-                          : m.admin_edition_type_capsule_exchange()}{" "}
-                      {activeEdition.year} ({editionCounts.active})
+                      {m.admin_filter_active_edition()}: {editionDisplayNameWithType(activeEdition)}{" "}
+                      ({editionCounts.active})
                     </Toggle>
                   </div>
                   {allocationOptions.length > 0 && (

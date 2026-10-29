@@ -50,6 +50,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import "./analyticsDashboard.css";
+import { editionDisplayName } from "@/utils/editionName";
 
 interface AnalyticsDashboardProps {
   authHeaders: () => Record<string, string>;
@@ -101,7 +102,7 @@ interface AttendanceRow {
 }
 
 function editionLabel(edition: EditionAttendanceStats): string {
-  return `${edition.year} ${edition.month}`;
+  return editionDisplayName(edition);
 }
 
 export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
@@ -388,9 +389,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           <TableBody>
             {editions.map((edition) => (
               <TableRow key={edition.editionId}>
-                <TableCell>
-                  {edition.year} {edition.month}
-                </TableCell>
+                <TableCell>{editionLabel(edition)}</TableCell>
                 <TableCell>{edition.eventsCount}</TableCell>
                 <TableCell>{edition.totalRegistrations}</TableCell>
                 <TableCell>{edition.totalGuests}</TableCell>
@@ -416,12 +415,12 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                       setLedgerSorting([]);
                       setLedgerEdition({
                         id: edition.editionId,
-                        label: `${edition.year} ${edition.month}`,
+                        label: editionLabel(edition),
                       });
                     }}
                     title={m.admin_payment_view_ledger()}
                     aria-label={m.admin_payment_view_ledger_for({
-                      edition: `${edition.year} ${edition.month}`,
+                      edition: editionLabel(edition),
                     })}
                   >
                     <Icon icon={NotebookTextIcon} />
@@ -434,7 +433,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     onClick={() => void handleExportLedger(edition.editionId)}
                     title={m.admin_analytics_export_ledger()}
                     aria-label={m.admin_analytics_export_ledger_for({
-                      edition: `${edition.year} ${edition.month}`,
+                      edition: editionLabel(edition),
                     })}
                   >
                     {exportingEditionId === edition.editionId ? (

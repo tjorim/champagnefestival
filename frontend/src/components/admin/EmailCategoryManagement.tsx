@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
 import { fetchVoidOrThrowWithUnauthorized } from "@/utils/adminApi";
@@ -23,11 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Icon } from "@/components/Icon";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminCheck, AdminField, AdminInput, AdminLabel, AdminTextarea } from "./AdminFields";
 import AdminEditorDialog from "./AdminEditorDialog";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const KEY_PATTERN = /^[a-z][a-z0-9_-]{0,49}$/;
 const LOCALES = ["nl", "fr", "en"] as const;
@@ -254,6 +254,7 @@ export default function EmailCategoryManagement({
     const confirmed = await confirm({
       title: m.email_category_delete_title(),
       body: m.email_category_delete_confirm({ name: category.name }),
+      confirmLabel: m.admin_delete(),
       errorFallback: m.email_category_delete_error(),
     });
     if (!confirmed) return;
@@ -275,10 +276,7 @@ export default function EmailCategoryManagement({
       <Card tone="secondary">
         <CardHeader className="flex items-center justify-between">
           <span className="font-semibold">{m.admin_email_categories_section()}</span>
-          <Button variant="outline-warning" size="sm" onClick={() => setEditing(null)}>
-            <Icon icon={PlusIcon} />
-            {m.email_category_add()}
-          </Button>
+          <AdminAddButton onClick={() => setEditing(null)}>{m.email_category_add()}</AdminAddButton>
         </CardHeader>
         <CardContent className="p-0">
           <p className="text-sm text-subtle m-4 mb-0">{m.email_categories_intro()}</p>
@@ -327,26 +325,22 @@ export default function EmailCategoryManagement({
                     </TableCell>
                     <TableCell>{category.sort_order}</TableCell>
                     <TableCell className="w-px whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
+                      <RowActions
+                        destructive={
+                          <RowActionButton
+                            destructive
+                            icon={TrashIcon}
+                            label={m.admin_delete_item({ name: category.name })}
+                            onClick={() => void remove(category)}
+                          />
+                        }
+                      >
+                        <RowActionButton
+                          icon={PencilIcon}
+                          label={m.admin_edit_item({ name: category.name })}
                           onClick={() => setEditing(category)}
-                          aria-label={`${m.admin_edit()} ${category.key}`}
-                          title={m.admin_edit()}
-                        >
-                          <Icon icon={PencilIcon} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          onClick={() => void remove(category)}
-                          aria-label={`${m.admin_delete()} ${category.key}`}
-                          title={m.admin_delete()}
-                        >
-                          <Icon icon={TrashIcon} />
-                        </Button>
-                      </div>
+                        />
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -8,7 +8,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PencilIcon,
-  PlusIcon,
   RotateCcwIcon,
   TrashIcon,
   UserIcon,
@@ -52,6 +51,9 @@ import {
   saveContentSectionItem,
   updateContentSectionItemActive,
 } from "@/utils/adminContentApi";
+import { editionDisplayName } from "@/utils/editionName";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 function typeBadgeVariant(type: string | undefined): BadgeVariant {
   switch (type) {
@@ -124,6 +126,7 @@ export function ContentSection({
 }: ContentSectionProps) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -152,7 +155,7 @@ export function ContentSection({
     const editions = editionsQuery.data ?? [];
     const map = new Map<number, string[]>();
     for (const edition of editions) {
-      const label = `${edition.year} – ${edition.month}`;
+      const label = editionDisplayName(edition);
       for (const item of [
         ...(edition.producers ?? []),
         ...(edition.sponsors ?? []),
@@ -318,7 +321,15 @@ export function ContentSection({
   );
 
   const handleDelete = useCallback(
-    async (id: number) => {
+    async (item: ItemDraft) => {
+      const confirmed = await confirm({
+        title: m.admin_item_delete_title(),
+        body: m.admin_item_delete_confirm({ name: item.name }),
+        confirmLabel: m.admin_delete(),
+        errorFallback: m.admin_item_delete_error(),
+      });
+      if (!confirmed) return;
+      const id = item.id;
       setActionError(null);
       const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
@@ -331,7 +342,7 @@ export function ContentSection({
         setActionError(apiErrorMessage(error, m.admin_content_error_save()));
       }
     },
-    [captureFence, deleteItemMutation, onItemDeleted, queryClient, sectionKey],
+    [captureFence, confirm, deleteItemMutation, onItemDeleted, queryClient, sectionKey],
   );
 
   const handleBulkArchive = useCallback(async () => {
@@ -424,49 +435,41 @@ export function ContentSection({
             </small>
           )}
         </span>
-        <span className="flex gap-1 shrink-0">
+        <RowActions
+          className="shrink-0"
+          destructive={
+            isArchived ? (
+              <RowActionButton
+                destructive
+                icon={TrashIcon}
+                label={m.admin_delete_item({ name: item.name })}
+                onClick={() => handleDelete(item)}
+              />
+            ) : undefined
+          }
+        >
           {!isArchived && (
-            <Button
-              variant="outline"
-              size="sm"
+            <RowActionButton
+              icon={PencilIcon}
+              label={m.admin_edit_item({ name: item.name })}
               onClick={() => openEdit(item)}
-              aria-label={m.admin_edit_item({ name: item.name })}
-            >
-              <Icon icon={PencilIcon} />
-            </Button>
+            />
           )}
           {!isArchived ? (
-            <Button
-              variant="outline"
-              size="sm"
+            <RowActionButton
+              icon={ArchiveIcon}
+              label={`${m.admin_content_archive()}: ${item.name}`}
               onClick={() => handleArchive(item.id)}
-              aria-label={`${m.admin_content_archive()} ${item.name}`}
-              title={m.admin_content_archive()}
-            >
-              <Icon icon={ArchiveIcon} />
-            </Button>
+            />
           ) : (
-            <>
-              <Button
-                variant="outline-success"
-                size="sm"
-                onClick={() => handleRestore(item.id)}
-                aria-label={`${m.admin_content_restore()} ${item.name}`}
-                title={m.admin_content_restore()}
-              >
-                <Icon icon={RotateCcwIcon} />
-              </Button>
-              <Button
-                variant="outline-danger"
-                size="sm"
-                onClick={() => handleDelete(item.id)}
-                aria-label={`${m.admin_delete()} ${item.name}`}
-              >
-                <Icon icon={TrashIcon} />
-              </Button>
-            </>
+            <RowActionButton
+              variant="outline-success"
+              icon={RotateCcwIcon}
+              label={`${m.admin_content_restore()}: ${item.name}`}
+              onClick={() => handleRestore(item.id)}
+            />
           )}
-        </span>
+        </RowActions>
       </PresentationListItem>
     );
   }
@@ -494,10 +497,7 @@ export function ContentSection({
             </Badge>
           )}
         </h2>
-        <Button variant="outline-primary" size="sm" onClick={openAdd}>
-          <Icon icon={PlusIcon} />
-          {m.admin_content_add_item()}
-        </Button>
+        <AdminAddButton onClick={openAdd}>{m.admin_content_add_item()}</AdminAddButton>
       </div>
       <div className="flex flex-wrap gap-2 items-center mb-2">
         <ToggleGroup
@@ -544,6 +544,7 @@ export function ContentSection({
           {m.admin_content_error_load()}
         </Alert>
       )}
+      {confirmDialog}
       {actionError && (
         <Alert
           role="alert"
@@ -735,10 +736,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
             ))}
           </ToggleGroup>
         </div>
-        <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
-          <Icon icon={PlusIcon} />
+        <AdminAddButton onClick={() => setAddModalOpen(true)}>
           {m.admin_content_edition_add()}
-        </Button>
+        </AdminAddButton>
       </div>
 
       {editionsQuery.isPending && (

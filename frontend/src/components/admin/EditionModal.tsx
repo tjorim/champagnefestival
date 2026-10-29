@@ -50,6 +50,7 @@ import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchEditionModalOrganizations, saveEdition } from "@/utils/adminContentApi";
+import { editionDisplayName } from "@/utils/editionName";
 
 interface EditionModalProps {
   show: boolean;
@@ -311,7 +312,7 @@ export default function EditionModal({
         <DialogHeader>
           <DialogTitle>
             {isEdit
-              ? m.admin_edition_edit_title({ id: record!.id })
+              ? m.admin_edit_item({ name: editionDisplayName(record!) })
               : m.admin_content_edition_add()}
           </DialogTitle>
         </DialogHeader>

@@ -86,7 +86,7 @@ describe("ComposerManagement", () => {
 
     renderComposer();
     await screen.findByText("No composed messages yet.");
-    fireEvent.click(screen.getByRole("button", { name: "New message draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add message draft" }));
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Nieuwe titel" } });
     fireEvent.change(screen.getByLabelText("Body"), { target: { value: "Nieuwe inhoud" } });
@@ -148,7 +148,7 @@ describe("ComposerManagement", () => {
 
     renderComposer();
     await screen.findByText("No composed messages yet.");
-    fireEvent.click(screen.getByRole("button", { name: "New message draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add message draft" }));
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Ruilbeurs" } });
     fireEvent.change(screen.getByLabelText("Body"), { target: { value: "Zaterdag" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "Email to members" }));
@@ -407,7 +407,7 @@ describe("ComposerManagement", () => {
     );
     renderComposer();
     await screen.findByText("No composed messages yet.");
-    fireEvent.click(screen.getByRole("button", { name: "New message draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add message draft" }));
     const button = screen.getByRole("button", { name: "Create draft" });
     fireEvent.click(button);
     await waitFor(() => expect(button).toBeDisabled());

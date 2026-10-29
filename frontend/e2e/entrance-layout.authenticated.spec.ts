@@ -147,7 +147,7 @@ for (const viewport of [
       await page.screenshot({ path: testInfo.outputPath("booking-detail.png") });
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
-      await page.getByRole("button", { name: "Add Registration", exact: true }).click();
+      await page.getByRole("button", { name: "Add registration", exact: true }).click();
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: "Create", exact: true }).click();
       await expect(

@@ -2,7 +2,13 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUpIcon, ChevronDownIcon, GripVerticalIcon } from "lucide-react";
+import {
+  ChevronUpIcon,
+  ChevronDownIcon,
+  GripVerticalIcon,
+  LinkIcon,
+  PencilIcon,
+} from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
@@ -44,6 +50,8 @@ import { signageIcons } from "@/signage/icons";
 import "@/signage/editor.css";
 import SignageVideoExports from "./SignageVideoExports";
 import AdminEditorDialog from "./AdminEditorDialog";
+import { editionDisplayName } from "@/utils/editionName";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const channelPath = (slug: string) => `/signage/${slug}`;
 
@@ -338,12 +346,16 @@ export default function SignageChannels({
       await refresh();
     });
   }
-  async function confirmRemove(resource: "channels" | "slides", id: string) {
+  async function confirmRemove(resource: "channels" | "slides", id: string, name: string) {
     if (
       await confirm({
         title:
           resource === "channels" ? m.signage_channels_delete() : m.signage_channels_delete_slide(),
-        body: m.signage_channels_delete_confirm(),
+        body:
+          resource === "channels"
+            ? m.signage_channels_delete_confirm({ name })
+            : m.signage_channels_delete_slide_confirm({ name }),
+        confirmLabel: m.admin_delete(),
         errorFallback: m.signage_channels_error(),
       })
     )
@@ -426,9 +438,7 @@ export default function SignageChannels({
       {status && <p role="status">{status}</p>}
       <SignageVideoExports channels={channels.data ?? []} authHeaders={authHeaders} />
       <fieldset disabled={busy} className="space-y-4">
-        <Button className="hover:bg-primary" onClick={() => openChannel()}>
-          {m.signage_channels_new()}
-        </Button>
+        <AdminAddButton onClick={() => openChannel()}>{m.signage_channels_new()}</AdminAddButton>
         <ul className="space-y-2">
           {channels.data?.map((item) => (
             <li key={item.id} className="flex flex-wrap items-center gap-2">
@@ -439,26 +449,31 @@ export default function SignageChannels({
               >
                 {item.name}
               </Button>
-              <Button variant="outline" onClick={() => openChannel(item)}>
-                {m.admin_edit_item({ name: item.name })}
-              </Button>
+              <RowActions>
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name: item.name })}
+                  onClick={() => openChannel(item)}
+                />
+                <RowActionButton
+                  icon={LinkIcon}
+                  label={m.signage_channels_copy({ name: item.name })}
+                  onClick={() =>
+                    void run(async () => {
+                      await navigator.clipboard.writeText(
+                        `${location.origin}/signage/${item.slug}`,
+                      );
+                      setStatus(m.signage_channels_copied());
+                    })
+                  }
+                />
+              </RowActions>
               <span>
                 {item.active ? m.signage_channels_active() : m.signage_channels_inactive()}
               </span>
               <a href={channelPath(item.slug)} target="_blank" rel="noreferrer">
                 {channelPath(item.slug)}
               </a>
-              <Button
-                className="hover:bg-primary"
-                onClick={() =>
-                  void run(async () => {
-                    await navigator.clipboard.writeText(`${location.origin}/signage/${item.slug}`);
-                    setStatus(m.signage_channels_copied());
-                  })
-                }
-              >
-                {m.signage_channels_copy({ name: item.name })}
-              </Button>
               {[true, false].map((bundle) => (
                 <Button
                   key={String(bundle)}
@@ -561,7 +576,7 @@ export default function SignageChannels({
                     <AdminOption value="">—</AdminOption>
                     {editions.data?.map((item) => (
                       <AdminOption key={item.id} value={item.id}>
-                        {item.year} · {item.month}
+                        {editionDisplayName(item)}
                       </AdminOption>
                     ))}
                   </AdminSelect>
@@ -584,9 +599,7 @@ export default function SignageChannels({
             <h3>
               {channel.name} · {m.signage_channels_playlist()}
             </h3>
-            <Button className="hover:bg-primary" onClick={() => edit()}>
-              {m.signage_channels_add()}
-            </Button>
+            <AdminAddButton onClick={() => edit()}>{m.signage_channels_add()}</AdminAddButton>
             <DragDropProvider
               onDragEnd={(event) => {
                 if (!event.canceled && isSortable(event.operation.source)) {
@@ -624,7 +637,7 @@ export default function SignageChannels({
                   <Button
                     variant="destructive"
                     disabled={busy}
-                    onClick={() => void confirmRemove("slides", slideId)}
+                    onClick={() => void confirmRemove("slides", slideId, label(draft))}
                   >
                     {m.signage_channels_delete_slide()}
                   </Button>
@@ -833,7 +846,7 @@ export default function SignageChannels({
             variant="destructive"
             className="text-content"
             onClick={() => {
-              void confirmRemove("channels", channelId);
+              void confirmRemove("channels", channelId, channel.name);
             }}
           >
             {m.signage_channels_delete()}

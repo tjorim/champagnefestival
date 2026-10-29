@@ -264,6 +264,84 @@ The generated-tab replacement was verified with 1,187 frontend unit tests, 47
 Chromium browser cases (admin flows plus public schedule/account widgets in all
 six themes at desktop/mobile widths), lint, formatting and the production build.
 
+## Admin action patterns (#1439)
+
+One way to do the same task on every admin screen. The components live in
+`frontend/src/components/admin/RowActions.tsx`; new screens use them instead of
+laying out their own buttons.
+
+### Row actions
+
+`RowActions` and `RowActionButton` render the actions of a list row or card.
+
+- Actions are icon-only outlined small buttons. The tooltip (`title`) and the
+  accessible name are the same string and name both the action and the row:
+  "Edit March 2027", "Hide “Where do I park?” from visitors". Use
+  `m.admin_edit_item({ name })` and `m.admin_delete_item({ name })`; for other
+  actions write "<Action>: <name>". A label that only says "Edit" is not enough
+  once there are many rows.
+- Order: everyday actions first (compose, consent, edit, then archive, restore,
+  hide or show), then the destructive action in the `destructive` slot. The slot
+  puts a divider in front of it so Delete is never directly beside Edit.
+- Delete (and deactivate) uses the destructive outline variant and is last. A
+  deactivation, which keeps the records, uses a person icon (`UserMinusIcon`),
+  not the trash can.
+- One icon means one thing on a screen. Email consent is `ShieldCheckIcon`;
+  `MailIcon` is only for composing an email.
+- State is shown in the row, not in the button. A hidden FAQ question or a
+  disabled announcement carries a badge ("Hidden", "Disabled"); the button names
+  the action it will do ("Show …", "Publish …") and its icon is that action's
+  (`EyeIcon` to show, `EyeOffIcon` to hide).
+- Text buttons are for actions that need a word to be understood and have no
+  stable icon (for example stamp cards, sending a message, and the Screens
+  download buttons). Do not mix text and icon buttons for the same kind of action
+  across screens.
+- Controls inside a detail card or an unsaved form follow the same order and
+  naming. In the floor-plan editor the table and area headers put the delete
+  button after a `RowActionDivider`. The remove button of an unsaved help period
+  in the volunteer form stays a labelled text button because it only edits the
+  draft.
+
+### Primary action
+
+`AdminAddButton` is the "Add …" action at the top of a section: outlined, small,
+with a plus icon. The label is "Add <thing>" in sentence case ("Add registration",
+"Add announcement", "Add layout"); never "New …" or Title Case. Create dialogs use
+the same string as their title. A nested add inside a card (rooms in a venue,
+events in an edition) passes `variant="outline"` so it stays below the section's
+primary action.
+
+### Names
+
+- An edition is `editionDisplayName` (`frontend/src/utils/editionName.ts`):
+  "March 2027". Never show its id (`2027-march`). The backend builds the same
+  string for ledger rows and the payments CSV (`edition_display_name` in
+  `backend/app/utils.py`); keep the two in step. Where the edition type matters
+  and cannot be assumed (the active-edition strip and filter), use
+  `editionDisplayNameWithType`: "Champagnefestival · March 2027".
+- The page title "Admin Dashboard" appears once, in the top bar; the sidebar
+  header is labelled "Sections".
+- Announcements have no title, so they are named by their Dutch text, shortened
+  (`announcementName`).
+
+### Confirming a destructive action
+
+Use `ConfirmModal` or `useConfirmDialog`; never an inline Confirm/Cancel pair and
+never `window.confirm`.
+
+1. Title: the action and the kind of thing ("Delete venue").
+2. Body, in this order: name the item in quotes; what else is lost or refused;
+   "This cannot be undone." only when it is true. Check the backend before
+   promising a cascade: venues, layouts, table types and tables are refused while
+   something still uses them, and the text says so rather than claiming the
+   children are deleted.
+3. Confirm button: the action ("Delete", "Deactivate membership", "Archive"),
+   never "Confirm". Cancel stays "Cancel".
+4. Failures show inside the dialog with the translated fallback and keep it open.
+
+Reversible changes (archive, restore, hide, reorder) do not ask. Archive of a
+venue asks because it hides it from new editions.
+
 ## Shared admin controls (2026-10-19, PR #1356)
 
 Sidebar, Toggle Group, Skeleton, Empty and Pagination were generated from the

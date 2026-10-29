@@ -1,6 +1,6 @@
 import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
-import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
+import { SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useLayoutEffect, useMemo, useState } from "react";
@@ -20,6 +20,7 @@ import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirt
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
+import { AdminAddButton } from "./RowActions";
 
 interface VolunteerFormModalProps {
   show: boolean;
@@ -266,15 +267,9 @@ export default function VolunteerFormModal({
                 <AdminLabel className="text-subtle text-sm mb-0">
                   {m.admin_volunteers_help_periods_label()}
                 </AdminLabel>
-                <Button
-                  type="button"
-                  variant="outline-warning"
-                  size="sm"
-                  onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}
-                >
-                  <Icon icon={CirclePlusIcon} />
+                <AdminAddButton onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}>
                   {m.admin_volunteers_add_help_period()}
-                </Button>
+                </AdminAddButton>
               </div>
 
               {helpPeriods.length === 0 ? (

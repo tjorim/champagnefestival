@@ -50,7 +50,7 @@ for (const kind of ["announcements", "composer"] as const) {
       await page.getByRole("button", { name: "Announcements", exact: true }).click();
       if (kind === "composer")
         await page.getByRole("tab", { name: "Compose & send", exact: true }).click();
-      const newLabel = kind === "composer" ? "New message draft" : "New announcement";
+      const newLabel = kind === "composer" ? "Add message draft" : "Add announcement";
       const editLabel = kind === "composer" ? "Edit message draft" : "Edit announcement";
       const fieldLabel = kind === "composer" ? "Title" : "Text (NL)";
       const createLabel = kind === "composer" ? "Create draft" : "Create";
@@ -77,7 +77,7 @@ for (const kind of ["announcements", "composer"] as const) {
       ).toMatchObject([{ path: `/api/${kind}`, method: "POST" }]);
       const row = page.getByRole("row").filter({ hasText: "Doors open at six" });
       await expect(row).toBeVisible();
-      await row.getByRole("button", { name: "Edit", exact: true }).click();
+      await row.getByRole("button", { name: /^Edit/ }).click();
       const editing = page.getByRole("dialog", { name: editLabel, exact: true });
       const field = editing.getByLabel(fieldLabel, { exact: true });
       await expect(field).toHaveValue("Doors open at six");
@@ -90,8 +90,8 @@ for (const kind of ["announcements", "composer"] as const) {
       await editing.getByRole("button", { name: "Close", exact: true }).click();
       await discard.getByRole("button", { name: "Discard changes", exact: true }).click();
       await expect(editing).toHaveCount(0);
-      await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeFocused();
-      await row.getByRole("button", { name: "Edit", exact: true }).click();
+      await expect(row.getByRole("button", { name: /^Edit/ })).toBeFocused();
+      await row.getByRole("button", { name: /^Edit/ }).click();
       await expect(field).toHaveValue("Doors open at six");
       await field.fill("Doors open at seven");
       if (kind === "composer") {
@@ -117,7 +117,7 @@ for (const kind of ["announcements", "composer"] as const) {
       await expect(editing).toHaveCount(0);
       const updatedRow = page.getByRole("row").filter({ hasText: "Doors open at seven" });
       await expect(updatedRow).toBeVisible();
-      await expect(updatedRow.getByRole("button", { name: "Edit", exact: true })).toBeFocused();
+      await expect(updatedRow.getByRole("button", { name: /^Edit/ })).toBeFocused();
       await newButton.click();
       await expect(dialog.getByLabel(fieldLabel, { exact: true })).toHaveValue("");
       await dialog.getByRole("button", { name: "Cancel", exact: true }).click();

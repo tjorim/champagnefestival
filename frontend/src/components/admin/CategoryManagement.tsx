@@ -10,7 +10,7 @@ import { AdminEmptyState } from "./AdminEmptyState";
 
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -32,7 +32,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
-import { Icon } from "@/components/Icon";
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
@@ -43,6 +42,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 export type CategoryKind = "event" | "product";
 
@@ -192,6 +192,7 @@ export default function CategoryManagement({
       const confirmed = await confirm({
         title: m.admin_category_delete_title(),
         body: config.deleteConfirm(category.label),
+        confirmLabel: m.admin_delete(),
         errorFallback: m.admin_error_delete_category(),
       });
       if (!confirmed) return;
@@ -212,10 +213,7 @@ export default function CategoryManagement({
       <Card tone="secondary">
         <CardHeader className="flex items-center justify-between">
           <span className="font-semibold">{config.section()}</span>
-          <Button variant="outline-warning" size="sm" onClick={openAdd}>
-            <Icon icon={PlusIcon} />
-            {m.admin_add_category()}
-          </Button>
+          <AdminAddButton onClick={openAdd}>{m.admin_add_category()}</AdminAddButton>
         </CardHeader>
         <CardContent className="p-0">
           {rowError && (
@@ -256,28 +254,24 @@ export default function CategoryManagement({
                     ))}
                     <TableCell>{category.sortOrder}</TableCell>
                     <TableCell className="w-px whitespace-nowrap">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
+                      <RowActions
+                        destructive={
+                          <RowActionButton
+                            destructive
+                            icon={TrashIcon}
+                            label={m.admin_delete_item({ name: category.label })}
+                            disabled={busy}
+                            onClick={() => handleDelete(category)}
+                          />
+                        }
+                      >
+                        <RowActionButton
+                          icon={PencilIcon}
+                          label={m.admin_edit_item({ name: category.label })}
                           disabled={busy}
                           onClick={() => openEdit(category)}
-                          aria-label={`${m.admin_edit()} ${category.key}`}
-                          title={m.admin_edit()}
-                        >
-                          <Icon icon={PencilIcon} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          disabled={busy}
-                          onClick={() => handleDelete(category)}
-                          aria-label={`${m.admin_delete()} ${category.key}`}
-                          title={m.admin_delete()}
-                        >
-                          <Icon icon={TrashIcon} />
-                        </Button>
-                      </div>
+                        />
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))}

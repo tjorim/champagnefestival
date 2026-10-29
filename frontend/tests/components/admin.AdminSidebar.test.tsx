@@ -9,6 +9,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     workspace_title: () => "My tasks",
     admin_title: () => "Administration",
+    admin_sidebar_heading: () => "Sections",
     admin_registrations_tab: () => "Registrations",
     admin_waitlist_section: () => "Waitlist",
     admin_scratchpad_section: () => "Scratchpad",

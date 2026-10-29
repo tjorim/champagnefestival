@@ -117,7 +117,7 @@ describe("EmailCategoryManagement", () => {
     );
     mount();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Edit club_news" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Clubnieuws" }));
     expect(await screen.findByLabelText("Key")).toHaveAttribute("readonly");
     fireEvent.click(screen.getByRole("checkbox", { name: "Member" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -140,8 +140,8 @@ describe("EmailCategoryManagement", () => {
     );
     mount();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete new_editions" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete Nieuwe editie" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText(/The application uses this email category/)).toBeInTheDocument();
   });

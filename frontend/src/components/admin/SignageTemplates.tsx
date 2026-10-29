@@ -36,6 +36,8 @@ import type { Layer, PublicSlide } from "@/signage/types";
 import "@/signage/editor.css";
 import AdminEditorDialog from "./AdminEditorDialog";
 import SignageLayerPanel from "./SignageLayerPanel";
+import { PencilIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const labels = () => ({
   name: m.signage_editor_name(),
@@ -127,27 +129,28 @@ export default function SignageTemplates({
       <h2 className="text-xl font-semibold">{m.signage_editor_heading()}</h2>
       {templates.error && <Alert variant="danger">{m.admin_error_load_data()}</Alert>}
       {saved && <p role="status">{m.signage_editor_saved()}</p>}
-      <Button
+      <AdminAddButton
         onClick={() => {
           setSaved(false);
           setEditing(null);
         }}
       >
         {m.signage_editor_new()}
-      </Button>
+      </AdminAddButton>
       <ul className="space-y-2">
         {templates.data?.map((template) => (
           <li key={template.id} className="flex items-center justify-between gap-2">
             <span>{template.name}</span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSaved(false);
-                setEditing(template);
-              }}
-            >
-              {m.admin_edit_item({ name: template.name })}
-            </Button>
+            <RowActions>
+              <RowActionButton
+                icon={PencilIcon}
+                label={m.admin_edit_item({ name: template.name })}
+                onClick={() => {
+                  setSaved(false);
+                  setEditing(template);
+                }}
+              />
+            </RowActions>
           </li>
         ))}
       </ul>

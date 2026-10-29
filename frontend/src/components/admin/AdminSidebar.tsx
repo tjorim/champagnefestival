@@ -203,8 +203,7 @@ export default function AdminSidebar({
       <Sidebar>
         {/* Brand */}
         <SidebarHeader className="flex-row items-center gap-2 border-b border-border p-4 pr-12">
-          <Icon icon={ShieldIcon} />
-          <span className="text-sm font-semibold">{m.admin_title()}</span>
+          <span className="text-sm font-semibold">{m.admin_sidebar_heading()}</span>
         </SidebarHeader>
 
         {/* Navigation */}

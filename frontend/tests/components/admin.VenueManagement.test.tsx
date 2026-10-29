@@ -290,7 +290,9 @@ describe("VenueManagement", () => {
   it("edits a venue including its map coordinates", async () => {
     const { onUpdate } = renderVenueManagement();
     fireEvent.click(
-      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_edit Grand Hall" }),
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Grand Hall"})',
+      }),
     );
     const dialogScope = within(await screen.findByRole("dialog"));
     fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
@@ -329,7 +331,9 @@ describe("VenueManagement", () => {
     const { onArchive } = renderVenueManagement();
 
     fireEvent.click(
-      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: "admin_content_archive: Grand Hall",
+      }),
     );
     const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_venue_archive_confirm")).toBeInTheDocument();
@@ -343,7 +347,9 @@ describe("VenueManagement", () => {
     const { onArchive } = renderVenueManagement();
 
     fireEvent.click(
-      within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: "admin_content_archive: Grand Hall",
+      }),
     );
     const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_content_archive" }));
@@ -355,10 +361,12 @@ describe("VenueManagement", () => {
     const { onDelete } = renderVenueManagement();
 
     fireEvent.click(
-      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Old Barn"})',
+      }),
     );
     const dialog = within(await screen.findByRole("alertdialog"));
-    expect(dialog.getByText("admin_venue_delete_confirm")).toBeInTheDocument();
+    expect(dialog.getByText('admin_venue_delete_confirm({"name":"Old Barn"})')).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
     expect(onDelete).not.toHaveBeenCalled();
@@ -369,10 +377,12 @@ describe("VenueManagement", () => {
     const { onDelete } = renderVenueManagement();
 
     fireEvent.click(
-      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Old Barn"})',
+      }),
     );
     const dialog = within(await screen.findByRole("alertdialog"));
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith("venue-2"));
   });
@@ -381,7 +391,9 @@ describe("VenueManagement", () => {
     const { onRestore } = renderVenueManagement();
 
     fireEvent.click(
-      within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_content_restore" }),
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: "admin_content_restore: Old Barn",
+      }),
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -427,12 +439,14 @@ describe("VenueManagement", () => {
       .mockResolvedValueOnce(undefined);
     renderVenueManagement({ onDeleteRoom });
 
-    const deleteButton = screen.getByRole("button", { name: /admin_delete Room B/ });
+    fireEvent.click(screen.getByRole("button", { name: 'admin_delete_item({"name":"Room B"})' }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(dialog.getByText('admin_room_delete_confirm({"name":"Room B"})')).toBeInTheDocument();
 
-    fireEvent.click(deleteButton);
-    expect(await screen.findByText("api_error_room_has_layouts")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+    expect(await dialog.findByText("api_error_room_has_layouts")).toBeInTheDocument();
 
-    fireEvent.click(deleteButton);
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
     await waitFor(() => expect(onDeleteRoom).toHaveBeenCalledTimes(2));
     expect(onDeleteRoom).toHaveBeenLastCalledWith("room-2");
   });
@@ -440,7 +454,11 @@ describe("VenueManagement", () => {
   it("opens the edit-room modal prefilled, and calls onUpdateRoom with the edited fields", async () => {
     const { onUpdateRoom } = renderVenueManagement();
 
-    fireEvent.click(within(listItem("Room A")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Room A")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Room A"})',
+      }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -477,7 +495,11 @@ describe("VenueManagement", () => {
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
     });
 
-    fireEvent.click(within(listItem("Room A")).getByRole("button", { name: "admin_edit" }));
+    fireEvent.click(
+      within(listItem("Room A")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Room A"})',
+      }),
+    );
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
@@ -591,7 +613,9 @@ describe("VenueManagement", () => {
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -621,7 +645,9 @@ describe("VenueManagement", () => {
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -650,7 +676,9 @@ describe("VenueManagement", () => {
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -682,7 +710,9 @@ describe("VenueManagement", () => {
     const { onUpdateTableType } = renderVenueManagement();
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -709,7 +739,9 @@ describe("VenueManagement", () => {
     const { onUpdateTableType } = renderVenueManagement({ tables: [] });
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_edit" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -730,7 +762,9 @@ describe("VenueManagement", () => {
     const { onArchiveTableType } = renderVenueManagement();
 
     fireEvent.click(
-      within(listItem("Standard Rectangle")).getByRole("button", { name: "admin_content_archive" }),
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: "admin_content_archive: Standard Rectangle",
+      }),
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -741,9 +775,11 @@ describe("VenueManagement", () => {
     const { onRestoreTableType } = renderVenueManagement();
 
     const row = listItem("Retired Round");
-    expect(within(row).queryByRole("button", { name: "admin_edit" })).not.toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: /admin_edit_item/ })).not.toBeInTheDocument();
 
-    fireEvent.click(within(row).getByRole("button", { name: "admin_content_restore" }));
+    fireEvent.click(
+      within(row).getByRole("button", { name: "admin_content_restore: Retired Round" }),
+    );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(onRestoreTableType).toHaveBeenCalledWith("tt-2");
@@ -757,12 +793,16 @@ describe("VenueManagement", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
+      within(listItem("Retired Round")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Retired Round"})',
+      }),
     );
 
     const dialog = within(await screen.findByRole("alertdialog"));
-    expect(dialog.getByText("admin_table_type_delete_confirm")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    expect(
+      dialog.getByText('admin_table_type_delete_confirm({"name":"Retired Round"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(onDeleteTableType).toHaveBeenCalledWith("tt-2"));
   });
@@ -777,10 +817,12 @@ describe("VenueManagement", () => {
     renderVenueManagement({ onDeleteTableType });
 
     fireEvent.click(
-      within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
+      within(listItem("Retired Round")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Retired Round"})',
+      }),
     );
     const dialog = within(await screen.findByRole("alertdialog"));
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     expect(await screen.findByText("api_error_table_type_in_use")).toBeInTheDocument();
   });

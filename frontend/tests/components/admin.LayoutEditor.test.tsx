@@ -295,7 +295,9 @@ describe("LayoutEditor", () => {
     const card = screen
       .getByText("admin_table_label: Table A")
       .closest('[data-slot="card"]') as HTMLElement;
-    expect(within(card).getByRole("button", { name: "admin_delete" })).toBeDisabled();
+    expect(
+      within(card).getByRole("button", { name: 'admin_delete_item({"name":"Table A"})' }),
+    ).toBeDisabled();
   });
 
   afterEach(() => {
@@ -481,11 +483,15 @@ describe("LayoutEditor", () => {
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
-    fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: 'admin_delete_item({"name":"Table A"})' }),
+    );
 
     const dialog = within(await screen.findByRole("alertdialog"));
-    expect(dialog.getByText("admin_layout_table_delete_confirm")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    expect(
+      dialog.getByText('admin_layout_table_delete_confirm({"name":"Table A"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(callbacks.onDeleteTable).toHaveBeenCalledWith("table-1"));
   });
@@ -500,7 +506,9 @@ describe("LayoutEditor", () => {
     const card = screen
       .getByText("admin_table_label: Table A")
       .closest('[data-slot="card"]') as HTMLElement;
-    const deleteButton = within(card).getByRole("button", { name: "admin_delete" });
+    const deleteButton = within(card).getByRole("button", {
+      name: 'admin_delete_item({"name":"Table A"})',
+    });
 
     expect(deleteButton).toBeDisabled();
     expect(deleteButton).toHaveAttribute("title", "admin_layout_table_delete_blocked");
@@ -519,7 +527,9 @@ describe("LayoutEditor", () => {
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
-    fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: 'admin_delete_item({"name":"Table A"})' }),
+    );
 
     const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
@@ -539,11 +549,15 @@ describe("LayoutEditor", () => {
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
-    fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: 'admin_delete_item({"name":"Stand 1"})' }),
+    );
 
     const dialog = within(await screen.findByRole("alertdialog"));
-    expect(dialog.getByText("admin_layout_area_delete_confirm")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    expect(
+      dialog.getByText('admin_layout_area_delete_confirm({"name":"Stand 1"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(callbacks.onDeleteArea).toHaveBeenCalledWith("area-1"));
   });
@@ -559,7 +573,9 @@ describe("LayoutEditor", () => {
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
-    fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(
+      within(card).getByRole("button", { name: 'admin_delete_item({"name":"Stand 1"})' }),
+    );
 
     const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
@@ -572,11 +588,13 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(screen.getByRole("button", { name: 'admin_delete_item({"name":"Saturday"})' }));
 
     const dialog = within(await screen.findByRole("alertdialog"));
-    expect(dialog.getByText("admin_layout_delete_confirm")).toBeInTheDocument();
-    fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
+    expect(
+      dialog.getByText('admin_layout_delete_confirm({"name":"Saturday"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
 
     await waitFor(() => expect(callbacks.onDeleteLayout).toHaveBeenCalledWith("layout-1"));
   });
@@ -585,7 +603,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
+    fireEvent.click(screen.getByRole("button", { name: 'admin_delete_item({"name":"Saturday"})' }));
 
     const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));

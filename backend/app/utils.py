@@ -37,6 +37,16 @@ from app.translations import resolve_text
 _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 
 
+def edition_display_name(edition: Edition) -> str:
+    """The admin's display name for an edition, e.g. ``March 2027``.
+
+    Mirrors ``editionDisplayName`` in ``frontend/src/utils/editionName.ts``; the
+    edition id (``2027-march``) is internal and not shown to people.
+    """
+    month = edition.month.strip()
+    return f"{month[:1].upper()}{month[1:]} {edition.year}".strip()
+
+
 def csv_safe(value: object) -> str:
     """Return a spreadsheet-safe CSV cell value.
 
