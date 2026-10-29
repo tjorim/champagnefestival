@@ -77,7 +77,11 @@ describe("EventModal translations", () => {
     mount(null, vi.fn(), { ...edition, dates: [], editionType: "capsule_exchange" });
     expect(screen.getByLabelText("Date")).not.toHaveAttribute("readonly");
     expect(screen.getByText("Choose the date for this edition’s first event.")).toBeInTheDocument();
-    expect(screen.queryByText("This event uses the edition date.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "This event uses the edition date. To change it, edit the edition’s existing event.",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("fills each language from the event", () => {

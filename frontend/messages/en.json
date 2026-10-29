@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producers and sponsors",
   "signage_editor_notice": "Notice",
   "signage_editor_sample": "Preview with existing content",
-  "signage_editor_no_samples": "Representative sample data is shown because no existing content is available for this type.",
+  "signage_editor_no_samples": "No existing sample content for this type. Add content to preview its data.",
   "signage_editor_missing": "Required visible placeholders missing:",
   "signage_editor_move": "Move layer (arrow keys; Shift for larger steps)",
   "signage_editor_resize": "Resize layer (or use width and height fields)",
@@ -1615,7 +1615,7 @@
   "signage_channels_group": "Organisation group",
   "signage_channels_all": "All organisations",
   "signage_channels_template": "Template",
-  "signage_channels_templates_help": "Only templates with the required placeholders are listed. Create a compatible template here without leaving your slide.",
+  "signage_channels_templates_help": "Only templates with the required placeholders are listed. Create templates in Screen templates.",
   "signage_channels_duration": "Duration per slide (seconds)",
   "signage_channels_slide_active": "Slide active",
   "signage_channels_start": "Starts at (local time)",
@@ -1990,5 +1990,6 @@
   "signage_sample_text": "Sample content: discover our producers and enjoy the festival. This text is only used in the template preview.",
   "public_offline_notice": "You're offline. Saved information may be out of date. Registration, contact and waiting list forms cannot be sent. Nothing is queued; reconnect before submitting.",
   "public_offline_updated": "Last updated: {time}.",
-  "public_offline_write": "You're offline. Reconnect before sending this form. Nothing has been queued."
+  "public_offline_write": "You're offline. Reconnect before sending this form. Nothing has been queued.",
+  "admin_person_matches_unavailable": "Existing people could not be checked. Search the directory before creating a new person."
 }

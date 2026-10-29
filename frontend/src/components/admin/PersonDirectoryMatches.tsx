@@ -28,13 +28,15 @@ export function PersonDirectoryMatches({
     authHeaders,
     query.length >= 3,
   );
-  if (
-    query !== search ||
-    query.length < 3 ||
-    matches.isPlaceholderData ||
-    !matches.data?.items.length
-  )
-    return null;
+  if (query !== search || query.length < 3 || matches.isPlaceholderData) return null;
+  // A failed search must not look like "no matches": the organiser could create a duplicate.
+  if (matches.isError)
+    return (
+      <Alert variant="warning" role="status" className="mb-4">
+        {m.admin_person_matches_unavailable()}
+      </Alert>
+    );
+  if (!matches.data?.items.length) return null;
   return (
     <Alert className="mb-4">
       <p>{m.admin_person_matches_help()}</p>

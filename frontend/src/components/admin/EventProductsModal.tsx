@@ -105,10 +105,15 @@ export default function EventProductsModal({
   const [textLanguage, setTextLanguage] = useState("nl");
   const [validationAttempt, setValidationAttempt] = useState(0);
   const [error, setError] = useState("");
+  const [textError, setTextError] = useState<"name" | "description" | null>(null);
   useEffect(() => {
     if (error)
       document.getElementById("product-editor-error")?.scrollIntoView?.({ block: "nearest" });
   }, [error, validationAttempt]);
+  // Runs after the Dutch tab is active, so the (kept-mounted) panel is no longer hidden.
+  useEffect(() => {
+    if (textError) document.getElementById(`product-${textError}-nl`)?.focus();
+  }, [textError, validationAttempt]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [preview, setPreview] = useState<{
@@ -203,8 +208,10 @@ export default function EventProductsModal({
     onSubmit: async ({ value }) => {
       setError("");
       setValidationAttempt((attempt) => attempt + 1);
+      setTextError(null);
       if (!hasDutch(value.name)) {
         setTextLanguage("nl");
+        setTextError("name");
         setError(m.admin_products_name_required());
         return;
       }
@@ -213,6 +220,7 @@ export default function EventProductsModal({
         !hasDutch(value.description)
       ) {
         setTextLanguage("nl");
+        setTextError("description");
         setError(m.admin_products_description_required());
         return;
       }

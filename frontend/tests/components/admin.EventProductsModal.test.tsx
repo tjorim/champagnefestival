@@ -231,6 +231,8 @@ describe("EventProductsModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
 
     expect(await screen.findByText("admin_products_name_required")).toBeInTheDocument();
+    // The Dutch field takes focus, not the footer Save button.
+    await waitFor(() => expect(screen.getByLabelText(nameIn("nl"))).toHaveFocus());
   });
 
   it("unticking purchasable forces required off and disables its checkbox", async () => {

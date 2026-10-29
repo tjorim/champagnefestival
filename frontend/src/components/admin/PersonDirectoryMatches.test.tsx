@@ -31,6 +31,20 @@ it("offers reuse and deliberate separate creation from authorised search results
   await userEvent.click(screen.getByRole("button", { name: m.admin_person_reuse() }));
   expect(reuse).toHaveBeenCalledWith(guest);
 });
+it("warns instead of staying silent when the directory search fails", () => {
+  query.mockReturnValue({ data: undefined, isPlaceholderData: false, isError: true });
+  render(
+    <PersonDirectoryMatches
+      name="Guest"
+      email="guest@example.com"
+      authHeaders={() => ({})}
+      onReuse={vi.fn()}
+    />,
+  );
+  return waitFor(() =>
+    expect(screen.getByRole("status")).toHaveTextContent(m.admin_person_matches_unavailable()),
+  );
+});
 it("does not offer stale placeholder matches", async () => {
   query.mockReturnValue({ data: { items: [guest] }, isPlaceholderData: true });
   render(

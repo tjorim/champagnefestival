@@ -411,6 +411,65 @@ function DraggableArea({
 }
 
 // ---------------------------------------------------------------------------
+// TableLocator — search state lives here so a keystroke does not re-render the canvas
+// ---------------------------------------------------------------------------
+
+function TableLocator({
+  tables,
+  selectedTable,
+  onSelect,
+}: {
+  tables: FloorTable[];
+  selectedTable: string | null;
+  onSelect: (tableId: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const needle = search.toLocaleLowerCase();
+  const matches = tables.filter((table) => table.name.toLocaleLowerCase().includes(needle));
+  return (
+    <div className="mb-4">
+      <AdminField controlId="plan-table-search">
+        <AdminLabel className="text-content" htmlFor="plan-table-search">
+          {m.admin_layout_find_table()}
+        </AdminLabel>
+        <AdminInput
+          id="plan-table-search"
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </AdminField>
+      <div
+        className="max-h-40 overflow-auto flex flex-col gap-1 mt-2"
+        aria-label={m.admin_layout_find_table()}
+      >
+        {matches.map((table) => (
+          <Button
+            key={table.id}
+            variant={selectedTable === table.id ? "secondary" : "outline"}
+            className="justify-start whitespace-normal text-left"
+            aria-pressed={selectedTable === table.id}
+            onClick={() => {
+              onSelect(table.id);
+              document
+                .querySelector(`[data-plan-table="${CSS.escape(table.id)}"]`)
+                ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+            }}
+          >
+            {table.name}
+          </Button>
+        ))}
+        {matches.length === 0 && (
+          <p className="text-subtle" role="status">
+            {m.admin_layout_no_matching_tables()}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // RoomCanvas — the drag target for one room
 // ---------------------------------------------------------------------------
 
@@ -633,7 +692,6 @@ export default function LayoutEditor({
   const [showCompareLayouts, setShowCompareLayouts] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
   const inspectorRef = useRef<HTMLElement>(null);
-  const [tableSearch, setTableSearch] = useState("");
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
@@ -1150,53 +1208,15 @@ export default function LayoutEditor({
           <h3 className="font-semibold mb-2">{m.admin_layout_inspector()}</h3>
           <p className="text-sm text-subtle mb-3">{m.admin_layout_save_behaviour()}</p>
           {activeLayoutId && (
-            <div className="mb-4">
-              <AdminField controlId="plan-table-search">
-                <AdminLabel className="text-content" htmlFor="plan-table-search">
-                  {m.admin_layout_find_table()}
-                </AdminLabel>
-                <AdminInput
-                  id="plan-table-search"
-                  type="search"
-                  value={tableSearch}
-                  onChange={(e) => setTableSearch(e.target.value)}
-                />
-              </AdminField>
-              <div
-                className="max-h-40 overflow-auto flex flex-col gap-1 mt-2"
-                aria-label={m.admin_layout_find_table()}
-              >
-                {canvasTables
-                  .filter((table) =>
-                    table.name.toLocaleLowerCase().includes(tableSearch.toLocaleLowerCase()),
-                  )
-                  .map((table) => (
-                    <Button
-                      key={table.id}
-                      variant={selectedTable === table.id ? "secondary" : "outline"}
-                      className="justify-start whitespace-normal text-left"
-                      aria-pressed={selectedTable === table.id}
-                      onClick={() => {
-                        setSelectedTable(table.id);
-                        setSelectedArea(null);
-                        setLayer("seating");
-                        document
-                          .querySelector(`[data-plan-table="${CSS.escape(table.id)}"]`)
-                          ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-                      }}
-                    >
-                      {table.name}
-                    </Button>
-                  ))}
-                {!canvasTables.some((table) =>
-                  table.name.toLocaleLowerCase().includes(tableSearch.toLocaleLowerCase()),
-                ) && (
-                  <p className="text-subtle" role="status">
-                    {m.admin_layout_no_matching_tables()}
-                  </p>
-                )}
-              </div>
-            </div>
+            <TableLocator
+              tables={canvasTables}
+              selectedTable={selectedTable}
+              onSelect={(tableId) => {
+                setSelectedTable(tableId);
+                setSelectedArea(null);
+                setLayer("seating");
+              }}
+            />
           )}
           {!selectedTableData && !selectedAreaData && (
             <AdminEmptyState>{m.admin_layout_select_object()}</AdminEmptyState>

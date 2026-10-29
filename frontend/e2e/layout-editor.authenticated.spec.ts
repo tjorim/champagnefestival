@@ -147,17 +147,22 @@ for (const [width, height, zoom] of [
       await expect(inspector.getByRole("textbox", { name: en.admin_table_name })).toBeVisible();
       const map = page.getByRole("region", { name: "Preparation hall", exact: true });
       await expect(map.locator('[data-plan-table="dense-23"]')).toBeVisible();
+      // Selecting from the locator must scroll the table into view, not just render it.
+      await expect(map.locator('[data-plan-table="dense-23"]')).toBeInViewport();
       await search.fill("no match");
       await expect(inspector.getByRole("textbox", { name: en.admin_table_name })).toBeVisible();
       await page.screenshot({ path: test.info().outputPath("selected-table.png") });
       const lastBooking = inspector.getByText("Guest 14 with a long booking name", { exact: true });
       await lastBooking.scrollIntoViewIfNeeded();
       await expect(lastBooking).toBeVisible();
+      const mapBox = await map.boundingBox();
+      const inspectorBox = await inspector.boundingBox();
       if (width / zoom >= 1200 && height / zoom >= 600) {
-        const mapBox = await map.boundingBox();
-        const inspectorBox = await inspector.boundingBox();
         expect(inspectorBox!.x).toBeGreaterThan(mapBox!.x + mapBox!.width - 1);
         expect(mapBox!.y).toBeGreaterThanOrEqual(0);
+      } else {
+        // Below the two-column breakpoint the inspector stacks under the map.
+        expect(inspectorBox!.y).toBeGreaterThanOrEqual(mapBox!.y + mapBox!.height - 1);
       }
       // A new canvas selection must reveal the inspector header after a long allocation list.
       const firstTable = map.locator('[data-plan-table="dense-0"]');

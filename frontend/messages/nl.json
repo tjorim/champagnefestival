@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producenten en sponsors",
   "signage_editor_notice": "Mededeling",
   "signage_editor_sample": "Voorbeeld met bestaande inhoud",
-  "signage_editor_no_samples": "Er worden representatieve voorbeeldgegevens getoond omdat er nog geen inhoud van dit type beschikbaar is.",
+  "signage_editor_no_samples": "Geen bestaande voorbeeldinhoud voor dit type. Voeg inhoud toe om de gegevens te bekijken.",
   "signage_editor_missing": "Verplichte zichtbare gegevensvelden ontbreken:",
   "signage_editor_move": "Laag verplaatsen (pijltjestoetsen; Shift voor grotere stappen)",
   "signage_editor_resize": "Laag schalen (of gebruik breedte en hoogte)",
@@ -1615,7 +1615,7 @@
   "signage_channels_group": "Organisatiegroep",
   "signage_channels_all": "Alle organisaties",
   "signage_channels_template": "Sjabloon",
-  "signage_channels_templates_help": "Alleen sjablonen met de vereiste placeholders worden getoond. Maak hier een compatibel sjabloon zonder je dia te verlaten.",
+  "signage_channels_templates_help": "Alleen sjablonen met de vereiste velden worden getoond. Maak sjablonen bij Schermsjablonen.",
   "signage_channels_duration": "Duur per dia (seconden)",
   "signage_channels_slide_active": "Dia actief",
   "signage_channels_start": "Begint op (lokale tijd)",
@@ -1990,5 +1990,6 @@
   "signage_sample_text": "Voorbeeldinhoud: ontdek onze producenten en geniet van het festival. Deze tekst wordt alleen in het sjabloonvoorbeeld gebruikt.",
   "public_offline_notice": "Je bent offline. Opgeslagen informatie kan verouderd zijn. Inschrijvingen, contactberichten en wachtlijstaanvragen kunnen niet worden verstuurd. Er wordt niets in een wachtrij geplaatst; herstel de verbinding voordat je verstuurt.",
   "public_offline_updated": "Laatst bijgewerkt: {time}.",
-  "public_offline_write": "Je bent offline. Herstel de verbinding voordat je dit formulier verstuurt. Er is niets in een wachtrij geplaatst."
+  "public_offline_write": "Je bent offline. Herstel de verbinding voordat je dit formulier verstuurt. Er is niets in een wachtrij geplaatst.",
+  "admin_person_matches_unavailable": "Bestaande personen konden niet worden gecontroleerd. Zoek in de personenlijst voordat u een nieuwe persoon aanmaakt."
 }

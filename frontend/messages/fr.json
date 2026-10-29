@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producteurs et sponsors",
   "signage_editor_notice": "Annonce",
   "signage_editor_sample": "Prévisualiser avec du contenu existant",
-  "signage_editor_no_samples": "Des données représentatives sont affichées car aucun contenu de ce type n’est encore disponible.",
+  "signage_editor_no_samples": "Aucun exemple existant pour ce type. Ajoutez du contenu pour prévisualiser les données.",
   "signage_editor_missing": "Champs visibles obligatoires manquants :",
   "signage_editor_move": "Déplacer le calque (flèches ; Maj pour de plus grands pas)",
   "signage_editor_resize": "Redimensionner le calque (ou utiliser les champs largeur et hauteur)",
@@ -1615,7 +1615,7 @@
   "signage_channels_group": "Groupe d’organisations",
   "signage_channels_all": "Toutes les organisations",
   "signage_channels_template": "Modèle",
-  "signage_channels_templates_help": "Seuls les modèles avec les champs requis sont affichés. Créez ici un modèle compatible sans quitter votre diapositive.",
+  "signage_channels_templates_help": "Seuls les modèles contenant les champs requis sont affichés. Créez-les dans Modèles des écrans.",
   "signage_channels_duration": "Durée par diapositive (secondes)",
   "signage_channels_slide_active": "Diapositive active",
   "signage_channels_start": "Début (heure locale)",
@@ -1990,5 +1990,6 @@
   "signage_sample_text": "Exemple : découvrez nos producteurs et profitez du festival. Ce texte est uniquement utilisé dans l’aperçu du modèle.",
   "public_offline_notice": "Vous êtes hors ligne. Les informations enregistrées peuvent être obsolètes. Les inscriptions, messages et demandes de liste d’attente ne peuvent pas être envoyés. Rien n’est mis en attente ; reconnectez-vous avant d’envoyer.",
   "public_offline_updated": "Dernière mise à jour : {time}.",
-  "public_offline_write": "Vous êtes hors ligne. Reconnectez-vous avant d’envoyer ce formulaire. Rien n’a été mis en attente."
+  "public_offline_write": "Vous êtes hors ligne. Reconnectez-vous avant d’envoyer ce formulaire. Rien n’a été mis en attente.",
+  "admin_person_matches_unavailable": "Les personnes existantes n’ont pas pu être vérifiées. Recherchez dans l’annuaire avant de créer une nouvelle personne."
 }

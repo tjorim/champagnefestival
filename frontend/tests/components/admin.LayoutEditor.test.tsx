@@ -817,5 +817,7 @@ describe("table locator", () => {
     );
     expect(callbacks.onUpdateTable).not.toHaveBeenCalled();
     expect(callbacks.onSaveAllocations).not.toHaveBeenCalled();
+    expect(callbacks.onMoveTable).not.toHaveBeenCalled();
+    expect(callbacks.onRotateTable).not.toHaveBeenCalled();
   });
 });
