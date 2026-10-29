@@ -293,8 +293,14 @@ laying out their own buttons.
   the action it will do ("Show …", "Publish …") and its icon is that action's
   (`EyeIcon` to show, `EyeOffIcon` to hide).
 - Text buttons are for actions that need a word to be understood and have no
-  stable icon (for example stamp cards). Do not mix text and icon buttons for the
-  same kind of action across screens.
+  stable icon (for example stamp cards, sending a message, and the Screens
+  download buttons). Do not mix text and icon buttons for the same kind of action
+  across screens.
+- Controls inside a detail card or an unsaved form follow the same order and
+  naming. In the floor-plan editor the table and area headers put the delete
+  button after a `RowActionDivider`. The remove button of an unsaved help period
+  in the volunteer form stays a labelled text button because it only edits the
+  draft.
 
 ### Primary action
 

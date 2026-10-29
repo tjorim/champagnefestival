@@ -2,7 +2,13 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronUpIcon, ChevronDownIcon, GripVerticalIcon } from "lucide-react";
+import {
+  ChevronUpIcon,
+  ChevronDownIcon,
+  GripVerticalIcon,
+  LinkIcon,
+  PencilIcon,
+} from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
@@ -45,7 +51,7 @@ import "@/signage/editor.css";
 import SignageVideoExports from "./SignageVideoExports";
 import AdminEditorDialog from "./AdminEditorDialog";
 import { editionDisplayName } from "@/utils/editionName";
-import { AdminAddButton } from "./RowActions";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const channelPath = (slug: string) => `/signage/${slug}`;
 
@@ -443,26 +449,31 @@ export default function SignageChannels({
               >
                 {item.name}
               </Button>
-              <Button variant="outline" onClick={() => openChannel(item)}>
-                {m.admin_edit_item({ name: item.name })}
-              </Button>
+              <RowActions>
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name: item.name })}
+                  onClick={() => openChannel(item)}
+                />
+                <RowActionButton
+                  icon={LinkIcon}
+                  label={m.signage_channels_copy({ name: item.name })}
+                  onClick={() =>
+                    void run(async () => {
+                      await navigator.clipboard.writeText(
+                        `${location.origin}/signage/${item.slug}`,
+                      );
+                      setStatus(m.signage_channels_copied());
+                    })
+                  }
+                />
+              </RowActions>
               <span>
                 {item.active ? m.signage_channels_active() : m.signage_channels_inactive()}
               </span>
               <a href={channelPath(item.slug)} target="_blank" rel="noreferrer">
                 {channelPath(item.slug)}
               </a>
-              <Button
-                className="hover:bg-primary"
-                onClick={() =>
-                  void run(async () => {
-                    await navigator.clipboard.writeText(`${location.origin}/signage/${item.slug}`);
-                    setStatus(m.signage_channels_copied());
-                  })
-                }
-              >
-                {m.signage_channels_copy({ name: item.name })}
-              </Button>
               {[true, false].map((bundle) => (
                 <Button
                   key={String(bundle)}

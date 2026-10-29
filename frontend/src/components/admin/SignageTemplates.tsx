@@ -36,7 +36,8 @@ import type { Layer, PublicSlide } from "@/signage/types";
 import "@/signage/editor.css";
 import AdminEditorDialog from "./AdminEditorDialog";
 import SignageLayerPanel from "./SignageLayerPanel";
-import { AdminAddButton } from "./RowActions";
+import { PencilIcon } from "lucide-react";
+import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const labels = () => ({
   name: m.signage_editor_name(),
@@ -140,15 +141,16 @@ export default function SignageTemplates({
         {templates.data?.map((template) => (
           <li key={template.id} className="flex items-center justify-between gap-2">
             <span>{template.name}</span>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSaved(false);
-                setEditing(template);
-              }}
-            >
-              {m.admin_edit_item({ name: template.name })}
-            </Button>
+            <RowActions>
+              <RowActionButton
+                icon={PencilIcon}
+                label={m.admin_edit_item({ name: template.name })}
+                onClick={() => {
+                  setSaved(false);
+                  setEditing(template);
+                }}
+              />
+            </RowActions>
           </li>
         ))}
       </ul>

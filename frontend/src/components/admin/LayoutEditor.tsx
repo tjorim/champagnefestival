@@ -24,7 +24,6 @@ import {
   TableIcon,
   TrashIcon,
   UsersIcon,
-  XIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
 /**
@@ -67,7 +66,7 @@ import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
 import LayoutRevisionsModal from "./LayoutRevisionsModal";
-import { AdminAddButton } from "./RowActions";
+import { AdminAddButton, RowActionDivider } from "./RowActions";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
@@ -1063,7 +1062,7 @@ export default function LayoutEditor({
                           })}
                           className="rounded-tl-none rounded-bl-none border-l-0"
                         >
-                          <Icon icon={XIcon} />
+                          <Icon icon={TrashIcon} />
                         </Button>
                       </div>
                     ))}
@@ -1185,6 +1184,7 @@ export default function LayoutEditor({
                   </Button>
                 </>
               )}
+              <RowActionDivider />
               <Button
                 variant="outline-danger"
                 size="sm"
@@ -1464,6 +1464,7 @@ export default function LayoutEditor({
               >
                 <Icon icon={RotateCwIcon} />
               </Button>
+              <RowActionDivider />
               <Button
                 variant="outline-danger"
                 size="sm"

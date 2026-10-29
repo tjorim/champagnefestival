@@ -11,6 +11,11 @@ import { cn } from "@/lib/utils";
  * and set apart by a divider so it is not next to Edit. Wrapping on narrow
  * screens keeps the divider and delete together.
  */
+/** The divider that sets a destructive action apart from the rest of an action group. */
+export function RowActionDivider() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />;
+}
+
 export function RowActions({
   children,
   destructive,
@@ -26,7 +31,7 @@ export function RowActions({
       {children}
       {destructive && (
         <span className="flex items-center gap-1">
-          {children && <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />}
+          {children && <RowActionDivider />}
           {destructive}
         </span>
       )}
