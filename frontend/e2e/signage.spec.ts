@@ -146,12 +146,16 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
     });
     let revision = "v1";
     let conditional = false;
-    await context.route("**/api/**", async (route) => {
+    // The mock server follows the controlled page clock. It is tracked here, not read with
+    // page.evaluate() inside the handler, which can outlive the request and the page.
+    let serverNow = Date.parse(epoch);
+    const fastForward = async (ms: number) => {
+      await page.clock.fastForward(ms);
+      serverNow += ms;
+    };
+    await context.route("**/api/**", (route) => {
       if (route.request().url().endsWith("/time")) {
-        // Visibility changes trigger another sync. The mock server must advance with
-        // the controlled clock, including when a sync overlaps fastForward().
-        const serverTime = await page.evaluate(() => new Date().toISOString());
-        return route.fulfill({ json: { server_time: serverTime } });
+        return route.fulfill({ json: { server_time: new Date(serverNow).toISOString() } });
       }
       if (route.request().url().includes("/playlist")) {
         conditional ||= route.request().headers()["if-none-match"] === '"v1"';
@@ -177,10 +181,10 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
       .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
       .toBe(1);
     revision = "v2";
-    await page.clock.fastForward(30_000);
+    await fastForward(30_000);
     await expect.poll(() => conditional).toBe(true);
     await expect(page.getByText("v1:1", { exact: true })).toBeVisible();
-    await page.clock.fastForward(10_000);
+    await fastForward(10_000);
     await expect(page.getByText("v2:0", { exact: true })).toBeVisible();
     // Exercise visibility-triggered resynchronization after the boundary assertions.
     await page.evaluate(() => {
@@ -191,8 +195,8 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
       .poll(() => page.evaluate(() => (window as unknown as { wakeRequests: number }).wakeRequests))
       .toBe(2);
   } finally {
-    // Keep the page alive until time mocks finish their page.evaluate calls.
-    await context.unrouteAll({ behavior: "wait" });
+    // The visibility sync may still be fetching when the assertions finish.
+    await context.unrouteAll({ behavior: "ignoreErrors" });
     await context.close();
   }
 });
