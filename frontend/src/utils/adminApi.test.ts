@@ -27,6 +27,17 @@ describe("adminApi", () => {
     });
   });
 
+  it("does not log a request the caller cancelled as a network failure", async () => {
+    server.use(http.all("/api/admin/check-in", () => HttpResponse.error()));
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(requestApi("/api/admin/check-in", { signal: controller.signal })).rejects.toThrow(
+      "We could not reach the server.",
+    );
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
   it("keeps request IDs out of user-facing API errors and logs them instead", async () => {
     server.use(
       http.get("/api/admin/registrations/missing", () =>

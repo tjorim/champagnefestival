@@ -473,7 +473,7 @@ function PlanExplorer({
                         return (
                           <div
                             key={item.id}
-                            className={`absolute rounded-md border min-w-18 px-2 py-1 text-center ${highlighted ? "border-warning bg-warning text-contrast" : occupancyClass}`}
+                            className={`absolute rounded-md border min-w-18 px-2 py-1 text-center ${highlighted ? "border-foreground bg-foreground text-background ring-2 ring-ring" : occupancyClass}`}
                             /* oxlint-disable shadcn/no-inline-styles -- Floor-plan x/y percentages and rotation per docs/floor-plan-coordinates.md. */
                             style={{
                               left: `${item.x}%`,
