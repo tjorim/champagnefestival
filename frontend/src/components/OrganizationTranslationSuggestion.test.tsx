@@ -151,13 +151,13 @@ it("fills the manager form but submits only after review and editing", async () 
   const edit = await screen.findByRole("button", { name: "Edit website and description" });
   await waitFor(() => expect(edit).toBeEnabled());
   fireEvent.click(edit);
-  fireEvent.click(screen.getByRole("tab", { name: "English", exact: true }));
+  fireEvent.click(screen.getByRole("tab", { name: "English" }));
   fireEvent.click(await screen.findByRole("button", { name: "Suggest translation" }));
   await waitFor(() =>
-    expect(screen.getByRole("textbox", { name: "English", exact: true })).toHaveValue("Hello"),
+    expect(screen.getByRole("textbox", { name: "English" })).toHaveValue("Hello"),
   );
   expect(submissions).toEqual([]);
-  fireEvent.change(screen.getByRole("textbox", { name: "English", exact: true }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "English" }), {
     target: { value: "Reviewed Hello" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
@@ -183,13 +183,13 @@ it("fills the admin form and saves only after manual review", async () => {
       onHide={() => {}}
     />,
   );
-  fireEvent.click(screen.getByRole("tab", { name: "English", exact: true }));
+  fireEvent.click(screen.getByRole("tab", { name: "English" }));
   fireEvent.click(await screen.findByRole("button", { name: "Suggest translation" }));
   await waitFor(() =>
-    expect(screen.getByRole("textbox", { name: "English", exact: true })).toHaveValue("Hello"),
+    expect(screen.getByRole("textbox", { name: "English" })).toHaveValue("Hello"),
   );
   expect(save).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByRole("textbox", { name: "English", exact: true }), {
+  fireEvent.change(screen.getByRole("textbox", { name: "English" }), {
     target: { value: "Reviewed draft" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Save" }));

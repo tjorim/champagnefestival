@@ -34,7 +34,7 @@ export async function rehearsePreparation(page: Page, labels: typeof en = en, ke
   await activate(
     home().getByRole("link", { name: labels.admin_content_editions_section, exact: true }),
   );
-  await activate(page.getByRole("button", { name: "march-2027", exact: true }));
+  await activate(page.getByRole("button", { name: "March 2027", exact: true }));
   const products = page
     .getByRole("button", { name: new RegExp(`^${labels.admin_content_edition_manage_products} `) })
     .first();

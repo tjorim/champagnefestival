@@ -85,6 +85,8 @@ export const exclusions = {
     descriptionEn: "form field key",
   },
   "components/admin/LayoutEditor.tsx": {
+    "(max-width: 1199px), (max-height: 599px)":
+      "CSS media query for scrolling the floor-plan inspector into view, not interface copy",
     "border-color 0.15s, opacity 0.15s": "CSS transition",
     "border-color 0.15s": "CSS transition",
   },
