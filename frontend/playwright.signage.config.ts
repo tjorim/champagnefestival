@@ -3,7 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testMatch: ["signage.spec.ts", "public-offline.spec.ts"],
-  use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:5178" },
+  use: {
+    ...devices["Desktop Chrome"],
+    baseURL: "http://localhost:5178",
+    trace: "retain-on-failure",
+  },
   webServer: {
     command: "pnpm build && pnpm exec vite preview --port 5178 --strictPort",
     url: "http://localhost:5178",

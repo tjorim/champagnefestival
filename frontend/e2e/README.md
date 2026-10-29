@@ -15,6 +15,30 @@ For diagnosis, run the affected files with `--retries=0 --max-failures=1`, fix t
 first failure, then rerun the relevant matrix. Tests for a particular admin
 section should open `/admin?section=...`; `/admin` intentionally opens My tasks.
 
+## CI sharding
+
+`Frontend CI` splits the Playwright run over four runners (`--shard=N/4`, one worker
+each, because concurrent cold Vite loads cause contention) and runs the production
+signage suite (`playwright.signage.config.ts`) on its own runner at the same time.
+Playwright shards by spec file and adds the `setup` project to every shard that has
+authenticated specs. The `E2E Tests (Chromium)` job aggregates all of them, so the
+required check name is unchanged and fails if any shard or the signage run failed,
+was cancelled or did not run.
+
+Each shard uploads its own HTML report (`playwright-report-N`, with traces for retried
+tests) and the signage run uploads `playwright-report-signage`. There is no merged report: a
+failing shard's job names the report to open. Changing the shard count means editing the
+matrix, the `--shard=N/4` flags and the job name in `.github/workflows/frontend-ci.yml`.
+
+Pull requests and pushes to `main` run the default theme only; the other themes are
+temporary and only manual runs (`workflow_dispatch`) cover all of them (553 tests, about
+40 min serial, which exceeded the old 30 min single-job timeout).
+
+Measurements (the default-theme run, 270 tests, one worker): the single job took 20.1 min
+of tests (21.4 min wall). Split by file, the heaviest of four shards holds about 32% of the
+test time (about 6.5 min of tests plus about 1.5 min setup), so the wall time should fall
+to about 8 min while runner minutes rise by about 25% (four installs).
+
 ## Seeding mock state
 
 The MSW service worker owns `/api`, so `page.route` cannot override it. Public state
