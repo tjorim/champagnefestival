@@ -1,4 +1,6 @@
 import {
+  ADMIN_CONTROL_CLASS,
+  ADMIN_LABEL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -254,7 +256,7 @@ export default function PersonFormModal({
               controlId="person-name"
               serverError={fieldErrors.field("name")}
             >
-              <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_name()} *</AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -271,7 +273,7 @@ export default function PersonFormModal({
                     <>
                       <AdminInput
                         type="text"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -288,7 +290,7 @@ export default function PersonFormModal({
             <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
               <div className="w-full site-md:w-6/12">
                 <AdminField controlId="person-email" serverError={fieldErrors.field("email")}>
-                  <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_email()}</AdminLabel>
                   <form.Field
                     name="email"
                     validators={[
@@ -307,7 +309,7 @@ export default function PersonFormModal({
                         <>
                           <AdminInput
                             type="email"
-                            className="bg-muted text-content border-input"
+                            className={ADMIN_CONTROL_CLASS}
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -323,12 +325,12 @@ export default function PersonFormModal({
               </div>
               <div className="w-full site-md:w-6/12">
                 <AdminField controlId="person-phone" serverError={fieldErrors.field("phone")}>
-                  <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_phone()}</AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
                       <AdminInput
                         type="tel"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -345,14 +347,14 @@ export default function PersonFormModal({
               controlId="person-address"
               serverError={fieldErrors.field("address")}
             >
-              <AdminLabel className="text-subtle text-sm">
+              <AdminLabel className={ADMIN_LABEL_CLASS}>
                 {m.admin_people_address_label()}
               </AdminLabel>
               <form.Field name="address">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -382,9 +384,7 @@ export default function PersonFormModal({
             </form.Field>
             <p className="text-sm text-subtle mb-4">{m.workspace_role_help()}</p>
             <AdminField className="mb-4" controlId="person-roles">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_people_roles_label()}
-              </AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_people_roles_label()}</AdminLabel>
               <div className="flex flex-wrap gap-2 mb-2">
                 {KNOWN_ROLES.map((role) => (
                   <Button
@@ -402,7 +402,7 @@ export default function PersonFormModal({
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     placeholder={m.admin_people_roles_placeholder()}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -417,12 +417,12 @@ export default function PersonFormModal({
               controlId="person-notes"
               serverError={fieldErrors.field("notes")}
             >
-              <AdminLabel className="text-subtle text-sm">{m.admin_notes()}</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_notes()}</AdminLabel>
               <form.Field name="notes">
                 {(field) => (
                   <AdminTextarea
                     rows={2}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}

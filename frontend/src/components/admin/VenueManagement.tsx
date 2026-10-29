@@ -1,6 +1,7 @@
 import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import {
+  ADMIN_CONTROL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -852,7 +853,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     placeholder={m.admin_venue_name_placeholder()}
                   />
                 )}
@@ -867,7 +868,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   />
                 )}
               </venueForm.Field>
@@ -883,7 +884,7 @@ export default function VenueManagement({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                       />
                     )}
                   </venueForm.Field>
@@ -915,7 +916,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   />
                 )}
               </venueForm.Field>
@@ -936,7 +937,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                       />
                     )}
                   </venueForm.Field>
@@ -957,7 +958,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                       />
                     )}
                   </venueForm.Field>
@@ -1029,7 +1030,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   >
                     {venues
                       .filter((v) => v.active)
@@ -1051,7 +1052,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     placeholder={m.admin_room_name_placeholder()}
                   />
                 )}
@@ -1073,7 +1074,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                       />
                     )}
                   </roomForm.Field>
@@ -1094,7 +1095,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                       />
                     )}
                   </roomForm.Field>
@@ -1168,7 +1169,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   >
                     <AdminOption value="">— {m.admin_room_venue_label()} —</AdminOption>
                     {venues
@@ -1191,7 +1192,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     placeholder={m.admin_table_type_name_placeholder()}
                   />
                 )}
@@ -1213,7 +1214,7 @@ export default function VenueManagement({
                       tableTypeForm.setFieldValue("lengthM", "");
                     }}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   >
                     <AdminOption value="rectangle">{m.admin_table_shape_rectangle()}</AdminOption>
                     <AdminOption value="round">{m.admin_table_shape_round()}</AdminOption>
@@ -1229,7 +1230,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e as "low" | "high")}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   >
                     <AdminOption value="low">{m.admin_table_height_type_low()}</AdminOption>
                     <AdminOption value="high">{m.admin_table_height_type_high()}</AdminOption>
@@ -1256,7 +1257,7 @@ export default function VenueManagement({
                         tableTypeForm.setFieldValue("lengthM", v);
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                     />
                   )}
                 </tableTypeForm.Field>
@@ -1280,7 +1281,7 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                         />
                       )}
                     </tableTypeForm.Field>
@@ -1303,7 +1304,7 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-muted text-content border-input"
+                          className={ADMIN_CONTROL_CLASS}
                         />
                       )}
                     </tableTypeForm.Field>
@@ -1322,7 +1323,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   />
                 )}
               </tableTypeForm.Field>

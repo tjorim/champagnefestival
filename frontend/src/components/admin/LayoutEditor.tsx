@@ -1,5 +1,7 @@
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
+  ADMIN_CONTROL_CLASS,
+  ADMIN_LABEL_CLASS,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -1289,11 +1291,11 @@ export default function LayoutEditor({
                   </Alert>
                 )}
                 <AdminField className="mb-4" controlId="table-name-edit">
-                  <AdminLabel className="text-subtle text-sm">{m.admin_table_name()}</AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_table_name()}</AdminLabel>
                   <AdminInput
                     size="sm"
                     type="text"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     defaultValue={selectedTableData.name}
                     onBlur={async (e) => {
                       const val = e.target.value.trim();
@@ -1310,12 +1312,12 @@ export default function LayoutEditor({
                   />
                 </AdminField>
                 <AdminField className="mb-4" controlId="table-type-select">
-                  <AdminLabel className="text-subtle text-sm">
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>
                     {m.admin_layout_table_type_label()}
                   </AdminLabel>
                   <AdminSelect
                     size="sm"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={selectedTableData.tableTypeId}
                     onValueChange={async (e) => {
                       setUpdateTableError(null);
@@ -1437,7 +1439,7 @@ export default function LayoutEditor({
                   </PresentationList>
                 )}
                 <div className="border-t border-subtle pt-4 mt-4">
-                  <AdminLabel className="text-subtle text-sm">
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>
                     {m.admin_layout_assign_booking()}
                   </AdminLabel>
                   <div className="flex flex-wrap gap-2">
@@ -1576,13 +1578,13 @@ export default function LayoutEditor({
                   </Alert>
                 )}
                 <AdminField className="mb-4" controlId="area-label">
-                  <AdminLabel className="text-subtle text-sm">
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>
                     {m.admin_layout_area_form_label()}
                   </AdminLabel>
                   <AdminInput
                     size="sm"
                     type="text"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     defaultValue={selectedAreaData.label}
                     onBlur={(e) => {
                       const newLabel = e.target.value.trim();
@@ -1595,7 +1597,7 @@ export default function LayoutEditor({
                 </AdminField>
                 <div className="flex gap-2 mb-4">
                   <AdminField controlId="area-width" className="flex-1">
-                    <AdminLabel className="text-subtle text-sm">
+                    <AdminLabel className={ADMIN_LABEL_CLASS}>
                       {m.admin_layout_area_width_m()}
                     </AdminLabel>
                     <AdminInput
@@ -1604,7 +1606,7 @@ export default function LayoutEditor({
                       min={0.1}
                       max={50}
                       step={0.1}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       defaultValue={selectedAreaData.widthM}
                       onBlur={async (e) => {
                         const val = parseFloat(e.target.value);
@@ -1621,7 +1623,7 @@ export default function LayoutEditor({
                     />
                   </AdminField>
                   <AdminField controlId="area-length" className="flex-1">
-                    <AdminLabel className="text-subtle text-sm">
+                    <AdminLabel className={ADMIN_LABEL_CLASS}>
                       {m.admin_layout_area_length_m()}
                     </AdminLabel>
                     <AdminInput
@@ -1630,7 +1632,7 @@ export default function LayoutEditor({
                       min={0.1}
                       max={50}
                       step={0.1}
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       defaultValue={selectedAreaData.lengthM}
                       onBlur={async (e) => {
                         const val = parseFloat(e.target.value);
@@ -1648,14 +1650,14 @@ export default function LayoutEditor({
                   </AdminField>
                 </div>
                 <AdminField className="mb-4" controlId="area-icon">
-                  <AdminLabel className="text-subtle text-sm">
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>
                     {m.admin_layout_area_form_icon()}
                   </AdminLabel>
                   <div className="flex gap-2 items-center">
                     <AreaIcon name={selectedAreaData.icon} className="text-primary" />
                     <AdminSelect
                       size="sm"
-                      className="bg-muted text-content border-input"
+                      className={ADMIN_CONTROL_CLASS}
                       value={selectedAreaData.icon || "bi-shop"}
                       onValueChange={async (e) => {
                         const newIcon = e;
@@ -1682,12 +1684,12 @@ export default function LayoutEditor({
                   </div>
                 </AdminField>
                 <AdminField controlId="area-assign-item">
-                  <AdminLabel className="text-subtle text-sm">
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>
                     {m.admin_layout_area_assigned_to()}
                   </AdminLabel>
                   <AdminSelect
                     size="sm"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={
                       selectedAreaData.organizationId ? `e:${selectedAreaData.organizationId}` : ""
                     }
@@ -1775,7 +1777,7 @@ export default function LayoutEditor({
               <AdminSelect
                 value={newLayout.eventId}
                 onValueChange={(e) => setNewLayout((p) => ({ ...p, eventId: e }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               >
                 {dayOptions.map((day) => (
                   <AdminOption key={day.eventId} value={day.eventId}>
@@ -1789,7 +1791,7 @@ export default function LayoutEditor({
               <AdminSelect
                 value={newLayout.copyFromLayoutId}
                 onValueChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               >
                 <AdminOption value="">{m.admin_layout_copy_from_empty()}</AdminOption>
                 {roomLayouts.map((layout) => (
@@ -1867,7 +1869,7 @@ export default function LayoutEditor({
                 type="text"
                 value={newArea.label}
                 onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
                 placeholder={m.admin_layout_area_label_placeholder()}
               />
             </AdminField>
@@ -1878,7 +1880,7 @@ export default function LayoutEditor({
                 <AdminSelect
                   value={newArea.icon}
                   onValueChange={(e) => setNewArea((p) => ({ ...p, icon: e }))}
-                  className="bg-muted text-content border-input"
+                  className={ADMIN_CONTROL_CLASS}
                 >
                   {getAreaIcons().map((ic) => (
                     <AdminOption key={ic.value} value={ic.value}>
@@ -1907,7 +1909,7 @@ export default function LayoutEditor({
                     }));
                   }
                 }}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               >
                 <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
                 {organizations.filter((e) => e.active).length > 0 && (
@@ -1934,7 +1936,7 @@ export default function LayoutEditor({
                     step={0.5}
                     value={newArea.widthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   />
                 </AdminField>
               </div>
@@ -1948,7 +1950,7 @@ export default function LayoutEditor({
                     step={0.5}
                     value={newArea.lengthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                   />
                 </AdminField>
               </div>
@@ -1993,7 +1995,7 @@ export default function LayoutEditor({
                 type="text"
                 value={newTable.name}
                 onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
                 placeholder={m.admin_table_name_placeholder()}
               />
             </AdminField>
@@ -2002,7 +2004,7 @@ export default function LayoutEditor({
               <AdminSelect
                 value={newTable.tableTypeId}
                 onValueChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e }))}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               >
                 <AdminOption value="">— {m.admin_table_type_select()} —</AdminOption>
                 {tableTypes

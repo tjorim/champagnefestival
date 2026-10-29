@@ -2,7 +2,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminEmptyState } from "./AdminEmptyState";
-import { AdminField, AdminLabel, AdminOption, AdminSelect } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminField,
+  AdminLabel,
+  AdminOption,
+  AdminSelect,
+} from "@/components/admin/AdminFields";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -271,7 +277,7 @@ export default function EditionPollModal({
               </AdminLabel>
               <AdminSelect
                 size="sm"
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
                 value={kind}
                 onValueChange={(value) => {
                   setKind(value as PollQuestionKind);
@@ -323,7 +329,7 @@ export default function EditionPollModal({
                   </AdminLabel>
                   <AdminSelect
                     size="sm"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={copySource}
                     onValueChange={(value) => setCopySource(value)}
                   >

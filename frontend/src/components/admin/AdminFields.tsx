@@ -24,6 +24,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+/** Shared appearance for muted admin controls; keep identical consumers in sync. */
+export const ADMIN_CONTROL_CLASS = "bg-muted text-content border-input";
+export const ADMIN_LABEL_CLASS = "text-subtle text-sm";
+
 // Associations survive TanStack render props without coupling presentation to
 // form state. Unnamed groups receive an ID, just like explicitly named fields.
 const ServerFieldError = createContext<string | undefined>(undefined);

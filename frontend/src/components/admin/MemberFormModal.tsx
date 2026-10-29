@@ -1,4 +1,6 @@
 import {
+  ADMIN_CONTROL_CLASS,
+  ADMIN_LABEL_CLASS,
   AdminCheck,
   AdminField,
   AdminLabel,
@@ -191,7 +193,7 @@ export default function MemberFormModal({
               controlId="member-name"
               serverError={fieldErrors.field("name")}
             >
-              <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_name()} *</AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -208,7 +210,7 @@ export default function MemberFormModal({
                     <>
                       <AdminInput
                         type="text"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -225,7 +227,7 @@ export default function MemberFormModal({
             <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
               <div className="w-full site-md:w-6/12">
                 <AdminField controlId="member-email" serverError={fieldErrors.field("email")}>
-                  <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_email()}</AdminLabel>
                   <form.Field
                     name="email"
                     validators={[
@@ -244,7 +246,7 @@ export default function MemberFormModal({
                         <>
                           <AdminInput
                             type="email"
-                            className="bg-muted text-content border-input"
+                            className={ADMIN_CONTROL_CLASS}
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -260,12 +262,12 @@ export default function MemberFormModal({
               </div>
               <div className="w-full site-md:w-6/12">
                 <AdminField controlId="member-phone" serverError={fieldErrors.field("phone")}>
-                  <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
+                  <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_phone()}</AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
                       <AdminInput
                         type="tel"
-                        className="bg-muted text-content border-input"
+                        className={ADMIN_CONTROL_CLASS}
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -296,14 +298,12 @@ export default function MemberFormModal({
               )}
             </form.Field>
             <AdminField className="mb-4" controlId="member-since">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_members_since_label()}
-              </AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_members_since_label()}</AdminLabel>
               <form.Field name="memberSince">
                 {(field) => (
                   <AdminInput
                     type="date"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -317,14 +317,14 @@ export default function MemberFormModal({
               controlId="member-address"
               serverError={fieldErrors.field("address")}
             >
-              <AdminLabel className="text-subtle text-sm">
+              <AdminLabel className={ADMIN_LABEL_CLASS}>
                 {m.admin_people_address_label()}
               </AdminLabel>
               <form.Field name="address">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -362,12 +362,12 @@ export default function MemberFormModal({
               controlId="member-notes"
               serverError={fieldErrors.field("notes")}
             >
-              <AdminLabel className="text-subtle text-sm">{m.registration_notes()}</AdminLabel>
+              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.registration_notes()}</AdminLabel>
               <form.Field name="notes">
                 {(field) => (
                   <AdminTextarea
                     rows={4}
-                    className="bg-muted text-content border-input"
+                    className={ADMIN_CONTROL_CLASS}
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}

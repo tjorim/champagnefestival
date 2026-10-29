@@ -4,7 +4,13 @@
  * Dutch (same rule for events, FAQ items, announcements, policies, products, ...).
  */
 
-import { AdminField, AdminInput, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminField,
+  AdminInput,
+  AdminLabel,
+  AdminTextarea,
+} from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
 import type { EventLanguage } from "@/types/event";
 
@@ -58,7 +64,7 @@ export function LocalizedInputs({
                 maxLength={maxLength}
                 value={values[language]}
                 onChange={(event) => onChange(language, event.target.value)}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               />
             ) : (
               <AdminInput
@@ -66,7 +72,7 @@ export function LocalizedInputs({
                 maxLength={maxLength}
                 value={values[language]}
                 onChange={(event) => onChange(language, event.target.value)}
-                className="bg-muted text-content border-input"
+                className={ADMIN_CONTROL_CLASS}
               />
             )}
           </AdminField>
