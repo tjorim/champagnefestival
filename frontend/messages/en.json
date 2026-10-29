@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producers and sponsors",
   "signage_editor_notice": "Notice",
   "signage_editor_sample": "Preview with existing content",
-  "signage_editor_no_samples": "No existing sample content for this type. Add content to preview its data.",
+  "signage_editor_no_samples": "Representative sample data is shown because no existing content is available for this type.",
   "signage_editor_missing": "Required visible placeholders missing:",
   "signage_editor_move": "Move layer (arrow keys; Shift for larger steps)",
   "signage_editor_resize": "Resize layer (or use width and height fields)",
@@ -1615,7 +1615,7 @@
   "signage_channels_group": "Organisation group",
   "signage_channels_all": "All organisations",
   "signage_channels_template": "Template",
-  "signage_channels_templates_help": "Only templates with the required placeholders are listed. Create templates in Screen templates.",
+  "signage_channels_templates_help": "Only templates with the required placeholders are listed. Create a compatible template here without leaving your slide.",
   "signage_channels_duration": "Duration per slide (seconds)",
   "signage_channels_slide_active": "Slide active",
   "signage_channels_start": "Starts at (local time)",
@@ -1980,5 +1980,12 @@
   "admin_person_identity_conflict": "This identity number is already linked to another person. Check the directory before continuing.",
   "admin_person_matches_help": "Possible existing people. Check whether this is the same person.",
   "admin_person_reuse": "Use existing person",
-  "admin_person_continue_help": "For a different person, continue with Save. Shared email addresses are allowed."
+  "admin_person_continue_help": "For a different person, continue with Save. Shared email addresses are allowed.",
+  "signage_channel_requirements": "Name, public link name and edition are required. Use lowercase letters, numbers and single hyphens for the public link name.",
+  "signage_slide_requirements": "Choose a compatible template, set a duration from 1 to 3600 seconds, and add notice text or an image as appropriate. If both schedule dates are set, the end must follow the start.",
+  "signage_create_template_here": "Create template for this slide",
+  "signage_template_return_help": "Your slide draft stays open. Save the template to select it and return here, or cancel to return without changing the slide.",
+  "signage_template_requirements": "Enter a template name and add the required placeholders before saving. Image templates may have no layers; the slide supplies the image.",
+  "signage_sample_title": "Welcome to the festival",
+  "signage_sample_text": "Sample content: discover our producers and enjoy the festival. This text is only used in the template preview."
 }

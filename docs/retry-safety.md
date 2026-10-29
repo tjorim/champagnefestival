@@ -1139,3 +1139,14 @@ suggestions are authorised read-only searches. Choosing an existing person in
 People opens that record for editing; it does not create, merge, or retry a write.
 Shared-email creation remains allowed for non-members. No automatic retry or
 new idempotency guarantee is introduced.
+
+### First-use signage template creation (#1433)
+
+The slide dialog can open the existing template editor with compatible starter
+placeholders. Saving still uses the explicit, non-retried `POST
+/api/signage/templates`; it allocates an identity and is not retry-safe. The
+returned template is selected locally without saving the slide or activating the
+channel. Cancel returns to the unchanged slide draft. There is no automatic
+retry, upload, or additional server write in this path; ambiguous failures retain
+the existing template-creation recovery rule above. Sample artwork is a static
+preview-only asset and never enters the uploaded-file storage lifecycle.

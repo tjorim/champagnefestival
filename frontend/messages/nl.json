@@ -1564,7 +1564,7 @@
   "signage_editor_organisations": "Producenten en sponsors",
   "signage_editor_notice": "Mededeling",
   "signage_editor_sample": "Voorbeeld met bestaande inhoud",
-  "signage_editor_no_samples": "Geen bestaande voorbeeldinhoud voor dit type. Voeg inhoud toe om de gegevens te bekijken.",
+  "signage_editor_no_samples": "Er worden representatieve voorbeeldgegevens getoond omdat er nog geen inhoud van dit type beschikbaar is.",
   "signage_editor_missing": "Verplichte zichtbare gegevensvelden ontbreken:",
   "signage_editor_move": "Laag verplaatsen (pijltjestoetsen; Shift voor grotere stappen)",
   "signage_editor_resize": "Laag schalen (of gebruik breedte en hoogte)",
@@ -1615,7 +1615,7 @@
   "signage_channels_group": "Organisatiegroep",
   "signage_channels_all": "Alle organisaties",
   "signage_channels_template": "Sjabloon",
-  "signage_channels_templates_help": "Alleen sjablonen met de vereiste velden worden getoond. Maak sjablonen bij Schermsjablonen.",
+  "signage_channels_templates_help": "Alleen sjablonen met de vereiste placeholders worden getoond. Maak hier een compatibel sjabloon zonder je dia te verlaten.",
   "signage_channels_duration": "Duur per dia (seconden)",
   "signage_channels_slide_active": "Dia actief",
   "signage_channels_start": "Begint op (lokale tijd)",
@@ -1980,5 +1980,12 @@
   "admin_person_identity_conflict": "Dit identiteitsnummer is al gekoppeld aan een andere persoon. Controleer eerst de personenlijst.",
   "admin_person_matches_help": "Mogelijk bestaande personen. Controleer of dit dezelfde persoon is.",
   "admin_person_reuse": "Bestaande persoon gebruiken",
-  "admin_person_continue_help": "Voor een andere persoon gaat u verder met Opslaan. Een gedeeld e-mailadres is toegestaan."
+  "admin_person_continue_help": "Voor een andere persoon gaat u verder met Opslaan. Een gedeeld e-mailadres is toegestaan.",
+  "signage_channel_requirements": "Naam, openbare linknaam en editie zijn verplicht. Gebruik kleine letters, cijfers en enkele koppeltekens voor de openbare linknaam.",
+  "signage_slide_requirements": "Kies een compatibel sjabloon, stel een duur van 1 tot 3600 seconden in en voeg waar nodig berichttekst of een afbeelding toe. Als beide planningsdatums zijn ingesteld, moet het einde na het begin liggen.",
+  "signage_create_template_here": "Sjabloon voor deze dia maken",
+  "signage_template_return_help": "Je diaconcept blijft open. Sla het sjabloon op om het te selecteren en hier terug te keren, of annuleer om terug te keren zonder de dia te wijzigen.",
+  "signage_template_requirements": "Voer een sjabloonnaam in en voeg de vereiste placeholders toe voordat je opslaat. Afbeeldingssjablonen mogen leeg zijn; de dia levert de afbeelding.",
+  "signage_sample_title": "Welkom op het festival",
+  "signage_sample_text": "Voorbeeldinhoud: ontdek onze producenten en geniet van het festival. Deze tekst wordt alleen in het sjabloonvoorbeeld gebruikt."
 }
