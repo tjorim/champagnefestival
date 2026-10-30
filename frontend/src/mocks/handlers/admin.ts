@@ -1017,17 +1017,16 @@ export const adminHandlers = [
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const today = localIsoDate();
+    const helpPeriods = (people[idx]!.help_periods ?? []) as Record<string, unknown>[];
     people[idx] = {
       ...retireMockRole(people[idx]!, "volunteer"),
-      help_periods: ((people[idx]!.help_periods ?? []) as Record<string, unknown>[]).map(
-        (period) =>
-          period.last_help_day === null
-            ? {
-                ...period,
-                last_help_day:
-                  today > String(period.first_help_day) ? today : period.first_help_day,
-              }
-            : period,
+      help_periods: helpPeriods.map((period) =>
+        period.last_help_day === null
+          ? {
+              ...period,
+              last_help_day: today > String(period.first_help_day) ? today : period.first_help_day,
+            }
+          : period,
       ),
     };
     return new HttpResponse(null, { status: 204 });
