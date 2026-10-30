@@ -30,8 +30,8 @@ importers:
         specifier: ^0.5.11
         version: 0.5.11(react@19.3.1)(typescript@7.0.2)
       '@tanstack/react-form':
-        specifier: 2.0.0-alpha.2
-        version: 2.0.0-alpha.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 2.0.0-alpha.3
+        version: 2.0.0-alpha.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1556,8 +1556,8 @@ packages:
     peerDependencies:
       typescript: '>=4.7'
 
-  '@tanstack/form-core@2.0.0-alpha.2':
-    resolution: {integrity: sha512-u/2s1rJ1pSdFgU/oKz2zt/Wdb3XQK9LY1IIL2pLMu0AVYK5f8Ue5UwaCjcUxEAI8g6XJpbmEuy2wLIwHZbZnwA==}
+  '@tanstack/form-core@2.0.0-alpha.3':
+    resolution: {integrity: sha512-TbwZhIJpK7MWxzA40JuPtTOEJ32d1NPd2ksk8mlGzzx24tN+tGI2v+xOssJvlu3CFvj4BluV1x6unaqd4VWiPQ==}
     engines: {node: '>=18'}
 
   '@tanstack/history@1.162.5':
@@ -1585,8 +1585,8 @@ packages:
     peerDependencies:
       react: '>=18.0.0'
 
-  '@tanstack/react-form@2.0.0-alpha.2':
-    resolution: {integrity: sha512-rIm6kRhpK9Fbb5p3xiwKKofOKHXAK3K28NeR4sM5T0h8CU0TpCLMz27SAHY2xjvG2iSgx8n4mLVEyTxw7iHJdw==}
+  '@tanstack/react-form@2.0.0-alpha.3':
+    resolution: {integrity: sha512-n3ocTax6Dlb26j6/WVRmDmRS1Hllgr83XscB5XjO109ZnWNRQ/jZyad8IctFZp2CdyqoUwqpO5niFvHevgSp3A==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -1607,12 +1607,6 @@ packages:
       react: '>=18.0.0 || >=19.0.0'
       react-dom: '>=18.0.0 || >=19.0.0'
 
-  '@tanstack/react-store@0.11.1':
-    resolution: {integrity: sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   '@tanstack/react-store@0.11.2':
     resolution: {integrity: sha512-oj5O5DmiMWE+ih+SioX2ayC1kbK7d3fpLx0B75fPJr9nY3zU+hoW010yr64qXsY/9fyiLVE2bn5mGNV3owm8RQ==}
     peerDependencies:
@@ -1628,9 +1622,6 @@ packages:
   '@tanstack/router-core@1.171.38':
     resolution: {integrity: sha512-XRZVxiO6BIexICmEo3XfPmpoyyLhbjgaMJsONz4gIf5oYys0UiaG1BJGRyj9x8QZPDZcBhvAMuTYN70wSxV0gA==}
     engines: {node: '>=20.19'}
-
-  '@tanstack/store@0.11.1':
-    resolution: {integrity: sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==}
 
   '@tanstack/store@0.11.2':
     resolution: {integrity: sha512-sJ4mjol8uQsHV0gOJzzjwXfh2Fwm+Sz0+8deqiTm4jGbMdjzNSW+xZCFm0kUa870uhd8yi+DpKnZb5Kc4apa0Q==}
@@ -5039,7 +5030,7 @@ snapshots:
       '@tanstack/pacer-lite': 0.2.2
       typescript: 7.0.2
 
-  '@tanstack/form-core@2.0.0-alpha.2':
+  '@tanstack/form-core@2.0.0-alpha.3':
     dependencies:
       '@tanstack/pacer-lite': 0.2.2
       '@tanstack/store': 0.11.2
@@ -5068,10 +5059,10 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@tanstack/react-form@2.0.0-alpha.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tanstack/react-form@2.0.0-alpha.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@tanstack/form-core': 2.0.0-alpha.2
-      '@tanstack/react-store': 0.11.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@tanstack/form-core': 2.0.0-alpha.3
+      '@tanstack/react-store': 0.11.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
     transitivePeerDependencies:
       - react-dom
@@ -5091,13 +5082,6 @@ snapshots:
       isbot: 5.2.2
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
-
-  '@tanstack/react-store@0.11.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
-    dependencies:
-      '@tanstack/store': 0.11.1
-      react: 19.3.1
-      react-dom: 19.3.1(react@19.3.1)
-      use-sync-external-store: 1.7.0(react@19.3.1)
 
   '@tanstack/react-store@0.11.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
@@ -5120,8 +5104,6 @@ snapshots:
       cookie-es: 3.1.1
       seroval: 1.6.11
       seroval-plugins: 1.6.11(seroval@1.6.11)
-
-  '@tanstack/store@0.11.1': {}
 
   '@tanstack/store@0.11.2': {}
 
