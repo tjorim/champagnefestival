@@ -290,7 +290,6 @@ function DraggableTable({
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       aria-pressed={isInteractive ? isSelected : undefined}
-      aria-label={`${m.admin_table_label()} ${table.name}`}
       onKeyDown={
         isInteractive
           ? (e) => {
@@ -381,7 +380,6 @@ function DraggableArea({
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
       aria-pressed={isInteractive ? isSelected : undefined}
-      aria-label={`${m.admin_layout_area_label_prefix()} ${area.label}`}
       onKeyDown={
         isInteractive
           ? (e) => {
