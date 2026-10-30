@@ -48,7 +48,7 @@ describe("MaintenancePage", () => {
 
   it("offers the language switcher so visitors can leave the detected language", async () => {
     render(<MaintenancePage />);
-    expect(await screen.findByRole("button", { name: "Select language" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /select language/i })).toBeInTheDocument();
   });
 
   it("hides the Facebook action when the setting is empty", () => {

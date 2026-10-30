@@ -49,7 +49,7 @@ const LanguageSwitcher = () => {
     <DropdownMenu>
       <DropdownMenuTrigger
         className="site-lang-toggle inline-flex items-center gap-2 rounded border px-2 py-1 text-sm"
-        aria-label={m.language_select()}
+        aria-label={`${currentLanguage.code.toUpperCase()}: ${m.language_select()}`}
         title={m.language_select()}
       >
         <GlobeIcon aria-hidden="true" className="size-4" />
