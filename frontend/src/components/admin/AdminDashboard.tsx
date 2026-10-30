@@ -504,7 +504,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     setActiveKey("registrations");
                     setApplyActiveEditionFilterRequest((current) => current + 1);
                   }}
-                  aria-label={m.admin_active_edition_apply_filter()}
+                  title={m.admin_active_edition_apply_filter()}
                 >
                   <span className="font-semibold">{editionDisplayNameWithType(activeEdition)}</span>
                   {isActiveEditionDay && (
