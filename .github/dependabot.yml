@@ -18,6 +18,7 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+      - "platform:frontend"
     versioning-strategy: "increase"
     groups:
       react:
@@ -107,7 +108,7 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
-      - "backend"
+      - "platform:backend"
       - "python"
     versioning-strategy: "increase"
     groups:
@@ -146,7 +147,7 @@ updates:
       include: "scope"
     labels:
       - "dependencies"
-      - "android"
+      - "platform:android"
 
   - package-ecosystem: "docker"
     directories:
