@@ -25,7 +25,11 @@ describe("LanguageSwitcher component", () => {
   it("shows current language code in toggle", async () => {
     render(<LanguageSwitcher />);
     await act(async () => {});
-    expect(screen.getByText("NL")).toBeInTheDocument();
+    const code = screen.getByText("NL");
+    expect(code).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "NL: Select language" })).toHaveAccessibleName(
+      expect.stringContaining(code.textContent!),
+    );
   });
 
   it("shows all three language options in dropdown", async () => {

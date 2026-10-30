@@ -18,7 +18,7 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
       }, theme);
       await page.goto("/");
       await expect(page.locator("html")).toHaveAttribute("data-visual-theme", theme);
-      const language = page.getByRole("button", { name: "Select language" });
+      const language = page.getByRole("button", { name: "EN: Select language" });
       await language.focus();
       await page.keyboard.press("ArrowDown");
       await expect(page.getByRole("menu")).toBeVisible();
