@@ -293,7 +293,7 @@ describe("LayoutEditor", () => {
     await waitFor(() =>
       expect(screen.getAllByText(fixture.tables[0]!.name)[0]!).toBeInTheDocument(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
     const card = screen
       .getByText("admin_table_label: Table A")
       .closest('[data-slot="card"]') as HTMLElement;
@@ -329,7 +329,7 @@ describe("LayoutEditor", () => {
   it("assigns an unallocated booking from the selected table on the plan", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
     await selectAdminOption(
       screen.getByRole("combobox", { name: "admin_layout_assign_booking" }),
       "reg-1",
@@ -349,7 +349,7 @@ describe("LayoutEditor", () => {
       allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
     });
     const { callbacks } = renderLayoutEditor(fixture);
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
     await selectAdminOption(
       screen.getByRole("combobox", { name: "admin_layout_move_booking Jane Doe" }),
       "table-2",
@@ -435,7 +435,7 @@ describe("LayoutEditor", () => {
     ];
     renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
 
     const select = screen.getByLabelText("admin_layout_table_type_label") as HTMLSelectElement;
     const optionValues = (await readAdminOptions(select)).map((o) => o.value);
@@ -479,7 +479,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
 
     const detailHeading = screen.getByText("admin_table_label: Table A");
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
@@ -503,7 +503,7 @@ describe("LayoutEditor", () => {
     fixture.tables = [makeTable({ registrationIds: ["reg-1"] }), fixture.tables[1]!];
     const { callbacks } = renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
 
     const card = screen
       .getByText("admin_table_label: Table A")
@@ -523,7 +523,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
-    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
 
     const detailHeading = screen.getByText("admin_table_label: Table A");
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
@@ -545,7 +545,7 @@ describe("LayoutEditor", () => {
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_areas" }));
-    fireEvent.click(screen.getByRole("button", { name: "admin_layout_area_label_prefix Stand 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stand 1" }));
 
     const detailHeading = screen.getByText("admin_layout_area_label_prefix Stand 1");
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
@@ -569,7 +569,7 @@ describe("LayoutEditor", () => {
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_areas" }));
-    fireEvent.click(screen.getByRole("button", { name: "admin_layout_area_label_prefix Stand 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Stand 1" }));
 
     const detailHeading = screen.getByText("admin_layout_area_label_prefix Stand 1");
     const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
