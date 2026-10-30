@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { settleAnimations } from "./axe";
 
 test("edits channels and playlists, previews drafts and supports accessible reordering", async ({
   page,
@@ -131,6 +132,8 @@ test("edits channels and playlists, previews drafts and supports accessible reor
       (slide: { kind: string }) => slide.kind === "notice",
     ),
   ).toBe(false);
+  // Scanning mid-transition reads blended colours (a 2.2:1 contrast failure under load).
+  await settleAnimations(page);
   const results = await new AxeBuilder({ page }).include('[data-slot="dialog-content"]').analyze();
   expect(results.violations).toEqual([]);
   // Reopen the saved row: unsaved schedule and active edits never overwrite it.
