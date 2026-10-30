@@ -35,7 +35,7 @@ test("hovering a legend entry dims the other series", async ({ page }) => {
   await expect(guestBars.first()).toBeVisible();
   await expect(attendance).toHaveAttribute("data-ts-motion-state", "finished");
 
-  await page.getByRole("button", { name: "Checked in" }).hover();
+  await page.getByRole("button", { name: "Toggle Checked in series" }).hover();
 
   await expect
     .poll(async () => guestBars.first().evaluate((el) => Number(getComputedStyle(el).opacity)))
