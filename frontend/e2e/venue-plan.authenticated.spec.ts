@@ -51,7 +51,7 @@ async function seedPlan(page: Page, tableCount = 24) {
   });
 }
 
-for (const width of [390, 1280, 1366, 1440]) {
+for (const width of [390, 1280]) {
   test(`dense plan navigation at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
     await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));

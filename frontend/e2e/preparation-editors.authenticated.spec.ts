@@ -123,122 +123,119 @@ async function editors(page: Page) {
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 }
 
-for (const [width, height] of [
-  [1280, 800],
-  [1366, 768],
-  [1440, 900],
+// One corner per width and zoom (narrowest and widest effective viewports included):
+// 1280/1366/1440 share one layout, so the full width × zoom grid repeats the same checks.
+for (const [width, height, zoom] of [
+  [1280, 800, 1.5],
+  [1366, 768, 1.25],
+  [1440, 900, 1],
 ]) {
-  for (const zoom of [1, 1.25, 1.5]) {
-    test(`preparation editors ${width}x${height} at native zoom ${zoom}`, async ({ baseURL }) => {
-      test.setTimeout(90000);
-      const { chromium } = await import("@playwright/test");
-      const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");
-      const { tmpdir } = await import("node:os");
-      const { join } = await import("node:path");
-      const profile = await mkdtemp(join(tmpdir(), "editors-zoom-"));
-      const extension = join(profile, "extension");
-      await mkdir(extension);
-      await writeFile(
-        join(extension, "manifest.json"),
-        JSON.stringify({
-          manifest_version: 3,
-          name: "Editor zoom test",
-          version: "1.0",
-          permissions: ["tabs"],
-          background: { service_worker: "background.js" },
-        }),
-      );
-      await writeFile(
-        join(extension, "background.js"),
-        "chrome.runtime.onInstalled.addListener(() => {});",
-      );
-      const state = JSON.parse(await readFile("e2e/.auth/admin.json", "utf8"));
-      const context = await chromium.launchPersistentContext(profile, {
-        baseURL,
-        channel: "chromium",
-        headless: true,
-        viewport: { width, height },
-        args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
-      });
-      try {
-        await context.addInitScript((origins) => {
-          for (const origin of origins)
-            if (origin.origin === location.origin)
-              for (const entry of origin.localStorage)
-                localStorage.setItem(entry.name, entry.value);
-          localStorage.setItem("PARAGLIDE_LOCALE", "en");
-          const original = window.fetch.bind(window);
-          window.fetch = async (input, init) => {
-            const request = new Request(input, init);
-            const url = new URL(request.url, location.origin);
-            if (url.pathname === "/api/products" && request.method === "GET")
-              return Response.json([
-                {
-                  id: "review-product",
-                  event_id: url.searchParams.get("event_id"),
-                  name: "Product with existing bookings",
-                  name_nl: "Product with existing bookings",
-                  name_fr: "Produit traduit",
-                  description_nl: "Een beschrijving",
-                  price: 50,
-                  category: "other",
-                  purchasable: true,
-                  required: false,
-                  stock: 10,
-                  unit: "table",
-                  inclusions: [],
-                  created_at: "",
-                  updated_at: "",
-                },
-              ]);
-            if (url.pathname === "/api/products/review-product/preview")
-              return Response.json({
-                preview_token: "review-token",
-                price_changed: true,
-                contents_changed: true,
-                bookings: Array.from({ length: 12 }, (_, i) => ({
-                  id: `booking-${i}`,
-                  before_total: "50.00",
-                  after_total: "100.00",
-                  amount_paid: "60.00",
-                  refund_due: "0.00",
-                  before_items: [{ name: "Original package", quantity: 1 }],
-                  after_items: [
-                    { name: "Changed package with a long translated name", quantity: 2 },
-                  ],
-                })),
-                shortages: [
-                  {
-                    product_id: "review-product",
-                    name: "Tables",
-                    stock: 10,
-                    reserved: 12,
-                    shortage: 2,
-                  },
-                ],
-              });
-            return original(input, init);
-          };
-        }, state.origins);
-        const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
-        const page = await context.newPage();
-        page.setDefaultTimeout(15000);
-        await page.goto("/admin");
-        await expect(
-          page.getByRole("navigation", { name: en.workspace_title, exact: true }),
-        ).toBeVisible();
-        await worker.evaluate(
-          `new Promise(resolve => chrome.tabs.query({}, tabs => chrome.tabs.setZoom(tabs.find(tab => tab.url?.includes('/admin')).id, ${zoom}, resolve)))`,
-        );
-        await page.waitForFunction((factor) => Math.abs(devicePixelRatio - factor) < 0.05, zoom);
-        await test.step("Exercise populated editors", () => editors(page));
-      } catch (error) {
-        console.log(await context.pages().at(-1)?.locator("body").innerText());
-        throw error;
-      } finally {
-        await context.close();
-        await rm(profile, { recursive: true, force: true });
-      }
+  test(`preparation editors ${width}x${height} at native zoom ${zoom}`, async ({ baseURL }) => {
+    test.setTimeout(90000);
+    const { chromium } = await import("@playwright/test");
+    const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const profile = await mkdtemp(join(tmpdir(), "editors-zoom-"));
+    const extension = join(profile, "extension");
+    await mkdir(extension);
+    await writeFile(
+      join(extension, "manifest.json"),
+      JSON.stringify({
+        manifest_version: 3,
+        name: "Editor zoom test",
+        version: "1.0",
+        permissions: ["tabs"],
+        background: { service_worker: "background.js" },
+      }),
+    );
+    await writeFile(
+      join(extension, "background.js"),
+      "chrome.runtime.onInstalled.addListener(() => {});",
+    );
+    const state = JSON.parse(await readFile("e2e/.auth/admin.json", "utf8"));
+    const context = await chromium.launchPersistentContext(profile, {
+      baseURL,
+      channel: "chromium",
+      headless: true,
+      viewport: { width, height },
+      args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`],
     });
-  }
+    try {
+      await context.addInitScript((origins) => {
+        for (const origin of origins)
+          if (origin.origin === location.origin)
+            for (const entry of origin.localStorage) localStorage.setItem(entry.name, entry.value);
+        localStorage.setItem("PARAGLIDE_LOCALE", "en");
+        const original = window.fetch.bind(window);
+        window.fetch = async (input, init) => {
+          const request = new Request(input, init);
+          const url = new URL(request.url, location.origin);
+          if (url.pathname === "/api/products" && request.method === "GET")
+            return Response.json([
+              {
+                id: "review-product",
+                event_id: url.searchParams.get("event_id"),
+                name: "Product with existing bookings",
+                name_nl: "Product with existing bookings",
+                name_fr: "Produit traduit",
+                description_nl: "Een beschrijving",
+                price: 50,
+                category: "other",
+                purchasable: true,
+                required: false,
+                stock: 10,
+                unit: "table",
+                inclusions: [],
+                created_at: "",
+                updated_at: "",
+              },
+            ]);
+          if (url.pathname === "/api/products/review-product/preview")
+            return Response.json({
+              preview_token: "review-token",
+              price_changed: true,
+              contents_changed: true,
+              bookings: Array.from({ length: 12 }, (_, i) => ({
+                id: `booking-${i}`,
+                before_total: "50.00",
+                after_total: "100.00",
+                amount_paid: "60.00",
+                refund_due: "0.00",
+                before_items: [{ name: "Original package", quantity: 1 }],
+                after_items: [{ name: "Changed package with a long translated name", quantity: 2 }],
+              })),
+              shortages: [
+                {
+                  product_id: "review-product",
+                  name: "Tables",
+                  stock: 10,
+                  reserved: 12,
+                  shortage: 2,
+                },
+              ],
+            });
+          return original(input, init);
+        };
+      }, state.origins);
+      const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+      const page = await context.newPage();
+      page.setDefaultTimeout(15000);
+      await page.goto("/admin");
+      await expect(
+        page.getByRole("navigation", { name: en.workspace_title, exact: true }),
+      ).toBeVisible();
+      await worker.evaluate(
+        `new Promise(resolve => chrome.tabs.query({}, tabs => chrome.tabs.setZoom(tabs.find(tab => tab.url?.includes('/admin')).id, ${zoom}, resolve)))`,
+      );
+      await page.waitForFunction((factor) => Math.abs(devicePixelRatio - factor) < 0.05, zoom);
+      await test.step("Exercise populated editors", () => editors(page));
+    } catch (error) {
+      console.log(await context.pages().at(-1)?.locator("body").innerText());
+      throw error;
+    } finally {
+      await context.close();
+      await rm(profile, { recursive: true, force: true });
+    }
+  });
 }

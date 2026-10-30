@@ -153,6 +153,7 @@ for (const viewport of [
     expect(await navigation.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
       true,
     );
+    await settleAnimations(page);
     const navigationAudit = await new AxeBuilder({ page }).include('[role="tablist"]').analyze();
     expect(navigationAudit.violations).toEqual([]);
     await page.getByRole("button", { name: "Add template", exact: true }).click();
@@ -226,7 +227,10 @@ for (const viewport of [
     await expect(rows.nth(2).getByRole("button", { name: "Sponsor", exact: true })).toBeVisible();
     // Direct placeholder creation selects the correct binding in one step.
     await dialog.getByRole("combobox", { name: "Add layer", exact: true }).click();
-    await page.getByRole("option", { name: "Title placeholder", exact: true }).click();
+    // Pick with the keyboard: at 390px a pointer click lands on the neighbouring option while the
+    // popup is still positioning itself.
+    await page.getByRole("option", { name: "Title placeholder", exact: true }).focus();
+    await page.keyboard.press("Enter");
     await expect(
       properties.getByRole("combobox", { name: "Placeholder", exact: true }),
     ).toContainText("Title");

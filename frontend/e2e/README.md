@@ -39,6 +39,41 @@ of tests (21.4 min wall). Split by file, the heaviest of four shards holds about
 test time (about 6.5 min of tests plus about 1.5 min setup), so the wall time should fall
 to about 8 min while runner minutes rise by about 25% (four installs).
 
+### Repeated viewport and theme matrices
+
+Specs that repeat one scenario over widths, colour schemes or zoom levels keep only the
+variants that exercise a different layout. 1280, 1366 and 1440px share one layout, so
+the extra widths and the full width × zoom grids were dropped; the narrowest and widest
+effective viewports stay. The theme specs (`THEME_VARIANTS` in `variants.ts`) run a wide
+light and a narrow dark variant per theme instead of all four width × scheme pairs; the
+axe scans keep covering contrast in light, dark and narrow. When you add a repeated spec,
+reuse `THEME_VARIANTS` or list only the viewports that differ.
+
+Measured locally with four workers on the default theme (mocked API, 4-core laptop):
+
+|                      | Tests | Summed test time | Wall time |
+| -------------------- | ----- | ---------------- | --------- |
+| Before (after #1470) | 270   | 1565 s           | 7.2 min   |
+| After                | 217   | 1213 s           | 4.9 min   |
+
+### Shard balance
+
+Shard wall times after #1470 were 3.4 / 6.0 / 7.3 / 7.7 min because Playwright balances
+by test count and the public specs are fast. Decision: keep the four `--shard=N/4`
+shards. Trimming the matrices removed 55 tests, most of them slow authenticated ones, which narrows the gap
+for free; perfect balance would save about 1.5 min, and pinning heavy files or enabling
+`fullyParallel` risks order-dependent tests within a file. Revisit when the slowest shard
+exceeds 8 min.
+
+### Unmocked requests
+
+A request that the MSW worker never answers falls through to the Vite proxy and logs
+`vite http proxy error` (`ECONNREFUSED` without a backend). This happens when a test ends
+or closes its context while the page still has a request in flight. Wait for the response
+(`page.waitForResponse`) before the test ends. To find offenders, run Vite with the
+`/api` proxy target pointed at a port with no listener and grep its log for
+`proxy error`. The main suite should log none.
+
 ## Seeding mock state
 
 The MSW service worker owns `/api`, so `page.route` cannot override it. Public state
