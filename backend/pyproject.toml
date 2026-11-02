@@ -19,7 +19,7 @@ dependencies = [
   "fastmcp==4.1.4",
   "httpx==0.28.1",
   "limits==5.8.0",
-  "phonenumbers==9.0.41",
+  "phonenumbers==9.0.42",
   "psycopg[binary]==3.3.6",
   "pydantic[email]==2.14.1",
   "pydantic-settings==2.16.2",
