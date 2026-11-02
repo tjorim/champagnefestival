@@ -24,6 +24,7 @@ from app.middleware import (
     add_trusted_host_middleware,
 )
 from app.observability import request_metrics_middleware
+from app.request_limits import RateLimitHeadersMiddleware
 from app.request_timing import RequestTimingMiddleware
 from app.routers import (
     announcements,
@@ -178,11 +179,16 @@ app = FastAPI(
 
 add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
 app.state.limiter = general_rate_limiter
+app.add_middleware(RateLimitHeadersMiddleware)
 
 
 @app.exception_handler(GeneralRateLimitExceeded)
 async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExceeded) -> JSONResponse:
-    return JSONResponse({"error": exc.detail}, status_code=429)
+    return JSONResponse(
+        {"error": f"Rate limit exceeded: {exc.detail}"},
+        status_code=429,
+        headers={**exc.headers, "Cache-Control": "no-store"},
+    )
 
 
 # Metrics middleware is registered next-to-last so it is close to outermost and

@@ -1012,3 +1012,5 @@ fix can introduce new 429s. If a staged rollout is needed, keep
 `RATE_LIMIT_ENABLED=false` while measuring traffic, then configure an appropriate
 `RATE_LIMIT_DEFAULT` before enabling enforcement. This switch does not provide
 log-only counting; use access logs for that assessment.
+
+Rate-limit buckets, response headers, exemptions and rollout: [REST rate limiting](docs/RATE_LIMITING.md).

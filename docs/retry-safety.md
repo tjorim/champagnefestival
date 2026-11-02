@@ -1170,3 +1170,11 @@ automatic retry or idempotency guarantee: clients must continue to follow each
 operation's documented retry policy, especially after an ambiguous earlier
 attempt. Token-gated check-in retains its separate policy; the `/mcp` mount uses
 its own authentication and integration-client limits.
+
+### General REST throttling
+
+A general rate-limit 429 occurs before the route handler and carries Retry-After
+and no-store semantics. Changing an ID or HTTP method does not create a fresh
+route-template allowance. This rejection causes no handler write; it does not
+prove that an earlier timed-out write failed. Existing idempotency keys or
+reconciliation rules still govern retries. Mounted MCP policies stay separate.
