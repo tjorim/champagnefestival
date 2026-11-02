@@ -16,7 +16,7 @@ champagnefestival/
 
 | Tool | Purpose | Install |
 |---|---|---|
-| Node.js 24+ + pnpm | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
+| Node.js 26.13.0 + pnpm 12.16.1 | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
 | Python 3.15+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
 | Docker (optional) | Containerised backend | [docs.docker.com](https://docs.docker.com) |
 
@@ -118,3 +118,5 @@ it. See [configuration and API contract](docs/organization-description-translati
 ## UI maintenance
 
 See [UI dependency and component maintenance](docs/ui-maintenance.md) for package updates, component provenance, upstream review commands and validation.
+
+Toolchain versions and coordinated rollout: [Node and pnpm toolchain](docs/toolchain.md).

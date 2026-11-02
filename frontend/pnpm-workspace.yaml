@@ -1,3 +1,6 @@
 allowBuilds:
   browser-tabs-lock: true
   msw: true
+
+# Keep the one-day quarantine for new dependency releases, including frozen installs.
+minimumReleaseAge: 1440
