@@ -40,7 +40,7 @@ dependencies = [
 sentry = ["sentry-sdk[fastapi]==2.72.0"]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.15.1", "ruff==0.17.0", "ty==0.0.87"]
+dev = ["pytest==9.2.0", "pytest-asyncio==1.4.1", "anyio==4.15.1", "ruff==0.17.3", "ty==0.0.95"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
