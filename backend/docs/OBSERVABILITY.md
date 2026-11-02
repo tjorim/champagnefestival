@@ -71,7 +71,7 @@ curl -H "X-Metrics-Token: $(python -c "from app.routers.health import build_metr
 
 ## Rate Limiting
 
-A general, configurable per-IP rate limiter (`RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT`, via `slowapi`) applies to every `/api` route. The check-in and registration endpoints additionally enforce a stricter, hardcoded 5-req/600s limit (`app/ratelimit.py`) on top of the general default, as an override for that specific abuse vector.
+A general, configurable per-IP and route-template rate limiter (`RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT`, via a global FastAPI dependency and `limits`) covers included routers. Token-gated check-in routes are exempt and retain their database-backed per-registration and shared-IP policy. Registration creation retains its additional purpose-specific limit (`app/ratelimit.py`). Mounted `/mcp` uses its own authentication and integration-client rate policy. See the backend README for rollout guidance following #1497.
 
 ---
 

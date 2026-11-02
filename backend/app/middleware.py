@@ -4,11 +4,11 @@ import logging
 from collections.abc import Callable, Iterable
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
+from limits import parse
+from limits.storage import MemoryStorage
+from limits.strategies import FixedWindowRateLimiter
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -52,30 +52,36 @@ def add_cors_middleware(app: FastAPI, settings: Settings, *, mcp_enabled: bool =
         app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 
-def add_rate_limit_middleware(
-    app: FastAPI,
-    settings: Settings,
-    *,
-    exempt_routes: Iterable[Callable[..., Any]] = (),
-) -> Limiter:
-    """Install a general, configurable per-IP rate limiter across every route.
+class GeneralRateLimiter:
+    """Global dependency: routing has resolved included routers before this runs.
 
-    Applies RATE_LIMIT_DEFAULT per client IP and route unless RATE_LIMIT_ENABLED
-    is false. Callers may exempt routes that have a purpose-specific policy;
-    Token-gated check-in uses this to avoid stacking the global limit on top of
-    its per-registration limit and shared-IP abuse backstop.
+    Mounted ASGI apps do not inherit dependencies; /mcp keeps its own
+    authentication and integration-client rate policy. Storage is per worker.
     """
-    limiter = Limiter(
-        key_func=get_client_ip,
-        default_limits=[settings.rate_limit_default],
-        enabled=settings.rate_limit_enabled,
-    )
-    for route in exempt_routes:
-        limiter.exempt(route)
-    app.state.limiter = limiter
-    app.exception_handler(RateLimitExceeded)(_rate_limit_exceeded_handler)
-    app.add_middleware(SlowAPIMiddleware)
-    return limiter
+
+    def __init__(self, settings: Settings, *, exempt_routes: Iterable[Callable[..., Any]] = ()) -> None:
+        self.enabled = settings.rate_limit_enabled
+        self.limit = parse(settings.rate_limit_default)
+        self.exempt_routes = frozenset(exempt_routes)
+        self.storage = MemoryStorage()
+        self.limiter = FixedWindowRateLimiter(self.storage)
+
+    def reset(self) -> None:
+        self.storage.reset()
+
+    async def __call__(self, request: Request) -> None:
+        if not self.enabled or request.scope.get("endpoint") in self.exempt_routes:
+            return
+        template = getattr(request.scope.get("route"), "path_format", None) or request.url.path
+        if not self.limiter.hit(self.limit, get_client_ip(request), template):
+            # Preserve SlowAPI's public response body, handled separately from
+            # application HTTPExceptions so the diagnostic is not rewritten.
+            raise GeneralRateLimitExceeded(str(self.limit))
+
+
+class GeneralRateLimitExceeded(HTTPException):
+    def __init__(self, limit: str) -> None:
+        super().__init__(status_code=429, detail=f"Rate limit exceeded: {limit}")
 
 
 def add_trusted_host_middleware(app: FastAPI, settings: Settings) -> None:

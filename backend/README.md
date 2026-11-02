@@ -988,3 +988,27 @@ REST question create/update and MCP `create_poll_question`/`update_poll_question
 accept `event_id`; MCP `clear_event` explicitly clears the link. Admin and
 volunteer question responses expose the link. See the retry-safety inventory
 for stable error codes, lock order and reconciliation after timeouts.
+
+### General request rate limit
+
+`RATE_LIMIT_DEFAULT` is enforced by a global FastAPI dependency after routing,
+including nested `include_router` routes. Each worker has an in-memory fixed-window
+bucket per client IP and route template; methods and different IDs of one template
+share that bucket. Trusted-proxy IP resolution uses the same `get_client_ip`
+helper as the purpose-specific limits. Rejections retain the response shape
+`{"error": "Rate limit exceeded: 60 per 1 minute"}`. `RATE_LIMIT_ENABLED=false`
+disables only this general policy.
+
+The token-gated check-in lookup and check-in endpoints are exempt and retain their
+persistent per-registration and shared-IP limits. Mounted ASGI applications do not
+inherit FastAPI dependencies: `/mcp` deliberately retains its own authentication
+and integration-client rate policy, without this general IP limit. Unmatched
+paths and framework documentation endpoints also do not execute the dependency.
+
+Before deploying the #1497 enforcement fix, inspect access-log request rates per
+client IP and route, especially shared NATs, polling clients and integrations.
+Previously included-router routes silently bypassed the general policy, so the
+fix can introduce new 429s. If a staged rollout is needed, keep
+`RATE_LIMIT_ENABLED=false` while measuring traffic, then configure an appropriate
+`RATE_LIMIT_DEFAULT` before enabling enforcement. This switch does not provide
+log-only counting; use access logs for that assessment.

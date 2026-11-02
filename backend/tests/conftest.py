@@ -42,7 +42,7 @@ def reset_rate_limiter(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def reset_general_rate_limiter():
-    """Reset the general slowapi rate limiter's storage before every test for isolation."""
+    """Reset the general rate limiter's storage before every test for isolation."""
     app.state.limiter.reset()
 
 

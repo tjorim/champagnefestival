@@ -5,7 +5,7 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
@@ -17,7 +17,12 @@ from app.live.listener import pg_live_listener
 from app.live.render_cache_listener import pg_render_cache_listener
 from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
-from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
+from app.middleware import (
+    GeneralRateLimiter,
+    GeneralRateLimitExceeded,
+    add_cors_middleware,
+    add_trusted_host_middleware,
+)
 from app.observability import request_metrics_middleware
 from app.request_timing import RequestTimingMiddleware
 from app.routers import (
@@ -158,7 +163,10 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
 
+general_rate_limiter = GeneralRateLimiter(settings, exempt_routes=(check_in.lookup_check_in, check_in.post_check_in))
+
 app = FastAPI(
+    dependencies=[Depends(general_rate_limiter)],
     title="Champagnefestival API",
     version=APP_VERSION,
     description=(
@@ -169,11 +177,13 @@ app = FastAPI(
 )
 
 add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
-add_rate_limit_middleware(
-    app,
-    settings,
-    exempt_routes=(check_in.lookup_check_in, check_in.post_check_in),
-)
+app.state.limiter = general_rate_limiter
+
+
+@app.exception_handler(GeneralRateLimitExceeded)
+async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExceeded) -> JSONResponse:
+    return JSONResponse({"error": exc.detail}, status_code=429)
+
 
 # Metrics middleware is registered next-to-last so it is close to outermost and
 # captures every request, including those short-circuited by CORS, rate
