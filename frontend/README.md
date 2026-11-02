@@ -231,3 +231,5 @@ themes, portal scoping and interaction contracts.
 ## Technologies
 
 React, Vite (Rolldown), TypeScript, Tailwind CSS, Base UI, Paraglide i18n, Vitest, oxlint
+
+Toolchain versions and coordinated rollout: [Node and pnpm toolchain](../docs/toolchain.md).
