@@ -29,7 +29,7 @@ dependencies = [
   "qrcode[pil]==8.2",
   "pillow==13.0.0",
   "slowapi==0.1.10",
-  "sqlalchemy[asyncio]==2.1.4",
+  "sqlalchemy[asyncio]==2.1.6",
   "uvicorn[standard]==0.54.0",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
