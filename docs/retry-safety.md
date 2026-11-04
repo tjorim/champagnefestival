@@ -1160,3 +1160,21 @@ attempts before fetch with translated guidance; the public page also blocks form
 submission while offline. Reconnecting does not submit any retained draft.
 Existing submission IDs and ambiguous-failure recovery rules still apply when
 a connection fails during an online submission. No automatic write retry is added.
+
+## General rate-limit dependency (#1497)
+
+Every FastAPI operation, including writes on included routers, now passes the
+process-local general IP/template limit before endpoint execution. A rejection
+returns the existing 429 error body without executing the write. This adds no
+automatic retry or idempotency guarantee: clients must continue to follow each
+operation's documented retry policy, especially after an ambiguous earlier
+attempt. Token-gated check-in retains its separate policy; the `/mcp` mount uses
+its own authentication and integration-client limits.
+
+### General REST throttling
+
+A general rate-limit 429 occurs before the route handler and carries Retry-After
+and no-store semantics. Changing an ID or HTTP method does not create a fresh
+route-template allowance. This rejection causes no handler write; it does not
+prove that an earlier timed-out write failed. Existing idempotency keys or
+reconciliation rules still govern retries. Mounted MCP policies stay separate.
