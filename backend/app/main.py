@@ -179,7 +179,7 @@ app = FastAPI(
 
 add_cors_middleware(app, settings, mcp_enabled=_mcp_app is not None)
 app.state.limiter = general_rate_limiter
-app.add_middleware(RateLimitHeadersMiddleware)
+app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=general_rate_limiter)
 
 
 @app.exception_handler(GeneralRateLimitExceeded)
@@ -187,7 +187,7 @@ async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExc
     return JSONResponse(
         {"error": f"Rate limit exceeded: {exc.detail}"},
         status_code=429,
-        headers={**exc.headers, "Cache-Control": "no-store"},
+        headers={**exc.rate_headers, "Cache-Control": "no-store"},
     )
 
 

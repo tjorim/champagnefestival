@@ -6,14 +6,16 @@ storage backend before scaling workers or replicas.
 
 import math
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from ipaddress import IPv6Address, ip_address, ip_network
 from typing import Any
 
+from fastapi.routing import APIRoute
 from limits import parse_many
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
 from starlette.datastructures import MutableHeaders
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.routing import compile_path
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -74,10 +76,10 @@ def route_template(request: Request) -> str:
     raise RuntimeError("Selected route does not match the request path")
 
 
-class RateLimitExceeded(Exception):
+class RateLimitExceeded(HTTPException):
     def __init__(self, detail: str, headers: dict[str, str]) -> None:
-        self.detail = detail
-        self.headers = headers
+        self.rate_headers = headers
+        super().__init__(status_code=429, detail=detail, headers=headers)
 
 
 class RequestRateLimiter:
@@ -108,6 +110,12 @@ class RequestRateLimiter:
         return endpoint
 
     def check(self, request: Request, *, scope: str | None = None) -> None:
+        # Body admission and the dependency must charge a request only once.
+        checked = request.scope.setdefault("state", {}).setdefault("rate_limit_checked", set())
+        identity = (id(self), scope)
+        if identity in checked:
+            return
+        checked.add(identity)
         if not self.enabled or request.scope.get("endpoint") in self.exempt_routes:
             return
         identifiers = (get_client_ip(request), scope or route_template(request))
@@ -133,14 +141,47 @@ class RequestRateLimiter:
 
 
 class RateLimitHeadersMiddleware:
-    """Keep rate headers on explicit Responses, errors and streaming responses."""
+    """Admit bodies and retain rate headers; register before HTTP middleware.
 
-    def __init__(self, app: ASGIApp) -> None:
+    Keeping this inside BaseHTTPMiddleware lets body-admission HTTP exceptions
+    reach FastAPI directly instead of being wrapped in an ExceptionGroup.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        owner: ASGIApp | None = None,
+        check_before_body: Callable[[Request], Awaitable[None]] | None = None,
+    ) -> None:
         self.app = app
+        self.owner = owner
+        self.check_before_body = check_before_body
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        response_started = False
+        body_checked = False
+
+        async def guarded_receive() -> Message:
+            nonlocal body_checked
+            # Routing has selected the APIRoute before FastAPI first reads its
+            # body. Admit here, before JSON decoding (including malformed JSON).
+            # Only this FastAPI app owns the policy; mounted apps stay separate.
+            if (
+                not response_started
+                and not body_checked
+                and scope.get("app") is self.owner
+                and isinstance(scope.get("route"), APIRoute)
+                and self.check_before_body is not None
+            ):
+                body_checked = True
+                await self.check_before_body(Request(scope))
+            return await receive()
+
         async def send_with_headers(message: Message) -> None:
+            nonlocal response_started
             if message["type"] == "http.response.start":
+                response_started = True
                 headers = MutableHeaders(scope=message)
                 state = scope.get("state", {})
                 # A purpose-specific quota can reject an otherwise allowed
@@ -153,4 +194,4 @@ class RateLimitHeadersMiddleware:
                     headers["Cache-Control"] = "no-store"
             await send(message)
 
-        await self.app(scope, receive, send_with_headers)
+        await self.app(scope, guarded_receive, send_with_headers)

@@ -30,3 +30,8 @@ enabling enforcement. Mounted MCP applications retain their own policies.
 Purpose-specific 429 responses retain their own backoff and quota headers. A
 general allowance never overwrites a stricter endpoint policy or reports a
 positive general balance as the cause of that rejection.
+
+Body admission runs after route selection but before the first body read, so
+malformed JSON consumes the same allowance and an exhausted request is rejected
+before decoding. The dependency covers bodyless requests; a per-request marker
+prevents double charging. Mounted applications remain outside the REST policy.

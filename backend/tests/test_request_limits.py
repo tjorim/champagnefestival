@@ -24,11 +24,15 @@ def build_app(limit="2/minute"):
         limiter.check(request)
 
     app = FastAPI(dependencies=[Depends(enforce)])
-    app.add_middleware(RateLimitHeadersMiddleware)
+    app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=enforce)
 
     @app.exception_handler(RateLimitExceeded)
     async def exceeded(request, exc):
         return JSONResponse({"error": f"Rate limit exceeded: {exc.detail}"}, status_code=429, headers=exc.headers)
+
+    @app.middleware("http")
+    async def outer_observability(request, call_next):
+        return await call_next(request)
 
     router = APIRouter()
 
@@ -39,6 +43,10 @@ def build_app(limit="2/minute"):
     @router.get("")
     async def root():
         return {"ok": True}
+
+    @router.post("/json")
+    async def json_body(payload: dict):
+        return payload
 
     @router.get("/raw")
     async def raw():
@@ -78,6 +86,13 @@ def build_app(limit="2/minute"):
     app.include_router(parent, prefix="/api")
     app.include_router(router, prefix="/other")
     app.mount("/mcp", Starlette(routes=[Route("/", lambda request: PlainTextResponse("ok"))]))
+    mounted = FastAPI()
+
+    @mounted.post("/json")
+    async def mounted_json(payload: dict):
+        return payload
+
+    app.mount("/json-mcp", mounted)
     return app, limiter
 
 
@@ -196,3 +211,80 @@ def test_purpose_specific_429_keeps_its_own_backoff():
     assert response.headers["retry-after"] == "600"
     assert response.headers["cache-control"] == "no-store"
     assert "x-ratelimit-remaining" not in response.headers
+
+
+def test_malformed_json_consumes_budget_and_valid_json_is_charged_once():
+    app, _ = build_app()
+    client = TestClient(app)
+    invalid = client.post("/other/json", content="{", headers={"Content-Type": "application/json"})
+    assert invalid.status_code == 422
+    assert invalid.headers["x-ratelimit-remaining"] == "1"
+    valid = client.post("/other/json", json={})
+    assert valid.status_code == 200
+    assert valid.headers["x-ratelimit-remaining"] == "0"
+    exhausted = client.post("/other/json", content="{", headers={"Content-Type": "application/json"})
+    assert exhausted.status_code == 429
+    assert int(exhausted.headers["retry-after"]) > 0
+
+
+def test_exhausted_json_request_is_rejected_before_reading_body():
+    import asyncio
+
+    from httpx import ASGITransport, AsyncClient
+
+    async def run():
+        app, _ = build_app("1/minute")
+        consumed = []
+
+        async def body():
+            consumed.append(True)
+            yield b"{"
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            assert (await client.post("/other/json", json={})).status_code == 200
+            response = await client.post("/other/json", content=body(), headers={"Content-Type": "application/json"})
+            assert response.status_code == 429
+            assert consumed == []
+
+    asyncio.run(run())
+
+
+def test_real_app_malformed_json_is_limited_before_decoding(monkeypatch):
+    from limits import parse_many
+
+    from app.main import app
+
+    limiter = app.state.limiter
+    limiter.reset()
+    monkeypatch.setattr(limiter, "enabled", True)
+    monkeypatch.setattr(limiter, "limits", parse_many("2/minute"))
+    path = next(
+        path
+        for path, operations in app.openapi()["paths"].items()
+        if "{" not in path
+        and "application/json" in operations.get("post", {}).get("requestBody", {}).get("content", {})
+    )
+    client = TestClient(app, base_url="http://localhost")
+    responses = [client.post(path, content="{", headers={"Content-Type": "application/json"}) for _ in range(3)]
+    assert [response.status_code for response in responses] == [422, 422, 429]
+    assert responses[0].headers["x-ratelimit-remaining"] == "1"
+    assert int(responses[-1].headers["retry-after"]) > 0
+
+
+def test_mounted_json_app_does_not_inherit_parent_body_admission():
+    app, _ = build_app("1/minute")
+    client = TestClient(app)
+    for _ in range(3):
+        response = client.post("/json-mcp/json", content="{", headers={"Content-Type": "application/json"})
+        assert response.status_code == 422
+        assert "x-ratelimit-limit" not in response.headers
+
+
+def test_method_mismatch_does_not_consume_a_route_allowance():
+    app, _ = build_app("1/minute")
+    client = TestClient(app)
+    for _ in range(3):
+        response = client.put("/other/json", json={})
+        assert response.status_code == 405
+        assert "x-ratelimit-limit" not in response.headers
+    assert client.post("/other/json", json={}).status_code == 200
