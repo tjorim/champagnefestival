@@ -203,15 +203,15 @@ updates:
           - "ty"
           - "pytest"
           - "pytest-asyncio"
-      # Postgres drivers (psycopg[binary] installs psycopg-binary), SQLAlchemy/Alembic and the
-      # SQLite driver used for dev and tests
-      database:
+      # psycopg[binary] installs psycopg-binary; psycopg-pool etc. ship from the same project
+      psycopg:
         patterns:
           - "psycopg*"
-          - "asyncpg"
+      # Alembic is built on SQLAlchemy
+      sqlalchemy:
+        patterns:
           - "sqlalchemy"
           - "alembic"
-          - "aiosqlite"
       # Token, OIDC and JOSE libraries are security-sensitive; review them together.
       # cachetools is a transitive google-auth dependency
       auth:
