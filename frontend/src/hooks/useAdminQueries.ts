@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQueryClient } from "@tanstack/react-query";
+import { collectionError } from "@/state/adminCollectionFactory";
 import {
   createAdminRegistrationsCollection,
   refetchAdminRegistrations,
@@ -82,10 +83,7 @@ export function useAdminQueries({
       }),
     [registrationsQueryOptions.enabled, authHeaders, queryClient, editionId],
   );
-  const registrationsLiveQuery = useLiveQuery(
-    () => registrationsCollection,
-    [registrationsCollection],
-  );
+  const registrationsLiveQuery = useLiveQuery(registrationsCollection);
   const registrationsCollectionRef = useRef(registrationsCollection);
   useEffect(() => {
     registrationsCollectionRef.current = registrationsCollection;
@@ -96,7 +94,7 @@ export function useAdminQueries({
   );
   const registrationsQuery = {
     data: registrationsLiveQuery.data,
-    error: registrationsCollection.utils.lastError ?? null,
+    error: collectionError(registrationsCollection),
     isPending: registrationsLiveQuery.isLoading,
     isFetching: registrationsCollection.utils.isFetching,
   };
@@ -110,7 +108,7 @@ export function useAdminQueries({
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const tablesLiveQuery = useLiveQuery(() => tablesCollection, [tablesCollection]);
+  const tablesLiveQuery = useLiveQuery(tablesCollection);
   const tablesCollectionRef = useRef(tablesCollection);
   useEffect(() => {
     tablesCollectionRef.current = tablesCollection;
@@ -124,7 +122,7 @@ export function useAdminQueries({
   );
   const tablesQuery = {
     data: tablesData,
-    error: tablesCollection.utils.lastError ?? null,
+    error: collectionError(tablesCollection),
     isPending: tablesLiveQuery.isLoading,
     isFetching: tablesCollection.utils.isFetching,
   };
@@ -146,11 +144,11 @@ export function useAdminQueries({
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const venuesLiveQuery = useLiveQuery(() => venueCollections.venues, [venueCollections]);
-  const roomsLiveQuery = useLiveQuery(() => venueCollections.rooms, [venueCollections]);
-  const tableTypesLiveQuery = useLiveQuery(() => venueCollections.tableTypes, [venueCollections]);
-  const layoutsLiveQuery = useLiveQuery(() => venueCollections.layouts, [venueCollections]);
-  const areasLiveQuery = useLiveQuery(() => venueCollections.areas, [venueCollections]);
+  const venuesLiveQuery = useLiveQuery(venueCollections.venues);
+  const roomsLiveQuery = useLiveQuery(venueCollections.rooms);
+  const tableTypesLiveQuery = useLiveQuery(venueCollections.tableTypes);
+  const layoutsLiveQuery = useLiveQuery(venueCollections.layouts);
+  const areasLiveQuery = useLiveQuery(venueCollections.areas);
   const venueCollectionsRef = useRef(venueCollections);
   useEffect(() => {
     venueCollectionsRef.current = venueCollections;
@@ -158,31 +156,31 @@ export function useAdminQueries({
   useEffect(() => registerAdminVenueCollections(venueCollections), [venueCollections]);
   const venuesQuery = {
     data: venuesLiveQuery.data,
-    error: venueCollections.venues.utils.lastError ?? null,
+    error: collectionError(venueCollections.venues),
     isPending: venuesLiveQuery.isLoading,
     isFetching: venueCollections.venues.utils.isFetching,
   };
   const roomsQuery = {
     data: roomsLiveQuery.data,
-    error: venueCollections.rooms.utils.lastError ?? null,
+    error: collectionError(venueCollections.rooms),
     isPending: roomsLiveQuery.isLoading,
     isFetching: venueCollections.rooms.utils.isFetching,
   };
   const tableTypesQuery = {
     data: tableTypesLiveQuery.data,
-    error: venueCollections.tableTypes.utils.lastError ?? null,
+    error: collectionError(venueCollections.tableTypes),
     isPending: tableTypesLiveQuery.isLoading,
     isFetching: venueCollections.tableTypes.utils.isFetching,
   };
   const layoutsQuery = {
     data: layoutsLiveQuery.data,
-    error: venueCollections.layouts.utils.lastError ?? null,
+    error: collectionError(venueCollections.layouts),
     isPending: layoutsLiveQuery.isLoading,
     isFetching: venueCollections.layouts.utils.isFetching,
   };
   const areasQuery = {
     data: areasLiveQuery.data,
-    error: venueCollections.areas.utils.lastError ?? null,
+    error: collectionError(venueCollections.areas),
     isPending: areasLiveQuery.isLoading,
     isFetching: venueCollections.areas.utils.isFetching,
   };
@@ -196,10 +194,7 @@ export function useAdminQueries({
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const organizationsLiveQuery = useLiveQuery(
-    () => organizationsCollection,
-    [organizationsCollection],
-  );
+  const organizationsLiveQuery = useLiveQuery(organizationsCollection);
   const organizationsCollectionRef = useRef(organizationsCollection);
   useEffect(() => {
     organizationsCollectionRef.current = organizationsCollection;
@@ -210,7 +205,7 @@ export function useAdminQueries({
   );
   const organizationsQuery = {
     data: organizationsLiveQuery.data,
-    error: organizationsCollection.utils.lastError ?? null,
+    error: collectionError(organizationsCollection),
     isPending: organizationsLiveQuery.isLoading,
     isFetching: organizationsCollection.utils.isFetching,
   };

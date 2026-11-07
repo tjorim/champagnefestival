@@ -1,9 +1,23 @@
+import type { HealthNode } from "@tanstack/db";
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions, type QueryCollectionConfig } from "@tanstack/query-db-collection";
 import type { QueryClient, QueryFunctionContext, QueryKey } from "@tanstack/react-query";
 import { ADMIN_CACHE_MAX_AGE } from "./adminCachePersistence";
 import { createEpochFence } from "@/state/epochFence";
 import type { LiveEnvelope } from "@/utils/liveStream";
+
+/**
+ * The error a collection currently reports. It replaces `collectionError(collection)`,
+ * which TanStack DB 1.0 removed in favour of `collection.health`: the failure the sync
+ * is still retrying (`failureReason`), or the one that stopped it or failed the first
+ * load (`error`). `null` while the collection is healthy.
+ */
+export function collectionError(collection: { readonly health: HealthNode }): Error | null {
+  const { error, failureReason } = collection.health;
+  const problem = error ?? failureReason;
+  if (!problem) return null;
+  return problem.cause instanceof Error ? problem.cause : new Error(problem.message);
+}
 
 /**
  * How a collection loads its rows.
@@ -44,7 +58,7 @@ export type AdminCollectionConfig<
 /**
  * Builds a collection with the admin app's shared query settings: 60 second
  * staleness, no automatic retry (a failed read surfaces on
- * `collection.utils.lastError`; see `docs/retry-safety.md`) and a selectable
+ * `collectionError(collection)`; see `docs/retry-safety.md`) and a selectable
  * sync mode. Write handlers (`onUpdate`/`onDelete`) pass straight through.
  */
 export function createAdminCollection<TRow extends object, TKey extends string | number = string>({
@@ -134,7 +148,7 @@ export function createAdminCollectionLifecycle<
     });
   }
 
-  /** Refetches from the server; failures stay on `collection.utils.lastError`. */
+  /** Refetches from the server; failures stay on `collectionError(collection)`. */
   async function refetch(collection: TCollection): Promise<void> {
     await collection.utils.refetch().catch(() => undefined);
   }
@@ -214,7 +228,7 @@ export function createAdminCollectionLifecycle<
 
 /**
  * Runs a write handler's API calls, then refetches explicitly (the implicit
- * refetch after a handler is deprecated, so handlers return `{ refetch: false }`).
+ * refetch after a handler was removed in TanStack DB 1.0, so handlers return nothing).
  * If a call fails the write may or may not have committed, so the server state is
  * refetched before the optimistic change is rolled back (see docs/retry-safety.md).
  *

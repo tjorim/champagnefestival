@@ -94,7 +94,6 @@ export function createAdminVenueCollections({
           },
           isCurrent,
         );
-        return { refetch: false };
       },
     }),
   };
@@ -180,7 +179,7 @@ export async function resetAdminVenueCollections(
 /**
  * Refetches one resource (or all of them) from the server. The implicit
  * refetch after a write is deprecated, so every write refetches explicitly.
- * Failures stay on `collection.utils.lastError`. With `isCurrent`, a refetch
+ * Failures stay on `collectionError(collection)`. With `isCurrent`, a refetch
  * that follows a write from an earlier session is skipped.
  */
 export async function refetchAdminVenueCollections(

@@ -73,7 +73,7 @@ export const resetAdminOrganizationsCollection = lifecycle.reset;
 
 /**
  * Refetches the organizations from the server. Failures stay on
- * `collection.utils.lastError`, which the dashboard already surfaces. With
+ * `collectionError(collection)`, which the dashboard already surfaces. With
  * `isCurrent`, a refetch that follows a response from an earlier session is
  * skipped, so it cannot repopulate the query a sign-out removed.
  */

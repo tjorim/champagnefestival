@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { createAdminCollection } from "./adminCollectionFactory";
+import { collectionError, createAdminCollection } from "./adminCollectionFactory";
 import { describe, expect, it, vi } from "vitest";
 
 describe("Query collection warm-start prerequisites", () => {
@@ -22,7 +22,7 @@ describe("Query collection warm-start prerequisites", () => {
     await vi.waitFor(() => expect(collection.get("one")?.label).toBe("cached"));
     await preload;
     reject(new Error("offline"));
-    await vi.waitFor(() => expect(collection.utils.lastError).toBeTruthy());
+    await vi.waitFor(() => expect(collectionError(collection)).toBeTruthy());
     expect(collection.get("one")?.label).toBe("cached");
     await collection.utils.writeUpsert({ id: "one", label: "patched" });
     expect(client.getQueryData(key)).toEqual([{ id: "one", label: "patched" }]);

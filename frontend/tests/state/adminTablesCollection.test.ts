@@ -87,7 +87,7 @@ describe("admin tables collection", () => {
     });
     expect(collection.get("table-01")).toMatchObject({ x: 61, y: 72 });
 
-    await tx.isPersisted.promise;
+    await tx.when("settled");
 
     expect(bodies).toEqual([{ x: 61, y: 72 }]);
     expect(collection.get("table-01")).toMatchObject({ x: 61, y: 72 });
@@ -103,15 +103,21 @@ describe("admin tables collection", () => {
       }),
     );
 
-    await collection.update("table-01", (draft) => {
-      draft.name = "Renamed";
-    }).isPersisted.promise;
-    await collection.update("table-01", (draft) => {
-      draft.tableTypeId = "tt-02";
-    }).isPersisted.promise;
-    await collection.update("table-01", (draft) => {
-      draft.rotation = 90;
-    }).isPersisted.promise;
+    await collection
+      .update("table-01", (draft) => {
+        draft.name = "Renamed";
+      })
+      .when("settled");
+    await collection
+      .update("table-01", (draft) => {
+        draft.tableTypeId = "tt-02";
+      })
+      .when("settled");
+    await collection
+      .update("table-01", (draft) => {
+        draft.rotation = 90;
+      })
+      .when("settled");
 
     expect(bodies).toEqual([{ name: "Renamed" }, { table_type_id: "tt-02" }, { rotation: 90 }]);
   });
@@ -127,7 +133,7 @@ describe("admin tables collection", () => {
     });
     expect(collection.get("table-01")?.x).toBe(99);
 
-    await expect(tx.isPersisted.promise).rejects.toThrow();
+    await expect(tx.when("settled")).rejects.toThrow();
     expect(collection.get("table-01")?.x).toBe(seedTables[0]!.x);
   });
 
@@ -161,7 +167,7 @@ describe("admin tables collection", () => {
     const tx = collection.delete("table-02");
     expect(collection.has("table-02")).toBe(false);
 
-    await tx.isPersisted.promise;
+    await tx.when("settled");
 
     expect(deleted).toEqual(["table-02"]);
     expect(collection.has("table-02")).toBe(false);
@@ -179,7 +185,7 @@ describe("admin tables collection", () => {
     const tx = collection.delete("table-01");
     expect(collection.has("table-01")).toBe(false);
 
-    await expect(tx.isPersisted.promise).rejects.toThrow();
+    await expect(tx.when("settled")).rejects.toThrow();
     expect(collection.has("table-01")).toBe(true);
   });
 
@@ -297,7 +303,7 @@ describe("admin tables writes after an API call", () => {
     );
     release();
 
-    await expect(tx.isPersisted.promise).resolves.toBeDefined();
+    await expect(tx.when("settled")).resolves.toBeDefined();
     expect(collection.has("table-02")).toBe(false);
   });
 
