@@ -9,7 +9,7 @@
     "validate": "node scripts/validate.mjs"
   },
   "dependencies": {
-    "@moddable/pebbleproxy": "^0.1.0"
+    "@moddable/pebbleproxy": "^0.2.2"
   },
   "pebble": {
     "displayName": "Champagnefestival",
