@@ -50,13 +50,13 @@
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.70.0",
-    "oidc-client-ts": "^3.1.0",
+    "oidc-client-ts": "^3.5.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-error-boundary": "^6.1.6",
     "react-leaflet": "^5.0.0",
-    "react-oidc-context": "^3.2.0"
+    "react-oidc-context": "^3.3.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
