@@ -59,18 +59,11 @@
     },
     {
       "description": [
-        "react-query, its persister and the TanStack DB packages all resolve one @tanstack/query-core. Updated in separate PRs they leave two copies and break the QueryClient types, so they move together."
+        "query-db-collection 1.5 needs @tanstack/db 1.0 (it peers on ^1.0.0-rc.0), while this app is on db 0.15 and react-db 0.5, so the bump breaks the collection types. Remove this rule when db and react-db are migrated to 1.0, as worktime did."
       ],
       "matchDatasources": ["npm"],
-      "matchPackageNames": [
-        "@tanstack/react-query",
-        "@tanstack/react-query-devtools",
-        "@tanstack/query-persist-client-core",
-        "@tanstack/query-db-collection",
-        "@tanstack/db",
-        "@tanstack/react-db"
-      ],
-      "groupName": "tanstack-data"
+      "matchPackageNames": ["@tanstack/query-db-collection"],
+      "allowedVersions": "<1.5.0"
     }
   ]
 }
