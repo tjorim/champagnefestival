@@ -64,7 +64,7 @@
     "@inlang/plugin-message-format": "^4.6.0",
     "@playwright/test": "^1.64.1",
     "@shadcn/lint": "^0.2.5",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.4",
     "@tanstack/table-core": "9.3.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -84,7 +84,7 @@
     "oxfmt": "^0.76.0",
     "oxlint": "^1.91.0",
     "shadcn": "4.23.0",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.1.0"
