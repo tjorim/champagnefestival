@@ -51,16 +51,19 @@ updates:
         patterns:
           - "oidc-client-ts"
           - "react-oidc-context"
-      # Vitest, Testing Library and the test-environment helpers
+      # Vitest and Testing Library
       # tinybench is vitest's benchmark runner; it is a transitive dependency
       testing:
         patterns:
           - "@testing-library/*"
           - "@vitest/*"
           - "vitest"
+          - "tinybench"
+      # Browser APIs the tests run against; separate projects from Vitest, so reviewed on their own
+      test-env:
+        patterns:
           - "happy-dom"
           - "fake-indexeddb"
-          - "tinybench"
       # msw's own stack: msw, its @msw/@mswjs packages, and the helpers and cookie/URL packages it ships with.
       # Generic utilities it reaches (yargs, wrap-ansi, type-fest, graphql, ...) stay ungrouped.
       msw:
