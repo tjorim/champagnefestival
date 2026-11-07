@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@dnd-kit/dom": "^0.5.1",
-    "@dnd-kit/react": "^0.5.1",
+    "@dnd-kit/dom": "^0.5.3",
+    "@dnd-kit/react": "^0.5.3",
     "@tanstack/charts": "^1.1.0",
     "@tanstack/query-db-collection": "^1.4.8",
     "@tanstack/query-persist-client-core": "5.105.0",
