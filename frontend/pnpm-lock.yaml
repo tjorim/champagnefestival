@@ -180,10 +180,10 @@ importers:
         version: 1.1.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(svelte@5.57.2)
       '@tanstack/query-db-collection':
         specifier: ^1.4.8
-        version: 1.4.8(@tanstack/query-core@5.105.0)(typescript@7.0.2)
+        version: 1.4.8(@tanstack/query-core@5.105.3)(typescript@7.0.2)
       '@tanstack/query-persist-client-core':
-        specifier: 5.105.0
-        version: 5.105.0
+        specifier: 5.105.3
+        version: 5.105.3
       '@tanstack/react-db':
         specifier: ^0.5.12
         version: 0.5.12(react@19.3.1)(typescript@7.0.2)
@@ -191,8 +191,8 @@ importers:
         specifier: 2.0.0-alpha.3
         version: 2.0.0-alpha.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
-        specifier: ^5.105.0
-        version: 5.105.0(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^5.105.3
+        version: 5.105.3(@types/react@19.3.0)(react@19.3.1)
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1715,8 +1715,8 @@ packages:
     resolution: {integrity: sha512-eQ1MyLKCHyXiH7NbdmB80W77OhiMgGBUb+qDx/8WMGbwg5Lf/NlfD0TfNYAqY77i8V3AxoDoYdICrQE5ADw4Yw==}
     engines: {node: '>=18'}
 
-  '@tanstack/query-core@5.105.0':
-    resolution: {integrity: sha512-7p56vRmT/z4UJ6sctGIdl5WRUQyUv53IUpUwEKi2g97zMbO7zh8ZsCLffGAvCPBR4xD72e3VXsDyLwXHhoNTMQ==}
+  '@tanstack/query-core@5.105.3':
+    resolution: {integrity: sha512-v1rbNy7MB/4Akth7CQH+CerV13K7Ok9hAusEsfz4sCjDdu3/kOSJPoWfoB+YjdEX1eBFBWKNAGE5nqZCgdlHDw==}
 
   '@tanstack/query-db-collection@1.4.8':
     resolution: {integrity: sha512-ysoX+BSYt6fbp0dPb/+vIe7wLlhPVXP0GKUP1sJ9FnbP2FkgxOzPzk2JDQsqlJweFl7P3z4kNViAyREJfbfc4w==}
@@ -1724,8 +1724,8 @@ packages:
       '@tanstack/query-core': ^5.90.15
       typescript: '>=4.7'
 
-  '@tanstack/query-persist-client-core@5.105.0':
-    resolution: {integrity: sha512-bOy2lMzzEyacL6s9hIa0tKmaIr/TM24HZaK9a20ctZjPYlCs6NhGdgbxi20RcdJWZwWunkLqPDnxfClD7QIyKg==}
+  '@tanstack/query-persist-client-core@5.105.3':
+    resolution: {integrity: sha512-VcK3dfkvYkEb1AsX/VK/LJAa9nGN0OE5x2SnFHKY5Rwzixg9zqXdcr7fCpyolEWj/cygOd8Nt1ZRTPzfB0lEaw==}
 
   '@tanstack/react-db@0.5.12':
     resolution: {integrity: sha512-Sq5qtW/vJRzV3+vSFnr5dEk3GHOc/x7aG3lte6Y1wnC3GwsbnrBm1xy7XccPIvkeV8AU88Bo9QJwQXoElYqKLg==}
@@ -1738,8 +1738,8 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
-  '@tanstack/react-query@5.105.0':
-    resolution: {integrity: sha512-y+hMuDERvgg6ay1da0V1a6ZC0ZONt7dELxSFkqRZuwm7p1TTZs0MoXrPlBRflIpRoYjvzQVYxycnLImpFLhWrw==}
+  '@tanstack/react-query@5.105.3':
+    resolution: {integrity: sha512-dj5hGWZmwoc9NG4enoXuYbiYwb5FxgJYPVv06eUgicMTfEMTRXn08Xv9D/r1V8TfjAv+BpxdvZFzJ1h3hSWZcQ==}
     peerDependencies:
       '@types/react': ^18 || ^19
       react: ^18 || ^19
@@ -4794,18 +4794,18 @@ snapshots:
 
   '@tanstack/pacer-lite@0.2.2': {}
 
-  '@tanstack/query-core@5.105.0': {}
+  '@tanstack/query-core@5.105.3': {}
 
-  '@tanstack/query-db-collection@1.4.8(@tanstack/query-core@5.105.0)(typescript@7.0.2)':
+  '@tanstack/query-db-collection@1.4.8(@tanstack/query-core@5.105.3)(typescript@7.0.2)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@tanstack/db': 0.15.2(typescript@7.0.2)
-      '@tanstack/query-core': 5.105.0
+      '@tanstack/query-core': 5.105.3
       typescript: 7.0.2
 
-  '@tanstack/query-persist-client-core@5.105.0':
+  '@tanstack/query-persist-client-core@5.105.3':
     dependencies:
-      '@tanstack/query-core': 5.105.0
+      '@tanstack/query-core': 5.105.3
 
   '@tanstack/react-db@0.5.12(react@19.3.1)(typescript@7.0.2)':
     dependencies:
@@ -4822,9 +4822,9 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tanstack/react-query@5.105.0(@types/react@19.3.0)(react@19.3.1)':
+  '@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@tanstack/query-core': 5.105.0
+      '@tanstack/query-core': 5.105.3
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
