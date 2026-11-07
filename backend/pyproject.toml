@@ -10,7 +10,7 @@ name = "champagnefestival-backend"
 # (see app/version.py) and is what app/main.py, the frontend, and Android use.
 version = "0.0.0"
 description = "FastAPI backend for the Champagnefestival reservation system"
-requires-python = ">=3.15"
+requires-python = ">=3.15.2"
 dependencies = [
   "alembic==1.20.1",
   "aiosqlite==0.22.1",
