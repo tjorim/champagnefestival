@@ -2,8 +2,9 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-// #1440 / PR #1466: production measurements and review in docs/ui-maintenance.md.
-export const budgets = { total: 2920, entry: 335, admin: 450, eager: 670 };
+// Limits follow the dependency set: raise them through a reviewed entry in
+// docs/ui-maintenance.md (latest: #1609) instead of holding updates back.
+export const budgets = { total: 2930, entry: 335, admin: 450, eager: 670 };
 
 export async function measureBundle(directory) {
   const manifest = JSON.parse(await readFile(resolve(directory, ".vite/manifest.json"), "utf8"));

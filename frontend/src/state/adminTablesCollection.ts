@@ -56,7 +56,6 @@ export function createAdminTablesCollection({
           await updateTable(authHeaders, String(mutation.key), mutation.changes);
         }
       });
-      return { refetch: false };
     },
     onDelete: async ({ transaction, collection }) => {
       await persistThenRefetch(collection, async () => {
@@ -64,7 +63,6 @@ export function createAdminTablesCollection({
           await deleteTable(authHeaders, String(mutation.key));
         }
       });
-      return { refetch: false };
     },
   });
 }
@@ -134,7 +132,7 @@ export const captureAdminTablesFence = lifecycle.captureFence;
 export const registerAdminTablesCollection = lifecycle.register;
 export const resetAdminTablesCollection = lifecycle.reset;
 
-/** Refetches the tables from the server; failures stay on `collection.utils.lastError`. */
+/** Refetches the tables from the server; failures stay on `collectionError(collection)`. */
 export const refetchAdminTables = lifecycle.refetch;
 
 export const hasAdminTablesKey = lifecycle.hasQueryKey;
