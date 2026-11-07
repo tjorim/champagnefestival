@@ -20,6 +20,12 @@ updates:
       - "npm"
       - "platform:frontend"
     versioning-strategy: "increase"
+    # Dependabot runs pnpm with --config.minimum-release-age=4320 (3 days). Without a matching
+    # cooldown it proposes releases younger than that, pnpm refuses them for transitive
+    # dependencies (@babel/*, undici, ...) and the job fails with dependency_file_not_resolvable.
+    # Security updates ignore the cooldown.
+    cooldown:
+      default-days: 3
     groups:
       react:
         patterns:
