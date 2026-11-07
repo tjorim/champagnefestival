@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>tjorim/renovate-config",
+    "github>tjorim/renovate-config:js",
+    "github>tjorim/renovate-config:python",
+    "github>tjorim/renovate-config:android"
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["jest-axe", "@types/jest-axe"],
+      "groupName": "jest-axe"
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["dayjs"],
+      "groupName": "dayjs"
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["leaflet", "react-leaflet", "@types/leaflet"],
+      "groupName": "maps"
+    },
+    {
+      "description": [
+        "dnd-kit packages share internal deps; mismatched versions cause type errors"
+      ],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["@dnd-kit/*"],
+      "groupName": "dnd-kit"
+    },
+    {
+      "description": ["frontend/**"],
+      "matchDatasources": ["npm"],
+      "matchFileNames": ["frontend/**"],
+      "addLabels": ["platform:frontend"]
+    },
+    {
+      "description": ["pebble/**"],
+      "matchDatasources": ["npm"],
+      "matchFileNames": ["pebble/**"],
+      "addLabels": ["platform:pebble"],
+      "commitMessagePrefix": "deps(pebble):"
+    },
+    {
+      "description": ["backend/**"],
+      "matchDatasources": ["pypi"],
+      "matchFileNames": ["backend/**"],
+      "addLabels": ["platform:backend"],
+      "commitMessagePrefix": "deps(backend):"
+    },
+    {
+      "description": ["android/**"],
+      "matchManagers": ["gradle"],
+      "matchFileNames": ["android/**"],
+      "addLabels": ["platform:android"],
+      "commitMessagePrefix": "deps(android):"
+    },
+    {
+      "description": [
+        "react-query, its persister and the TanStack DB packages all resolve one @tanstack/query-core. Updated in separate PRs they leave two copies and break the QueryClient types, so they move together."
+      ],
+      "matchDatasources": ["npm"],
+      "matchPackageNames": [
+        "@tanstack/react-query",
+        "@tanstack/react-query-devtools",
+        "@tanstack/query-persist-client-core",
+        "@tanstack/query-db-collection",
+        "@tanstack/db",
+        "@tanstack/react-db"
+      ],
+      "groupName": "tanstack-data"
+    }
+  ]
+}
