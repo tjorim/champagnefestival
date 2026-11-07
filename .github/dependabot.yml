@@ -31,16 +31,50 @@ updates:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
-      # msw is test-only; its @inquirer/* and tldts* transitives move with it
+      # tinybench is vitest's benchmark runner; it is a transitive dependency, not listed in package.json
       testing:
         patterns:
           - "@testing-library/*"
           - "@vitest/*"
           - "vitest"
+          - "tinybench"
+      # msw and the packages only it pulls in (lockfile closure minus everything else). string-width is
+      # left out: another copy is used by other packages, so a name pattern would group that copy too.
+      msw:
+        patterns:
           - "msw"
+          - "@msw/*"
+          - "@mswjs/*"
           - "@inquirer/*"
+          - "@open-draft/until"
+          - "@types/debug"
+          - "@types/ms"
+          - "@types/set-cookie-parser"
+          - "ansi-styles"
+          - "cli-width"
+          - "cliui"
+          - "cookie"
+          - "fast-string-truncated-width"
+          - "fast-string-width"
+          - "fast-wrap-ansi"
+          - "get-caller-file"
+          - "graphql"
+          - "headers-polyfill"
+          - "is-node-process"
+          - "mute-stream"
+          - "outvariant"
+          - "rettime"
+          - "set-cookie-parser"
+          - "tagged-tag"
           - "tldts"
           - "tldts-core"
+          - "tough-cookie"
+          - "type-fest"
+          - "until-async"
+          - "wrap-ansi"
+          - "y18n"
+          - "yargs"
+          - "yargs-parser"
       oxc:
         patterns:
           - "oxlint"
