@@ -31,12 +31,35 @@ updates:
         patterns:
           - "vite"
           - "@vitejs/plugin-react"
-      # tinybench is vitest's benchmark runner; it is a transitive dependency, not listed in package.json
+      # tailwindcss and its Vite plugin share one release train
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      # OXC toolchain: linter, formatter and parser
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
+          - "oxc-parser"
+      # Inlang i18n packages
+      i18n:
+        patterns:
+          - "@inlang/*"
+      # oidc-client-ts is the engine react-oidc-context wraps
+      oidc:
+        patterns:
+          - "oidc-client-ts"
+          - "react-oidc-context"
+      # Vitest, Testing Library and the test-environment helpers
+      # tinybench is vitest's benchmark runner; it is a transitive dependency
       testing:
         patterns:
           - "@testing-library/*"
           - "@vitest/*"
           - "vitest"
+          - "happy-dom"
+          - "fake-indexeddb"
           - "tinybench"
       # msw's own stack: msw, its @msw/@mswjs packages, and the helpers and cookie/URL packages it ships with.
       # Generic utilities it reaches (yargs, wrap-ansi, type-fest, graphql, ...) stay ungrouped.
@@ -55,28 +78,69 @@ updates:
           - "headers-polyfill"
           - "until-async"
           - "is-node-process"
-      oxc:
-        patterns:
-          - "oxlint"
-          - "oxfmt"
-          - "oxc-parser"
-      i18n:
-        patterns:
-          - "@inlang/*"
-      # oidc-client-ts is the engine react-oidc-context wraps
-      oidc:
-        patterns:
-          - "oidc-client-ts"
-          - "react-oidc-context"
-      # tailwindcss and its Vite plugin share one release train
-      tailwind:
-        patterns:
-          - "tailwindcss"
-          - "@tailwindcss/*"
+      # Playwright and the axe-core integration used by the e2e suite
       playwright:
         patterns:
           - "@playwright/*"
-          - "@axe-core/playwright"
+          - "@axe-core/*"
+      # TanStack Query packages must share one @tanstack/query-core; duplicate copies break QueryClient types
+      tanstack-query:
+        patterns:
+          - "@tanstack/react-query"
+          - "@tanstack/react-query-devtools"
+          - "@tanstack/query-persist-client-core"
+      # TanStack Router with its internals; seroval is router-core's serializer
+      tanstack-router:
+        patterns:
+          - "@tanstack/react-router"
+          - "@tanstack/router-*"
+          - "@tanstack/history"
+          - "isbot"
+          - "seroval"
+          - "seroval-plugins"
+      # TanStack Table adapter and core must update together or pipelines fail
+      tanstack-table:
+        patterns:
+          - "@tanstack/react-table"
+          - "@tanstack/table-core"
+      # TanStack DB packages all depend on @tanstack/db; mismatched versions cause type errors
+      tanstack-db:
+        patterns:
+          - "@tanstack/db"
+          - "@tanstack/react-db"
+          - "@tanstack/query-db-collection"
+      # @tanstack/charts pulls in the d3-* modules (d3-scale, d3-brush, d3-zoom, ...) as runtime
+      # dependencies; they release individually and must move with it. svelte stays ungrouped:
+      # inlang and oxfmt also depend on it
+      charts:
+        patterns:
+          - "@tanstack/charts"
+          - "d3-*"
+          - "@types/d3-*"
+      # Babel packages are transitive and must resolve to one version per major line
+      babel:
+        patterns:
+          - "@babel/*"
+      # TypeScript and its runtime helpers
+      typescript:
+        patterns:
+          - "typescript"
+          - "tslib"
+      # Base UI is the shipped runtime (@base-ui/react and its pinned @base-ui/utils);
+      # its behaviour changes get their own PR
+      base-ui:
+        patterns:
+          - "@base-ui/*"
+      # shadcn CLI and its registry tooling (dev-only). Kept apart from the Base UI runtime group so a
+      # regression is attributable to one of them (docs/ui-maintenance.md)
+      shadcn:
+        patterns:
+          - "shadcn"
+          - "@shadcn/*"
+      # Icon set kept in its own group so icon releases are reviewed separately
+      lucide:
+        patterns:
+          - "lucide-react"
       jest-axe:
         patterns:
           - "jest-axe"
@@ -89,56 +153,10 @@ updates:
           - "leaflet"
           - "react-leaflet"
           - "@types/leaflet"
-      # Group TanStack table packages (must update together or pipelines fail)
-      tanstack-table:
-        patterns:
-          - "@tanstack/react-table"
-          - "@tanstack/table-core"
-      # Group TanStack DB packages (both depend on @tanstack/db; mismatched versions cause type errors)
-      tanstack-db:
-        patterns:
-          - "@tanstack/react-db"
-          - "@tanstack/query-db-collection"
-      # Group TanStack Query packages (must share one @tanstack/query-core; duplicate copies break QueryClient types)
-      tanstack-query:
-        patterns:
-          - "@tanstack/react-query"
-          - "@tanstack/query-persist-client-core"
-      # Group dnd-kit packages (share internal deps; mismatched versions cause type errors)
+      # dnd-kit packages share internal deps; mismatched versions cause type errors
       dnd-kit:
         patterns:
           - "@dnd-kit/*"
-      # Group TanStack Router with its serialisation packages (seroval is router-core's serializer)
-      tanstack-router:
-        patterns:
-          - "@tanstack/react-router"
-          - "@tanstack/router-*"
-          - "@tanstack/history"
-          - "seroval"
-          - "seroval-plugins"
-      # @tanstack/charts pulls in the d3-* modules as runtime dependencies
-      # svelte is left ungrouped: inlang and oxfmt also depend on it
-      charts:
-        patterns:
-          - "@tanstack/charts"
-          - "d3-*"
-      # Babel packages are transitive and must resolve to one version per major line
-      babel:
-        patterns:
-          - "@babel/*"
-      # shadcn CLI and its registry tooling (dev-only). Kept apart from the Base UI runtime group so a
-      # regression is attributable to one of them (docs/ui-maintenance.md)
-      shadcn:
-        patterns:
-          - "shadcn"
-          - "@shadcn/*"
-      # Icon set kept in its own group so icon releases are reviewed separately
-      icons:
-        patterns:
-          - "lucide-react"
-      base-ui:
-        patterns:
-          - "@base-ui/*"
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
@@ -162,8 +180,7 @@ updates:
       - "python"
     versioning-strategy: "increase"
     groups:
-      # fastmcp pulls in mcp and mcp-types; keep them moving together
-      # cyclopts is a direct dependency of fastmcp; keep its pinned range in step
+      # fastmcp pulls in mcp and mcp-types; cyclopts is its CLI dependency. Keep them moving together
       fastmcp:
         patterns:
           - "fastmcp"
@@ -183,16 +200,37 @@ updates:
           - "ty"
           - "pytest"
           - "pytest-asyncio"
-      # psycopg and psycopg-binary ship as a pair; the direct dependency is psycopg[binary]
-      psycopg:
+      # Postgres drivers (psycopg[binary] installs psycopg-binary), SQLAlchemy/Alembic and the
+      # SQLite driver used for dev and tests
+      database:
         patterns:
           - "psycopg*"
-      # Token and JOSE libraries are security-sensitive; review them together
+          - "asyncpg"
+          - "sqlalchemy"
+          - "alembic"
+          - "aiosqlite"
+      # Token, OIDC and JOSE libraries are security-sensitive; review them together.
+      # cachetools is a transitive google-auth dependency
       auth:
         patterns:
           - "authlib"
           - "joserfc"
           - "pyjwt"
+          - "google-auth"
+          - "cachetools"
+          - "cryptography"
+      # FastAPI request stack and its async/multipart dependencies
+      fastapi-stack:
+        patterns:
+          - "fastapi"
+          - "starlette"
+          - "python-multipart"
+          - "anyio"
+      # markdown-it plugins are pinned against their core release
+      markdown:
+        patterns:
+          - "markdown-it-py"
+          - "mdit-py-plugins"
 
   - package-ecosystem: "gradle"
     directory: "/android"
