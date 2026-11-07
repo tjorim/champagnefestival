@@ -82,7 +82,7 @@ export function useAdminVenueActions({
   // at once, rolls back if the PUT fails, and is reconciled by a refetch.
   const updateTableRow = useCallback(
     async (tableId: string, apply: (draft: FloorTableRecord) => void) => {
-      await tablesCollection.update(tableId, apply).isPersisted.promise;
+      await tablesCollection.update(tableId, apply).when("settled");
     },
     [tablesCollection],
   );
@@ -111,7 +111,7 @@ export function useAdminVenueActions({
     async (tableId: string) => {
       // Optimistic through the collection's `onDelete` handler; rolls back if
       // the server refuses (for example a table that still holds bookings).
-      await tablesCollection.delete(tableId).isPersisted.promise;
+      await tablesCollection.delete(tableId).when("settled");
     },
     [tablesCollection],
   );
@@ -356,7 +356,7 @@ export function useAdminVenueActions({
   // and is reconciled by a refetch.
   const updateAreaRow = useCallback(
     async (areaId: string, apply: (draft: FloorArea) => void) => {
-      await areas.update(areaId, apply).isPersisted.promise;
+      await areas.update(areaId, apply).when("settled");
     },
     [areas],
   );
