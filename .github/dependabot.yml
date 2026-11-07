@@ -212,16 +212,13 @@ updates:
         patterns:
           - "sqlalchemy"
           - "alembic"
-      # Token, OIDC and JOSE libraries are security-sensitive; review them together.
-      # cachetools is a transitive google-auth dependency
+      # Token, OIDC and JOSE libraries are security-sensitive; review them together
       auth:
         patterns:
           - "authlib"
           - "joserfc"
           - "pyjwt"
           - "google-auth"
-          - "cachetools"
-          - "cryptography"
       # FastAPI request stack and its async/multipart dependencies
       fastapi-stack:
         patterns:
