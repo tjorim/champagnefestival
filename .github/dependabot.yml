@@ -38,43 +38,23 @@ updates:
           - "@vitest/*"
           - "vitest"
           - "tinybench"
-      # msw and the packages only it pulls in (lockfile closure minus everything else). string-width is
-      # left out: another copy is used by other packages, so a name pattern would group that copy too.
+      # msw's own stack: msw, its @msw/@mswjs packages, and the helpers and cookie/URL packages it ships with.
+      # Generic utilities it reaches (yargs, wrap-ansi, type-fest, graphql, ...) stay ungrouped.
       msw:
         patterns:
           - "msw"
           - "@msw/*"
           - "@mswjs/*"
-          - "@inquirer/*"
           - "@open-draft/until"
-          - "@types/debug"
-          - "@types/ms"
-          - "@types/set-cookie-parser"
-          - "ansi-styles"
-          - "cli-width"
-          - "cliui"
-          - "cookie"
-          - "fast-string-truncated-width"
-          - "fast-string-width"
-          - "fast-wrap-ansi"
-          - "get-caller-file"
-          - "graphql"
-          - "headers-polyfill"
-          - "is-node-process"
-          - "mute-stream"
-          - "outvariant"
-          - "rettime"
-          - "set-cookie-parser"
-          - "tagged-tag"
+          - "@inquirer/*"
           - "tldts"
           - "tldts-core"
           - "tough-cookie"
-          - "type-fest"
+          - "outvariant"
+          - "rettime"
+          - "headers-polyfill"
           - "until-async"
-          - "wrap-ansi"
-          - "y18n"
-          - "yargs"
-          - "yargs-parser"
+          - "is-node-process"
       oxc:
         patterns:
           - "oxlint"
@@ -136,17 +116,18 @@ updates:
           - "@tanstack/history"
           - "seroval"
           - "seroval-plugins"
-      # @tanstack/charts pulls in the d3-* modules and svelte as runtime dependencies
+      # @tanstack/charts pulls in the d3-* modules as runtime dependencies
+      # svelte is left ungrouped: inlang and oxfmt also depend on it
       charts:
         patterns:
           - "@tanstack/charts"
           - "d3-*"
-          - "svelte"
       # Babel packages are transitive and must resolve to one version per major line
       babel:
         patterns:
           - "@babel/*"
-      # shadcn CLI and its registry tooling; validate together (docs/ui-maintenance.md)
+      # shadcn CLI and its registry tooling (dev-only). Kept apart from the Base UI runtime group so a
+      # regression is attributable to one of them (docs/ui-maintenance.md)
       shadcn:
         patterns:
           - "shadcn"
