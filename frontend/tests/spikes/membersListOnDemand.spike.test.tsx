@@ -1,8 +1,8 @@
 /**
  * Spike for #1175: how should a server-driven admin table (the Members list)
  * load its pages? Two candidates run against the same fake paged server on the
- * installed versions (`@tanstack/db` 0.14.0, `@tanstack/query-db-collection`
- * 1.4.4, `@tanstack/react-query` 5.104):
+ * installed versions (`@tanstack/db` 1.0.0-rc.1.3, `@tanstack/query-db-collection`
+ * 1.5.1, `@tanstack/react-query` 5.105):
  *
  * - TanStack DB `syncMode: "on-demand"` with a live query per page.
  * - TanStack Query with `placeholderData: keepPreviousData`.
@@ -16,6 +16,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { createCollection, eq, ilike, useLiveQuery, type Collection } from "@tanstack/react-db";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { parseLoadSubsetOptions, queryCollectionOptions } from "@tanstack/query-db-collection";
+import { collectionError } from "@/state/adminCollectionFactory";
 import { createTestQueryClient, createTestQueryClientHarness } from "../utils/queryClient";
 
 interface Member {
@@ -52,7 +53,7 @@ function respond(ms: number, signal: AbortSignal | undefined): Promise<void> {
   });
 }
 
-describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.4.4)", () => {
+describe("on-demand collection sync (@tanstack/db 1.0.0-rc.1.3, query-db-collection 1.5.1)", () => {
   interface Call {
     limit: number | undefined;
     offset: number | undefined;
@@ -118,17 +119,14 @@ describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.
   type MemberCollection = Collection<Member, string>;
 
   const page = (collection: MemberCollection, pageIndex: number, role?: Member["role"]) =>
-    useLiveQuery(
-      (q) => {
-        const base = q.from({ p: collection });
-        const filtered = role ? base.where(({ p }) => eq(p.role, role)) : base;
-        return filtered
-          .orderBy(({ p }) => p.createdAt, "desc")
-          .limit(5)
-          .offset(pageIndex * 5);
-      },
-      [collection, pageIndex, role],
-    );
+    useLiveQuery((q) => {
+      const base = q.from({ p: collection });
+      const filtered = role ? base.where(({ p }) => eq(p.role, role)) : base;
+      return filtered
+        .orderBy(({ p }) => p.createdAt, "desc")
+        .limit(5)
+        .offset(pageIndex * 5);
+    });
 
   it("pushes sort and filter, but turns offset into a larger limit and adds a tie-break request", async () => {
     const { collection, calls } = createOnDemand();
@@ -155,7 +153,7 @@ describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.
     expect(calls.some((call) => call.limit === 15 && call.offset === undefined)).toBe(true);
   });
 
-  it("has no previous data while the next page loads", async () => {
+  it("keeps the previous page visible while the next page loads", async () => {
     const { collection } = createOnDemand({ delayMs: 30 });
     const { result, rerender } = renderHook(
       ({ pageIndex }) => page(collection as MemberCollection, pageIndex),
@@ -166,8 +164,10 @@ describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.
 
     rerender({ pageIndex: 1 });
 
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.data).toEqual([]);
+    // 0.14 blanked the list here (isLoading true, data []). Since 1.0 the live query keeps
+    // showing the previous page until the next window arrives.
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data.map((row) => row.id)).toEqual(["p01", "p02", "p03", "p04", "p05"]);
     await waitFor(() => expect(result.current.data[0]?.id).toBe("p06"));
   });
 
@@ -190,20 +190,18 @@ describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.
   it("fails loudly on a predicate parseLoadSubsetOptions cannot express", async () => {
     const { collection } = createOnDemand({ search: false });
     const { result } = renderHook(() =>
-      useLiveQuery(
-        (q) =>
-          q
-            .from({ p: collection as MemberCollection })
-            .where(({ p }) => ilike(p.name, "%3%"))
-            .orderBy(({ p }) => p.createdAt, "desc")
-            .limit(5),
-        [collection],
+      useLiveQuery((q) =>
+        q
+          .from({ p: collection as MemberCollection })
+          .where(({ p }) => ilike(p.name, "%3%"))
+          .orderBy(({ p }) => p.createdAt, "desc")
+          .limit(5),
       ),
     );
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    await waitFor(() => expect(result.current.isLoadingError).toBe(true));
     expect(result.current.data).toEqual([]);
-    expect(String(collection.utils.lastError)).toMatch(/does not support 'ilike'/);
+    expect(String(collectionError(collection))).toMatch(/does not support 'ilike'/);
   });
 
   it("re-evaluates the pushed predicate on the client, so server-only search semantics disappear", async () => {
@@ -230,14 +228,12 @@ describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.
       }),
     );
     const { result } = renderHook(() =>
-      useLiveQuery(
-        (q) =>
-          q
-            .from({ p: collection })
-            .where(({ p }) => ilike(p.name, "%person%"))
-            .orderBy(({ p }) => p.createdAt, "desc")
-            .limit(5),
-        [collection],
+      useLiveQuery((q) =>
+        q
+          .from({ p: collection })
+          .where(({ p }) => ilike(p.name, "%person%"))
+          .orderBy(({ p }) => p.createdAt, "desc")
+          .limit(5),
       ),
     );
 

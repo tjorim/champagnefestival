@@ -43,9 +43,9 @@ and `queryCollectionOptions` from `@tanstack/query-db-collection`:
 - `enabled` follows `visible && isAuthenticated`; `staleTime` is 60 seconds and
   `retry` is `false`, matching the other admin queries.
 - `useAdminQueries` memoizes one collection per `(editionId, enabled, authHeaders,
-  queryClient)` and reads it with `useLiveQuery(() => collection, [collection])`.
+  queryClient)` and reads it with `useLiveQuery(collection)`.
   It exposes a `registrationsQuery` shaped like a query result (`data`, `error`
-  from `collection.utils.lastError`, `isPending` from the live query's
+  from `collectionError(collection)` (its `collection.health`), `isPending` from the live query's
   `isLoading`, `isFetching` from `collection.utils.isFetching`) so callers such as
   `AdminDashboard` did not need to change.
 
@@ -113,8 +113,8 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   the source rows unmodified.
 - **Writes.** Position, rotation, rename, table-type changes and deletes are
   optimistic through the collection's `onUpdate`/`onDelete` handlers: one request
-  per changed row, an explicit `collection.utils.refetch()` and
-  `{ refetch: false }` on success, and a refetch before rollback on failure.
+  per changed row, an explicit `collection.utils.refetch()` on success, and a refetch
+  before rollback on failure.
   Create is not optimistic (the server assigns the id and the table type's
   capacity), so `addAdminTable` calls the API and then applies `writeUpsert`.
   The rule for further collections: server-generated rows use a direct write,
@@ -170,7 +170,7 @@ resource, built together and registered, reset and fenced as a group.
   lists). `useAdminQueries` creates the group in one `useMemo`, reads each with
   `useLiveQuery` and exposes query-shaped `venuesQuery`, `roomsQuery`,
   `tableTypesQuery`, `layoutsQuery` and `areasQuery` objects (`data`, `error` from
-  `lastError`, `isPending`, `isFetching`), so `AdminDashboard` reads them as
+  `collectionError`, `isPending`, `isFetching`), so `AdminDashboard` reads them as
   before. It also returns `venueCollections` for the actions; the per-resource
   query-key props of `useAdminVenueActions` and `useVenueMutations` are gone.
 - **One authoritative copy each; views are derived.** The rooms of a venue, the
@@ -186,8 +186,8 @@ resource, built together and registered, reset and fenced as a group.
   a row the collection no longer holds). Moving, rotating, resizing and relabelling
   an area are changes the client already knows the outcome of (a dragged area must
   follow the pointer), so they run through the areas collection's `onUpdate`
-  handler like table edits: one `PUT` per changed area, an explicit `refetch()` and
-  `{ refetch: false }` on success, a refetch before the rollback on failure; the
+  handler like table edits: one `PUT` per changed area, an explicit `refetch()` on
+  success, a refetch before the rollback on failure; the
   handler takes the group fence before its first request and, once it moves,
   sends no further `PUT` and skips both refetches. That
   replaces the four optimistic `useMutation`s with `onMutate`/`onError` snapshots.
@@ -201,7 +201,7 @@ resource, built together and registered, reset and fenced as a group.
   table-type capacity change refetches the tables collection (a table's capacity
   comes from its type); a rename does not.
 - **Refetch.** Each mutation's `onSettled` refetches the collections it touched
-  through `refetchAdminVenueCollections` (the implicit refetch is deprecated).
+  through `refetchAdminVenueCollections` (the implicit refetch was removed in DB 1.0).
   `loadData` refetches the whole group. A layout copy refetches layouts, areas and
   tables, because the server creates areas and tables with fresh ids.
 - **Session fence and reset.** `captureAdminVenueFence()` is true only while none of
@@ -266,7 +266,7 @@ migration. They are now one eager collection on the shared factory
   out, because a refetch ignores `enabled`), through its own helper, and no
   `queryClient.refetchQueries` predicate remains. `loadData` refetches the organizations
   through `refetchAdminOrganizations`. The
-  dashboard's organizations error comes from the collection's `lastError` like the
+  dashboard's organizations error comes from the collection's `collectionError` like the
   others. The `ContentSection` list and `EditionModal`'s organization picker keep
   their own queries (`contentManagement.section`, `editionModalOrganizations`); they
   are separate reads of the same endpoint, not a second copy the dashboard patches.
@@ -361,9 +361,9 @@ It works, and it is the wrong fit for our list contract.
 | `orderBy`, `limit`, `where` reach the `queryFn` through `ctx.meta.loadSubsetOptions`, and a filter change aborts the superseded request (`ctx.signal` and `loadSubsetOptions.signal`). | Works, but Query gives the same cancellation through `signal` with no collection code. |
 | **`offset` is not pushed down.** A live query with `limit(5).offset(10)` calls the `queryFn` with `limit: 15` and no `offset`. | Page N loads N pages from the top. The backend contract is `page` and `limit`; deep pages over-fetch and the page boundary cannot be sent. |
 | Every window also issues a **tie-break request** with no limit and no sort, filtered to `eq(sortField, boundaryValue)`. | Two requests per page, and the backend must serve arbitrary equality filters on every sortable column. |
-| `parseLoadSubsetOptions` expresses and-ed `eq`/`gt`/`gte`/`lt`/`lte`/`in`, their `not_` forms and `isNull`. It **throws** on `or`, `like` and `ilike`, and its result has no `offset`. | Unsupported predicates fail loudly: the live query reports `isError`, `collection.utils.lastError` is set and no rows load. This meets the "never silently load an unfiltered list" requirement. |
+| `parseLoadSubsetOptions` expresses and-ed `eq`/`gt`/`gte`/`lt`/`lte`/`in`, their `not_` forms and `isNull`. It **throws** on `or`, `like` and `ilike`, and its result has no `offset`. | Unsupported predicates fail loudly: the live query reports `isLoadingError`, `collectionError(collection)` is set and no rows load. This meets the "never silently load an unfiltered list" requirement. |
 | The pushed-down `where` is **re-evaluated on the client** against the loaded rows. A row the server returned because its phone number matched is dropped by a live query that can only push `ilike(name, ...)`. | The people search spans name, email, phone, address, NISS, eID, club, notes and roles with `OR`. A live query cannot express it, so the server's search semantics cannot be reproduced. This alone rules out on-demand for search. |
-| A page change has **no previous data**: `isLoading` is true and `data` is `[]` until the next window arrives. | The "keep the previous page visible" requirement in #1180 would need extra code on top of the live query. |
+| A page change has **no previous data** on 0.14: `isLoading` was true and `data` was `[]` until the next window arrived. **Since `@tanstack/db` 1.0.0-rc.1.3 the previous page stays visible** (`isLoading` false, status `ready`) until the next window arrives. | On 1.0 the "keep the previous page visible" requirement in #1180 no longer needs extra code on top of the live query. The other rows still hold: the spike's other eleven tests pass unchanged on 1.0.0-rc.1.3. This decision (2026-10-05) is not re-opened here; this row simply no longer separates the two approaches. |
 | There is **no channel for the total**. | `rowCount` needs a second query, so Query is needed next to the collection anyway. |
 
 ### Write interplay, sign-out and live events on a partial cache
@@ -514,10 +514,10 @@ These come from #442 and apply to every further migration:
 Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 `@tanstack/query-db-collection` ^1.3.4.
 
-- **Auto-refetch after a handler is deprecated.** A write handler
-  (`onInsert`/`onUpdate`/`onDelete`) should call `collection.utils.refetch()`
-  explicitly and return `{ refetch: false }` instead of relying on the implicit
-  refetch.
+- **Auto-refetch after a handler was removed in DB 1.0** (deprecated before that).
+  A write handler (`onInsert`/`onUpdate`/`onDelete`) calls `collection.utils.refetch()`
+  explicitly and returns nothing (`Promise<void>`; `{ refetch: false }` no longer
+  exists).
 - Direct writes (`writeUpsert`, `writeDelete`, `writeBatch`) return a promise that
   resolves once the write is applied (1.3.2). Registration live-event patching
   awaits these receipts through the shared lifecycle; #1167 completed this work.
