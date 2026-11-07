@@ -170,10 +170,10 @@ importers:
         specifier: ^1.9.0
         version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@dnd-kit/dom':
-        specifier: ^0.5.1
+        specifier: ^0.5.3
         version: 0.5.3
       '@dnd-kit/react':
-        specifier: ^0.5.1
+        specifier: ^0.5.3
         version: 0.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/charts':
         specifier: ^1.1.0
