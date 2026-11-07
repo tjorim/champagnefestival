@@ -288,7 +288,7 @@ importers:
         specifier: ^1.9.22
         version: 1.9.22
       '@types/node':
-        specifier: ^26.6.5
+        specifier: ^26.6.6
         version: 26.6.6
       '@types/react':
         specifier: ^19.3.0
