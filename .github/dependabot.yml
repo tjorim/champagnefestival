@@ -259,7 +259,8 @@ updates:
       android-build:
         patterns:
           - "com.android.*"
-          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlin.*"
+          - "org.jetbrains.kotlin:*"
           - "com.google.devtools.ksp"
 
   # Monitor npm dependencies for the Pebble watch app
