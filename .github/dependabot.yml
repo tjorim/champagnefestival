@@ -146,11 +146,14 @@ updates:
       babel:
         patterns:
           - "@babel/*"
-      # shadcn CLI and the icon set its generated components use; validate together (docs/ui-maintenance.md)
+      # shadcn CLI and its registry tooling; validate together (docs/ui-maintenance.md)
       shadcn:
         patterns:
           - "shadcn"
           - "@shadcn/*"
+      # Icon set kept in its own group so icon releases are reviewed separately
+      icons:
+        patterns:
           - "lucide-react"
       base-ui:
         patterns:
@@ -287,12 +290,6 @@ updates:
       - "dependencies"
       - "github-actions"
     groups:
-      # One SHA-pinned bump PR for all non-CodeQL actions; CodeQL keeps its own group
-      actions:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "github/codeql-action/*"
       codeql:
         patterns:
           - "github/codeql-action/*"
