@@ -18,7 +18,7 @@ permissions:
 jobs:
   changes:
     name: Detect changed components
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       android: ${{ steps.filter.outputs.android }}
       backend: ${{ steps.filter.outputs.backend }}
@@ -174,7 +174,7 @@ jobs:
       - codeql-backend
       - codeql-frontend
       - pr-preview
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Require every job to have passed or been skipped
         env:
