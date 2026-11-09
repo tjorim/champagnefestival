@@ -94,7 +94,7 @@ _mcp_app = _mcp.http_app(path="/", stateless_http=True) if _mcp is not None else
 
 if settings.sentry_dsn:
     try:
-        import sentry_sdk  # ty: ignore[unresolved-import]
+        import sentry_sdk  # ty: ignore[import-not-found]
 
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
