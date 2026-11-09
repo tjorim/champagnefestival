@@ -238,7 +238,7 @@ class YesNoKind(PollKind):
             select(
                 VolunteerPollAnswer.question_id,
                 func.count(),
-                func.coalesce(func.sum(cast(VolunteerPollAnswer.attending, Integer)), 0),
+                func.coalesce(func.sum(cast(VolunteerPollAnswer.attending, Integer())), 0),
                 func.coalesce(func.sum(VolunteerPollAnswer.people), 0),
             )
             .join(EditionPollQuestion, EditionPollQuestion.id == VolunteerPollAnswer.question_id)
