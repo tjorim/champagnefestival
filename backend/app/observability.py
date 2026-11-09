@@ -14,7 +14,7 @@ from fastapi import Request
 from starlette.responses import Response as StarletteResponse
 
 try:
-    import sentry_sdk  # ty: ignore[unresolved-import]
+    import sentry_sdk  # ty: ignore[import-not-found]
 except ImportError:
     sentry_sdk = None
 
