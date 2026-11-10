@@ -1,0 +1,30 @@
+{
+  "base": "/",
+  "entries": {
+    "main": "index.html"
+  },
+  "budgets": {
+    "entries": {
+      "main": {
+        "raw": 522240,
+        "entryRaw": 343040,
+        "gzip": 183000
+      }
+    },
+    "total": {
+      "raw": 2867200,
+      "gzip": 931000
+    },
+    "chunks": [
+      {
+        "name": "admin dashboard",
+        "pattern": "^assets/AdminDashboard-.*\\.js$",
+        "raw": 435200
+      }
+    ]
+  },
+  "forbidInitial": {
+    "main": ["(^|/)oidc-vendor[.-]"]
+  },
+  "note": "Limits follow measured production builds with about 5% headroom. Existing ceilings are preserved when migrating to the shared implementation. Explain justified increases in docs/ui-maintenance.md; size is a regression signal, not a performance measurement."
+}
