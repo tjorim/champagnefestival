@@ -31,7 +31,12 @@ export default defineConfig(({ command, mode, isPreview }) => {
         outdir: "./src/paraglide",
         strategy: ["custom-localePath", "localStorage", "preferredLanguage", "baseLocale"],
       }),
-      redact({ preset: "full", environments: ["client"] }),
+      redact({
+        preset: "full",
+        environments: ["client"],
+        // Client-only mount; no Activity boundaries or Fragment DOM refs are used.
+        features: { hydration: false, activity: false, fragmentRefs: false },
+      }),
       reactPlugin(),
       // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
       // so the worker script is never emitted into dist.

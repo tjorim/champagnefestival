@@ -274,7 +274,7 @@ all four checks, eager dependency traversal and OIDC isolation enforcement enabl
 
 ## Redact runtime (2026-11-09)
 
-The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset,
+The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset and explicit feature exclusions,
 registered before the React plugin. Keep React, React DOM and their types installed
 for library peers and TypeScript. No application imports need changing.
 Vitest stays on native React. Redact aliases application imports, but CommonJS
@@ -300,3 +300,23 @@ Production signage/public offline E2E: all 3 checks passed, including offline re
 Native unit suite: all 1489 tests passed.
 
 Focused Chromium public-widget and registration suite: all 18 checks passed.
+
+### Unused feature exclusions (2026-11-10)
+
+Disable `hydration`, `activity` and `fragmentRefs` in the browser runtime.
+The entry points mount with `createRoot`; the production module graph has no
+React Activity boundaries or Fragment DOM refs in app code or dependencies.
+Base UI's Activity mentions are comments explaining effect cleanup, not usage.
+Query/router cache hydration and Preact's internal hydration are separate APIs
+and do not require Redact DOM hydration.
+
+Keep portals, context, memo, forwardRef, lazy, Suspense and class components
+(including error-boundary lifecycles). Native view-transition animation remains
+off by default. Re-enable the relevant flag before introducing SSR hydration,
+Activity boundaries or Fragment refs, including through a dependency update.
+
+Same-config production chunk audit: disabling these three features removes
+15,803 raw bytes and 5,523 gzip bytes beyond the full-preset build.
+The audit found no native React/React DOM modules in the emitted browser chunks.
+
+Validation with these exclusions: build, lint and bundle checks passed; 18 public/registration checks and 3 production signage/offline checks passed.
