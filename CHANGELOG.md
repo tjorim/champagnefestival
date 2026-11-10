@@ -17,6 +17,8 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Fixed
 
+- **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.
+- **Sign-out:** `GET /api/auth/oidc-config` now returns the provider's `end_session_url` and the Android app reads it. The app only starts the provider logout when an end-session endpoint is known, and it never received one, so signing out cleared the local session but left the Keycloak session alive (the next sign-in succeeded silently).
 - The cascade layer order is declared before the first `@layer components` rule in `index.html`. The inline style that hides the server fragment mentioned `components` first, which put the runtime themes below Tailwind's preflight: the fixed header covered the top of the page, and theme headings and spacing were reset. The mobile sort controls of admin tables are exposed as a labelled group.
 - The count badge on the active admin sidebar item (for example the number of registrations) was unreadable (contrast 1.1:1: dark text on a dark badge); it now uses the foreground colour.
 - The floor-plan editor no longer colours the room name with the room's saved colour, which fell below contrast on the dark admin background for many colours (a default grey measured 3.5:1); the colour is now a swatch beside the name.
