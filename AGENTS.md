@@ -101,7 +101,8 @@ from it — nothing else should be hand-edited:
    `VERSION`, `frontend/package.json` and the changelog (`node scripts/release.mjs check --tag`).
 4. Wait for backend/frontend checks to pass; the workflow creates a **draft** release whose notes are the
    changelog section.
-5. Publish the draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
+5. Publish the draft release. Publishing does not deploy: the VPS deploys `origin/main` through the infra stack
+   (`scripts/upgrade-apps.sh` in `tjorim/apps`), see tjorim/apps#345.
 
 `node scripts/release.mjs check` also runs in CI on every pull request.
 
