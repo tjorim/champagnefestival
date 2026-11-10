@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   bump,
@@ -10,6 +12,7 @@ import {
   exportChangelog,
   nextVersion,
   notes,
+  parseArgs,
   parseBody,
 } from "./release.mjs";
 
@@ -396,5 +399,54 @@ describe("audiences and platforms", () => {
     // Only Planned left: nothing to release.
     write("CHANGELOG.md", changelog.replace("### Fixed\n\n- Shipped fix\n\n", ""));
     assert.throws(() => bump(root, { date: "2026-11-21" }), /nothing to release/);
+  });
+
+  it("rejects an unknown audience instead of silently showing Internal entries", () => {
+    for (const audience of ["App", "apps", "internal"]) {
+      assert.throws(() => exportChangelog(root, { audience }), /unknown audience/);
+      assert.throws(() => notes(root, "2026.11.1", { audience }), /unknown audience/);
+    }
+  });
+});
+
+describe("command line", () => {
+  const script = fileURLToPath(new URL("./release.mjs", import.meta.url));
+  const run = (...args) =>
+    spawnSync(process.execPath, [script, ...args], {
+      env: { ...process.env, RELEASE_ROOT: root },
+      encoding: "utf8",
+    });
+
+  it("parses values, booleans and positionals", () => {
+    assert.deepEqual(parseArgs(["2026.12.1", "--date", "2026-12-01", "--allow-empty"]), {
+      flags: { date: "2026-12-01", allowEmpty: true },
+      positional: ["2026.12.1"],
+    });
+    assert.equal(parseArgs(["--limit", "3"]).flags.limit, "3");
+    assert.equal(parseArgs(["--tag", ""]).flags.tag, "");
+  });
+
+  it("rejects a flag without a value, an unknown flag and a bad count", () => {
+    assert.throws(() => parseArgs(["--tag"]), /--tag needs a value/);
+    assert.throws(() => parseArgs(["--tag", "--audience", "app"]), /--tag needs a value/);
+    assert.throws(() => parseArgs(["--bogus", "x"]), /unknown option --bogus/);
+    for (const bad of ["abc", "0", "-1", "1.5", "12x"]) {
+      assert.throws(() => parseArgs(["--limit", bad]), /positive whole number/);
+      assert.throws(() => parseArgs(["--max-chars", bad]), /positive whole number/);
+    }
+  });
+
+  it("fails check instead of skipping the tag comparison when --tag has no value", () => {
+    const result = run("check", "--tag");
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /--tag needs a value/);
+    assert.equal(run("check", "--tag", "v2026.11.1").status, 0);
+  });
+
+  it("reports bad option values through the normal error path", () => {
+    assert.match(run("notes", "--max-chars", "abc").stderr, /positive whole number/);
+    assert.match(run("export", "--audience", "App").stderr, /unknown audience/);
+    assert.match(run("next", "--date", "tomorrow").stderr, /not YYYY-MM-DD/);
+    assert.equal(run("export", "--audience", "App").status, 1);
   });
 });

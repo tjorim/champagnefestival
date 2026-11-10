@@ -198,6 +198,9 @@ function mergeCategories(categories) {
 }
 
 function filterCategories(categories, config, { audience, platform } = {}) {
+  if (audience && audience !== "app") {
+    throw new Error(`unknown audience "${audience}" (supported: app)`);
+  }
   if (platform && !(config.platforms ?? []).some((p) => sameName(p, platform))) {
     throw new Error(
       `unknown platform "${platform}" (configured: ${(config.platforms ?? []).join(", ") || "none"})`,
@@ -414,14 +417,33 @@ export function exportChangelog(root, { audience, platform, limit } = {}) {
   };
 }
 
-function parseArgs(argv) {
+const VALUE_FLAGS = new Set(["tag", "date", "audience", "platform", "max-chars", "limit"]);
+const COUNT_FLAGS = new Set(["max-chars", "limit"]);
+
+/**
+ * Split command-line arguments into `--flag value` pairs and positionals. A flag without a value,
+ * an unknown flag and a non-numeric count are errors: silently ignoring them could skip a check
+ * (`check --tag` with no tag would otherwise pass).
+ */
+export function parseArgs(argv) {
   const flags = {};
   const positional = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--allow-empty") flags.allowEmpty = true;
-    else if (arg.startsWith("--")) flags[arg.slice(2)] = argv[++i];
-    else positional.push(arg);
+    if (arg === "--allow-empty") {
+      flags.allowEmpty = true;
+    } else if (arg.startsWith("--")) {
+      const name = arg.slice(2);
+      if (!VALUE_FLAGS.has(name)) throw new Error(`unknown option ${arg}`);
+      const value = argv[++i];
+      if (value === undefined || value.startsWith("--")) throw new Error(`${arg} needs a value`);
+      if (COUNT_FLAGS.has(name) && !/^[1-9]\d*$/.test(value)) {
+        throw new Error(`${arg} needs a positive whole number, got "${value}"`);
+      }
+      flags[name] = value;
+    } else {
+      positional.push(arg);
+    }
   }
   return { flags, positional };
 }
@@ -431,18 +453,21 @@ function main(argv) {
     process.env.RELEASE_ROOT ?? join(dirname(fileURLToPath(import.meta.url)), ".."),
   );
   const [command, ...rest] = argv;
-  const { flags, positional } = parseArgs(rest);
   const fail = (message) => {
     console.error(process.env.GITHUB_ACTIONS ? `::error::${message}` : `error: ${message}`);
     process.exitCode = 1;
   };
   try {
+    const { flags, positional } = parseArgs(rest);
     if (command === "check") {
       const errors = check(root, { tag: flags.tag });
       if (errors.length) errors.forEach(fail);
       else console.log(`release metadata consistent (${readVersion(root, readConfig(root))})`);
     } else if (command === "next") {
       const config = readConfig(root);
+      if (flags.date && !DATE_RE.test(flags.date)) {
+        throw new Error(`date "${flags.date}" is not YYYY-MM-DD`);
+      }
       console.log(
         nextVersion(readVersion(root, config), flags.date ?? new Date().toISOString().slice(0, 10)),
       );
