@@ -352,3 +352,5 @@ whose existing limits remain unchanged. No application auth bypass or loading
 behaviour was changed. Related Daynest template-dialog and Worktime label
 focus-return tests passed during this audit; their stored focus targets remain
 areas to recheck when rendering or dependencies change.
+
+See [Redact compatibility checks](redact-compatibility.md) for repeatable runtime/browser commands, recorded results and unresolved coverage.

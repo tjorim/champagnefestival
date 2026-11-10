@@ -29,7 +29,10 @@
     "ui:test": "node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs",
     "ui:usage": "node scripts/ui-imports.mjs",
     "bundle:report": "node scripts/bundle-budget.mjs",
-    "bundle:test": "node --test scripts/bundle-budget.verify.mjs"
+    "bundle:test": "node --test scripts/bundle-budget.verify.mjs",
+    "test:compatibility:runtime": "vitest run -c vitest.redact.config.ts",
+    "test:compatibility:browsers": "playwright test -c playwright.compatibility.config.ts",
+    "test:compatibility": "pnpm test:compatibility:runtime && pnpm test:compatibility:browsers"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
