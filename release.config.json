@@ -1,0 +1,6 @@
+{
+  "repo": "tjorim/champagnefestival",
+  "targets": [{ "file": "frontend/package.json", "pattern": "\"version\": \"([^\"]+)\"" }],
+  "scopes": ["Web", "Android", "Backend", "MCP", "Breaking"],
+  "platforms": ["Web", "Android"]
+}
