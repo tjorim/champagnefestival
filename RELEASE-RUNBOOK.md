@@ -10,6 +10,7 @@ Supplement to the release process steps in `AGENTS.md`. Covers ownership, pre-re
 | Tag push (`vX.Y.Z`) | Repository maintainer (tjorim) |
 | CI green sign-off | Author confirms all checks pass in `release-draft.yml` |
 | Draft release publish | Repository maintainer (tjorim) |
+| Explicit VPS deployment (independent of release publication) | Repository maintainer (tjorim) |
 | Post-deploy verification | On-call volunteer / release author |
 | Rollback decision | Repository maintainer (tjorim) |
 
@@ -28,12 +29,16 @@ For every release that includes Alembic migrations, complete this before merging
 5. **Take a backup** — before applying migrations in production, snapshot the database:
    ```bash
    # Run from the VPS or a host with access to the Postgres container
-   docker compose exec -T db pg_dump -c -U postgres champagnefestival > backup-$(date +%Y%m%d%H%M%S).sql
+   docker compose -f /opt/apps/infra/compose.yaml exec -T postgres pg_dump -c -U postgres champagnefestival > backup-$(date +%Y%m%d%H%M%S).sql
    ```
 
 ## Post-deploy verification checklist
 
-Run these checks after the production deploy completes (typically within ~2–3 minutes of publishing the draft release):
+Publishing a draft does not deploy the VPS. From `/opt/apps`, run
+`scripts/upgrade-apps.sh champagnefestival` (or the infra deploy playbook). Both
+build the latest `origin/main`, which may be newer than the published tag.
+Record the previous commit and migration revision before deploying. Run these
+checks after that explicit deploy completes:
 
 - [ ] **Health endpoint** — `curl -sf https://champagnefestival.tjor.im/api/health` returns HTTP 200.
 - [ ] **Frontend loads** — open `https://champagnefestival.tjor.im` in a browser; the page renders without console errors.
@@ -41,7 +46,7 @@ Run these checks after the production deploy completes (typically within ~2–3 
 - [ ] **Outbox worker** — confirm the separately supervised `python -m app.worker` service is healthy, then verify the test registration's confirmation job reaches `delivered` in `GET /api/outbox` and the email arrives.
 - [ ] **Admin login** — navigate to `/admin`, click **Login**, complete OIDC auth, and confirm the dashboard loads.
 - [ ] **Check-in token scan** — scan or manually enter a known check-in token; confirm guest lookup succeeds.
-- [ ] **Version visible** — `curl -sf https://champagnefestival.tjor.im/api/health | jq .version` returns the expected `X.Y.Z`.
+- [ ] **Version visible** — `curl -sf https://champagnefestival.tjor.im/api/health | jq '{version, commit}'` matches `cat /opt/apps/champagnefestival/VERSION` and `git -C /opt/apps/champagnefestival rev-parse HEAD` from the build. A release version alone does not identify the deployed commit.
 
 If any check fails, proceed to the relevant rollback section below.
 
@@ -49,15 +54,16 @@ If any check fails, proceed to the relevant rollback section below.
 
 The frontend is served as static files from `/srv/champagnefestival` on the VPS, managed by the infra stack in `/opt/apps/infra`.
 
-1. **Identify the previous good release** — note the tag of the last known-good release (e.g., `vX.Y.(Z-1)`).
-2. **Re-deploy the previous frontend build** via the infra stack:
+1. **Select the previous good source commit** in `/opt/apps/champagnefestival`:
    ```bash
-   cd /opt/apps/infra
-   # Update the pinned frontend version to the previous release tag, then apply
-   # (exact command depends on the infra playbook/compose setup — see the private infra repo)
+   cd /opt/apps
+   git -C champagnefestival switch --detach <previous-good-commit>
+   (cd champagnefestival/frontend && CI=true pnpm install --frozen-lockfile && pnpm build)
    ```
-   If the infra stack uses a versioned artifact or Docker image for the frontend, roll back that image tag and restart the relevant service.
-3. **Verify** — re-run the frontend steps from the post-deploy checklist once the rollback is applied.
+   Caddy serves this checkout's `frontend/dist`. Use the recorded source commit;
+   do not assume the previous release tag was the previous deployment.
+2. **Verify** — re-run the frontend checks. Do not run the normal upgrade script
+   or deploy playbook for a pinned rollback: they switch back to `origin/main`.
 
 ## Rollback: backend
 
@@ -65,18 +71,28 @@ The backend runs in Docker on the VPS, managed by the infra stack in `/opt/apps/
 
 ### 1. Revert the application
 
+Images are built locally, not pulled by CalVer tags. Select the recorded
+previous good commit, review migration compatibility, then build both services:
+
 ```bash
-cd /opt/apps/infra
-# Roll back to the previous image tag
-docker compose pull champagnefestival-api:<previous-version>
-docker compose up -d champagnefestival-api
+cd /opt/apps
+git -C champagnefestival switch --detach <previous-good-commit>
+metadata="$(python3 scripts/deployment-metadata.py --format shell)"
+eval "$metadata"
+docker compose -f infra/compose.yaml build champagnefestival-api champagnefestival-worker
 ```
 
-The durable outbox worker must use the same backend image and be rolled back or
-restarted with the API. The production infra stack owns its separate supervised
-service; do not run it as an in-process API task.
+If required, downgrade or restore the database using the rebuilt image before
+starting old code. Then apply both services:
 
-Images are tagged by the app's CalVer version (see "Versioning" in `AGENTS.md`); replace `<previous-version>` with the last known-good tag (e.g. `2026.6.3`).
+```bash
+docker compose -f infra/compose.yaml up -d champagnefestival-api champagnefestival-worker
+```
+
+The durable outbox worker must use the same source commit as the API. The
+production infra stack owns its separate supervised service; do not run it as
+an in-process API task. Do not use the normal deploy commands for a pinned
+rollback: they select `origin/main`.
 
 ### 2. Roll back Alembic migrations (if schema changed)
 
@@ -84,12 +100,12 @@ Only needed if the release included database migrations.
 
 ```bash
 # Identify the target revision from the pre-release migration checklist
-docker compose run --rm champagnefestival-api alembic downgrade <previous_revision_id>
+docker compose -f /opt/apps/infra/compose.yaml run --rm champagnefestival-api alembic downgrade <previous_revision_id>
 ```
 
 > **Data-loss warning:** if the downgrade path drops columns or tables, data written since the upgrade is permanently lost. Restore from the pre-deploy backup instead:
 > ```bash
-> docker compose exec -T db psql -U postgres champagnefestival < backup-YYYYMMDDHHMMSS.sql
+> docker compose -f /opt/apps/infra/compose.yaml exec -T postgres psql -U postgres champagnefestival < backup-YYYYMMDDHHMMSS.sql
 > ```
 
 ### 3. Verify

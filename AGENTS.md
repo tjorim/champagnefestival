@@ -103,6 +103,9 @@ from it — nothing else should be hand-edited:
    changelog section.
 5. Publish the draft release. Publishing does not deploy: the VPS deploys `origin/main` through the infra stack
    (`scripts/upgrade-apps.sh` in `tjorim/apps`), see tjorim/apps#345.
+6. Deploy explicitly with `/opt/apps/scripts/upgrade-apps.sh champagnefestival` or the infra deploy playbook.
+   Verify `/api/health` reports the build checkout's `VERSION` and full `commit`;
+   `origin/main` may be newer than the published release tag.
 
 `node scripts/release.mjs check` also runs in CI on every pull request.
 

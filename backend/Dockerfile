@@ -23,6 +23,9 @@ COPY backend/ .
 # needs repo-root context (not just backend/) to reach it.
 COPY VERSION ./VERSION
 
+ARG APP_COMMIT=unknown
+ENV APP_COMMIT=${APP_COMMIT}
+
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run as non-root user for security hardening.

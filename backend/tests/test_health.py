@@ -52,11 +52,13 @@ async def test_jwks_reachable_coalesces_concurrent_cache_misses(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_health_summary(client):
+async def test_health_summary(client, monkeypatch):
+    monkeypatch.setattr("app.routers.health.APP_COMMIT", "a" * 40)
     r = await client.get("/api/health")
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
+    assert body["commit"] == "a" * 40
     assert body["version"]
     assert "liveness_endpoint" in body
     assert "readiness_endpoint" in body
