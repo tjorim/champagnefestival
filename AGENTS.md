@@ -89,11 +89,21 @@ from it — nothing else should be hand-edited:
 
 ## Release process
 
-1. Update the version in the root `VERSION` file (e.g. `2026.7.1`).
-2. Add/update `CHANGELOG.md` entry header as `## [YYYY.MM.MICRO] - YYYY-MM-DD`.
-3. Push tag `vYYYY.MM.MICRO` to run `.github/workflows/release-draft.yml`.
-4. Wait for backend/frontend checks and metadata validation to pass.
-5. Publish the generated draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
+1. Add entries under `## [Unreleased]` in `CHANGELOG.md` while working (`### Added`, `### Changed`,
+   `### Fixed`, `### Removed`). Put backend, infrastructure, CI and dependency changes under
+   `### Internal`: apps hide that heading from users. Prefix a bullet with `**Android:**` (any scope in
+   `release.config.json`) when it only applies to one client.
+   `node scripts/release.mjs export --audience app --platform android` prints what an app should show.
+2. `node scripts/release.mjs bump` writes the next `YYYY.M.MICRO` into `VERSION` and
+   `frontend/package.json` and turns `[Unreleased]` into the dated release section and compare links.
+   Review the diff, open the release PR and merge it.
+3. Push tag `vYYYY.M.MICRO` to run `.github/workflows/release-draft.yml`. It re-checks the tag against
+   `VERSION`, `frontend/package.json` and the changelog (`node scripts/release.mjs check --tag`).
+4. Wait for backend/frontend checks to pass; the workflow creates a **draft** release whose notes are the
+   changelog section.
+5. Publish the draft release to trigger the VPS deploy via the infra stack in `/opt/apps/infra`.
+
+`node scripts/release.mjs check` also runs in CI on every pull request.
 
 See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migration sign-off, and rollback procedures.
 
