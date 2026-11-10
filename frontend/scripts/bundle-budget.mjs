@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 // Limits follow the dependency set: raise them through a reviewed entry in
 // docs/ui-maintenance.md (latest: #1609) instead of holding updates back.
-export const budgets = { total: 2930, entry: 335, admin: 450, eager: 670 };
+export const budgets = { total: 2815, entry: 335, admin: 425, eager: 525 };
 
 export async function measureBundle(directory) {
   const manifest = JSON.parse(await readFile(resolve(directory, ".vite/manifest.json"), "utf8"));

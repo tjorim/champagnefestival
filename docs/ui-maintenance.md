@@ -271,3 +271,32 @@ AdminDashboard (450) and eager (670) keep their limits, with 8.3, 24.5 and
 3.2 KiB of headroom. Policy: dependency updates are not held back for bundle
 size; when a limit is exceeded, review the measurement here and raise it. Keep
 all four checks, eager dependency traversal and OIDC isolation enforcement enabled.
+
+## Redact runtime (2026-11-09)
+
+The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset,
+registered before the React plugin. Keep React, React DOM and their types installed
+for library peers and TypeScript. No application imports need changing.
+Vitest stays on native React. Redact aliases application imports, but CommonJS
+entries in testing-library, Lucide and react-error-boundary can still load native
+React and cause invalid hook calls. Browser E2E tests exercise Redact instead;
+keep this distinction when interpreting unit test coverage.
+
+Redact renders synchronously. Review input responsiveness, portals, focus return,
+external stores and calendar/map interactions when upgrading it. Renovate groups
+Redact separately and disables automerge.
+
+Rollback: remove the Redact plugin call/import from Vite and remove its dev
+dependency with pnpm.
+
+Bundle limits now follow the measured full-preset build: total 2676.6 KiB, entry 318.5, admin 401.9 and eager 499.7 (raw JS). Limits retain about 5% headroom.
+
+Implementation validation uses base `7a0582fd5d42e5cd2a5f4a1c907dbc64e55f76c2`. `pnpm build` passed with Redact;
+TypeScript runs in that command. Unit tests deliberately use native React as
+explained above. No INP trace or Firefox/WebKit compatibility claim is made.
+
+Production signage/public offline E2E: all 3 checks passed, including offline reload, cycle-boundary revisions and wake-lock reacquisition.
+
+Native unit suite: all 1489 tests passed.
+
+Focused Chromium public-widget and registration suite: all 18 checks passed.
