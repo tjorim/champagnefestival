@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 # Read-only by default. Only `draft` writes (contents) and only `publish-library` gets an OIDC token.
 permissions:
