@@ -361,4 +361,40 @@ describe("audiences and platforms", () => {
       'CHANGELOG.md: [Unreleased] has "### Fixed" more than once; merge them',
     ]);
   });
+
+  it("leaves a ### Planned list under [Unreleased] when cutting a release", () => {
+    write(
+      "CHANGELOG.md",
+      `## [Unreleased]
+
+### Planned
+
+- Calendar export
+- Team carousel
+
+### Fixed
+
+- Shipped fix
+
+## [2026.11.1] - 2026-11-10
+
+### Added
+
+- First
+
+[Unreleased]: https://github.com/tjorim/example/compare/v2026.11.1...HEAD
+[2026.11.1]: https://github.com/tjorim/example/releases/tag/v2026.11.1
+`,
+    );
+    bump(root, { date: "2026-11-20" });
+    const changelog = read("CHANGELOG.md");
+    assert.match(
+      changelog,
+      /## \[Unreleased\]\n\n### Planned\n\n- Calendar export\n- Team carousel\n\n## \[2026\.11\.2\] - 2026-11-20\n\n### Fixed\n\n- Shipped fix\n\n## \[2026\.11\.1\]/,
+    );
+    assert.deepEqual(check(root), []);
+    // Only Planned left: nothing to release.
+    write("CHANGELOG.md", changelog.replace("### Fixed\n\n- Shipped fix\n\n", ""));
+    assert.throws(() => bump(root, { date: "2026-11-21" }), /nothing to release/);
+  });
 });
