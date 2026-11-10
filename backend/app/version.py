@@ -29,3 +29,6 @@ def _read_app_version() -> str:
 
 
 APP_VERSION = _read_app_version()
+
+# Baked into the image by the deployment build, independent of release tags.
+APP_COMMIT = os.environ.get("APP_COMMIT", "unknown")
