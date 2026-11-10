@@ -19,6 +19,7 @@ class OidcDiscoveryConfig(BaseModel):
     issuer: str
     authorization_url: str
     token_url: str
+    end_session_url: str | None = None
 
 
 # Discovery results are stable for the lifetime of the process, like the JWKS
@@ -41,6 +42,7 @@ async def _discover(issuer: str) -> OidcDiscoveryConfig:
         issuer=data.get("issuer", issuer),
         authorization_url=data["authorization_endpoint"],
         token_url=data["token_endpoint"],
+        end_session_url=data.get("end_session_endpoint"),
     )
 
 

@@ -73,6 +73,7 @@ async def test_oidc_config_endpoint_returns_discovered_provider_urls(monkeypatch
                     "issuer": issuer,
                     "authorization_endpoint": f"{issuer}/protocol/openid-connect/auth",
                     "token_endpoint": f"{issuer}/protocol/openid-connect/token",
+                    "end_session_endpoint": f"{issuer}/protocol/openid-connect/logout",
                 }
             ),
         )
@@ -87,7 +88,35 @@ async def test_oidc_config_endpoint_returns_discovered_provider_urls(monkeypatch
         "issuer": issuer,
         "authorization_url": f"{issuer}/protocol/openid-connect/auth",
         "token_url": f"{issuer}/protocol/openid-connect/token",
+        "end_session_url": f"{issuer}/protocol/openid-connect/logout",
     }
+
+
+@pytest.mark.asyncio
+async def test_oidc_config_endpoint_omits_end_session_when_provider_has_none(monkeypatch) -> None:
+    issuer = "https://auth.example.test/application/o/champagnefestival"
+    monkeypatch.setattr(settings, "oidc_issuer_url", issuer)
+    monkeypatch.setattr(auth, "_config_cache", {})
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=json.dumps(
+                {
+                    "issuer": issuer,
+                    "authorization_endpoint": f"{issuer}/authorize/",
+                    "token_endpoint": f"{issuer}/token/",
+                }
+            ),
+        )
+
+    monkeypatch.setattr(auth, "_http_client", _mock_discovery_client(handler))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/auth/oidc-config")
+
+    assert response.status_code == 200
+    assert response.json()["end_session_url"] is None
 
 
 @pytest.mark.asyncio
