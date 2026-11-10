@@ -340,3 +340,15 @@ are unchanged.
 The original 125% case also passed locally with an empty dependency cache, so
 CI must confirm the mitigation. With warmup, all six zoom iterations (125%,
 150%, 200%, twice each) and all ten other entrance-layout cases passed.
+
+### Authenticated E2E readiness
+
+A subsequent cold message-editor run still timed out on the initial admin
+loading shell despite Vite warmup. Auth setup now verifies the authenticated
+registrations screen and search control after saving the auth-only fixture.
+A bounded setup budget (90 seconds overall, 60 seconds per readiness assertion)
+separates cold dev-module/data initialization from functional test assertions,
+whose existing limits remain unchanged. No application auth bypass or loading
+behaviour was changed. Related Daynest template-dialog and Worktime label
+focus-return tests passed during this audit; their stored focus targets remain
+areas to recheck when rendering or dependencies change.

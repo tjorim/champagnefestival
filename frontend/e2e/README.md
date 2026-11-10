@@ -120,6 +120,13 @@ same value before running the setup step _and_ before starting the backend
 `_DEV_BYPASS_CLAIMS`) — that value then flows through as the session's
 Authorization header instead.
 
+After saving that auth-only state, setup visits the registrations screen and
+verifies both the authenticated admin root and its search control. This bounded
+cold-start phase has a 90-second overall setup timeout and 60-second readiness
+assertions. It completes the heavy dev-module/data load before functional
+assertions start; individual test timeouts and assertions are unchanged. Saving
+state before this visit keeps navigation preferences out of the shared fixture.
+
 This is test/dev tooling only — `frontend/src/config/oidc.ts` and
 `frontend/src/contexts/AuthContext.tsx` are untouched, and the normal login
 flow works exactly as before when neither the Vite dev-session opt-in nor
