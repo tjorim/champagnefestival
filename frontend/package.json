@@ -21,13 +21,18 @@
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "check-message-parity": "node scripts/check-message-parity.mjs",
     "locale:audit": "node scripts/locale-audit.mjs",
-    "bundle:check": "node scripts/bundle-budget.mjs",
+    "bundle:check": "node scripts/bundle-budget.mjs --check",
     "ui:check": "node scripts/ui-maintenance.mjs check && node scripts/ui-imports.mjs",
     "ui:upstream": "node scripts/ui-maintenance.mjs upstream",
     "ui:diff": "node scripts/ui-maintenance.mjs diff",
     "ui:record": "node scripts/ui-maintenance.mjs record",
     "ui:test": "node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs",
-    "ui:usage": "node scripts/ui-imports.mjs"
+    "ui:usage": "node scripts/ui-imports.mjs",
+    "bundle:report": "node scripts/bundle-budget.mjs",
+    "bundle:test": "node --test scripts/bundle-budget.verify.mjs",
+    "test:compatibility:runtime": "vitest run -c vitest.redact.config.ts",
+    "test:compatibility:browsers": "playwright test -c playwright.compatibility.config.ts",
+    "test:compatibility": "pnpm test:compatibility:runtime && pnpm test:compatibility:browsers"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -66,6 +71,7 @@
     "@playwright/test": "^1.65.0",
     "@shadcn/lint": "^0.2.5",
     "@tailwindcss/vite": "^4.3.4",
+    "@tanstack/redact": "0.3.1",
     "@tanstack/table-core": "9.3.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

@@ -1,0 +1,81 @@
+# Bundle budget history
+
+Historical notes migrated from the frontend CI workflow. Current byte limits
+are in `frontend/bundle-budget.json`.
+
+Ceilings track deliberate feature and dependency growth from the
+2026-06-27 baseline (see history below).
+Raise only after a deliberate, reviewed size increase.
+Baselines (kB, uncompressed): total JS ≈ 1 654, index ≈ 785, AdminDashboard ≈ 517
+AdminDashboard raised 700 -> 750 for #942's ComposerManagement admin
+section (measured 709 kB) — real admin-feature growth, not bloat;
+keeps headroom for the next admin section rather than tracking
+actual size exactly.
+AdminDashboard raised 750 -> 780 for #1019's payment-ledger follow-up
+(person payment summary, edition/person ledger CSV export links, and
+a refund/correction reversal picker) — measured 752 kB.
+AdminDashboard raised 780 -> 810 for #1048's admin-form consistency
+migration (VenueManagement, EventProductsModal, BookingEditor,
+PolicyManagement, ComposerManagement, AnnouncementManagement, and
+SettingsManagement moved off hand-rolled useState onto the
+@tanstack/react-form pattern the rest of the admin dashboard already
+used) — measured 782 kB.
+AdminDashboard raised 810 -> 830 for the tanstack-db dependency-group
+bump (@tanstack/query-db-collection 1.2.12 -> 1.2.13, @tanstack/react-db
+0.3.7 -> 0.3.8, transitively @tanstack/db -> 0.9.0) — no admin feature
+changed; the upstream release grew the shared chunk (measured 816 kB).
+Total raised 2200 -> 2450 and AdminDashboard raised 830 -> 1050 for the
+@tanstack/react-form v1 -> v2 (alpha) migration across all 17 admin/
+public forms — the new atom-based reactivity (@tanstack/react-store)
+and pipeline validator engine are meaningfully heavier than v1's in
+this alpha (measured: total 2362 kB, AdminDashboard 977 kB). Revisit
+downward once v2 reaches stable and has had a chance to slim down.
+Total raised 2450 -> 2700 and AdminDashboard raised 1050 -> 1300
+for #1106 / PR #1114's admin table migration to shadcn and Base UI.
+The first production use of Base UI Menu, Select, Checkbox and Button
+adds their interaction, focus-management and positioning code while
+Bootstrap remained during coexistence. Same-dependency builds before/
+after: total 2373 -> 2608 KiB, admin 979 -> 1214 KiB; index stays
+632 KiB.
+Total lowered 2700 -> 2560 and AdminDashboard 1300 -> 1000 by #1111,
+which removed bootstrap, react-bootstrap and bootstrap-icons
+(measured: total 2563 -> 2504 KiB, index 776 -> 774, admin 946 -> 937;
+CSS 350 -> 119 kB raw, 53 -> 24 kB gzip). The public entry budget is
+unchanged.
+Total raised 2560 -> 2600 for #1193 / PR #1211's private organization
+proposal editor and admin review. Same-dependency builds before/after:
+total 2557 -> 2568 KiB, index stays 806, admin 954 -> 956. No new
+dependencies; retain modest headroom and the existing chunk ceilings.
+AdminDashboard raised 1000 -> 1050 for #1226's sortable edition
+lineup (@dnd-kit/react/sortable, already a dependency, plus the
+lineup list). Same-dependency builds before/after: admin 983 ->
+1019 KiB, total 2554 KiB (unchanged budget), index 726 KiB.
+Total raised 2600 -> 2650 for #1263 / PR #1272's layered signage
+template editor. Same-dependency builds against 023d958 before/after:
+total 2587 -> 2609 KiB, admin 1025 -> 1046, index unchanged at 728.
+No new dependencies; retain the public and admin chunk ceilings.
+Secondary admin sections now load on selection (PR #1301 follow-up).
+Compared with eager loading: admin 1065 -> 374 KiB; the admin chunk
+plus its static dependencies falls from 2201 -> 1481 KiB. Splitting
+adds shared/module overhead: total 2629 -> 2653 KiB. No new dependencies.
+Lower the admin ceiling and allow modest headroom for chunk overhead;
+retain the public entry ceiling.
+Total raised 2700 -> 2750 for PR #1356's guarded admin editor
+dialogs. Same-dependency builds against parent 710d002d: total
+2698 -> 2702 KiB (+4.6 KiB); index stays 676 and admin stays 375.
+No new dependencies; retain the public entry and admin ceilings.
+Total raised 2750 -> 2800 for the volunteer poll questions (yes/no and
+meal questions, admin answer entry, who-answered-what table). Same
+dependencies, parent 163ccf4a: total 2723 -> 2762 KiB (+39); index stays
+683 and admin stays 396. No new dependencies; retain the other ceilings.
+Public entry lowered 1050 -> 520 for apps#247: the registration form,
+Web Push opt-in and admin live-update stream (TanStack DB) load on
+demand, so index fell 683 -> 465 KiB (first visit 347 -> 235 KiB
+gzipped). Total 2783 KiB, admin 397. Keep this ceiling tight.
+Total raised 2800 -> 2820 for the public-site and admin usability pass:
+`?lng=` language links, load-when-visible map, print stylesheet, scroll-aware
+table focus, translated confirmations and empty states. Same dependencies:
+total 2797.5 -> 2801.9 KiB (+4.4), entry 369.1 -> 372.1, eager 720.1 -> 722.5,
+admin stays 390. No new dependencies; the other ceilings are unchanged.
+Keep framework splitting from hiding growth in static dependencies.
+The full eager graph was 710.2 KiB on Base UI 1.8 and 712.7 on 1.9.

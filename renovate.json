@@ -56,6 +56,19 @@
       "matchFileNames": ["android/**"],
       "addLabels": ["platform:android"],
       "commitMessagePrefix": "deps(android):"
+    },
+    {
+      "description": [
+        "Review Redact runtime updates separately while its API is pre-1.0"
+      ],
+      "matchDatasources": [
+        "npm"
+      ],
+      "matchPackageNames": [
+        "@tanstack/redact"
+      ],
+      "groupName": "redact",
+      "automerge": false
     }
   ]
 }

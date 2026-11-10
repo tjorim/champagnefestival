@@ -1,4 +1,4 @@
-import { test as setup } from "@playwright/test";
+import { test as setup, expect } from "@playwright/test";
 
 /**
  * Playwright's documented "authenticate once, reuse everywhere" pattern
@@ -53,6 +53,7 @@ function buildFakeOidcUser() {
 }
 
 setup("authenticate as admin", async ({ page, baseURL }) => {
+  setup.setTimeout(90_000);
   // Navigate first so the localStorage write lands on the app's own origin.
   await page.goto(baseURL ?? "/");
   await page.evaluate(([key, user]) => window.localStorage.setItem(key, user), [
@@ -60,4 +61,10 @@ setup("authenticate as admin", async ({ page, baseURL }) => {
     JSON.stringify(buildFakeOidcUser()),
   ] as [string, string]);
   await page.context().storageState({ path: authFile });
+  // Verify the seeded session and finish the cold admin module/data load before
+  // functional tests start their normal assertion clocks. Save auth first so
+  // navigation preferences from this readiness visit do not enter the fixture.
+  await page.goto("/admin?section=registrations");
+  await expect(page.locator("section#admin.admin-authenticated")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("searchbox")).toBeVisible({ timeout: 60_000 });
 });

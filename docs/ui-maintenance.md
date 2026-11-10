@@ -271,3 +271,86 @@ AdminDashboard (450) and eager (670) keep their limits, with 8.3, 24.5 and
 3.2 KiB of headroom. Policy: dependency updates are not held back for bundle
 size; when a limit is exceeded, review the measurement here and raise it. Keep
 all four checks, eager dependency traversal and OIDC isolation enforcement enabled.
+
+## Redact runtime (2026-11-09)
+
+The browser build uses pinned `@tanstack/redact` 0.3.1 with the full preset and explicit feature exclusions,
+registered before the React plugin. Keep React, React DOM and their types installed
+for library peers and TypeScript. No application imports need changing.
+Vitest stays on native React. Redact aliases application imports, but CommonJS
+entries in testing-library, Lucide and react-error-boundary can still load native
+React and cause invalid hook calls. Browser E2E tests exercise Redact instead;
+keep this distinction when interpreting unit test coverage.
+
+Redact renders synchronously. Review input responsiveness, portals, focus return,
+external stores and calendar/map interactions when upgrading it. Renovate groups
+Redact separately and disables automerge.
+
+Rollback: remove the Redact plugin call/import from Vite and remove its dev
+dependency with pnpm.
+
+Bundle limits now follow the measured full-preset build: total 2676.6 KiB, entry 318.5, admin 401.9 and eager 499.7 (raw JS). Limits retain about 5% headroom.
+
+Implementation validation uses base `7a0582fd5d42e5cd2a5f4a1c907dbc64e55f76c2`. `pnpm build` passed with Redact;
+TypeScript runs in that command. Unit tests deliberately use native React as
+explained above. No INP trace or Firefox/WebKit compatibility claim is made.
+
+Production signage/public offline E2E: all 3 checks passed, including offline reload, cycle-boundary revisions and wake-lock reacquisition.
+
+Native unit suite: all 1489 tests passed.
+
+Focused Chromium public-widget and registration suite: all 18 checks passed.
+
+### Unused feature exclusions (2026-11-10)
+
+Disable `hydration`, `activity` and `fragmentRefs` in the browser runtime.
+The entry points mount with `createRoot`; the production module graph has no
+React Activity boundaries or Fragment DOM refs in app code or dependencies.
+Base UI's Activity mentions are comments explaining effect cleanup, not usage.
+Query/router cache hydration and Preact's internal hydration are separate APIs
+and do not require Redact DOM hydration.
+
+Keep portals, context, memo, forwardRef, lazy, Suspense and class components
+(including error-boundary lifecycles). Native view-transition animation remains
+off by default. Re-enable the relevant flag before introducing SSR hydration,
+Activity boundaries or Fragment refs, including through a dependency update.
+
+Same-config production chunk audit: disabling these three features removes
+15,803 raw bytes and 5,523 gzip bytes beyond the full-preset build.
+The audit found no native React/React DOM modules in the emitted browser chunks.
+
+Validation with these exclusions: build, lint and bundle checks passed; 18 public/registration checks and 3 production signage/offline checks passed.
+
+## Aligned bundle budgets (2026-11-10)
+
+All five apps now use the same measurement script, fixture tests, byte-based
+configuration and report/check commands. See [the shared contract](bundle-budgets.md).
+Existing ceilings are preserved; previously unguarded measurements use about
+5% headroom. The JSON config is the source of truth for limits. CI runs
+`pnpm bundle:test && pnpm bundle:check` after building.
+
+## Admin development cold starts (2026-11-10)
+
+CI entrance-layout shard 3 timed out waiting for registrations at 125% browser
+zoom; trace snapshots showed loading UI and delayed cold admin/Base UI module
+requests, not an API error. Vite now warms the lazy AdminDashboard module graph
+on dev-server startup. Production splitting and the test assertions/timeouts
+are unchanged.
+
+The original 125% case also passed locally with an empty dependency cache, so
+CI must confirm the mitigation. With warmup, all six zoom iterations (125%,
+150%, 200%, twice each) and all ten other entrance-layout cases passed.
+
+### Authenticated E2E readiness
+
+A subsequent cold message-editor run still timed out on the initial admin
+loading shell despite Vite warmup. Auth setup now verifies the authenticated
+registrations screen and search control after saving the auth-only fixture.
+A bounded setup budget (90 seconds overall, 60 seconds per readiness assertion)
+separates cold dev-module/data initialization from functional test assertions,
+whose existing limits remain unchanged. No application auth bypass or loading
+behaviour was changed. Related Daynest template-dialog and Worktime label
+focus-return tests passed during this audit; their stored focus targets remain
+areas to recheck when rendering or dependencies change.
+
+See [Redact compatibility checks](redact-compatibility.md) for repeatable runtime/browser commands, recorded results and unresolved coverage.

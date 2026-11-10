@@ -1,3 +1,4 @@
+import { redact } from "@tanstack/redact/vite";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
@@ -30,6 +31,12 @@ export default defineConfig(({ command, mode, isPreview }) => {
         outdir: "./src/paraglide",
         strategy: ["custom-localePath", "localStorage", "preferredLanguage", "baseLocale"],
       }),
+      redact({
+        preset: "full",
+        environments: ["client"],
+        // Client-only mount; no Activity boundaries or Fragment DOM refs are used.
+        features: { hydration: false, activity: false, fragmentRefs: false },
+      }),
       reactPlugin(),
       // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
       // so the worker script is never emitted into dist.
@@ -52,7 +59,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
               },
               {
                 name: "react-vendor",
-                test: /[/\\]node_modules[/\\](react|react-dom|scheduler)[/\\]/,
+                test: /[/\\]node_modules[/\\](react|react-dom|scheduler|@tanstack[/\\]redact)[/\\]/,
               },
             ],
           },
@@ -65,6 +72,9 @@ export default defineConfig(({ command, mode, isPreview }) => {
       },
     },
     server: {
+      // Transform the heavy lazy admin graph before the first staff navigation.
+      // This avoids cold dev-server waterfalls without changing production splitting.
+      warmup: { clientFiles: ["./src/components/admin/AdminDashboard.tsx"] },
       port: 5173,
       open: true,
       proxy: {
