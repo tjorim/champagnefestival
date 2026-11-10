@@ -8,7 +8,7 @@ Supplement to the release process steps in `AGENTS.md`. Covers ownership, pre-re
 |---|---|
 | Version bump + CHANGELOG entry | Author of the release PR |
 | Tag push (`vX.Y.Z`) | Repository maintainer (tjorim) |
-| CI green sign-off | Author confirms all checks pass in `release-draft.yml` |
+| CI green sign-off | Author confirms all checks pass in `release.yml` |
 | Draft release publish | Repository maintainer (tjorim) |
 | Explicit VPS deployment (independent of release publication) | Repository maintainer (tjorim) |
 | Post-deploy verification | On-call volunteer / release author |

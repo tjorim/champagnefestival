@@ -1,49 +1,60 @@
-name: Draft Release
+name: Release
 
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
+# Read-only by default. Only `draft` writes (contents) and only `publish-library` gets an OIDC token.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: "release-${{ github.ref }}"
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Every tjorim/* repository releases with the same job graph; a repository leaves out what it does not
+# have. Publishing is always manual: the last job only drafts the GitHub release.
+#
+#   validate         tag == VERSION == every versioned file == CHANGELOG        (all repositories)
+#   *-checks         the tests that gate this repository's release                (repository specific)
+#   publish-library  build and publish the Python client to PyPI, once per tag    (Daynest, Travel)
+#   package-*        build release assets (HACS archive, Android APK)             (Daynest, Travel)
+#   draft            changelog notes + assets become a draft GitHub release       (all repositories)
+
 jobs:
-  validate-release-metadata:
-    name: Validate tag, versions & changelog
+  validate:
+    name: Validate tag, versions and changelog
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.semver.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: frontend/.node-version
           package-manager-cache: false
 
-      # The tag, VERSION, frontend/package.json and the CHANGELOG must agree
-      # (scripts/release.mjs; configuration in release.config.json). The backend and
-      # Android read VERSION directly, so there is nothing further to validate for them.
+      # The tag, VERSION, frontend/package.json and the CHANGELOG must agree (scripts/release.mjs;
+      # configuration in release.config.json). The backend and Android read VERSION directly.
       - name: Validate tag, versions and changelog
         env:
           TAG: ${{ github.ref_name }}
         run: node scripts/release.mjs check --tag "$TAG"
 
       - name: Read version
-        id: semver
+        id: version
         run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
 
   backend-checks:
     name: Backend checks
     runs-on: ubuntu-latest
-    needs: validate-release-metadata
+    needs: validate
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
       TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
@@ -67,6 +78,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -94,13 +107,15 @@ jobs:
   frontend-checks:
     name: Frontend checks
     runs-on: ubuntu-latest
-    needs: validate-release-metadata
+    needs: validate
     defaults:
       run:
         working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
@@ -129,20 +144,19 @@ jobs:
       - name: Build
         run: pnpm run build
 
-  create-draft-release:
+  draft:
     name: Create draft release
+    needs: [validate, backend-checks, frontend-checks]
     runs-on: ubuntu-latest
-    needs:
-      - validate-release-metadata
-      - backend-checks
-      - frontend-checks
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: frontend/.node-version
@@ -155,6 +169,6 @@ jobs:
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ github.ref_name }}
-          name: v${{ needs.validate-release-metadata.outputs.version }}
+          name: ${{ github.ref_name }}
           draft: true
           body_path: ${{ runner.temp }}/release-notes.md

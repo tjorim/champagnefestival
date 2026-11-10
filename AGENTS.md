@@ -97,7 +97,7 @@ from it — nothing else should be hand-edited:
 2. `node scripts/release.mjs bump` writes the next `YYYY.M.MICRO` into `VERSION` and
    `frontend/package.json` and turns `[Unreleased]` into the dated release section and compare links.
    Review the diff, open the release PR and merge it.
-3. Push tag `vYYYY.M.MICRO` to run `.github/workflows/release-draft.yml`. It re-checks the tag against
+3. Push tag `vYYYY.M.MICRO` to run `.github/workflows/release.yml`. It re-checks the tag against
    `VERSION`, `frontend/package.json` and the changelog (`node scripts/release.mjs check --tag`).
 4. Wait for backend/frontend checks to pass; the workflow creates a **draft** release whose notes are the
    changelog section.
