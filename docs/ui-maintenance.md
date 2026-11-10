@@ -328,3 +328,15 @@ configuration and report/check commands. See [the shared contract](bundle-budget
 Existing ceilings are preserved; previously unguarded measurements use about
 5% headroom. The JSON config is the source of truth for limits. CI runs
 `pnpm bundle:test && pnpm bundle:check` after building.
+
+## Admin development cold starts (2026-11-10)
+
+CI entrance-layout shard 3 timed out waiting for registrations at 125% browser
+zoom; trace snapshots showed loading UI and delayed cold admin/Base UI module
+requests, not an API error. Vite now warms the lazy AdminDashboard module graph
+on dev-server startup. Production splitting and the test assertions/timeouts
+are unchanged.
+
+The original 125% case also passed locally with an empty dependency cache, so
+CI must confirm the mitigation. With warmup, all six zoom iterations (125%,
+150%, 200%, twice each) and all ten other entrance-layout cases passed.
