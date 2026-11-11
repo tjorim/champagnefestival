@@ -25,6 +25,7 @@ pnpm dev
 pnpm lint
 pnpm format         # rewrites files in place
 pnpm format:check   # what CI runs — fails on unformatted files, doesn't rewrite
+pnpm format:repo    # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
 pnpm typecheck
 pnpm test
 pnpm build
