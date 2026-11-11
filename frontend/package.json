@@ -14,6 +14,8 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "format:repo": "cd .. && frontend/node_modules/.bin/oxfmt -c frontend/.oxfmtrc.json .github scripts *.json",
+    "format:repo:check": "cd .. && frontend/node_modules/.bin/oxfmt --check -c frontend/.oxfmtrc.json .github scripts *.json",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:ui": "vitest --ui",

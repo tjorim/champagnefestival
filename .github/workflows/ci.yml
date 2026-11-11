@@ -177,6 +177,29 @@ jobs:
       - name: Check VERSION, versioned files and CHANGELOG agree
         run: node scripts/release.mjs check
 
+  repo-format:
+    name: Repository formatting
+    timeout-minutes: 10
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frontend tooling
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting of workflows, scripts and root JSON
+        working-directory: frontend
+        run: pnpm run format:repo:check
+
   gate:
     name: CI gate
     if: always()
@@ -192,6 +215,7 @@ jobs:
       - codeql-frontend
       - pr-preview
       - release-metadata
+      - repo-format
     runs-on: ubuntu-26.04
     steps:
       - name: Require every job to have passed or been skipped
