@@ -9,6 +9,7 @@ for (const theme of [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ]) {
   test(`SVG icons inherit ${theme} colours without loading the icon font`, async ({ page }) => {
     const fontRequests: string[] = [];

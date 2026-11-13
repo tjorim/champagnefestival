@@ -12,6 +12,7 @@ for (const theme of [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} alerts, badges and spinners at ${width}px (${colorScheme})`, async ({

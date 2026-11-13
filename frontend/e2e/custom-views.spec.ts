@@ -10,6 +10,7 @@ const THEMES = [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ] as const;
 
 const ANNOUNCEMENTS = [

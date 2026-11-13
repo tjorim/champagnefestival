@@ -10,6 +10,7 @@ for (const theme of [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} layouts at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {

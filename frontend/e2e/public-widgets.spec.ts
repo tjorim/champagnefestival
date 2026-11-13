@@ -17,6 +17,7 @@ for (const theme of [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ]) {
   for (const width of [1440, 390]) {
     test(`${theme} public widgets at ${width}px`, async ({ page }, testInfo) => {
@@ -51,21 +52,28 @@ for (const theme of [
         await page.keyboard.press("Escape");
         await expect(menuButton).toBeFocused();
       }
-      const tabs = page.locator("#schedule").getByRole("tab");
-      await expect(tabs.first()).toBeVisible();
-      const inactiveSurface = await tabSurface(tabs.nth(1));
-      await tabs.first().focus();
-      await page.keyboard.press("ArrowRight");
-      await expect(tabs.nth(1)).toBeFocused();
-      await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
-      await expect.poll(() => tabSurface(tabs.nth(1))).not.toEqual(inactiveSurface);
-      await page.keyboard.press("ArrowLeft");
-      await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "false");
-      await expect.poll(() => tabSurface(tabs.nth(1))).toEqual(inactiveSurface);
-      await page.keyboard.press("ArrowRight");
-      const panelId = await tabs.nth(1).getAttribute("aria-controls");
-      expect(panelId).toBeTruthy();
-      await expect(page.locator(`[id="${panelId}"]`)).toBeVisible();
+      if (theme === "billet") {
+        // Billet lists every festival day side by side instead of behind tabs.
+        await expect(page.locator("#schedule").getByRole("tab")).toHaveCount(0);
+        await expect(page.locator("#schedule .billet-day").first()).toBeVisible();
+        await expect(page.locator("#schedule .billet-event").first()).toBeVisible();
+      } else {
+        const tabs = page.locator("#schedule").getByRole("tab");
+        await expect(tabs.first()).toBeVisible();
+        const inactiveSurface = await tabSurface(tabs.nth(1));
+        await tabs.first().focus();
+        await page.keyboard.press("ArrowRight");
+        await expect(tabs.nth(1)).toBeFocused();
+        await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+        await expect.poll(() => tabSurface(tabs.nth(1))).not.toEqual(inactiveSurface);
+        await page.keyboard.press("ArrowLeft");
+        await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "false");
+        await expect.poll(() => tabSurface(tabs.nth(1))).toEqual(inactiveSurface);
+        await page.keyboard.press("ArrowRight");
+        const panelId = await tabs.nth(1).getAttribute("aria-controls");
+        expect(panelId).toBeTruthy();
+        await expect(page.locator(`[id="${panelId}"]`)).toBeVisible();
+      }
       const faq = page.locator('#faq [data-slot="accordion-trigger"]').first();
       const chevron = faq.locator("svg");
       await expect(chevron).toHaveCSS("transform", "none");

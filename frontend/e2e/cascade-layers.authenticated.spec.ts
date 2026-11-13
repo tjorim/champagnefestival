@@ -11,6 +11,7 @@ for (const theme of [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ]) {
   test(`admin layout keeps all CSS in layers under ${theme}`, async ({ page }) => {
     await page.addInitScript((variant) => {

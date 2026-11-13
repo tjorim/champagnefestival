@@ -10,6 +10,7 @@ const themes = [
   "millesime",
   "rose",
   "affiche",
+  "billet",
 ];
 
 async function waitForTheme(page: Page) {
