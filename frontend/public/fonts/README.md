@@ -2,7 +2,8 @@
 
 Variable WOFF2 files, so visitors' browsers never contact a third-party font service
 (no visitor IP is sent to Google). Declared in `src/styles/fonts.css` (Inter) and
-`public/themes/theme-cuvee.css` (Fraunces).
+`public/themes/theme-cuvee.css`, `public/themes/theme-rose.css` and
+`public/themes/theme-affiche.css` (Fraunces).
 
 | File                                                                   | Family   | Source                                |
 | ---------------------------------------------------------------------- | -------- | ------------------------------------- |

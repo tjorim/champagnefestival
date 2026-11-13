@@ -48,15 +48,28 @@ falls back to Refresh; pre-paint code also sets browser chrome colours.
 Cuvée map theme variables through semantic surface tokens; Remuage maps its
 `--rem-*` palette to those tokens directly. Millésime (an editorial paper-and-ink
 theme with a numbered two-column section layout from 992px) maps its `--mil-*`
-palette to the same shared tokens and uses only system fonts.
+palette to the same shared tokens and uses only system fonts. Rosé (blush, plum
+and one raspberry accent; pill buttons, bubble-shaped countdown units and curved
+cards) maps its `--rose-*` palette to the shared tokens in the same way. Affiche
+(a poster of flat blue, red and yellow blocks with ink outlines, `--aff-*`) also
+replaces the page top: `components/affiche/AfficheHero.tsx` renders a grid of
+tiles with the title, mascot, dates, countdown, venue and a running band of
+producer names, so the at-a-glance strip and the countdown in Next Festival are
+left out for that theme. Billet (the festival as an admission ticket on a
+midnight-blue page, `--billet-*`, system fonts only) changes the layout as well:
+`components/billet/BilletHero.tsx` is a portrait ticket that sits in its own
+column from 1100px and stays in view while the sections scroll beside it, and
+`components/billet/BilletProgramme.tsx` replaces the tabbed schedule with every
+day side by side.
 
-Fonts are self-hosted: Inter is declared in `src/styles/fonts.css` and Fraunces (Cuvée only)
-in `public/themes/theme-cuvee.css`, both from `public/fonts` (see its README). Do not add a
+Fonts are self-hosted: Inter is declared in `src/styles/fonts.css` and Fraunces (Cuvée, Rosé and Affiche)
+in their theme stylesheets, all from `public/fonts` (see its README). Do not add a
 third-party font stylesheet; it sends the visitor's address to that service.
 
-`data-theme-mode` drives the dark variant: Refresh and Millésime follow the
-system (Millésime's dark "ink" variant is keyed on `html[data-theme-mode="dark"]`),
-Classic is dark, and Riviera, Cuvée and Remuage are light. The admin scope uses
+`data-theme-mode` drives the dark variant: Refresh, Millésime and Rosé follow the
+system (Millésime's dark "ink" and Rosé's dark "soirée" variants are keyed on
+`html[data-theme-mode="dark"]`),
+Classic and Billet are dark, and Riviera, Cuvée, Remuage and Affiche are light. The admin scope uses
 `data-theme-scope="admin"` and `data-theme-mode="dark"` with its own fixed
 semantic palette; entering admin does not change the public document mode.
 

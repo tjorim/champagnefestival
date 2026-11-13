@@ -1,7 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { THEME_VARIANTS } from "./variants";
 
-const THEMES = ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"] as const;
+const THEMES = [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+  "billet",
+] as const;
 
 const ANNOUNCEMENTS = [
   { id: "a", text: "Doors open", level: "info", link_url: null, link_label: null },

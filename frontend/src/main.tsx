@@ -3,20 +3,20 @@ import { useNow } from "@/hooks/useNow";
 import StaffTasks from "@/components/StaffTasks";
 import {
   ArrowLeftIcon,
-  CalendarDaysIcon,
   CalendarPlusIcon,
   CircleArrowDownIcon,
   CircleUserRoundIcon,
   MailCheckIcon,
-  CupSodaIcon,
+  DoorOpenIcon,
   ExternalLinkIcon,
   MapIcon,
   ScanQrCodeIcon,
   ShieldCheckIcon,
   ShieldIcon,
   SparklesIcon,
-  UsersIcon,
+  ShoppingBagIcon,
   WatchIcon,
+  WineIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -40,6 +40,9 @@ import ThemeSwitcher from "./components/ThemeSwitcher";
 import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
 import RivieraHero from "./components/riviera/RivieraHero";
 import CuveeHero from "./components/cuvee/CuveeHero";
+import AfficheHero from "./components/affiche/AfficheHero";
+import BilletHero from "./components/billet/BilletHero";
+import BilletProgramme from "./components/billet/BilletProgramme";
 import type { HeroRegistrationProps } from "./components/heroRegistration";
 import RemuageFeatureRack from "./components/remuage/RemuageFeatureRack";
 import RemuageHero from "./components/remuage/RemuageHero";
@@ -70,9 +73,9 @@ import { editionStandsQueryOptions, type OrganizationStands } from "./utils/stan
 import type { SliderItem } from "./config/editions";
 
 const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {
-  1: CupSodaIcon,
-  2: CalendarDaysIcon,
-  3: UsersIcon,
+  1: DoorOpenIcon,
+  2: WineIcon,
+  3: ShoppingBagIcon,
 };
 
 // Must come after the CSS imports above so the theme <link> is appended after the bundled
@@ -527,7 +530,49 @@ function App() {
 
       <main id="main-content">
         {/* Hero Section */}
-        {variant === "remuage" ? (
+        {variant === "affiche" ? (
+          <AfficheHero
+            {...heroRegistration}
+            festivalName={heroKicker}
+            title={m.welcome_title()}
+            subtitle={m.welcome_subtitle()}
+            learnMoreLabel={m.welcome_learn_more()}
+            scheduleLabel={m.schedule_title()}
+            dateRange={hasEdition ? festivalDateRange : ""}
+            venueName={hasEdition ? venueName : ""}
+            venueLines={venueLines}
+            mapsUrl={venueMapsUrl}
+            producerNames={producers.map((producer) => producer.name)}
+            countdown={
+              hasEdition ? (
+                <AppSuspense errorFallbackText={m.error_countdown()}>
+                  <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
+                </AppSuspense>
+              ) : null
+            }
+          />
+        ) : variant === "billet" ? (
+          <BilletHero
+            {...heroRegistration}
+            festivalName={heroKicker}
+            title={m.welcome_title()}
+            subtitle={m.welcome_subtitle()}
+            learnMoreLabel={m.welcome_learn_more()}
+            scheduleLabel={m.schedule_title()}
+            dateRange={hasEdition ? festivalDateRange : ""}
+            year={hasEdition && firstFestivalDate ? String(dayjs(firstFestivalDate).year()) : null}
+            venueName={hasEdition ? venueName : ""}
+            venueLines={venueLines}
+            mapsUrl={venueMapsUrl}
+            countdown={
+              hasEdition ? (
+                <AppSuspense errorFallbackText={m.error_countdown()}>
+                  <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
+                </AppSuspense>
+              ) : null
+            }
+          />
+        ) : variant === "remuage" ? (
           <RemuageHero
             {...heroRegistration}
             festivalName={heroKicker}
@@ -558,21 +603,24 @@ function App() {
           <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-            {registrableEvents.length > 0 ? (
-              <Button
-                variant="brand"
-                className="rounded-full px-6 py-2"
-                onClick={openRegistrationModal}
-              >
-                <Icon icon={CalendarPlusIcon} />
-                {m.registration_cta()}
-              </Button>
-            ) : (
+            {/* Entry is free and most events need no reservation, so discovering the festival
+                leads and registering is the second action while it is open. */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href="#what-we-do" variant="brand" className="rounded-full px-6 py-2">
                 {m.welcome_learn_more()}
                 <Icon icon={CircleArrowDownIcon} />
               </ButtonLink>
-            )}
+              {registrableEvents.length > 0 && (
+                <Button
+                  variant="light"
+                  className="rounded-full px-6 py-2"
+                  onClick={openRegistrationModal}
+                >
+                  <Icon icon={CalendarPlusIcon} />
+                  {m.registration_cta()}
+                </Button>
+              )}
+            </div>
           </section>
         ) : (
           <section className="hero" id="welcome">
@@ -591,11 +639,22 @@ function App() {
                 </p>
               )}
               <div className="hero-actions">
+                {/* Entry is free and most events need no reservation, so discovering the
+                    festival leads and registering is the second action while it is open. */}
+                <ButtonLink
+                  href="#what-we-do"
+                  variant="brand"
+                  size="lg"
+                  className="h-auto px-5 py-3 text-base"
+                >
+                  {m.welcome_learn_more()}
+                  <Icon icon={CircleArrowDownIcon} />
+                </ButtonLink>
                 {registrableEvents.length > 0 ? (
                   <Button
-                    variant="brand"
+                    variant="light"
                     size="lg"
-                    className="h-auto px-5 py-3 text-base"
+                    className="h-auto px-5 py-3 text-base font-bold"
                     onClick={openRegistrationModal}
                   >
                     <Icon icon={CalendarPlusIcon} />
@@ -603,23 +662,14 @@ function App() {
                   </Button>
                 ) : (
                   <ButtonLink
-                    href="#what-we-do"
-                    variant="brand"
+                    href="#schedule"
+                    variant="light"
                     size="lg"
-                    className="h-auto px-5 py-3 text-base"
+                    className="h-auto px-5 py-3 text-base font-bold"
                   >
-                    {m.welcome_learn_more()}
-                    <Icon icon={CircleArrowDownIcon} />
+                    {m.schedule_title()}
                   </ButtonLink>
                 )}
-                <ButtonLink
-                  href="#schedule"
-                  variant="light"
-                  size="lg"
-                  className="h-auto px-5 py-3 text-base font-bold"
-                >
-                  {m.schedule_title()}
-                </ButtonLink>
               </div>
               {registrationOpensOn && (
                 <p className="hero-meta mt-4 mb-0">
@@ -630,7 +680,8 @@ function App() {
           </section>
         )}
 
-        {hasEdition ? (
+        {/* Affiche's tile grid and Billet's ticket already carry the dates, the venue and the way in. */}
+        {variant === "affiche" || variant === "billet" ? null : hasEdition ? (
           <FestivalFacts
             dateRange={festivalDateRange}
             venueName={edition.venue.venueName}
@@ -713,24 +764,32 @@ function App() {
               <div className="site-content-column site-md:w-content-md site-lg:w-content-lg">
                 {/* The mascot waits at her table beside the countdown when the column is wide
                     enough, and stands above it in narrow columns (mobile, Remuage's card). */}
-                <div className="@container">
-                  <div className="flex flex-col items-center gap-6 @xl:flex-row @xl:gap-10">
-                    <FestivalMascot crop="half" className="w-32 shrink-0 @xl:hidden" />
-                    <FestivalMascot className="hidden w-36 shrink-0 @xl:block" />
-                    <div className="min-w-0 flex-1">
-                      {hasEdition ? (
-                        <>
-                          <AppSuspense errorFallbackText={m.error_countdown()}>
-                            <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
-                          </AppSuspense>
-                          <p className="relative z-50 mb-6">{m.next_festival_description()}</p>
-                        </>
-                      ) : (
-                        <p className="relative z-50 mb-6">{m.next_festival_none()}</p>
-                      )}
+                {variant === "affiche" || variant === "billet" ? (
+                  // The mascot and the countdown already sit in Affiche's tile grid and on
+                  // Billet's ticket at the top.
+                  <p className="relative z-50 mb-0">
+                    {hasEdition ? m.next_festival_description() : m.next_festival_none()}
+                  </p>
+                ) : (
+                  <div className="@container">
+                    <div className="flex flex-col items-center gap-6 @xl:flex-row @xl:gap-10">
+                      <FestivalMascot crop="half" className="w-32 shrink-0 @xl:hidden" />
+                      <FestivalMascot className="hidden w-36 shrink-0 @xl:block" />
+                      <div className="min-w-0 flex-1">
+                        {hasEdition ? (
+                          <>
+                            <AppSuspense errorFallbackText={m.error_countdown()}>
+                              <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
+                            </AppSuspense>
+                            <p className="relative z-50 mb-6">{m.next_festival_description()}</p>
+                          </>
+                        ) : (
+                          <p className="relative z-50 mb-6">{m.next_festival_none()}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -753,7 +812,11 @@ function App() {
                   </Alert>
                 ) : (
                   <AppSuspense errorFallbackText={m.error_schedule()}>
-                    <Schedule events={edition.events} />
+                    {variant === "billet" ? (
+                      <BilletProgramme events={edition.events} />
+                    ) : (
+                      <Schedule events={edition.events} />
+                    )}
                   </AppSuspense>
                 )}
               </div>

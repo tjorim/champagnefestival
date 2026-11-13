@@ -8,7 +8,17 @@ const DIALOG_INPUT_BACKGROUND: Record<string, string> = {
   remuage: "rgb(251, 252, 254)",
 };
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+  "billet",
+]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} admin forms at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });

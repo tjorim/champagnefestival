@@ -2,7 +2,17 @@ import { expect, test } from "@playwright/test";
 
 const LIGHT_ADMIN_THEMES: ReadonlySet<string> = new Set(["cuvee", "remuage"]);
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+  "billet",
+]) {
   test(`admin layout keeps all CSS in layers under ${theme}`, async ({ page }) => {
     await page.addInitScript((variant) => {
       localStorage.setItem("champagnefestival:visualTheme", variant);

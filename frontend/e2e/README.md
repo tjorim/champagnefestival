@@ -165,9 +165,9 @@ This runs separately in CI after the standard browser suite.
 
 ## What CI runs
 
-Most specs repeat across the six visual themes, both colour schemes and two widths. To keep
+Most specs repeat across the nine visual themes, both colour schemes and two widths. To keep
 feedback fast, pull request runs skip every title containing `classic`, `riviera`, `cuvee`,
-`remuage` or `millesime` (`--grep-invert`, set in `.github/workflows/frontend-ci.yml`), which
+`remuage`, `millesime`, `rose`, `affiche` or `billet` (`--grep-invert`, set in `.github/workflows/frontend-ci.yml`), which
 leaves the default `refresh` theme at every width and colour scheme. Pushes to `main` and manual
 runs (`gh workflow run frontend-ci.yml --ref <branch>`) run all themes, so run that before merging
 a change to themes, CSS layers or shared UI. Name theme-specific test titles after the theme so

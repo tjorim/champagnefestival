@@ -1,7 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { THEME_VARIANTS } from "./variants";
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+  "billet",
+]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} cards and lists at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });

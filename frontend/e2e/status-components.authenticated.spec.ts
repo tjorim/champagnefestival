@@ -3,7 +3,17 @@ import { THEME_VARIANTS } from "./variants";
 
 const LEGACY = ".alert, .badge, .spinner-border, .spinner-grow";
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+  "billet",
+]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} alerts, badges and spinners at ${width}px (${colorScheme})`, async ({
       page,

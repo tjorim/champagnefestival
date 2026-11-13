@@ -1,0 +1,1252 @@
+/*
+ * Billet presents the festival as a ticket (entry is free; the stamp says so), and changes the page
+ * layout to match. A cream portrait ticket (components/billet/BilletHero.tsx)
+ * with scalloped edges, artwork, a "free entry" stamp and a tear-off stub carries the
+ * title, when and where, the countdown, the way in and a barcode. From 1100px it
+ * sits in its own column and stays in view while the sections scroll past beside
+ * it like the pages of a coupon booklet, separated by dashed "cut here" lines.
+ * The programme (components/billet/BilletProgramme.tsx) shows every day side by
+ * side instead of behind tabs, and the three features are pastel coupons.
+ *
+ * Dark only. Headings are heavy uppercase Inter and details use the system
+ * monospace stack, so the theme adds no font requests. The admin scope keeps its
+ * own fixed palette, so shared rules that could leak into it are scoped with
+ * :not([data-theme-scope="admin"] *).
+ */
+@layer components {
+  :root {
+    --billet-night: #101a30;
+    --billet-night-deep: #0a1222;
+    --billet-panel: #18243f;
+    --billet-paper: #f7f0de;
+    --billet-ink: #1b2238;
+    --billet-ink-soft: #4f566b;
+    --billet-cream: #f4ecd8;
+    --billet-cream-soft: #b9b3a1;
+    --billet-gold: #e2b857;
+    --billet-coral: #f08a7a;
+    --billet-stamp: #b3261e;
+    --billet-cut: 2px dashed rgba(226, 184, 87, 0.5);
+    --billet-edge: 1.5px dashed rgba(226, 184, 87, 0.5);
+    --billet-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --billet-sans:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    /* Scalloped left and right edges, as on a roll of tickets. */
+    --billet-scallop:
+      radial-gradient(circle 9px at left, #0000 97%, #000) left / 51% 30px repeat-y,
+      radial-gradient(circle 9px at right, #0000 97%, #000) right / 51% 30px repeat-y;
+
+    /* Shared app tokens consumed by components and the semantic surface tokens */
+    --primary-color: #e2b857;
+    --secondary-color: #f08a7a;
+    --text-color: #f4ecd8;
+    --text-muted: #b9b3a1;
+    --background-color: #101a30;
+    --card-background: #18243f;
+    --surface-color: #18243f;
+    --surface-color-strong: #18243f;
+    --border-color: rgba(244, 236, 216, 0.24);
+    --header-height: 4rem;
+    --bubble-color: rgba(226, 184, 87, 0.2);
+    --focus-ring-color: #e2b857;
+    --focus-ring-width: 2px;
+
+    /* Sections fill the booklet pane; the ticket owns the other column. */
+    --layout-column-md: 100%;
+    --layout-column-lg: 100%;
+    --layout-content: #f4ecd8;
+    --layout-subtle: #b9b3a1;
+    --layout-highlight: #e2b857;
+
+    color-scheme: dark;
+  }
+
+  /* The admin scope keeps its own fixed dark palette. */
+  [data-theme-scope="admin"] {
+    --primary-color: #8aa4f8;
+    --text-color: #f0f0f0;
+    --text-muted: #c5c5c5;
+  }
+
+  :is(main, .site-header, .site-footer, .standalone-app, [data-slot]):not(
+    [data-theme-scope="admin"] *
+  ) {
+    --radius-xs: 0.2rem;
+    --radius-sm: 0.3rem;
+    --radius-md: 0.45rem;
+    --radius-lg: 0.6rem;
+    --radius-xl: 0.8rem;
+    --radius-2xl: 0.9rem;
+    --radius-3xl: 1rem;
+    --base-link: var(--billet-gold);
+    --base-link-hover: var(--billet-cream);
+  }
+
+  html {
+    scroll-padding-top: calc(var(--header-height) + 1.5rem);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+    padding-top: var(--header-height);
+    font-family: var(--billet-sans);
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--text-color);
+    background: var(--billet-night);
+  }
+
+  ::selection {
+    color: var(--billet-ink);
+    background: var(--billet-gold);
+  }
+
+  .App {
+    min-height: 100vh;
+    overflow-x: clip;
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    counter-reset: billet-section;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    z-index: 1041;
+    width: 1px;
+    height: 1px;
+    padding: 8px 14px;
+    overflow: hidden;
+    color: var(--billet-ink);
+    font-weight: 800;
+    white-space: nowrap;
+    text-decoration: none;
+    background: var(--billet-gold);
+    border-width: 0;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .skip-link:focus {
+    top: 0;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  /* ---------- Rising bubbles (optional, toggled by the visitor) ---------- */
+
+  .bubble-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .bubble {
+    position: absolute;
+    bottom: -50px;
+    left: var(--bubble-left, 50%);
+    width: var(--bubble-size, 20px);
+    height: var(--bubble-size, 20px);
+    background: var(--bubble-color);
+    border-radius: 50%;
+    will-change: transform, opacity;
+    animation: rise var(--bubble-duration, 10s) linear var(--bubble-delay, 0s) infinite;
+  }
+
+  @keyframes rise {
+    0% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(-120vh);
+    }
+  }
+
+  /* ---------- Headings and running text ---------- */
+
+  :is(main, .standalone-app, .site-footer, [data-slot="dialog-content"]):not(
+      [data-theme-scope="admin"] *
+    )
+    :is(h1, h2, h3, h4, h5) {
+    color: var(--text-color);
+    font-family: var(--billet-sans);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  main h3 {
+    font-size: 1.35rem;
+  }
+
+  main h5 {
+    font-size: 1.15rem;
+  }
+
+  .section-subtitle {
+    max-width: 38rem;
+    margin-inline: auto;
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+
+  .text-subtle {
+    color: var(--text-muted);
+  }
+
+  .text-highlight {
+    color: var(--billet-gold);
+    -webkit-text-fill-color: currentColor;
+    background: none;
+  }
+
+  main a:not([data-slot="button"]) {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ---------- Header ---------- */
+
+  .site-header {
+    z-index: 1040;
+    min-height: var(--header-height);
+    background: color-mix(in srgb, var(--billet-night) 92%, transparent);
+    border-bottom: var(--billet-edge);
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+  }
+
+  .site-brand {
+    display: inline-flex;
+    align-items: center;
+    max-width: min(60vw, 20rem);
+    color: var(--text-color);
+    font-size: 1.25rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .site-brand span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .site-nav {
+    gap: 0.25rem;
+    background: transparent;
+    border: 0;
+  }
+
+  .site-nav-link,
+  .icon-link {
+    color: var(--text-color);
+    text-decoration: none;
+    background: transparent;
+    border: 0;
+    transition: color 0.15s ease;
+  }
+
+  .site-nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.3rem 0.7rem;
+    font-family: var(--billet-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .site-nav-link:hover,
+  .site-nav-link:focus-visible,
+  .icon-link:hover,
+  .icon-link:focus-visible {
+    color: var(--billet-gold);
+  }
+
+  .icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .site-lang-toggle {
+    --language-control-color: var(--billet-cream);
+    --language-control-bg: transparent;
+    --language-control-border-color: rgba(244, 236, 216, 0.4);
+    --language-control-hover-color: var(--billet-ink);
+    --language-control-hover-bg: var(--billet-gold);
+    --language-control-hover-border-color: var(--billet-gold);
+  }
+
+  .site-menu-button {
+    font-size: 1.15rem;
+  }
+
+  .site-mobile-menu-panel {
+    display: grid;
+    gap: 0;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    background: var(--billet-panel);
+    border: var(--billet-edge);
+    border-radius: 0.8rem;
+  }
+
+  .site-mobile-link {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.25rem;
+    color: var(--text-color);
+    font-family: var(--billet-mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    text-transform: uppercase;
+    border-bottom: var(--billet-edge);
+  }
+
+  .site-mobile-link:last-child {
+    border-bottom: 0;
+  }
+
+  .site-mobile-link:hover,
+  .site-mobile-link:focus-visible {
+    color: var(--billet-gold);
+  }
+
+  /* ---------- Layout: the ticket beside the booklet ---------- */
+
+  @media (min-width: 1100px) {
+    main:has(> .billet-hero) {
+      display: grid;
+      grid-template-columns: minmax(22rem, 27rem) minmax(0, 1fr);
+      max-width: 100rem;
+      margin-inline: auto;
+    }
+
+    main:has(> .billet-hero) > * {
+      grid-column: 2;
+      min-width: 0;
+    }
+
+    main > .billet-hero {
+      grid-row: 1 / span 40;
+      grid-column: 1;
+      align-self: start;
+    }
+
+    main > .billet-hero + .content-section {
+      border-top: 0;
+    }
+
+    main > .billet-hero + .content-section::before {
+      display: none;
+    }
+  }
+
+  /* Only pin the ticket where the whole of it fits below the header. */
+  @media (min-width: 1100px) and (min-height: 890px) {
+    main > .billet-hero {
+      position: sticky;
+      top: var(--header-height);
+    }
+  }
+
+  /* ---------- Page top: the ticket ---------- */
+
+  .billet-hero {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    padding: clamp(1.25rem, 3vw, 2rem) clamp(0.75rem, 3vw, 1.75rem) clamp(1.5rem, 3vw, 2rem);
+    filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.5));
+  }
+
+  .billet-ticket {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 26rem;
+    color: var(--billet-ink);
+    background: var(--billet-paper);
+    border-radius: 0.9rem;
+    container-type: inline-size;
+    -webkit-mask: var(--billet-scallop);
+    mask: var(--billet-scallop);
+  }
+
+  .billet-ticket :focus-visible {
+    outline-color: var(--billet-ink);
+  }
+
+  /* The artwork panel at the head of the ticket. */
+  .billet-ticket__art {
+    position: relative;
+    height: 7.75rem;
+    overflow: hidden;
+    background: var(--billet-gold);
+  }
+
+  .billet-hero .billet-ticket__mascot {
+    position: absolute;
+    top: 0.9rem;
+    left: 50%;
+    width: 9.5rem;
+    max-width: none;
+    translate: -50% 0;
+  }
+
+  /* A rubber stamp saying entry is free, pressed on slightly askew. */
+  .billet-stamp {
+    position: absolute;
+    top: 0.9rem;
+    right: 1.5rem;
+    display: grid;
+    width: 5.25rem;
+    margin: 0;
+    padding: 0.4rem;
+    color: var(--billet-stamp);
+    font-family: var(--billet-mono);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    text-align: center;
+    text-transform: uppercase;
+    background: var(--billet-paper);
+    border: 3px double currentColor;
+    border-radius: 50%;
+    outline: 1.5px solid currentColor;
+    outline-offset: 3px;
+    aspect-ratio: 1;
+    place-items: center;
+    rotate: 14deg;
+  }
+
+  .billet-ticket__main {
+    min-width: 0;
+    padding: 1.2rem 1.6rem 1.25rem;
+  }
+
+  .billet-label {
+    display: block;
+    color: var(--billet-ink-soft);
+    font-family: var(--billet-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* The selectors here outrank the shared heading rule above, which would turn them cream. */
+  main .billet-hero h1.billet-title {
+    margin: 0.7rem 0 0.8rem;
+    color: var(--billet-ink);
+    font-size: clamp(1.2rem, 7cqw, 1.85rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 0.98;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .billet-subtitle {
+    margin: 0;
+    color: var(--billet-ink);
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .billet-ticket__stub {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 1.35rem 1.6rem 1.25rem;
+    border-top: 2px dashed rgba(27, 34, 56, 0.4);
+  }
+
+  /* The notches where the stub tears off. */
+  .billet-ticket__stub::before,
+  .billet-ticket__stub::after {
+    position: absolute;
+    top: -15px;
+    width: 28px;
+    height: 28px;
+    content: "";
+    background: var(--billet-night);
+    border-radius: 50%;
+  }
+
+  .billet-ticket__stub::before {
+    left: -14px;
+  }
+
+  .billet-ticket__stub::after {
+    right: -14px;
+  }
+
+  .billet-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.25rem;
+    margin: 0;
+  }
+
+  .billet-fact {
+    margin: 0.15rem 0 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .billet-hero .billet-fact a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .billet-hero .billet-fact a:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+  }
+
+  .billet-address {
+    margin: 0.2rem 0 0;
+    color: var(--billet-ink-soft);
+    font-size: 0.9rem;
+  }
+
+  .billet-hero .billet-link {
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--billet-ink);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.3em;
+  }
+
+  .billet-actions {
+    display: grid;
+    gap: 0.8rem;
+    justify-items: center;
+  }
+
+  .billet-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.8rem 1.4rem;
+    color: var(--billet-paper);
+    font-size: 1rem;
+    font-weight: 800;
+    text-decoration: none;
+    background: var(--billet-ink);
+    border: 2px solid var(--billet-ink);
+    border-radius: 0.45rem;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .billet-button:hover,
+  .billet-button:focus-visible {
+    color: var(--billet-ink);
+    background: var(--billet-gold);
+  }
+
+  .billet-note {
+    margin: 0;
+    color: var(--billet-ink-soft);
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .billet-barcode {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .billet-barcode__bars {
+    display: block;
+    height: 2rem;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--billet-ink) 0 2px,
+      transparent 2px 5px,
+      var(--billet-ink) 5px 6px,
+      transparent 6px 10px,
+      var(--billet-ink) 10px 14px,
+      transparent 14px 16px,
+      var(--billet-ink) 16px 17px,
+      transparent 17px 21px
+    );
+  }
+
+  .billet-barcode__serial {
+    color: var(--billet-ink-soft);
+    font-family: var(--billet-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+  }
+
+  /* ---------- Countdown (printed on the stub) ---------- */
+
+  .countdown {
+    display: flex;
+    margin: 0.25rem 0 0;
+  }
+
+  .countdown-units {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.1rem;
+  }
+
+  .countdown-unit {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .countdown-value {
+    color: var(--billet-ink);
+    font-family: var(--billet-mono);
+    font-size: 1.7rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .countdown-label {
+    color: var(--billet-ink-soft);
+    font-family: var(--billet-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .countdown-loading,
+  .countdown-complete,
+  .countdown-concluded,
+  .countdown-current {
+    display: inline-block;
+    color: var(--billet-ink);
+    font-family: var(--billet-mono);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  /* ---------- Programme: every day side by side ---------- */
+
+  .billet-programme {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: 1rem;
+    text-align: left;
+  }
+
+  .billet-day {
+    min-width: 0;
+    background: var(--billet-panel);
+    border: var(--billet-edge);
+    border-radius: 0.7rem;
+  }
+
+  main .billet-programme h3.billet-day__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.9rem 1.1rem;
+    color: var(--billet-ink);
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    background: var(--billet-gold);
+    border-radius: 0.6rem 0.6rem 0 0;
+  }
+
+  .billet-day__date {
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  .billet-day__list {
+    margin: 0;
+    padding: 0 1.1rem;
+    list-style: none;
+  }
+
+  .billet-event {
+    display: grid;
+    grid-template-columns: 3.6rem minmax(0, 1fr);
+    gap: 0.9rem;
+    padding: 1rem 0;
+    border-top: var(--billet-edge);
+  }
+
+  .billet-event:first-child {
+    border-top: 0;
+  }
+
+  .billet-event__time {
+    display: grid;
+    align-content: start;
+    color: var(--billet-gold);
+    font-family: var(--billet-mono);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .billet-event__end {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  main .billet-event__title {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  .billet-event__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .billet-event__tags:empty {
+    display: none;
+  }
+
+  .billet-event__text {
+    margin: 0.5rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .billet-event__text:empty {
+    display: none;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  [data-slot="button"][data-variant="brand"]:not([data-theme-scope="admin"] *),
+  [data-slot="button"][data-variant="warning"]:not([data-theme-scope="admin"] *) {
+    --surface-primary: var(--billet-gold);
+    --surface-warning: var(--billet-gold);
+    --surface-warning-foreground: var(--billet-ink);
+    --layout-inverse: var(--billet-ink);
+  }
+
+  [data-slot="button"][data-variant="light"]:not([data-theme-scope="admin"] *) {
+    --layout-inverse: var(--billet-ink);
+    --layout-contrast: var(--billet-paper);
+  }
+
+  /* ---------- Sections: cut along the dashed line ---------- */
+
+  .content-section {
+    position: relative;
+    z-index: 1;
+    padding: clamp(3.25rem, 7vw, 5.75rem) 0;
+    border-top: var(--billet-cut);
+    counter-increment: billet-section;
+  }
+
+  .content-section::before {
+    position: absolute;
+    top: 0;
+    left: clamp(1rem, 5vw, 4rem);
+    padding-inline: 0.4rem;
+    color: var(--billet-gold);
+    font-size: 1.15rem;
+    line-height: 1;
+    content: "✂";
+    content: "✂" / "";
+    background: var(--billet-night);
+    translate: 0 -55%;
+  }
+
+  .highlight-section {
+    background: var(--billet-panel);
+  }
+
+  .highlight-section::before {
+    background: linear-gradient(var(--billet-night) 50%, var(--billet-panel) 50%);
+  }
+
+  .content-section .section-header {
+    margin: 0 0 1.25rem;
+    font-size: clamp(1.9rem, 4.6vw, 3.1rem);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    text-transform: uppercase;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  /* Each section is numbered like a coupon in a booklet. */
+  .content-section .section-header::before {
+    display: block;
+    margin-bottom: 0.7rem;
+    color: var(--billet-gold);
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    content: "N° " counter(billet-section, decimal-leading-zero);
+    content: "N° " counter(billet-section, decimal-leading-zero) / "";
+  }
+
+  /* ---------- Features: three pastel coupons ---------- */
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 2.75rem;
+    filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.35));
+  }
+
+  .feature {
+    min-height: 100%;
+    padding: 1.75rem 1.9rem 1.5rem;
+    color: var(--billet-ink);
+    text-align: left;
+    background: #bfe3cf;
+    border-radius: 0.6rem;
+    -webkit-mask: var(--billet-scallop);
+    mask: var(--billet-scallop);
+    transition: rotate 0.2s ease;
+    rotate: -1.2deg;
+  }
+
+  .feature:nth-child(3n + 2) {
+    background: #f5dc8a;
+    rotate: 0.8deg;
+  }
+
+  .feature:nth-child(3n + 3) {
+    background: #f6c1c7;
+    rotate: -0.5deg;
+  }
+
+  .feature:hover {
+    rotate: 0deg;
+  }
+
+  .feature-icon {
+    display: inline-flex;
+    margin-bottom: 0.8rem;
+    color: var(--billet-ink);
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  main .features .feature h3 {
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.7rem;
+    color: var(--billet-ink);
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    border-bottom: 1.5px dashed rgba(27, 34, 56, 0.45);
+  }
+
+  .feature p {
+    margin-bottom: 0;
+    color: var(--billet-ink);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  /* ---------- Schedule, cards, badges ---------- */
+
+  .schedule-tabs {
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+  }
+
+  [data-slot="tabs-trigger"]:not([data-theme-scope="admin"] *) {
+    padding: 0.5rem 1rem;
+    color: var(--text-color);
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: transparent;
+    border: var(--billet-edge);
+    border-radius: 0.4rem;
+  }
+
+  [data-slot="tabs-trigger"]:hover:not([data-theme-scope="admin"] *) {
+    color: var(--billet-gold);
+  }
+
+  [data-slot="tabs-trigger"][data-active]:not([data-theme-scope="admin"] *) {
+    color: var(--billet-ink);
+    background: var(--billet-gold);
+    border-color: var(--billet-gold);
+    border-style: solid;
+  }
+
+  [data-slot="card"]:not([data-theme-scope="admin"] *) {
+    color: var(--text-color);
+    background: var(--billet-panel);
+    border: var(--billet-edge);
+    border-radius: 0.7rem;
+    box-shadow: none;
+  }
+
+  .event-time {
+    flex: 0 0 5.25rem;
+    min-width: 5.25rem;
+    color: var(--billet-gold);
+    font-family: var(--billet-mono);
+    font-size: 1.4rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .event-time div + div {
+    margin-top: 0.15rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  .event-title,
+  .event-card h5 {
+    margin-bottom: 0.35rem;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  .event-description,
+  .event-card p {
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  [data-slot="badge"]:not([data-theme-scope="admin"] *) {
+    --badge-background: transparent;
+    --badge-foreground: var(--billet-cream);
+    padding: 0.2rem 0.55rem;
+    color: var(--badge-foreground);
+    font-family: var(--billet-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--badge-background);
+    border: 1px solid rgba(244, 236, 216, 0.5);
+    border-radius: 0.25rem;
+  }
+
+  [data-slot="badge"][data-variant="warning"]:not([data-theme-scope="admin"] *),
+  [data-slot="badge"][data-variant="primary"]:not([data-theme-scope="admin"] *),
+  [data-slot="badge"][data-variant="danger"]:not([data-theme-scope="admin"] *) {
+    --badge-background: var(--billet-gold);
+    --badge-foreground: var(--billet-ink);
+    border-color: var(--billet-gold);
+  }
+
+  /* ---------- FAQ accordion ---------- */
+
+  [data-slot="accordion"]:not([data-theme-scope="admin"] *) {
+    margin-top: 0;
+    overflow: visible;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  [data-slot="accordion-item"]:not([data-theme-scope="admin"] *) {
+    color: var(--text-color);
+    background: none;
+    border-bottom: var(--billet-edge);
+  }
+
+  [data-slot="accordion-item"]:first-child:not([data-theme-scope="admin"] *) {
+    border-top: var(--billet-edge);
+  }
+
+  [data-slot="accordion-trigger"]:not([data-theme-scope="admin"] *) {
+    padding: 1.1rem 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: left;
+    background: none;
+  }
+
+  [data-slot="accordion-trigger"]:hover:not([data-theme-scope="admin"] *),
+  [data-slot="accordion-trigger"][aria-expanded="true"]:not([data-theme-scope="admin"] *) {
+    color: var(--billet-gold);
+    background: none;
+  }
+
+  [data-slot="accordion-trigger"]:not([data-theme-scope="admin"] *) > svg {
+    margin-inline-start: 1rem;
+    color: var(--billet-gold);
+  }
+
+  [data-slot="accordion-content"]:not([data-theme-scope="admin"] *) {
+    padding: 0 0 1.2rem;
+    color: var(--text-muted);
+    background: none;
+  }
+
+  /* ---------- Map and carousels ---------- */
+
+  .map-loading,
+  .carousel-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 18rem;
+    background: var(--billet-panel);
+    border: var(--billet-edge);
+    border-radius: 0.7rem;
+  }
+
+  #map .leaflet-container {
+    border: var(--billet-edge);
+    border-radius: 0.7rem;
+  }
+
+  /* ---------- Forms ---------- */
+
+  [data-slot="input"]:not([data-theme-scope="admin"] *),
+  [data-slot="textarea"]:not([data-theme-scope="admin"] *) {
+    color: var(--text-color);
+    background: var(--billet-night-deep);
+    border-color: rgba(244, 236, 216, 0.4);
+  }
+
+  [data-slot="input"]:focus-visible:not([data-theme-scope="admin"] *),
+  [data-slot="textarea"]:focus-visible:not([data-theme-scope="admin"] *) {
+    border-color: var(--billet-gold);
+  }
+
+  [data-public-form][data-slot="field-label"]:not([data-theme-scope="admin"] *) {
+    color: var(--text-muted);
+    font-family: var(--billet-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Footer ---------- */
+
+  .site-footer {
+    position: relative;
+    z-index: 1;
+    padding: 2.5rem 0;
+    color: var(--billet-cream);
+    background: var(--billet-night-deep);
+    border-top: var(--billet-cut);
+  }
+
+  .site-footer p {
+    margin: 0;
+    color: var(--billet-cream-soft);
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+  }
+
+  .footer-link {
+    color: var(--billet-gold);
+    font-family: var(--billet-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-underline-offset: 0.3em;
+  }
+
+  .footer-link:hover {
+    color: var(--billet-cream);
+  }
+
+  /* ---------- Standalone pages (check-in, account, privacy) ---------- */
+
+  .standalone-app {
+    min-height: calc(100vh - var(--header-height));
+    background: var(--billet-night);
+  }
+
+  .standalone-navbar {
+    min-height: var(--header-height);
+    background: color-mix(in srgb, var(--billet-night) 92%, transparent);
+    border-bottom: var(--billet-edge);
+    box-shadow: none;
+    backdrop-filter: blur(10px);
+  }
+
+  .standalone-navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    max-width: min(58vw, 28rem);
+    overflow: hidden;
+    color: var(--text-color);
+    font-size: 1.15rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .standalone-navbar-brand svg,
+  .standalone-navbar-brand span {
+    flex: 0 0 auto;
+  }
+
+  .standalone-main {
+    min-height: calc(100vh - var(--header-height));
+    padding-top: 0.75rem;
+  }
+
+  .standalone-main .text-content {
+    color: var(--text-color);
+    --layout-content: var(--text-color);
+  }
+
+  .standalone-document-main #privacy-policy {
+    padding-top: clamp(3rem, 7vw, 5rem);
+  }
+
+  .standalone-document-main #privacy-policy .site-content-column {
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    background: var(--billet-panel);
+    border: var(--billet-edge);
+    border-radius: 0.7rem;
+    --layout-column-gutter: clamp(1.25rem, 3vw, 2.25rem);
+  }
+
+  .standalone-document-main #privacy-policy h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .standalone-document-main #privacy-policy h2 {
+    margin-top: 1.75rem;
+    text-align: left;
+  }
+
+  .standalone-document-main #privacy-policy hr {
+    border-color: rgba(226, 184, 87, 0.5);
+    border-style: dashed;
+    opacity: 1;
+  }
+
+  /* ---------- Focus ---------- */
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* ---------- Small screens ---------- */
+
+  @media (max-width: 991.98px) {
+    .features {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .event-time {
+      flex-basis: 4.25rem;
+      min-width: 4.25rem;
+      font-size: 1.15rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+
+    .feature,
+    .feature:nth-child(n) {
+      rotate: 0deg;
+    }
+  }
+
+  /* Wordmark: cream "CHAMPAGNE", a lifted red for "festival" on the dark page. */
+  .site-wordmark {
+    --wordmark-champagne: var(--text-color);
+    --wordmark-festival: #ff8a8a;
+  }
+}
