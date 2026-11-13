@@ -232,6 +232,68 @@
     border: 1px solid rgba(246, 241, 231, 0.7);
   }
 
+  /* rosé: a raspberry pill on a plum-tinted scrim, generous curves */
+  html[data-visual-theme="rose"] .maintenance-page__scrim {
+    background-color: rgba(42, 12, 28, 0.6);
+  }
+  html[data-visual-theme="rose"] .maintenance-page__cta {
+    border-radius: 999px;
+    background: #a61e4d;
+    color: #fffaf7;
+    border: 2px solid #a61e4d;
+    box-shadow: 0 14px 32px rgba(166, 30, 77, 0.4);
+  }
+  html[data-visual-theme="rose"] .maintenance-page__cta:hover,
+  html[data-visual-theme="rose"] .maintenance-page__cta:focus-visible {
+    background: #86173d;
+    border-color: #fffaf7;
+    color: #fffaf7;
+  }
+  html[data-visual-theme="rose"] .maintenance-page__flyer-card {
+    border-radius: 1.75rem;
+  }
+
+  /* affiche: a yellow pill with an ink outline and a hard offset, no blur */
+  html[data-visual-theme="affiche"] .maintenance-page__cta {
+    border-radius: 999px;
+    background: #f6c62d;
+    color: #17130f;
+    border: 2.5px solid #17130f;
+    box-shadow: 4px 4px 0 #17130f;
+  }
+  html[data-visual-theme="affiche"] .maintenance-page__cta:hover,
+  html[data-visual-theme="affiche"] .maintenance-page__cta:focus-visible {
+    background: #f6c62d;
+    color: #17130f;
+    box-shadow: 2px 2px 0 #17130f;
+    transform: translate(2px, 2px);
+  }
+  html[data-visual-theme="affiche"] .maintenance-page__flyer-card {
+    border-radius: 1.4rem;
+    border: 2.5px solid #17130f;
+  }
+
+  /* billet: a cream ticket-stub button on a midnight scrim, gold on hover */
+  html[data-visual-theme="billet"] .maintenance-page__scrim {
+    background-color: rgba(10, 18, 34, 0.66);
+  }
+  html[data-visual-theme="billet"] .maintenance-page__cta {
+    border-radius: 0.45rem;
+    background: #f7f0de;
+    color: #1b2238;
+    border: 2px dashed #1b2238;
+    box-shadow: none;
+  }
+  html[data-visual-theme="billet"] .maintenance-page__cta:hover,
+  html[data-visual-theme="billet"] .maintenance-page__cta:focus-visible {
+    background: #e2b857;
+    color: #1b2238;
+  }
+  html[data-visual-theme="billet"] .maintenance-page__flyer-card {
+    border-radius: 0.7rem;
+    border: 1.5px dashed rgba(226, 184, 87, 0.7);
+  }
+
   /* The wordmark sits on the darkened photo in every theme: white "CHAMPAGNE",
      a lifted red "festival" for contrast. */
   .maintenance-page .maintenance-page__wordmark {

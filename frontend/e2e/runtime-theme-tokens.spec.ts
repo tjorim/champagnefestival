@@ -127,6 +127,40 @@ const palettes = {
       "rgb(184, 173, 154)",
     ],
   },
+  rose: {
+    light: [
+      "rgb(251, 239, 234)",
+      "rgb(59, 22, 41)",
+      "rgb(166, 30, 77)",
+      "rgb(138, 79, 55)",
+      "rgb(255, 250, 247)",
+      "rgb(109, 83, 96)",
+    ],
+    dark: [
+      "rgb(28, 14, 22)",
+      "rgb(250, 233, 229)",
+      "rgb(245, 143, 174)",
+      "rgb(230, 181, 150)",
+      "rgb(42, 22, 33)",
+      "rgb(205, 179, 187)",
+    ],
+  },
+  affiche: [
+    "rgb(243, 232, 210)",
+    "rgb(23, 19, 15)",
+    "rgb(29, 79, 216)",
+    "rgb(200, 16, 46)",
+    "rgb(255, 250, 240)",
+    "rgb(90, 80, 68)",
+  ],
+  billet: [
+    "rgb(16, 26, 48)",
+    "rgb(244, 236, 216)",
+    "rgb(226, 184, 87)",
+    "rgb(240, 138, 122)",
+    "rgb(24, 36, 63)",
+    "rgb(185, 179, 161)",
+  ],
 } as const;
 
 async function addColorProbes(page: import("@playwright/test").Page) {
@@ -175,6 +209,9 @@ for (const preference of ["light", "dark"] as const) {
     "cuvee",
     "remuage",
     "millesime",
+    "rose",
+    "affiche",
+    "billet",
   ] as const) {
     test(`${variant} resolves concrete utility colors and dark variant (${preference})`, async ({
       page,
@@ -202,15 +239,12 @@ for (const preference of ["light", "dark"] as const) {
         ].filter((token) => !style.getPropertyValue(`--surface-${token}`).trim());
       });
       expect(unresolved).toEqual([]);
-      const colors =
-        variant === "refresh" || variant === "millesime"
-          ? palettes[variant][preference]
-          : palettes[variant];
+      const followsSystem = variant === "refresh" || variant === "millesime" || variant === "rose";
+      const colors = followsSystem ? palettes[variant][preference] : palettes[variant];
       await expectPalette(
         page,
         colors,
-        variant === "classic" ||
-          ((variant === "refresh" || variant === "millesime") && preference === "dark"),
+        variant === "classic" || variant === "billet" || (followsSystem && preference === "dark"),
       );
     });
   }

@@ -11,8 +11,10 @@
       {
         "allow": [
           "admin-*",
+          "affiche-*",
           "announcement-*",
           "App",
+          "billet-*",
           "bubble",
           "bubble-*",
           "carousel-*",

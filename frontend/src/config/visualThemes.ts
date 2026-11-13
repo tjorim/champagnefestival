@@ -6,7 +6,10 @@ export type VisualThemeVariant =
   | "riviera"
   | "cuvee"
   | "remuage"
-  | "millesime";
+  | "millesime"
+  | "rose"
+  | "affiche"
+  | "billet";
 
 export type ThemeColorMode = "system" | "light" | "dark";
 

@@ -1,4 +1,4 @@
-import { CalendarDaysIcon, CalendarPlusIcon, MapPinIcon } from "lucide-react";
+import { CalendarDaysIcon, CalendarPlusIcon, DoorOpenIcon, MapPinIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
@@ -14,8 +14,8 @@ interface FestivalFactsProps {
 }
 
 /**
- * At-a-glance strip below the hero: when and where the festival takes place,
- * plus the primary registration action. Uses semantic colours only, so every
+ * At-a-glance strip below the hero: when and where the festival takes place and
+ * that entry is free, plus the primary registration action. Uses semantic colours only, so every
  * runtime theme picks it up without extra stylesheet work.
  */
 const FestivalFacts = ({
@@ -60,6 +60,14 @@ const FestivalFacts = ({
               </dd>
             </div>
           )}
+          {/* Entry is free in every edition; only some events take reservations. */}
+          <div className="grid grid-flow-col grid-rows-2 items-center justify-start gap-x-3">
+            <Icon icon={DoorOpenIcon} className="row-span-2 text-2xl text-primary" />
+            <dt className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+              {m.festival_facts_entry()}
+            </dt>
+            <dd className="m-0 text-lg font-semibold">{m.festival_facts_entry_free()}</dd>
+          </div>
         </dl>
         {canRegister ? (
           <Button variant="brand" size="lg" className="h-auto px-5 py-3" onClick={onRegister}>

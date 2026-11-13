@@ -10,7 +10,16 @@ async function expectNoOverflow(page: Page, width: number) {
   );
 }
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+]) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} public forms at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });

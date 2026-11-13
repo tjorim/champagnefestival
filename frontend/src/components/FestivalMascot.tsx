@@ -10,6 +10,9 @@ const VARIANTS = {
 interface FestivalMascotProps {
   crop?: keyof typeof VARIANTS;
   className?: string;
+  /** Rendered width hint for the browser; override where she is shown larger than beside the countdown. */
+  sizes?: string;
+  loading?: "lazy" | "eager";
 }
 
 /**
@@ -18,18 +21,23 @@ interface FestivalMascotProps {
  * carries the content, so assistive technology skips her. Lazy loading means a
  * crop hidden by the current layout is never downloaded.
  */
-const FestivalMascot = ({ crop = "full", className }: FestivalMascotProps) => {
+const FestivalMascot = ({
+  crop = "full",
+  className,
+  sizes = "(min-width: 768px) 9rem, 8rem",
+  loading = "lazy",
+}: FestivalMascotProps) => {
   const { name, width, height } = VARIANTS[crop];
   return (
     <img
       src={`/images/${name}-360.webp`}
       srcSet={`/images/${name}-360.webp 360w, /images/${name}-720.webp 720w`}
-      sizes="(min-width: 768px) 9rem, 8rem"
+      sizes={sizes}
       width={width}
       height={height}
       alt=""
       aria-hidden="true"
-      loading="lazy"
+      loading={loading}
       decoding="async"
       data-slot="festival-mascot"
       className={cn("pointer-events-none h-auto select-none", className)}

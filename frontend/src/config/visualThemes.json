@@ -52,5 +52,32 @@
       "dark": "#14110e",
       "light": "#f6f1e7"
     }
+  },
+  {
+    "value": "rose",
+    "label": "Ros\u00e9",
+    "colorMode": "system",
+    "themeColors": {
+      "dark": "#1c0e16",
+      "light": "#fbefea"
+    }
+  },
+  {
+    "value": "affiche",
+    "label": "Affiche",
+    "colorMode": "light",
+    "themeColors": {
+      "dark": "#f3e8d2",
+      "light": "#f3e8d2"
+    }
+  },
+  {
+    "value": "billet",
+    "label": "Billet",
+    "colorMode": "dark",
+    "themeColors": {
+      "dark": "#101a30",
+      "light": "#101a30"
+    }
   }
 ]

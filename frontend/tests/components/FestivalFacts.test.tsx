@@ -7,6 +7,8 @@ vi.mock("@/paraglide/messages", () => ({
     festival_facts_label: () => "Festival at a glance",
     festival_facts_when: () => "When",
     festival_facts_where: () => "Where",
+    festival_facts_entry: () => "Entry",
+    festival_facts_entry_free: () => "Free",
     registration_cta: () => "Register Now",
     registration_opens_on: ({ date }: { date: string }) => `Registrations open on ${date}`,
     schedule_title: () => "Schedule",
@@ -28,6 +30,7 @@ describe("FestivalFacts", () => {
 
     const region = screen.getByRole("region", { name: "Festival at a glance" });
     expect(region).toHaveTextContent("WhenMarch 6-7-8, 2027");
+    expect(region).toHaveTextContent("EntryFree");
     expect(screen.getByRole("link", { name: "Brussels Expo, Brussels" })).toHaveAttribute(
       "href",
       "#map",

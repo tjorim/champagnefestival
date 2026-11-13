@@ -106,12 +106,12 @@ jobs:
         run: pnpm exec playwright install chromium --with-deps
 
       # Pull requests and pushes to main run the default theme only (every width and colour
-      # scheme of it); the other five themes repeat the same specs and are temporary until one
+      # scheme of it); the other eight themes repeat the same specs and are temporary until one
       # theme is settled. Manual runs (`gh workflow run frontend-ci.yml --ref <branch>`) run
       # every theme.
       - name: Run E2E tests
         env:
-          E2E_SKIP_THEMES: classic|riviera|cuvee|remuage|millesime
+          E2E_SKIP_THEMES: classic|riviera|cuvee|remuage|millesime|rose|affiche|billet
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             pnpm exec playwright test --shard=${{ matrix.shard }}/4 --reporter=github,html

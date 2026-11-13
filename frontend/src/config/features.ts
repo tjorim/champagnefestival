@@ -1,7 +1,9 @@
 import { m } from "@/paraglide/messages";
 
 /**
- * Feature items configuration
+ * The three things a first-time visitor needs to know, shown under "What we do":
+ * entry is free, tasting works with the festival glass and tokens, and bottles are
+ * bought directly from the producers.
  */
 export const featureItems = [
   {

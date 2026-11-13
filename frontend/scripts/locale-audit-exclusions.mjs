@@ -114,6 +114,12 @@ export const exclusions = {
   "components/admin/analyticsChartExport.ts": {
     'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif': "CSS font stack",
   },
+  "components/affiche/AfficheHero.tsx": {
+    "(min-width: 992px) 18rem, 40vw": "image sizes attribute",
+  },
+  "components/billet/BilletHero.tsx": {
+    "N°": "decorative serial prefix on the ticket barcode, hidden from assistive technology",
+  },
   "components/cuvee/CuveeHero.tsx": {
     CF: "brand monogram",
   },

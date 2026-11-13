@@ -44,6 +44,24 @@ const EXPECTED_THEMES = [
     colorMode: "system",
     themeColors: { dark: "#14110e", light: "#f6f1e7" },
   },
+  {
+    value: "rose",
+    label: "Rosé",
+    colorMode: "system",
+    themeColors: { dark: "#1c0e16", light: "#fbefea" },
+  },
+  {
+    value: "affiche",
+    label: "Affiche",
+    colorMode: "light",
+    themeColors: { dark: "#f3e8d2", light: "#f3e8d2" },
+  },
+  {
+    value: "billet",
+    label: "Billet",
+    colorMode: "dark",
+    themeColors: { dark: "#101a30", light: "#101a30" },
+  },
 ] as const;
 
 describe("visual theme registry", () => {

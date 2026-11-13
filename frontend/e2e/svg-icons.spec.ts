@@ -1,6 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
+for (const theme of [
+  "refresh",
+  "classic",
+  "riviera",
+  "cuvee",
+  "remuage",
+  "millesime",
+  "rose",
+  "affiche",
+]) {
   test(`SVG icons inherit ${theme} colours without loading the icon font`, async ({ page }) => {
     const fontRequests: string[] = [];
     page.on("request", (request) => {
