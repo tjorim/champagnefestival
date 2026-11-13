@@ -35,19 +35,25 @@ const RivieraHero = ({
           </p>
         )}
         <div className="riviera-hero__actions">
+          {/* Entry is free and most events need no reservation, so discovering the festival
+              leads and registering is the second action while it is open. */}
+          <a href="#what-we-do" className="riviera-button">
+            {learnMoreLabel}
+            <Icon icon={CircleArrowDownIcon} />
+          </a>
           {registration ? (
-            <button type="button" className="riviera-button" onClick={registration.onRegister}>
+            <button
+              type="button"
+              className="riviera-button riviera-button--secondary"
+              onClick={registration.onRegister}
+            >
               {registration.label}
             </button>
           ) : (
-            <a href="#what-we-do" className="riviera-button">
-              {learnMoreLabel}
-              <Icon icon={CircleArrowDownIcon} />
+            <a href="#schedule" className="riviera-button riviera-button--secondary">
+              {scheduleLabel}
             </a>
           )}
-          <a href="#schedule" className="riviera-button riviera-button--secondary">
-            {scheduleLabel}
-          </a>
         </div>
         {note && <p className="riviera-hero__note">{note}</p>}
       </div>

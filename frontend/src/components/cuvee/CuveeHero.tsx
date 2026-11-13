@@ -43,19 +43,25 @@ const CuveeHero = ({
           </p>
         )}
         <div className="cuvee-hero__actions">
+          {/* Entry is free and most events need no reservation, so discovering the festival
+              leads and registering is the second action while it is open. */}
+          <a href="#what-we-do" className="cuvee-button">
+            {learnMoreLabel}
+            <Icon icon={CircleArrowDownIcon} />
+          </a>
           {registration ? (
-            <button type="button" className="cuvee-button" onClick={registration.onRegister}>
+            <button
+              type="button"
+              className="cuvee-button cuvee-button--ghost"
+              onClick={registration.onRegister}
+            >
               {registration.label}
             </button>
           ) : (
-            <a href="#what-we-do" className="cuvee-button">
-              {learnMoreLabel}
-              <Icon icon={CircleArrowDownIcon} />
+            <a href="#schedule" className="cuvee-button cuvee-button--ghost">
+              {scheduleLabel}
             </a>
           )}
-          <a href="#schedule" className="cuvee-button cuvee-button--ghost">
-            {scheduleLabel}
-          </a>
         </div>
         {note && <p className="cuvee-hero__note">{note}</p>}
       </div>

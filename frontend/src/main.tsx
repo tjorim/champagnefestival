@@ -603,21 +603,24 @@ function App() {
           <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-            {registrableEvents.length > 0 ? (
-              <Button
-                variant="brand"
-                className="rounded-full px-6 py-2"
-                onClick={openRegistrationModal}
-              >
-                <Icon icon={CalendarPlusIcon} />
-                {m.registration_cta()}
-              </Button>
-            ) : (
+            {/* Entry is free and most events need no reservation, so discovering the festival
+                leads and registering is the second action while it is open. */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href="#what-we-do" variant="brand" className="rounded-full px-6 py-2">
                 {m.welcome_learn_more()}
                 <Icon icon={CircleArrowDownIcon} />
               </ButtonLink>
-            )}
+              {registrableEvents.length > 0 && (
+                <Button
+                  variant="light"
+                  className="rounded-full px-6 py-2"
+                  onClick={openRegistrationModal}
+                >
+                  <Icon icon={CalendarPlusIcon} />
+                  {m.registration_cta()}
+                </Button>
+              )}
+            </div>
           </section>
         ) : (
           <section className="hero" id="welcome">
@@ -636,11 +639,22 @@ function App() {
                 </p>
               )}
               <div className="hero-actions">
+                {/* Entry is free and most events need no reservation, so discovering the
+                    festival leads and registering is the second action while it is open. */}
+                <ButtonLink
+                  href="#what-we-do"
+                  variant="brand"
+                  size="lg"
+                  className="h-auto px-5 py-3 text-base"
+                >
+                  {m.welcome_learn_more()}
+                  <Icon icon={CircleArrowDownIcon} />
+                </ButtonLink>
                 {registrableEvents.length > 0 ? (
                   <Button
-                    variant="brand"
+                    variant="light"
                     size="lg"
-                    className="h-auto px-5 py-3 text-base"
+                    className="h-auto px-5 py-3 text-base font-bold"
                     onClick={openRegistrationModal}
                   >
                     <Icon icon={CalendarPlusIcon} />
@@ -648,23 +662,14 @@ function App() {
                   </Button>
                 ) : (
                   <ButtonLink
-                    href="#what-we-do"
-                    variant="brand"
+                    href="#schedule"
+                    variant="light"
                     size="lg"
-                    className="h-auto px-5 py-3 text-base"
+                    className="h-auto px-5 py-3 text-base font-bold"
                   >
-                    {m.welcome_learn_more()}
-                    <Icon icon={CircleArrowDownIcon} />
+                    {m.schedule_title()}
                   </ButtonLink>
                 )}
-                <ButtonLink
-                  href="#schedule"
-                  variant="light"
-                  size="lg"
-                  className="h-auto px-5 py-3 text-base font-bold"
-                >
-                  {m.schedule_title()}
-                </ButtonLink>
               </div>
               {registrationOpensOn && (
                 <p className="hero-meta mt-4 mb-0">

@@ -35,23 +35,25 @@ const RemuageHero = ({
           </p>
         )}
         <div className="remuage-hero__actions">
+          {/* Entry is free and most events need no reservation, so discovering the festival
+              leads and registering is the second action while it is open. */}
+          <a href="#what-we-do" className="remuage-button remuage-button--primary">
+            {learnMoreLabel}
+            <Icon icon={CircleArrowDownIcon} />
+          </a>
           {registration ? (
             <button
               type="button"
-              className="remuage-button remuage-button--primary"
+              className="remuage-button remuage-button--secondary"
               onClick={registration.onRegister}
             >
               {registration.label}
             </button>
           ) : (
-            <a href="#what-we-do" className="remuage-button remuage-button--primary">
-              {learnMoreLabel}
-              <Icon icon={CircleArrowDownIcon} />
+            <a href="#schedule" className="remuage-button remuage-button--secondary">
+              {scheduleLabel}
             </a>
           )}
-          <a href="#schedule" className="remuage-button remuage-button--secondary">
-            {scheduleLabel}
-          </a>
         </div>
         {note && <p className="remuage-hero__note">{note}</p>}
       </div>

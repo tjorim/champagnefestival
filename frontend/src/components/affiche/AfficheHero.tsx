@@ -49,20 +49,22 @@ const AfficheHero = ({
         <h1 className="affiche-title">{title}</h1>
         <p className="affiche-subtitle">{subtitle}</p>
         <div className="affiche-actions">
+          {/* Entry is free and most events need no reservation, so discovering the festival
+              leads and registering is the second action while it is open. */}
+          <a href="#what-we-do" className="affiche-button">
+            {learnMoreLabel}
+            <Icon icon={CircleArrowDownIcon} />
+          </a>
           {registration ? (
-            <button type="button" className="affiche-button" onClick={registration.onRegister}>
+            <button type="button" className="affiche-link" onClick={registration.onRegister}>
               <Icon icon={CalendarPlusIcon} />
               {registration.label}
             </button>
           ) : (
-            <a href="#what-we-do" className="affiche-button">
-              {learnMoreLabel}
-              <Icon icon={CircleArrowDownIcon} />
+            <a href="#schedule" className="affiche-link">
+              {scheduleLabel}
             </a>
           )}
-          <a href="#schedule" className="affiche-link">
-            {scheduleLabel}
-          </a>
         </div>
         {note && <p className="affiche-note">{note}</p>}
       </div>

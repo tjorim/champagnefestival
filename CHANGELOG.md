@@ -17,6 +17,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 ### Added
 
 - The landing page now says that entry is free: the strip under the page top lists "Entry: Free", and the three cards under "What we do" explain free entry, tasting with the official festival glass and tokens, and buying bottles directly from the producers.
+- "Discover the festival" is now the main button at the top of the landing page in every design. "Register Now" is the second button while an event is open for registration, and the registration button in the strip below is outlined.
 - A seventh preview design, "Rosé": blush paper, plum ink and a raspberry accent, with pill buttons, bubble-shaped countdown units and softly curved cards. It follows the system colour scheme and turns to a deep plum "soirée" palette in dark mode.
 - An eighth preview design, "Affiche": a poster of flat blue, red and yellow blocks with ink outlines. Its landing page opens with a grid of tiles showing the title, the mascot, the dates, the countdown, the venue and a running band of producer names.
 - A ninth preview design, "Billet": the festival as an admission ticket. A portrait ticket with the title, dates, venue, countdown and registration stays beside the page on wide screens while the sections scroll past, and the programme shows every day side by side.

@@ -15,7 +15,7 @@ interface FestivalFactsProps {
 
 /**
  * At-a-glance strip below the hero: when and where the festival takes place and
- * that entry is free, plus the primary registration action. Uses semantic colours only, so every
+ * that entry is free, plus the registration action while one is open. Uses semantic colours only, so every
  * runtime theme picks it up without extra stylesheet work.
  */
 const FestivalFacts = ({
@@ -70,7 +70,8 @@ const FestivalFacts = ({
           </div>
         </dl>
         {canRegister ? (
-          <Button variant="brand" size="lg" className="h-auto px-5 py-3" onClick={onRegister}>
+          // Outlined, not the brand button: entry is free and registering is for specific events.
+          <Button variant="outline" size="lg" className="h-auto px-5 py-3" onClick={onRegister}>
             <Icon icon={CalendarPlusIcon} />
             {m.registration_cta()}
           </Button>

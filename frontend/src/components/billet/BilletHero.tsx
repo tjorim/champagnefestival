@@ -107,20 +107,22 @@ const BilletHero = ({
           )}
 
           <div className="billet-actions">
+            {/* Entry is free and most events need no reservation, so discovering the festival
+                leads and registering is the second action while it is open. */}
+            <a href="#what-we-do" className="billet-button">
+              {learnMoreLabel}
+              <Icon icon={CircleArrowDownIcon} />
+            </a>
             {registration ? (
-              <button type="button" className="billet-button" onClick={registration.onRegister}>
+              <button type="button" className="billet-link" onClick={registration.onRegister}>
                 <Icon icon={CalendarPlusIcon} />
                 {registration.label}
               </button>
             ) : (
-              <a href="#what-we-do" className="billet-button">
-                {learnMoreLabel}
-                <Icon icon={CircleArrowDownIcon} />
+              <a href="#schedule" className="billet-link">
+                {scheduleLabel}
               </a>
             )}
-            <a href="#schedule" className="billet-link">
-              {scheduleLabel}
-            </a>
           </div>
           {note && <p className="billet-note">{note}</p>}
 
