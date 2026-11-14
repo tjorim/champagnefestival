@@ -6,6 +6,7 @@
     "**/build",
     "**/coverage",
     "openapi.json",
-    "src/api-schema"
+    "src/api-schema",
+    "project.inlang/cache"
   ]
 }
