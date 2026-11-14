@@ -18,8 +18,8 @@ export type EditionAttendanceStats = {
   total_checked_in: number;
   total_paid: string;
   total_due: string;
-  total_received?: string;
-  total_refunded?: string;
-  total_outstanding?: string;
-  total_refund_liability?: string;
+  total_received: string;
+  total_refunded: string;
+  total_outstanding: string;
+  total_refund_liability: string;
 };

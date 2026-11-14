@@ -15222,6 +15222,9 @@
         },
         "type": "object",
         "required": [
+          "member_limit",
+          "member_inactivity_months",
+          "stamp_card_type_id",
           "maintenance_mode",
           "public_email",
           "public_phone",
@@ -16037,6 +16040,7 @@
           "slug",
           "name",
           "edition_id",
+          "active",
           "id",
           "epoch",
           "revision"
@@ -16180,7 +16184,10 @@
           "id",
           "name",
           "event_id",
+          "edition_id",
           "event_title",
+          "table_id",
+          "table_name",
           "guest_count",
           "order_items",
           "notes",
@@ -16228,6 +16235,7 @@
         },
         "type": "object",
         "required": [
+          "stamp_progress",
           "registration",
           "already_checked_in"
         ],
@@ -17279,7 +17287,11 @@
           "total_guests",
           "total_checked_in",
           "total_paid",
-          "total_due"
+          "total_due",
+          "total_received",
+          "total_refunded",
+          "total_outstanding",
+          "total_refund_liability"
         ],
         "title": "EditionAttendanceStats"
       },
@@ -17437,11 +17449,15 @@
         },
         "type": "object",
         "required": [
+          "description_nl",
+          "description_fr",
+          "description_en",
           "id",
           "name",
           "image",
           "website",
-          "type"
+          "type",
+          "sponsor_tier"
         ],
         "title": "EditionItemOut",
         "description": "Slim organization shape embedded in the public edition response.\nOnly active items are included; contact person and active flag are\nintentionally excluded — they are internal admin data."
@@ -17584,11 +17600,17 @@
           "year",
           "month",
           "edition_type",
+          "dates",
           "venue",
           "events",
+          "organizations",
           "producers",
           "sponsors",
           "vendors",
+          "co_organizer",
+          "flyer_image",
+          "hero_image",
+          "share_image",
           "active",
           "created_at",
           "updated_at"
@@ -17747,11 +17769,16 @@
           "year",
           "month",
           "edition_type",
+          "dates",
           "venue",
           "events",
           "producers",
           "sponsors",
           "vendors",
+          "co_organizer",
+          "flyer_image",
+          "hero_image",
+          "share_image",
           "active",
           "created_at",
           "updated_at"
@@ -18901,16 +18928,27 @@
         "required": [
           "title",
           "description",
+          "title_nl",
+          "title_fr",
+          "title_en",
+          "description_nl",
+          "description_fr",
+          "description_en",
           "id",
           "edition_id",
           "date",
           "start_time",
           "end_time",
           "category",
+          "volunteers_only",
+          "members_only",
           "registration_required",
           "registrations_open_from",
           "registrations_close_at",
           "active",
+          "edition",
+          "order_questions",
+          "products",
           "created_at",
           "updated_at"
         ],
@@ -19095,16 +19133,26 @@
         "required": [
           "title",
           "description",
+          "title_nl",
+          "title_fr",
+          "title_en",
+          "description_nl",
+          "description_fr",
+          "description_en",
           "id",
           "edition_id",
           "date",
           "start_time",
           "end_time",
           "category",
+          "volunteers_only",
+          "members_only",
           "registration_required",
           "registrations_open_from",
           "registrations_close_at",
           "active",
+          "order_questions",
+          "products",
           "created_at",
           "updated_at"
         ],
@@ -20380,7 +20428,9 @@
           "kind",
           "id",
           "name",
-          "reason"
+          "reason",
+          "registration_ids",
+          "organization_id"
         ],
         "title": "LayoutRestoreAllocationConflict",
         "description": "One live allocation that would be silently invalidated by a restore.\n\nRestoring never touches ``Registration``/``Area.organization_id`` itself —\nthis only flags that the *geometry* change (delete/move) would orphan an\nexisting allocation, so the caller can make a deliberate call via\n``LayoutRestoreRequest.resolve_allocations``."
@@ -20453,7 +20503,15 @@
         "type": "object",
         "required": [
           "layout_id",
-          "revision_number"
+          "revision_number",
+          "tables_to_add",
+          "tables_to_update",
+          "tables_to_remove",
+          "areas_to_add",
+          "areas_to_update",
+          "areas_to_remove",
+          "allocation_conflicts",
+          "has_conflicts"
         ],
         "title": "LayoutRestorePreview"
       },
@@ -20559,7 +20617,13 @@
         "required": [
           "layout_id",
           "from_ref",
-          "to_ref"
+          "to_ref",
+          "added_tables",
+          "removed_tables",
+          "changed_tables",
+          "added_areas",
+          "removed_areas",
+          "changed_areas"
         ],
         "title": "LayoutRevisionDiff",
         "description": "Result of comparing two snapshots (each a revision or the live ``current``\ndraft), matching tables/areas by stable ``id`` rather than name/label."
@@ -20952,7 +21016,9 @@
           "date",
           "label",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "tables",
+          "areas"
         ],
         "title": "LayoutWithTablesOut",
         "description": "``LayoutOut`` plus its tables/areas, returned by ``GET /api/layouts/{id}``\nwhen ``include_tables=true`` is passed (or the MCP ``get_layout`` tool's\n``include_tables`` argument). ``tables``/``areas`` are ``None`` unless\nrequested, so a scoped single-layout read no longer requires a separate\nglobal ``list_tables``/``list_areas`` scan and client-side join."
@@ -21023,6 +21089,9 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "description_nl",
+          "description_fr",
+          "description_en",
           "image",
           "id",
           "name",
@@ -21345,7 +21414,8 @@
         "required": [
           "issuer",
           "authorization_url",
-          "token_url"
+          "token_url",
+          "end_session_url"
         ],
         "title": "OidcDiscoveryConfig",
         "description": "Public OIDC endpoints discovered by native clients from the API."
@@ -21472,6 +21542,9 @@
         "type": "object",
         "required": [
           "question_id",
+          "option_id",
+          "text",
+          "rating",
           "question"
         ],
         "title": "OrderAnswerOut"
@@ -21566,9 +21639,16 @@
         "required": [
           "product_id",
           "name",
+          "name_nl",
+          "name_fr",
+          "name_en",
           "quantity",
           "price",
-          "category"
+          "category",
+          "delivered_quantity",
+          "delivered",
+          "included_quantity",
+          "visible"
         ],
         "title": "OrderItemOut"
       },
@@ -22140,6 +22220,9 @@
         },
         "type": "object",
         "required": [
+          "description_nl",
+          "description_fr",
+          "description_en",
           "id",
           "name",
           "image",
@@ -22854,8 +22937,13 @@
           "name",
           "email",
           "phone",
+          "preferred_language",
           "address",
           "roles",
+          "retired_roles",
+          "role_history",
+          "inactivity_exempt",
+          "inactivity_exempt_note",
           "visits_per_month",
           "notes",
           "anonymised",
@@ -23162,13 +23250,21 @@
           "name",
           "email",
           "phone",
+          "preferred_language",
           "address",
           "roles",
+          "retired_roles",
+          "role_history",
+          "inactivity_exempt",
+          "inactivity_exempt_note",
           "visits_per_month",
           "notes",
           "anonymised",
           "created_at",
           "updated_at",
+          "reward_due",
+          "last_attended",
+          "inactivity_highlight",
           "registration_count"
         ],
         "title": "PersonListItemOut"
@@ -23305,10 +23401,15 @@
           "name",
           "email",
           "phone",
+          "preferred_language",
           "address",
           "roles",
+          "retired_roles",
+          "role_history",
           "national_register_number",
           "eid_document_number",
+          "inactivity_exempt",
+          "inactivity_exempt_note",
           "visits_per_month",
           "notes",
           "anonymised",
@@ -23396,7 +23497,8 @@
           "id",
           "name",
           "email",
-          "phone"
+          "phone",
+          "preferred_language"
         ],
         "title": "PersonSummaryOut",
         "description": "Minimal person projection used in public-facing reservation responses.\n\nOmits sensitive/admin-only fields so that the public reservation endpoints\ncannot leak PII (address, roles, national register number, notes, etc.)."
@@ -24294,6 +24396,12 @@
           "edition_id",
           "label",
           "label_nl",
+          "label_fr",
+          "label_en",
+          "dietary_tags",
+          "sort_order",
+          "total_quantity",
+          "volunteer_count",
           "created_at",
           "updated_at"
         ],
@@ -24421,7 +24529,8 @@
         "type": "object",
         "required": [
           "id",
-          "label"
+          "label",
+          "dietary_tags"
         ],
         "title": "PollOrderOptionOut"
       },
@@ -24483,7 +24592,13 @@
         "required": [
           "id",
           "kind",
-          "title"
+          "title",
+          "closed",
+          "options",
+          "answered_count",
+          "yes_count",
+          "no_count",
+          "people_total"
         ],
         "title": "PollOrderQuestionOut"
       },
@@ -24833,11 +24948,26 @@
         },
         "type": "object",
         "required": [
+          "event_id",
           "id",
           "edition_id",
           "kind",
           "title",
           "title_nl",
+          "title_fr",
+          "title_en",
+          "description",
+          "description_nl",
+          "description_fr",
+          "description_en",
+          "sort_order",
+          "closes_at",
+          "closed",
+          "options",
+          "answered_count",
+          "yes_count",
+          "no_count",
+          "people_total",
           "created_at",
           "updated_at"
         ],
@@ -25113,7 +25243,10 @@
           "note",
           "answered_question_ids",
           "selections",
-          "attendance"
+          "attendance",
+          "choices",
+          "texts",
+          "ratings"
         ],
         "title": "PollVolunteerOrderOut"
       },
@@ -25651,9 +25784,23 @@
         },
         "type": "object",
         "required": [
+          "unit",
+          "stock",
+          "reserved_quantity",
+          "available_quantity",
+          "shortage",
+          "sold_out",
+          "inclusions",
           "id",
           "event_id",
           "name",
+          "description",
+          "name_nl",
+          "name_fr",
+          "name_en",
+          "description_nl",
+          "description_fr",
+          "description_en",
           "price",
           "category",
           "purchasable",
@@ -25824,10 +25971,23 @@
         "required": [
           "id",
           "name",
+          "description",
+          "name_nl",
+          "name_fr",
+          "name_en",
+          "description_nl",
+          "description_fr",
+          "description_en",
           "price",
           "category",
+          "unit",
           "required",
-          "purchasable"
+          "purchasable",
+          "available_quantity",
+          "sold_out",
+          "inclusions",
+          "included_product_id",
+          "included_per_guests"
         ],
         "title": "ProductPublicOut",
         "description": "The visitor-facing shape of a product: always `purchasable=True` —\nsee app.utils.event_to_summary_dict, which excludes every hidden\n(`purchasable=False`) product from the public response entirely, and\nstrips any `inclusions`/`included_product_id` edge that targets one."
@@ -26139,7 +26299,12 @@
           "id",
           "kind",
           "duration",
-          "template"
+          "template",
+          "text",
+          "title",
+          "image",
+          "icon",
+          "organization"
         ],
         "title": "PublicSlide"
       },
@@ -26636,6 +26801,7 @@
         },
         "type": "object",
         "required": [
+          "order_answers",
           "id",
           "name",
           "event_id",
@@ -26647,6 +26813,8 @@
           "status",
           "payment_status",
           "amount_due",
+          "amount_paid",
+          "refund_due",
           "checked_in",
           "checked_in_at",
           "strap_issued",
@@ -26830,6 +26998,9 @@
         },
         "type": "object",
         "required": [
+          "order_answers",
+          "booked_table_quantity",
+          "allocations",
           "id",
           "person_id",
           "person",
@@ -26842,6 +27013,8 @@
           "status",
           "payment_status",
           "amount_due",
+          "amount_paid",
+          "refund_due",
           "checked_in",
           "checked_in_at",
           "strap_issued",
@@ -26885,6 +27058,8 @@
         },
         "type": "object",
         "required": [
+          "ok",
+          "delivery_mode",
           "expires_in_minutes"
         ],
         "title": "RegistrationLookupRequestAccepted"
@@ -27054,6 +27229,11 @@
         },
         "type": "object",
         "required": [
+          "poll_question_id",
+          "stamp_progress",
+          "order_answers",
+          "booked_table_quantity",
+          "allocations",
           "id",
           "person_id",
           "person",
@@ -27066,6 +27246,8 @@
           "status",
           "payment_status",
           "amount_due",
+          "amount_paid",
+          "refund_due",
           "checked_in",
           "checked_in_at",
           "strap_issued",
@@ -27243,6 +27425,11 @@
         },
         "type": "object",
         "required": [
+          "poll_question_id",
+          "stamp_progress",
+          "order_answers",
+          "booked_table_quantity",
+          "allocations",
           "id",
           "person_id",
           "person",
@@ -27255,6 +27442,8 @@
           "status",
           "payment_status",
           "amount_due",
+          "amount_paid",
+          "refund_due",
           "checked_in",
           "checked_in_at",
           "strap_issued",
@@ -27409,6 +27598,9 @@
         },
         "type": "object",
         "required": [
+          "order_answers",
+          "booked_table_quantity",
+          "allocations",
           "id",
           "person_id",
           "person",
@@ -27421,6 +27613,8 @@
           "status",
           "payment_status",
           "amount_due",
+          "amount_paid",
+          "refund_due",
           "checked_in",
           "checked_in_at",
           "strap_issued",
@@ -27638,6 +27832,10 @@
           }
         },
         "type": "object",
+        "required": [
+          "started_on",
+          "ended_on"
+        ],
         "title": "RoleStretchOut",
         "description": "One stretch of holding a role; ``started_on`` is null when the start is unknown."
       },
@@ -27978,7 +28176,13 @@
         "required": [
           "channel_id",
           "template_id",
+          "sort_order",
           "kind",
+          "duration",
+          "active",
+          "starts_at",
+          "ends_at",
+          "content",
           "id"
         ],
         "title": "SlideOut"
@@ -28233,8 +28437,13 @@
         "type": "object",
         "required": [
           "name_nl",
+          "name_fr",
+          "name_en",
           "box_count",
           "reward_label_nl",
+          "reward_label_fr",
+          "reward_label_en",
+          "active",
           "id"
         ],
         "title": "StampCardTypeOut"
@@ -29102,6 +29311,8 @@
         "type": "object",
         "required": [
           "name",
+          "background",
+          "layers",
           "id"
         ],
         "title": "TemplateOut"
@@ -29612,6 +29823,7 @@
         },
         "type": "object",
         "required": [
+          "exclusive",
           "id",
           "name",
           "capacity",
@@ -29957,7 +30169,8 @@
         },
         "type": "object",
         "required": [
-          "authenticated"
+          "authenticated",
+          "expires_at"
         ],
         "title": "VisitorSessionStatus",
         "description": "Whether the caller currently holds a valid visitor session (#953)."
@@ -30118,7 +30331,10 @@
         },
         "type": "object",
         "required": [
-          "linked"
+          "linked",
+          "name",
+          "national_register_number",
+          "eid_document_number"
         ],
         "title": "VolunteerIdentityOut"
       },
@@ -30280,6 +30496,8 @@
           "national_register_number",
           "eid_document_number",
           "anonymised",
+          "retired_roles",
+          "role_history",
           "help_periods",
           "oidc_subject",
           "created_at",
@@ -30453,7 +30671,8 @@
         "type": "object",
         "required": [
           "id",
-          "label"
+          "label",
+          "dietary_tags"
         ],
         "title": "VolunteerPollOptionOut"
       },
@@ -30492,7 +30711,8 @@
         "type": "object",
         "required": [
           "edition_id",
-          "questions"
+          "questions",
+          "note"
         ],
         "title": "VolunteerPollOut",
         "description": "What a volunteer sees: the active festival edition's questions (empty if none) with their own\nanswers, and their dietary note."
@@ -30617,9 +30837,20 @@
         },
         "type": "object",
         "required": [
+          "event_id",
           "id",
           "kind",
-          "title"
+          "title",
+          "description",
+          "closes_at",
+          "closed",
+          "options",
+          "selections",
+          "attending",
+          "people",
+          "option_id",
+          "text",
+          "rating"
         ],
         "title": "VolunteerPollQuestionOut"
       },

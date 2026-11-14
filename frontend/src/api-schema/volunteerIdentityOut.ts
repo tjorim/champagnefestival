@@ -8,7 +8,7 @@
 
 export type VolunteerIdentityOut = {
   linked: boolean;
-  name?: string | null;
-  national_register_number?: string | null;
-  eid_document_number?: string | null;
+  name: string | null;
+  national_register_number: string | null;
+  eid_document_number: string | null;
 };

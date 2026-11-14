@@ -8,9 +8,9 @@
 import type { PersonSummaryOut } from './personSummaryOut';
 
 export type OrganizationOut = {
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
+  description_nl: string | null;
+  description_fr: string | null;
+  description_en: string | null;
   id: number;
   name: string;
   image: string;

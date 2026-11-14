@@ -15,22 +15,22 @@ export type EditionOut = {
   year: number;
   month: string;
   edition_type: EditionOutEditionType;
-  dates?: string[];
+  dates: string[];
   venue: VenueOut;
   events: EventOut[];
   /** The lineup organization ids in admin-defined order. */
-  organizations?: number[];
+  organizations: number[];
   producers: EditionItemOut[];
   /** Ordered by sponsor tier (main first), then lineup order. */
   sponsors: EditionItemOut[];
   vendors: EditionItemOut[];
-  co_organizer?: EditionItemOut | null;
+  co_organizer: EditionItemOut | null;
   /** Uploaded flyer path, or null for the static default. */
-  flyer_image?: string | null;
+  flyer_image: string | null;
   /** Uploaded hero photo path, or null for the static default. */
-  hero_image?: string | null;
+  hero_image: string | null;
   /** Uploaded 1200x630 sharing image path (`og:image`), or null for the default. */
-  share_image?: string | null;
+  share_image: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;

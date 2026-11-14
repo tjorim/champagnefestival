@@ -10,7 +10,6 @@ docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_volunteer
@@ -21,6 +20,7 @@ from app.schema_types import NonEmptyText20, NonEmptyText50, NonEmptyText200
 from app.schemas import (
     FaqLocale,
     RequestModel,
+    ResponseModel,
     VolunteerPollAnswerIn,
     VolunteerPollNoteIn,
     VolunteerPollOut,
@@ -40,7 +40,7 @@ class VolunteerEidCorrectionRequest(RequestModel):
     eid_document_number: NonEmptyText50
 
 
-class VolunteerIdentityOut(BaseModel):
+class VolunteerIdentityOut(ResponseModel):
     linked: bool
     name: str | None = None
     national_register_number: str | None = None

@@ -19,6 +19,7 @@ from app.schema_types import (
     Text120,
     Text500,
 )
+from app.schemas import ResponseModel
 
 
 class Document(BaseModel):
@@ -81,7 +82,7 @@ class TemplateWrite(Document):
 
 class TemplateOut(TemplateWrite):
     id: str
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_serialization_defaults_required=True)
 
 
 class ChannelWrite(Document):
@@ -95,7 +96,7 @@ class ChannelOut(ChannelWrite):
     id: str
     epoch: datetime
     revision: int
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_serialization_defaults_required=True)
 
 
 class Content(Document):
@@ -141,7 +142,7 @@ class SlideWrite(Document):
 
 class SlideOut(SlideWrite):
     id: str
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_serialization_defaults_required=True)
 
 
 class PlaylistPreview(Document):
@@ -162,6 +163,8 @@ class Reorder(Document):
 
 
 class DisplayOrganization(Document):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     name: str
     logo: str
     description: str | None
@@ -172,10 +175,12 @@ class DisplayOrganization(Document):
 class DisplayTemplate(Document):
     background: Background
     layers: list[Layer]
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_serialization_defaults_required=True)
 
 
 class PublicSlide(Document):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     id: str
     kind: Literal["organization", "notice", "image"]
     duration: int
@@ -188,6 +193,8 @@ class PublicSlide(Document):
 
 
 class Playlist(Document):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     _max_age: int = PrivateAttr(default=5)
     revision: str
     epoch: datetime
@@ -204,13 +211,13 @@ def missing_bindings(layers, kind: str) -> set[str]:
     return required - present
 
 
-class SignageAssetOut(BaseModel):
+class SignageAssetOut(ResponseModel):
     """The public URL of an uploaded signage image."""
 
     url: str
 
 
-class VideoExportCapabilityOut(BaseModel):
+class VideoExportCapabilityOut(ResponseModel):
     available: bool
     max_slides: int
     max_seconds: int
@@ -219,7 +226,7 @@ class VideoExportCapabilityOut(BaseModel):
 VideoExportState = Literal["preparing", "submitted", "queued", "running", "ready", "failed", "cancelled", "expired"]
 
 
-class VideoExportOut(BaseModel):
+class VideoExportOut(ResponseModel):
     """One creator-owned video export, as ``services.signage_video.summary`` reports it."""
 
     id: str
@@ -235,12 +242,12 @@ class VideoExportOut(BaseModel):
     duration_seconds: int
 
 
-class ExpiredPlaylistSlide(BaseModel):
+class ExpiredPlaylistSlide(ResponseModel):
     model_config = ConfigDict(extra="forbid")
     duration: int
 
 
-class ExpiredPlaylist(BaseModel):
+class ExpiredPlaylist(ResponseModel):
     """What an expired export keeps of its snapshot: durations only, never content."""
 
     model_config = ConfigDict(extra="forbid")

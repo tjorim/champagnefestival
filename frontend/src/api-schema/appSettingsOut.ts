@@ -7,9 +7,9 @@
  */
 
 export type AppSettingsOut = {
-  member_limit?: number | null;
-  member_inactivity_months?: number | null;
-  stamp_card_type_id?: string | null;
+  member_limit: number | null;
+  member_inactivity_months: number | null;
+  stamp_card_type_id: string | null;
   maintenance_mode: boolean;
   public_email: string;
   public_phone: string;

@@ -14,9 +14,9 @@ import type { RegistrationListOutStatus } from './registrationListOutStatus';
 import type { TableAllocation } from './tableAllocation';
 
 export type RegistrationListOut = {
-  order_answers?: OrderAnswerOut[];
-  booked_table_quantity?: number;
-  allocations?: TableAllocation[];
+  order_answers: OrderAnswerOut[];
+  booked_table_quantity: number;
+  allocations: TableAllocation[];
   id: string;
   person_id: string;
   person: PersonSummaryOut;
@@ -29,8 +29,8 @@ export type RegistrationListOut = {
   status: RegistrationListOutStatus;
   payment_status: RegistrationListOutPaymentStatus;
   amount_due: string | null;
-  amount_paid?: string;
-  refund_due?: string | null;
+  amount_paid: string;
+  refund_due: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   strap_issued: boolean;

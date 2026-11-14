@@ -11,7 +11,7 @@ import type { RegistrationGuestOutPaymentStatus } from './registrationGuestOutPa
 import type { RegistrationGuestOutStatus } from './registrationGuestOutStatus';
 
 export type RegistrationGuestOut = {
-  order_answers?: OrderAnswerOut[];
+  order_answers: OrderAnswerOut[];
   id: string;
   name: string;
   event_id: string;
@@ -23,8 +23,8 @@ export type RegistrationGuestOut = {
   status: RegistrationGuestOutStatus;
   payment_status: RegistrationGuestOutPaymentStatus;
   amount_due: string | null;
-  amount_paid?: string;
-  refund_due?: string | null;
+  amount_paid: string;
+  refund_due: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   strap_issued: boolean;

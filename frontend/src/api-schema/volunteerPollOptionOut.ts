@@ -10,5 +10,5 @@ import type { VolunteerPollOptionOutDietaryTagsItem } from './volunteerPollOptio
 export type VolunteerPollOptionOut = {
   id: string;
   label: string;
-  dietary_tags?: VolunteerPollOptionOutDietaryTagsItem[];
+  dietary_tags: VolunteerPollOptionOutDietaryTagsItem[];
 };

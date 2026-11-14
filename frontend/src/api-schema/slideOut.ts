@@ -12,16 +12,16 @@ export type SlideOut = {
   channel_id: string;
   template_id: string;
   /** @minimum 0 */
-  sort_order?: number;
+  sort_order: number;
   kind: SlideOutKind;
   /**
      * @minimum 1
      * @maximum 3600
      */
-  duration?: number;
-  active?: boolean;
-  starts_at?: string | null;
-  ends_at?: string | null;
-  content?: Content;
+  duration: number;
+  active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  content: Content;
   id: string;
 };

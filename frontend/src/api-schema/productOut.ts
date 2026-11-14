@@ -8,23 +8,23 @@
 import type { ProductInclusion } from './productInclusion';
 
 export type ProductOut = {
-  unit?: string;
-  stock?: number | null;
-  reserved_quantity?: number;
-  available_quantity?: number | null;
-  shortage?: number;
-  sold_out?: boolean;
-  inclusions?: ProductInclusion[] | null;
+  unit: string;
+  stock: number | null;
+  reserved_quantity: number;
+  available_quantity: number | null;
+  shortage: number;
+  sold_out: boolean;
+  inclusions: ProductInclusion[] | null;
   id: string;
   event_id: string;
   name: string;
-  description?: string;
-  name_nl?: string | null;
-  name_fr?: string | null;
-  name_en?: string | null;
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
+  description: string;
+  name_nl: string | null;
+  name_fr: string | null;
+  name_en: string | null;
+  description_nl: string | null;
+  description_fr: string | null;
+  description_en: string | null;
   price: string;
   category: string;
   purchasable: boolean;

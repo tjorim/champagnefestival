@@ -14,8 +14,8 @@ export type TemplateOut = {
      * @maxLength 200
      */
   name: string;
-  background?: Background;
+  background: Background;
   /** @maxItems 100 */
-  layers?: Layer[];
+  layers: Layer[];
   id: string;
 };

@@ -12,10 +12,10 @@ export type PollOrderQuestionOut = {
   id: string;
   kind: PollOrderQuestionOutKind;
   title: string;
-  closed?: boolean;
-  options?: PollOrderOptionOut[];
-  answered_count?: number;
-  yes_count?: number;
-  no_count?: number;
-  people_total?: number;
+  closed: boolean;
+  options: PollOrderOptionOut[];
+  answered_count: number;
+  yes_count: number;
+  no_count: number;
+  people_total: number;
 };

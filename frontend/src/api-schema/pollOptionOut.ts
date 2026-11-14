@@ -16,12 +16,12 @@ export type PollOptionOut = {
   edition_id: string;
   label: string;
   label_nl: string;
-  label_fr?: string | null;
-  label_en?: string | null;
-  dietary_tags?: PollOptionOutDietaryTagsItem[];
-  sort_order?: number;
-  total_quantity?: number;
-  volunteer_count?: number;
+  label_fr: string | null;
+  label_en: string | null;
+  dietary_tags: PollOptionOutDietaryTagsItem[];
+  sort_order: number;
+  total_quantity: number;
+  volunteer_count: number;
   created_at: string;
   updated_at: string;
 };

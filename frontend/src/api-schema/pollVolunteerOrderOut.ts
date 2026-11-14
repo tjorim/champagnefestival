@@ -18,7 +18,7 @@ export type PollVolunteerOrderOut = {
   answered_question_ids: string[];
   selections: PollSelectionItem[];
   attendance: PollAttendanceItem[];
-  choices?: PollChoiceItem[];
-  texts?: PollTextItem[];
-  ratings?: PollRatingItem[];
+  choices: PollChoiceItem[];
+  texts: PollTextItem[];
+  ratings: PollRatingItem[];
 };

@@ -23,7 +23,7 @@ export type ChannelOut = {
      * @maxLength 100
      */
   edition_id: string;
-  active?: boolean;
+  active: boolean;
   id: string;
   epoch: string;
   revision: number;

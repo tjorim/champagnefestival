@@ -784,6 +784,15 @@ an expired video export's playlist), declare a union rather than a model that
 hides one of them. `tests/test_openapi_contract.py` fails when a route breaks
 these rules.
 
+A response model derives from `ResponseModel` (`app/schemas.py`), which sets
+`json_schema_serialization_defaults_required`: a response field with a default is
+always sent, so the document lists it as required and the generated TypeScript type
+has `field: T` rather than `field?: T`. Request bodies derive from `RequestModel`
+and keep their defaults optional. A schema used both as a request body and inside a
+response (`Layer`, `Background`, `TableAllocation` and a few others, listed in
+`tests/test_openapi_contract.py`) keeps optional defaults, because the request side
+must.
+
 The document is committed as `frontend/openapi.json` (release version replaced by
 `snapshot`). After changing a route or schema run `uv run python -m app.openapi_export`
 from `backend/`; `tests/test_openapi_export.py` fails while it is stale.

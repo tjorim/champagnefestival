@@ -7,7 +7,7 @@
  */
 
 export type VenuePlanTableOut = {
-  exclusive?: boolean;
+  exclusive: boolean;
   id: string;
   name: string;
   capacity: number;

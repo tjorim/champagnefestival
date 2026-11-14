@@ -18,5 +18,5 @@ export type PersonSummaryOut = {
   name: string;
   email: string;
   phone: string;
-  preferred_language?: PersonSummaryOutPreferredLanguage;
+  preferred_language: PersonSummaryOutPreferredLanguage;
 };

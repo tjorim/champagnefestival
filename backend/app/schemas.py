@@ -75,6 +75,16 @@ class RequestModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ResponseModel(BaseModel):
+    """Base for response bodies.
+
+    A response field with a default is always sent, so the generated schema lists it as required
+    (`json_schema_serialization_defaults_required`). Request bodies keep their optional defaults.
+    """
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
 def _validate_safe_announcement_url(value: str | None) -> str | None:
     """Accept only absolute HTTPS announcement links without embedded credentials."""
     if value is None:
@@ -90,7 +100,7 @@ def _validate_safe_announcement_url(value: str | None) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-class OrderItemBase(BaseModel):
+class OrderItemBase(ResponseModel):
     product_id: str
     name: str
     """Dutch name at order time. `name_*` hold the translations so the
@@ -158,7 +168,7 @@ class RegistrationDeliveryUpdate(RequestModel):
 # ---------------------------------------------------------------------------
 
 
-class PersonSummaryOut(BaseModel):
+class PersonSummaryOut(ResponseModel):
     """Minimal person projection used in public-facing reservation responses.
 
     Omits sensitive/admin-only fields so that the public reservation endpoints
@@ -174,14 +184,14 @@ class PersonSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RoleStretchOut(BaseModel):
+class RoleStretchOut(ResponseModel):
     """One stretch of holding a role; ``started_on`` is null when the start is unknown."""
 
     started_on: dt_date | None = None
     ended_on: dt_date | None = None
 
 
-class PersonOut(BaseModel):
+class PersonOut(ResponseModel):
     id: str
     name: str
     email: str
@@ -204,7 +214,7 @@ class PersonOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PersonAdminSummaryOut(BaseModel):
+class PersonAdminSummaryOut(ResponseModel):
     """``PersonOut`` without the volunteer-only identity fields.
 
     Used for the general people/members list and single-person reads, which
@@ -236,7 +246,7 @@ class PersonAdminSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PersonPaymentSummary(BaseModel):
+class PersonPaymentSummary(ResponseModel):
     """Received/refunded/net paid/due/outstanding/refund-liability across one
     person's non-cancelled bookings (#1019) — traceable to their payment
     ledger entries, the person-level counterpart to ``EditionAttendanceStats``.
@@ -257,14 +267,14 @@ class PersonListItemOut(PersonAdminSummaryOut):
     registration_count: int
 
 
-class PeopleCountsOut(BaseModel):
+class PeopleCountsOut(ResponseModel):
     total: int
     active: int
     inactive: int
     by_role: dict[str, int]
 
 
-class PersonListEnvelope(BaseModel):
+class PersonListEnvelope(ResponseModel):
     """Paginated response for the admin people/members lists.
 
     ``total`` counts every row matching the current filters, not just this
@@ -284,7 +294,7 @@ class PersonListEnvelope(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class EditionSummaryOut(BaseModel):
+class EditionSummaryOut(ResponseModel):
     id: str
     year: int
     month: str
@@ -333,7 +343,7 @@ class CategoryUpdate(CategoryLabels):
     sort_order: SortOrder | None = None
 
 
-class CategoryOut(BaseModel):
+class CategoryOut(ResponseModel):
     key: str
     label: str
     """The label resolved for the requested `locale` (Dutch when none)."""
@@ -398,7 +408,7 @@ class EmailCategoryUpdate(EmailCategoryTexts):
     sort_order: SortOrder | None = None
 
 
-class EmailCategoryOut(BaseModel):
+class EmailCategoryOut(ResponseModel):
     key: str
     name: str
     """The name resolved for the requested `locale` (Dutch when none)."""
@@ -417,7 +427,7 @@ class EmailCategoryOut(BaseModel):
     updated_at: datetime
 
 
-class EmailPreferenceOut(BaseModel):
+class EmailPreferenceOut(ResponseModel):
     key: str
     name: str
     description: str | None
@@ -426,7 +436,7 @@ class EmailPreferenceOut(BaseModel):
     granted_at: datetime | None
 
 
-class EmailPreferencesOut(BaseModel):
+class EmailPreferencesOut(ResponseModel):
     email: str | None
     """The verified address the preferences are for; `None` when the sign-in has no verified address."""
     categories: list[EmailPreferenceOut]
@@ -445,13 +455,13 @@ class EmailConsentConfirm(RequestModel):
     locale: Literal["nl", "fr", "en"] | None = None
 
 
-class EmailConsentConfirmedOut(BaseModel):
+class EmailConsentConfirmedOut(ResponseModel):
     category_key: str
     category_name: str
     """The category name resolved for the requested `locale` (Dutch when none)."""
 
 
-class EmailConsentOut(BaseModel):
+class EmailConsentOut(ResponseModel):
     id: str
     category_key: str
     category_name: str
@@ -553,6 +563,8 @@ class OrderAnswerIn(RequestModel):
 
 
 class OrderAnswerOut(OrderAnswerIn):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     question: OrderQuestionWrite
 
 
@@ -624,7 +636,7 @@ class EventUpdate(EventTextFields):
     active: bool | None = None
 
 
-class EventTextOut(BaseModel):
+class EventTextOut(ResponseModel):
     """The stored text of an event in every language.
 
     ``title``/``description`` on the enclosing model are the text resolved for
@@ -774,7 +786,7 @@ class ProductUpdate(ProductTextFields):
     included_per_guests: PositiveQuantity | None = None
 
 
-class ProductOut(BaseModel):
+class ProductOut(ResponseModel):
     unit: str = "item"
     stock: int | None = None
     reserved_quantity: int = 0
@@ -808,7 +820,7 @@ class ProductOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ProductPublicOut(BaseModel):
+class ProductPublicOut(ResponseModel):
     """The visitor-facing shape of a product: always `purchasable=True` —
     see app.utils.event_to_summary_dict, which excludes every hidden
     (`purchasable=False`) product from the public response entirely, and
@@ -838,7 +850,7 @@ class ProductPublicOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EventCheckInStats(BaseModel):
+class EventCheckInStats(ResponseModel):
     """Guest counts for an event's live entrance display. `total`/`checked_in`
     are guest headcounts (sum of `guest_count`), not booking counts."""
 
@@ -947,14 +959,14 @@ class RegistrationVolunteerAssignment(RequestModel):
     volunteer_id: NonEmptyText
 
 
-class StampProgress(BaseModel):
+class StampProgress(ResponseModel):
     card_id: str
     stamps: int
     box_count: int
     reward_earned: bool
 
 
-class RegistrationOut(BaseModel):
+class RegistrationOut(ResponseModel):
     poll_question_id: str | None = None
     stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
@@ -983,7 +995,7 @@ class RegistrationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RegistrationPublicOut(BaseModel):
+class RegistrationPublicOut(ResponseModel):
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     """Returned by the unauthenticated POST /api/registrations endpoint — the
     visitor's own just-created booking, but with `event` carrying the public
@@ -1052,7 +1064,7 @@ class PaymentTransactionCreate(RequestModel):
         return stripped or None
 
 
-class PaymentTransactionOut(BaseModel):
+class PaymentTransactionOut(ResponseModel):
     id: str
     registration_id: str
     amount: Decimal
@@ -1077,7 +1089,7 @@ class PaymentTransactionLedgerRow(PaymentTransactionOut):
     edition_label: str
 
 
-class PaymentTransactionLedgerEnvelope(BaseModel):
+class PaymentTransactionLedgerEnvelope(ResponseModel):
     """Paginated response for the edition/person ledger drill-down (#1032),
     mirroring ``RegistrationListEnvelope``: ``total`` counts every row
     matching the current filters, not just this page.
@@ -1089,7 +1101,7 @@ class PaymentTransactionLedgerEnvelope(BaseModel):
     page: int
 
 
-class RegistrationListOut(BaseModel):
+class RegistrationListOut(ResponseModel):
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
@@ -1119,7 +1131,7 @@ class RegistrationListOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class RegistrationListEnvelope(BaseModel):
+class RegistrationListEnvelope(ResponseModel):
     """Paginated response for the admin registration list.
 
     ``total`` counts every row matching the current filters, not just this
@@ -1134,7 +1146,7 @@ class RegistrationListEnvelope(BaseModel):
     page: int
 
 
-class RegistrationGuestOut(BaseModel):
+class RegistrationGuestOut(ResponseModel):
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     """Registration data returned to visitors via the self-lookup endpoint."""
 
@@ -1159,7 +1171,7 @@ class RegistrationGuestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class MyRegistrationOut(BaseModel):
+class MyRegistrationOut(ResponseModel):
     """Registration item returned from the authenticated visitor self-service API."""
 
     id: str
@@ -1176,11 +1188,11 @@ class MyRegistrationOut(BaseModel):
     created_at: datetime
 
 
-class PebbleAccessTokenOut(BaseModel):
+class PebbleAccessTokenOut(ResponseModel):
     token: str
 
 
-class CommunicationPreferenceOut(BaseModel):
+class CommunicationPreferenceOut(ResponseModel):
     preferred_language: Literal["nl", "fr", "en"] | None
 
 
@@ -1197,7 +1209,7 @@ class RegistrationLookupRequest(RequestModel):
         return v.strip() if isinstance(v, str) else v
 
 
-class RegistrationLookupRequestAccepted(BaseModel):
+class RegistrationLookupRequestAccepted(ResponseModel):
     ok: bool = True
     delivery_mode: Literal["email"] = "email"
     expires_in_minutes: int
@@ -1207,7 +1219,7 @@ class RegistrationAccessLookupRequest(RequestModel):
     token: str = Field(min_length=20)
 
 
-class VisitorSessionStatus(BaseModel):
+class VisitorSessionStatus(ResponseModel):
     """Whether the caller currently holds a valid visitor session (#953)."""
 
     authenticated: bool
@@ -1288,7 +1300,7 @@ class VolunteerUpdate(RequestModel):
         return stripped or None
 
 
-class VolunteerPeriodOut(BaseModel):
+class VolunteerPeriodOut(ResponseModel):
     id: int
     first_help_day: dt_date
     last_help_day: dt_date | None
@@ -1297,7 +1309,7 @@ class VolunteerPeriodOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class VolunteerOut(BaseModel):
+class VolunteerOut(ResponseModel):
     id: str
     name: str
     address: str
@@ -1314,7 +1326,7 @@ class VolunteerOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class VolunteerListEnvelope(BaseModel):
+class VolunteerListEnvelope(ResponseModel):
     """Paginated response for the admin volunteers list. See ``PersonListEnvelope``."""
 
     items: list[VolunteerOut]
@@ -1417,7 +1429,7 @@ class PollOptionReorder(RequestModel):
     ordered_ids: list[str] = Field(min_length=1, max_length=200)
 
 
-class PollOptionOut(BaseModel):
+class PollOptionOut(ResponseModel):
     """An option as the admin sees it, with how much volunteers asked for in total."""
 
     id: str
@@ -1437,7 +1449,7 @@ class PollOptionOut(BaseModel):
     updated_at: datetime
 
 
-class PollQuestionOut(BaseModel):
+class PollQuestionOut(ResponseModel):
     event_id: str | None = None
     """A question as the admin sees it: every translation, the closing state, its options (meals/single choice) and what
     volunteers answered so far."""
@@ -1512,13 +1524,13 @@ class PollRatingItem(RequestModel):
     rating: int = Field(ge=1, le=5, strict=True)
 
 
-class PollOrderOptionOut(BaseModel):
+class PollOrderOptionOut(ResponseModel):
     id: str
     label: str
     dietary_tags: list[DietaryTag] = Field(default_factory=list)
 
 
-class PollOrderQuestionOut(BaseModel):
+class PollOrderQuestionOut(ResponseModel):
     id: str
     kind: PollQuestionKind
     title: str
@@ -1530,7 +1542,7 @@ class PollOrderQuestionOut(BaseModel):
     people_total: int = 0
 
 
-class PollVolunteerOrderOut(BaseModel):
+class PollVolunteerOrderOut(ResponseModel):
     volunteer_id: str
     name: str
     note: str | None
@@ -1542,7 +1554,7 @@ class PollVolunteerOrderOut(BaseModel):
     ratings: list[PollRatingItem] = Field(default_factory=list)
 
 
-class PollOrdersOut(BaseModel):
+class PollOrdersOut(ResponseModel):
     """Who answered what: every active volunteer (also those who have not answered yet) and anyone else
     holding an answer, next to the questions in display order."""
 
@@ -1603,14 +1615,14 @@ class VolunteerPollNoteIn(RequestModel):
     note: Text500
 
 
-class VolunteerPollOptionOut(BaseModel):
+class VolunteerPollOptionOut(ResponseModel):
     id: str
     label: str
     """Resolved for the requested `locale` (Dutch when that language has no label)."""
     dietary_tags: list[DietaryTag] = Field(default_factory=list)
 
 
-class VolunteerPollQuestionOut(BaseModel):
+class VolunteerPollQuestionOut(ResponseModel):
     event_id: str | None = None
     id: str
     kind: PollQuestionKind
@@ -1628,7 +1640,7 @@ class VolunteerPollQuestionOut(BaseModel):
     rating: int | None = None
 
 
-class VolunteerPollOut(BaseModel):
+class VolunteerPollOut(ResponseModel):
     """What a volunteer sees: the active festival edition's questions (empty if none) with their own
     answers, and their dietary note."""
 
@@ -1642,7 +1654,7 @@ class VolunteerPollOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class CheckInGuestOut(BaseModel):
+class CheckInGuestOut(ResponseModel):
     """Minimal registration data returned by the public check-in GET endpoint.
 
     Only exposes fields needed on the volunteer tablet — guest name, party size,
@@ -1678,7 +1690,7 @@ class CheckInRequest(RequestModel):
     issue_strap: bool = True
 
 
-class CheckInOut(BaseModel):
+class CheckInOut(ResponseModel):
     stamp_progress: StampProgress | None = None
     registration: CheckInGuestOut
     already_checked_in: bool
@@ -1775,7 +1787,7 @@ class OrganizationUpdate(OrganizationDescription):
     contact_person_id: str | None = None
 
 
-class OrganizationOut(BaseModel):
+class OrganizationOut(ResponseModel):
     description_nl: str | None = None
     description_fr: str | None = None
     description_en: str | None = None
@@ -1809,7 +1821,7 @@ class LayoutCopyCreate(LayoutCreate):
     copy_areas: bool = True
 
 
-class LayoutOut(BaseModel):
+class LayoutOut(ResponseModel):
     event_id: str
     event_title: str
     id: str
@@ -1837,7 +1849,7 @@ class LayoutBulkCreate(RequestModel):
     idempotency_key: NonEmptyText200 | None = None
 
 
-class LayoutBulkOut(BaseModel):
+class LayoutBulkOut(ResponseModel):
     items: list[LayoutOut]
 
 
@@ -1878,7 +1890,7 @@ class TableTypeUpdate(RequestModel):
     active: bool | None = None
 
 
-class TableTypeOut(BaseModel):
+class TableTypeOut(ResponseModel):
     id: str
     name: str
     venue_id: str
@@ -1906,7 +1918,7 @@ class TableTypeBulkCreate(RequestModel):
     idempotency_key: NonEmptyText200 | None = None
 
 
-class TableTypeBulkOut(BaseModel):
+class TableTypeBulkOut(ResponseModel):
     items: list[TableTypeOut]
 
 
@@ -1951,7 +1963,7 @@ class TableUpdate(RequestModel):
     layout_id: str | None = None
 
 
-class TableOut(BaseModel):
+class TableOut(ResponseModel):
     event_id: str
     id: str
     name: str
@@ -1981,7 +1993,7 @@ class TableBulkCreate(RequestModel):
     idempotency_key: NonEmptyText200 | None = None
 
 
-class TableBulkOut(BaseModel):
+class TableBulkOut(ResponseModel):
     items: list[TableOut]
 
 
@@ -2013,7 +2025,7 @@ class AreaUpdate(RequestModel):
     rotation: FloorPlanRotation | None = Field(default=None, description=ROTATION_DESCRIPTION)
 
 
-class AreaOut(BaseModel):
+class AreaOut(ResponseModel):
     id: str
     layout_id: str
     icon: str
@@ -2052,7 +2064,7 @@ class LayoutWithTablesOut(LayoutOut):
 CURRENT_REVISION_REF = "current"
 
 
-class LayoutRevisionSnapshotTable(BaseModel):
+class LayoutRevisionSnapshotTable(ResponseModel):
     """One table's stable identity and geometry, captured at save-revision time.
 
     ``id`` is the source ``Table.id`` — the stable identity compare/restore
@@ -2071,7 +2083,7 @@ class LayoutRevisionSnapshotTable(BaseModel):
     length_m: float
 
 
-class LayoutRevisionSnapshotArea(BaseModel):
+class LayoutRevisionSnapshotArea(ResponseModel):
     """One area's stable identity and geometry, captured at save-revision time.
 
     ``id`` is the source ``Area.id`` — the stable identity compare/restore
@@ -2090,12 +2102,12 @@ class LayoutRevisionSnapshotArea(BaseModel):
     length_m: float
 
 
-class LayoutRevisionSnapshotRoom(BaseModel):
+class LayoutRevisionSnapshotRoom(ResponseModel):
     width_m: float
     length_m: float
 
 
-class LayoutRevisionSnapshot(BaseModel):
+class LayoutRevisionSnapshot(ResponseModel):
     """A geometry-only snapshot of a layout's tables and areas.
 
     Excludes allocations (``Registration``/``RegistrationAllocation``) and
@@ -2108,7 +2120,7 @@ class LayoutRevisionSnapshot(BaseModel):
     room: LayoutRevisionSnapshotRoom
 
 
-class LayoutRevisionOut(BaseModel):
+class LayoutRevisionOut(ResponseModel):
     id: str
     layout_id: str
     revision_number: int
@@ -2147,27 +2159,27 @@ class LayoutRevisionSaveRequest(RequestModel):
         return value.strip() if isinstance(value, str) else value
 
 
-class LayoutRevisionFieldChange(BaseModel):
+class LayoutRevisionFieldChange(ResponseModel):
     field: str
     before: Any
     after: Any
 
 
-class LayoutRevisionTableChange(BaseModel):
+class LayoutRevisionTableChange(ResponseModel):
     id: str
     before: LayoutRevisionSnapshotTable
     after: LayoutRevisionSnapshotTable
     changes: list[LayoutRevisionFieldChange]
 
 
-class LayoutRevisionAreaChange(BaseModel):
+class LayoutRevisionAreaChange(ResponseModel):
     id: str
     before: LayoutRevisionSnapshotArea
     after: LayoutRevisionSnapshotArea
     changes: list[LayoutRevisionFieldChange]
 
 
-class LayoutRevisionDiff(BaseModel):
+class LayoutRevisionDiff(ResponseModel):
     """Result of comparing two snapshots (each a revision or the live ``current``
     draft), matching tables/areas by stable ``id`` rather than name/label."""
 
@@ -2182,7 +2194,7 @@ class LayoutRevisionDiff(BaseModel):
     changed_areas: list[LayoutRevisionAreaChange] = Field(default_factory=list)
 
 
-class LayoutRestoreAllocationConflict(BaseModel):
+class LayoutRestoreAllocationConflict(ResponseModel):
     """One live allocation that would be silently invalidated by a restore.
 
     Restoring never touches ``Registration``/``Area.organization_id`` itself —
@@ -2199,7 +2211,7 @@ class LayoutRestoreAllocationConflict(BaseModel):
     organization_id: int | None = None
 
 
-class LayoutRestorePreview(BaseModel):
+class LayoutRestorePreview(ResponseModel):
     layout_id: str
     revision_number: int
     tables_to_add: list[LayoutRevisionSnapshotTable] = Field(default_factory=list)
@@ -2216,7 +2228,7 @@ class LayoutRestoreRequest(RequestModel):
     resolve_allocations: bool = False
 
 
-class VenuePlanRoomOut(BaseModel):
+class VenuePlanRoomOut(ResponseModel):
     id: str
     name: str
     width_m: float
@@ -2224,7 +2236,7 @@ class VenuePlanRoomOut(BaseModel):
     color: str
 
 
-class VenuePlanTableOut(BaseModel):
+class VenuePlanTableOut(ResponseModel):
     exclusive: bool = False
     id: str
     name: str
@@ -2237,7 +2249,7 @@ class VenuePlanTableOut(BaseModel):
     occupied_seats: int
 
 
-class VenuePlanAreaOut(BaseModel):
+class VenuePlanAreaOut(ResponseModel):
     id: str
     label: str
     icon: str
@@ -2249,7 +2261,7 @@ class VenuePlanAreaOut(BaseModel):
     organization_id: int | None
 
 
-class VenuePlanLayoutOut(BaseModel):
+class VenuePlanLayoutOut(ResponseModel):
     event_title: str
     id: str
     event_id: str
@@ -2260,7 +2272,7 @@ class VenuePlanLayoutOut(BaseModel):
     areas: list[VenuePlanAreaOut]
 
 
-class VenuePlanOut(BaseModel):
+class VenuePlanOut(ResponseModel):
     edition_id: str
     layouts: list[VenuePlanLayoutOut]
 
@@ -2292,7 +2304,7 @@ class VenueUpdate(RequestModel):
     active: bool | None = None
 
 
-class VenueOut(BaseModel):
+class VenueOut(ResponseModel):
     id: str
     name: str
     address: str
@@ -2333,7 +2345,7 @@ class RoomUpdate(RequestModel):
     active: bool | None = None
 
 
-class RoomOut(BaseModel):
+class RoomOut(ResponseModel):
     id: str
     venue_id: str
     name: str
@@ -2360,7 +2372,7 @@ class RoomBulkCreate(RequestModel):
     idempotency_key: NonEmptyText200 | None = None
 
 
-class RoomBulkOut(BaseModel):
+class RoomBulkOut(ResponseModel):
     items: list[RoomOut]
 
 
@@ -2408,7 +2420,7 @@ class EditionUpdate(RequestModel):
         return self
 
 
-class EditionItemOut(BaseModel):
+class EditionItemOut(ResponseModel):
     """Slim organization shape embedded in the public edition response.
     Only active items are included; contact person and active flag are
     intentionally excluded — they are internal admin data."""
@@ -2428,7 +2440,7 @@ class EditionItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EditionOut(BaseModel):
+class EditionOut(ResponseModel):
     id: str
     year: int
     month: str
@@ -2457,7 +2469,7 @@ class EditionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EditionPublicOut(BaseModel):
+class EditionPublicOut(ResponseModel):
     """Returned by the unauthenticated /api/editions/active and /upcoming
     endpoints — events carry EventPublicOut, never the admin product shape."""
 
@@ -2486,7 +2498,7 @@ class EditionPublicOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class StandOut(BaseModel):
+class StandOut(ResponseModel):
     """One stand of one organization on one festival day (public subset of an ``Area``).
 
     Deliberately carries no coordinates, size, icon or layout/area ids: the
@@ -2499,13 +2511,13 @@ class StandOut(BaseModel):
     label: str
 
 
-class OrganizationStandsOut(BaseModel):
+class OrganizationStandsOut(ResponseModel):
     organization_id: int
     name: str
     stands: list[StandOut]
 
 
-class EditionStandsOut(BaseModel):
+class EditionStandsOut(ResponseModel):
     """Returned by the unauthenticated ``GET /api/editions/{id}/stands``.
 
     Only lineup organizations that have at least one stand appear; there are no
@@ -2516,7 +2528,7 @@ class EditionStandsOut(BaseModel):
     organizations: list[OrganizationStandsOut]
 
 
-class PlanAreaOut(BaseModel):
+class PlanAreaOut(ResponseModel):
     """One area (stand, stage, entrance, catering, ...) of the public floor plan.
 
     Geometry follows ``docs/floor-plan-coordinates.md``. Deliberately has no layout id.
@@ -2533,7 +2545,7 @@ class PlanAreaOut(BaseModel):
     organization_id: int | None
 
 
-class PlanRoomOut(BaseModel):
+class PlanRoomOut(ResponseModel):
     id: str
     name: str
     width_m: float
@@ -2542,13 +2554,13 @@ class PlanRoomOut(BaseModel):
     areas: list[PlanAreaOut]
 
 
-class PlanDayOut(BaseModel):
+class PlanDayOut(ResponseModel):
     event_id: str
     date: dt_date
     rooms: list[PlanRoomOut]
 
 
-class EditionPlanOut(BaseModel):
+class EditionPlanOut(ResponseModel):
     """Returned by the unauthenticated ``GET /api/editions/{id}/plan`` (#1253).
 
     Only rooms and areas: there are no tables, registrations, guests, capacities
@@ -2563,14 +2575,14 @@ class EditionScratchpadUpdate(RequestModel):
     content: str = Field(max_length=20000)
 
 
-class EditionScratchpadOut(BaseModel):
+class EditionScratchpadOut(ResponseModel):
     content: str
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class AuditEntryOut(BaseModel):
+class AuditEntryOut(ResponseModel):
     id: str
     timestamp: datetime
     actor: str
@@ -2594,7 +2606,7 @@ class IntegrationClientCreate(RequestModel):
     rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
 
 
-class IntegrationClientOut(BaseModel):
+class IntegrationClientOut(ResponseModel):
     """Admin listing/detail shape — never includes the key hash or raw key."""
 
     id: str
@@ -2658,7 +2670,7 @@ class AppSettingsUpdate(RequestModel):
         return value
 
 
-class AppSettingsOut(BaseModel):
+class AppSettingsOut(ResponseModel):
     member_limit: int | None = None
     member_inactivity_months: int | None = None
 
@@ -2720,7 +2732,7 @@ class FaqItemReorder(RequestModel):
     ordered_ids: list[str] = Field(min_length=1)
 
 
-class FaqItemOut(BaseModel):
+class FaqItemOut(ResponseModel):
     """Admin shape: every language's content, for the FAQ editor."""
 
     id: str
@@ -2738,7 +2750,7 @@ class FaqItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FaqItemPublicOut(BaseModel):
+class FaqItemPublicOut(ResponseModel):
     """Public shape: one locale's question/answer, already resolved server-side
     (Dutch when that locale is not fully translated)."""
 
@@ -2820,7 +2832,7 @@ class AnnouncementReorder(RequestModel):
     ordered_ids: list[str] = Field(min_length=1)
 
 
-class AnnouncementOut(BaseModel):
+class AnnouncementOut(ResponseModel):
     id: str
     text_nl: str | None
     text_fr: str | None
@@ -2840,7 +2852,7 @@ class AnnouncementOut(BaseModel):
     updated_at: datetime
 
 
-class AnnouncementPublicOut(BaseModel):
+class AnnouncementPublicOut(ResponseModel):
     id: str
     text: str
     level: AnnouncementLevel
@@ -2851,7 +2863,7 @@ class AnnouncementPublicOut(BaseModel):
 PolicyVersionStatus = Literal["draft", "published", "superseded"]
 
 
-class PolicyVersionOut(BaseModel):
+class PolicyVersionOut(ResponseModel):
     """Admin shape: full per-locale Markdown source and provenance for one version."""
 
     id: str
@@ -2871,7 +2883,7 @@ class PolicyVersionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PolicyOut(BaseModel):
+class PolicyOut(ResponseModel):
     """Admin shape: the policy plus its full version history, newest first."""
 
     key: str
@@ -2912,11 +2924,11 @@ class PolicyRenderRequest(RequestModel):
     markdown: MarkdownSource = ""
 
 
-class PolicyRenderOut(BaseModel):
+class PolicyRenderOut(ResponseModel):
     html: str
 
 
-class PolicyPublicOut(BaseModel):
+class PolicyPublicOut(ResponseModel):
     key: str
     title: str
     locale: FaqLocale
@@ -2927,7 +2939,7 @@ class PolicyPublicOut(BaseModel):
     published_at: datetime
 
 
-class EditionAttendanceStats(BaseModel):
+class EditionAttendanceStats(ResponseModel):
     edition_id: str
     year: int
     month: str
@@ -2981,7 +2993,7 @@ class PushSubscribeRequest(RequestModel):
         return v
 
 
-class PushSubscriptionOut(BaseModel):
+class PushSubscriptionOut(ResponseModel):
     id: str
     categories: list[str]
     event_ids: list[str]
@@ -2991,7 +3003,7 @@ class PushUnsubscribeRequest(RequestModel):
     endpoint: NonEmptyText600
 
 
-class VapidPublicKeyOut(BaseModel):
+class VapidPublicKeyOut(ResponseModel):
     public_key: str
     enabled: bool
     """False when VAPID isn't configured server-side — the frontend shows no
@@ -3085,7 +3097,7 @@ class ComposedMessageUpdate(ComposedMessageFields):
     ``app.services.composer_service.update_draft``."""
 
 
-class ComposedMessageOut(BaseModel):
+class ComposedMessageOut(ResponseModel):
     id: str
     title_nl: str | None
     title_fr: str | None
@@ -3136,7 +3148,7 @@ class ComposedMessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class MemberMailUnsubscribeCategoryOut(BaseModel):
+class MemberMailUnsubscribeCategoryOut(ResponseModel):
     category_key: str
     category_name: str
 
@@ -3162,6 +3174,8 @@ class ComposedMessageScheduleRequest(RequestModel):
 
 
 class ManagedOrganizationOut(OrganizationDescription):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     image: str
     id: int
     name: str
@@ -3190,7 +3204,7 @@ class OrganizationChangeDecision(RequestModel):
     reason: Text2000 | None = None
 
 
-class OrganizationChangeOut(BaseModel):
+class OrganizationChangeOut(ResponseModel):
     id: str
     organization_id: int
     organization_name: str
@@ -3226,17 +3240,19 @@ class StampRewardUpdate(RequestModel):
 
 
 class StampCardTypeOut(StampCardTypeWrite):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     id: str
 
 
-class StampOut(BaseModel):
+class StampOut(ResponseModel):
     id: str
     card_id: str
     registration_id: str
     created_at: datetime
 
 
-class StampRewardOut(BaseModel):
+class StampRewardOut(ResponseModel):
     id: str
     card_id: str
     reward_label_nl: str
@@ -3247,7 +3263,7 @@ class StampRewardOut(BaseModel):
     handed_out_by: str | None
 
 
-class StampCardOut(BaseModel):
+class StampCardOut(ResponseModel):
     id: str
     person_id: str
     type_id: str
@@ -3268,22 +3284,22 @@ class StampCardOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class OkOut(BaseModel):
+class OkOut(ResponseModel):
     """Acknowledges a retry-safe public write; ``true`` also for an idempotent replay."""
 
     ok: bool
 
 
-class PushTestQueuedOut(BaseModel):
+class PushTestQueuedOut(ResponseModel):
     queued: bool
     job_id: str
 
 
-class ServerTimeOut(BaseModel):
+class ServerTimeOut(ResponseModel):
     server_time: datetime
 
 
-class HealthStatusOut(BaseModel):
+class HealthStatusOut(ResponseModel):
     status: str
 
 
@@ -3294,7 +3310,7 @@ class HealthOut(HealthStatusOut):
     readiness_endpoint: str
 
 
-class MetricsOut(BaseModel):
+class MetricsOut(ResponseModel):
     """Per-process request metrics (``per_process`` is always true)."""
 
     uptime_seconds: float
@@ -3308,7 +3324,7 @@ class MetricsOut(BaseModel):
     per_process: bool
 
 
-class McpToolCapabilityOut(BaseModel):
+class McpToolCapabilityOut(ResponseModel):
     name: str
     effect: Literal["read", "write"]
     requires_confirmation: bool
@@ -3316,7 +3332,7 @@ class McpToolCapabilityOut(BaseModel):
     """``{"role": <minimum role>}``."""
 
 
-class McpCapabilitiesOut(BaseModel):
+class McpCapabilitiesOut(ResponseModel):
     contract_version: int
     enabled: bool
     mount_path: str
@@ -3326,7 +3342,7 @@ class McpCapabilitiesOut(BaseModel):
     prompts: list[object]
 
 
-class ProductChangeShortageOut(BaseModel):
+class ProductChangeShortageOut(ResponseModel):
     product_id: str
     name: str
     stock: int
@@ -3334,7 +3350,7 @@ class ProductChangeShortageOut(BaseModel):
     shortage: int
 
 
-class ProductChangeBookingOut(BaseModel):
+class ProductChangeBookingOut(ResponseModel):
     id: str
     before_total: str
     after_total: str
@@ -3344,7 +3360,7 @@ class ProductChangeBookingOut(BaseModel):
     after_items: list[OrderItemOut]
 
 
-class ProductChangePreviewOut(BaseModel):
+class ProductChangePreviewOut(ResponseModel):
     """What saving a product change would do to existing bookings, without saving it.
 
     Send ``preview_token`` back with the save to confirm this exact preview was reviewed.
@@ -3357,24 +3373,24 @@ class ProductChangePreviewOut(BaseModel):
     contents_changed: bool
 
 
-class VolunteerTableMatchOut(BaseModel):
+class VolunteerTableMatchOut(ResponseModel):
     table_id: str
     table_name: str
     capacity: int
     layout_id: str
 
 
-class VolunteerTableResolveOut(BaseModel):
+class VolunteerTableResolveOut(ResponseModel):
     tables: list[VolunteerTableMatchOut]
     count: int
 
 
-class VolunteerTableCandidateOut(BaseModel):
+class VolunteerTableCandidateOut(ResponseModel):
     table_id: str
     table_name: str
 
 
-class VolunteerTableOrdersOut(BaseModel):
+class VolunteerTableOrdersOut(ResponseModel):
     """PII-free registrations allocated to one table."""
 
     table_id: str
@@ -3383,7 +3399,7 @@ class VolunteerTableOrdersOut(BaseModel):
     count: int
 
 
-class VolunteerTableOrdersUnresolvedOut(BaseModel):
+class VolunteerTableOrdersUnresolvedOut(ResponseModel):
     """A table reference matching no table, or several, so no orders are listed."""
 
     table_reference: str

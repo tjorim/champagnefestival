@@ -13,14 +13,14 @@ import type { EditionItemOutSponsorTier } from './editionItemOutSponsorTier';
  * intentionally excluded — they are internal admin data.
  */
 export type EditionItemOut = {
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
+  description_nl: string | null;
+  description_fr: string | null;
+  description_en: string | null;
   id: number;
   name: string;
   image: string;
   website: string;
   type: string;
   /** Sponsor level for this edition; null for non-sponsors and untiered sponsors. */
-  sponsor_tier?: EditionItemOutSponsorTier;
+  sponsor_tier: EditionItemOutSponsorTier;
 };

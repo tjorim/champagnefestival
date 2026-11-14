@@ -9,7 +9,7 @@ import type { CheckInGuestOut } from './checkInGuestOut';
 import type { StampProgress } from './stampProgress';
 
 export type CheckInOut = {
-  stamp_progress?: StampProgress | null;
+  stamp_progress: StampProgress | null;
   registration: CheckInGuestOut;
   already_checked_in: boolean;
 };

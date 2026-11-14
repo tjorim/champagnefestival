@@ -19,11 +19,11 @@ import type { TableAllocation } from './tableAllocation';
  * Only returned by the admin detail endpoint.
  */
 export type RegistrationOutWithToken = {
-  poll_question_id?: string | null;
-  stamp_progress?: StampProgress | null;
-  order_answers?: OrderAnswerOut[];
-  booked_table_quantity?: number;
-  allocations?: TableAllocation[];
+  poll_question_id: string | null;
+  stamp_progress: StampProgress | null;
+  order_answers: OrderAnswerOut[];
+  booked_table_quantity: number;
+  allocations: TableAllocation[];
   id: string;
   person_id: string;
   person: PersonSummaryOut;
@@ -36,8 +36,8 @@ export type RegistrationOutWithToken = {
   status: RegistrationOutWithTokenStatus;
   payment_status: RegistrationOutWithTokenPaymentStatus;
   amount_due: string | null;
-  amount_paid?: string;
-  refund_due?: string | null;
+  amount_paid: string;
+  refund_due: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   strap_issued: boolean;

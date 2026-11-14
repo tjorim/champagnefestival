@@ -9,17 +9,17 @@
 export type OrderItemOut = {
   product_id: string;
   name: string;
-  name_nl?: string | null;
-  name_fr?: string | null;
-  name_en?: string | null;
+  name_nl: string | null;
+  name_fr: string | null;
+  name_en: string | null;
   /** @minimum 1 */
   quantity: number;
   /** @minimum 0 */
   price: number;
   category: string;
-  delivered_quantity?: number | null;
-  delivered?: boolean;
+  delivered_quantity: number | null;
+  delivered: boolean;
   /** @minimum 0 */
-  included_quantity?: number;
-  visible?: boolean;
+  included_quantity: number;
+  visible: boolean;
 };

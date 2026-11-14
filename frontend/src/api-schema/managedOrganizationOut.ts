@@ -7,9 +7,9 @@
  */
 
 export type ManagedOrganizationOut = {
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
+  description_nl: string | null;
+  description_fr: string | null;
+  description_en: string | null;
   image: string;
   id: number;
   name: string;

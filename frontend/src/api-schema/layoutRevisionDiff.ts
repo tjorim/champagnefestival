@@ -18,10 +18,10 @@ export type LayoutRevisionDiff = {
   layout_id: string;
   from_ref: string;
   to_ref: string;
-  added_tables?: LayoutRevisionSnapshotTable[];
-  removed_tables?: LayoutRevisionSnapshotTable[];
-  changed_tables?: LayoutRevisionTableChange[];
-  added_areas?: LayoutRevisionSnapshotArea[];
-  removed_areas?: LayoutRevisionSnapshotArea[];
-  changed_areas?: LayoutRevisionAreaChange[];
+  added_tables: LayoutRevisionSnapshotTable[];
+  removed_tables: LayoutRevisionSnapshotTable[];
+  changed_tables: LayoutRevisionTableChange[];
+  added_areas: LayoutRevisionSnapshotArea[];
+  removed_areas: LayoutRevisionSnapshotArea[];
+  changed_areas: LayoutRevisionAreaChange[];
 };

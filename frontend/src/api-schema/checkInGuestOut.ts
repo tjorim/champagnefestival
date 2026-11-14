@@ -20,10 +20,10 @@ export type CheckInGuestOut = {
   id: string;
   name: string;
   event_id: string;
-  edition_id?: string | null;
+  edition_id: string | null;
   event_title: string;
-  table_id?: string | null;
-  table_name?: string | null;
+  table_id: string | null;
+  table_name: string | null;
   guest_count: number;
   order_items: OrderItemOut[];
   notes: string;

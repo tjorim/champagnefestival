@@ -21,6 +21,6 @@ export type LayoutRestoreAllocationConflict = {
   id: string;
   name: string;
   reason: LayoutRestoreAllocationConflictReason;
-  registration_ids?: string[];
-  organization_id?: number | null;
+  registration_ids: string[];
+  organization_id: number | null;
 };

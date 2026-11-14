@@ -12,8 +12,8 @@ export type StampCardTypeOut = {
      * @maxLength 200
      */
   name_nl: string;
-  name_fr?: string | null;
-  name_en?: string | null;
+  name_fr: string | null;
+  name_en: string | null;
   /** @minimum 1 */
   box_count: number;
   /**
@@ -21,8 +21,8 @@ export type StampCardTypeOut = {
      * @maxLength 200
      */
   reward_label_nl: string;
-  reward_label_fr?: string | null;
-  reward_label_en?: string | null;
-  active?: boolean;
+  reward_label_fr: string | null;
+  reward_label_en: string | null;
+  active: boolean;
   id: string;
 };

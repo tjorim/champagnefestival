@@ -7,7 +7,7 @@
  */
 
 export type RegistrationLookupRequestAccepted = {
-  ok?: boolean;
-  delivery_mode?: 'email';
+  ok: boolean;
+  delivery_mode: 'email';
   expires_in_minutes: number;
 };

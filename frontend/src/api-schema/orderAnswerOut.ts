@@ -13,8 +13,8 @@ export type OrderAnswerOut = {
      * @maxLength 64
      */
   question_id: string;
-  option_id?: string | null;
-  text?: string | null;
-  rating?: number | null;
+  option_id: string | null;
+  text: string | null;
+  rating: number | null;
   question: OrderQuestionWrite;
 };

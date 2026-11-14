@@ -14,9 +14,9 @@ export type PublicSlide = {
   kind: PublicSlideKind;
   duration: number;
   template: DisplayTemplate;
-  text?: string | null;
-  title?: string | null;
-  image?: string | null;
-  icon?: string | null;
-  organization?: DisplayOrganization | null;
+  text: string | null;
+  title: string | null;
+  image: string | null;
+  icon: string | null;
+  organization: DisplayOrganization | null;
 };

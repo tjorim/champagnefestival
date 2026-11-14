@@ -15,11 +15,11 @@ import type { StampProgress } from './stampProgress';
 import type { TableAllocation } from './tableAllocation';
 
 export type RegistrationOut = {
-  poll_question_id?: string | null;
-  stamp_progress?: StampProgress | null;
-  order_answers?: OrderAnswerOut[];
-  booked_table_quantity?: number;
-  allocations?: TableAllocation[];
+  poll_question_id: string | null;
+  stamp_progress: StampProgress | null;
+  order_answers: OrderAnswerOut[];
+  booked_table_quantity: number;
+  allocations: TableAllocation[];
   id: string;
   person_id: string;
   person: PersonSummaryOut;
@@ -32,8 +32,8 @@ export type RegistrationOut = {
   status: RegistrationOutStatus;
   payment_status: RegistrationOutPaymentStatus;
   amount_due: string | null;
-  amount_paid?: string;
-  refund_due?: string | null;
+  amount_paid: string;
+  refund_due: string | null;
   checked_in: boolean;
   checked_in_at: string | null;
   strap_issued: boolean;

@@ -14,5 +14,5 @@ import type { VolunteerPollQuestionOut } from './volunteerPollQuestionOut';
 export type VolunteerPollOut = {
   edition_id: string | null;
   questions: VolunteerPollQuestionOut[];
-  note?: string | null;
+  note: string | null;
 };

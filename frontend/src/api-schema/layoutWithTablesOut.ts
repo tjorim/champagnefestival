@@ -25,6 +25,6 @@ export type LayoutWithTablesOut = {
   label: string;
   created_at: string;
   updated_at: string;
-  tables?: TableOut[] | null;
-  areas?: AreaOut[] | null;
+  tables: TableOut[] | null;
+  areas: AreaOut[] | null;
 };

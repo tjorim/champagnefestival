@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,11 +11,12 @@ from app.auth import require_admin
 from app.database import get_db
 from app.dependencies import Pagination
 from app.models import OutboxJob
+from app.schemas import ResponseModel
 
 router = APIRouter(prefix="/api/outbox", tags=["outbox"], dependencies=[Depends(require_admin)])
 
 
-class OutboxJobOut(BaseModel):
+class OutboxJobOut(ResponseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     job_type: str
@@ -31,7 +32,7 @@ class OutboxJobOut(BaseModel):
     completed_at: datetime | None
 
 
-class OutboxJobListEnvelope(BaseModel):
+class OutboxJobListEnvelope(ResponseModel):
     """Paginated response for the outbox diagnostics list.
 
     ``total`` counts every job matching the current filter, not just this page,

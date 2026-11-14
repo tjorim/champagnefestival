@@ -11,12 +11,12 @@ from typing import Literal
 
 import httpx
 from fastapi import HTTPException
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from app.config import settings
 from app.ratelimit import check_rate_limit
 from app.schema_types import NonEmptyText600
-from app.schemas import RequestModel
+from app.schemas import RequestModel, ResponseModel
 
 Language = Literal["nl", "fr", "en"]
 logger = logging.getLogger(__name__)
@@ -38,11 +38,11 @@ class EventTranslationRequest(TranslationRequest):
     text: str = Field(min_length=1, max_length=EVENT_TEXT_LIMIT)
 
 
-class TranslationDraft(BaseModel):
+class TranslationDraft(ResponseModel):
     text: str
 
 
-class TranslationCapabilities(BaseModel):
+class TranslationCapabilities(ResponseModel):
     languages: list[Language]
 
 

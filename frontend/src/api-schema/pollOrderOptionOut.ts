@@ -10,5 +10,5 @@ import type { PollOrderOptionOutDietaryTagsItem } from './pollOrderOptionOutDiet
 export type PollOrderOptionOut = {
   id: string;
   label: string;
-  dietary_tags?: PollOrderOptionOutDietaryTagsItem[];
+  dietary_tags: PollOrderOptionOutDietaryTagsItem[];
 };

@@ -13,5 +13,5 @@ export type OidcDiscoveryConfig = {
   issuer: string;
   authorization_url: string;
   token_url: string;
-  end_session_url?: string | null;
+  end_session_url: string | null;
 };

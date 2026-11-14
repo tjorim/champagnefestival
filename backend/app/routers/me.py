@@ -29,6 +29,7 @@ from app.schemas import (
     PebbleAccessTokenOut,
     RegistrationGuestOut,
     RegistrationStatus,
+    ResponseModel,
 )
 from app.services import email_consent_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
@@ -72,7 +73,7 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
     )
 
 
-class MembershipSummary(BaseModel):
+class MembershipSummary(ResponseModel):
     state: Literal["active", "inactive", "unavailable"]
 
 

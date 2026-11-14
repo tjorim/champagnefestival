@@ -11,5 +11,5 @@
  */
 export type VisitorSessionStatus = {
   authenticated: boolean;
-  expires_at?: string | null;
+  expires_at: string | null;
 };

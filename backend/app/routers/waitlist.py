@@ -10,7 +10,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,7 @@ from app.dialect_functions import dialect_insert
 from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
-from app.schemas import OkOut, RequestModel
+from app.schemas import OkOut, RequestModel, ResponseModel
 from app.services import waitlist_service as service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
@@ -42,7 +42,7 @@ class WaitlistEntryRequest(RequestModel):
     form_start_time: str | None = None
 
 
-class WaitlistEntryOut(BaseModel):
+class WaitlistEntryOut(ResponseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     product_id: str
@@ -61,7 +61,7 @@ class WaitlistEntryAdminOut(WaitlistEntryOut):
     event_title: str
 
 
-class WaitlistEntryListEnvelope(BaseModel):
+class WaitlistEntryListEnvelope(ResponseModel):
     """One page of the queue; ``total`` counts every entry matching the filters."""
 
     items: list[WaitlistEntryAdminOut]
@@ -70,14 +70,14 @@ class WaitlistEntryListEnvelope(BaseModel):
     page: int
 
 
-class WaitlistEventScope(BaseModel):
+class WaitlistEventScope(ResponseModel):
     id: str
     title: str
     outstanding: int
     total: int
 
 
-class WaitlistProductScope(BaseModel):
+class WaitlistProductScope(ResponseModel):
     id: str
     name: str
     event_id: str
@@ -86,7 +86,7 @@ class WaitlistProductScope(BaseModel):
     total: int
 
 
-class WaitlistScopes(BaseModel):
+class WaitlistScopes(ResponseModel):
     events: list[WaitlistEventScope]
     products: list[WaitlistProductScope]
 

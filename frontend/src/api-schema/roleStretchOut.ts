@@ -10,6 +10,6 @@
  * One stretch of holding a role; ``started_on`` is null when the start is unknown.
  */
 export type RoleStretchOut = {
-  started_on?: string | null;
-  ended_on?: string | null;
+  started_on: string | null;
+  ended_on: string | null;
 };

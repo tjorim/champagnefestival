@@ -16,8 +16,8 @@ export type VolunteerOut = {
   national_register_number: string | null;
   eid_document_number: string | null;
   anonymised: boolean;
-  retired_roles?: VolunteerOutRetiredRoles;
-  role_history?: VolunteerOutRoleHistory;
+  retired_roles: VolunteerOutRetiredRoles;
+  role_history: VolunteerOutRoleHistory;
   help_periods: VolunteerPeriodOut[];
   oidc_subject: string | null;
   created_at: string;

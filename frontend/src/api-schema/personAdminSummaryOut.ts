@@ -25,13 +25,13 @@ export type PersonAdminSummaryOut = {
   name: string;
   email: string;
   phone: string;
-  preferred_language?: PersonAdminSummaryOutPreferredLanguage;
+  preferred_language: PersonAdminSummaryOutPreferredLanguage;
   address: string;
   roles: string[];
-  retired_roles?: PersonAdminSummaryOutRetiredRoles;
-  role_history?: PersonAdminSummaryOutRoleHistory;
-  inactivity_exempt?: boolean;
-  inactivity_exempt_note?: string;
+  retired_roles: PersonAdminSummaryOutRetiredRoles;
+  role_history: PersonAdminSummaryOutRoleHistory;
+  inactivity_exempt: boolean;
+  inactivity_exempt_note: string;
   visits_per_month: number | null;
   notes: string;
   anonymised: boolean;
