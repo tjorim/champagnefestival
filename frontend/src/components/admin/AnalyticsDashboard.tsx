@@ -101,9 +101,9 @@ interface AttendanceRow {
   count: number;
 }
 
-/** Totals arrive as exact decimal strings; the ledger totals are absent when there is nothing to show. */
-function money(amount: string | undefined): string {
-  return Number(amount ?? 0).toFixed(2);
+/** Totals arrive as exact decimal strings. */
+function money(amount: string): string {
+  return Number(amount).toFixed(2);
 }
 
 function editionLabel(edition: EditionAttendanceStats): string {
