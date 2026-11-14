@@ -8,6 +8,8 @@ import type {
   AreaOut,
   LayoutOut,
   LayoutRevisionOut,
+  PaymentTransactionLedgerRow,
+  PaymentTransactionOut,
   RoomOut,
   TableOut,
   TableTypeOut,
@@ -26,3 +28,7 @@ export type FloorArea = AreaOut;
 export type FloorTable = TableOut;
 export type FloorTableRecord = Omit<TableOut, "registration_ids">;
 export type LayoutRevision = LayoutRevisionOut;
+
+// Payments. `amount` is an exact decimal string; format it with `Number(...)` where it is shown.
+export type PaymentTransaction = PaymentTransactionOut;
+export type LedgerTransaction = PaymentTransactionLedgerRow;

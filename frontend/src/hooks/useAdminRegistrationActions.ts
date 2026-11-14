@@ -3,15 +3,15 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage, hasApiErrorCode } from "@/utils/apiErrors";
+import type { PaymentTransactionCreate } from "@/api-types";
 import type {
   TableAllocation,
   BookingUpdate,
   OrderItem,
-  PaymentTransactionCreate,
   Registration,
   RegistrationStatus,
 } from "@/types/registration";
-import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
+import { apiToRegistration } from "@/types/registrationMapper";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { fetchRegistration } from "@/utils/adminFetch";
@@ -161,22 +161,11 @@ export function useAdminRegistrationActions({
     async (registrationId: string, payload: PaymentTransactionCreate) => {
       let transaction;
       try {
-        transaction = apiToPaymentTransaction(
-          await createPaymentTransactionMutation.mutateAsync({
-            registrationId,
-            payload: {
-              amount: payload.amount,
-              effective_date: payload.effectiveDate,
-              ...(payload.reference ? { reference: payload.reference } : {}),
-              ...(payload.note ? { note: payload.note } : {}),
-              ...(payload.reversedTransactionId
-                ? { reversed_transaction_id: payload.reversedTransactionId }
-                : {}),
-              idempotency_key: payload.idempotencyKey,
-            },
-            fallbackMessage: m.admin_error_record_payment(),
-          }),
-        );
+        transaction = await createPaymentTransactionMutation.mutateAsync({
+          registrationId,
+          payload,
+          fallbackMessage: m.admin_error_record_payment(),
+        });
       } catch (err) {
         devError("Failed to record payment transaction", err);
         setRegistrationError(apiErrorMessage(err, m.admin_error_record_payment()));
@@ -229,8 +218,8 @@ export function useAdminRegistrationActions({
       if (outstanding <= 0) return;
       await handleAddTransaction(id, {
         amount: outstanding,
-        effectiveDate: toLocalDateKey(new Date()),
-        idempotencyKey: crypto.randomUUID(),
+        effective_date: toLocalDateKey(new Date()),
+        idempotency_key: crypto.randomUUID(),
       });
     },
     [handleAddTransaction, queryClient, registrationsQueryKey, authHeaders],

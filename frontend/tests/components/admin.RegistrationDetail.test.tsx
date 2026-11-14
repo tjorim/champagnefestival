@@ -493,7 +493,7 @@ describe("RegistrationDetail", () => {
       "reg-1",
       expect.objectContaining({
         amount: 42,
-        idempotencyKey: expect.stringMatching(
+        idempotency_key: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
         ),
       }),

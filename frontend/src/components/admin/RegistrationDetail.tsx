@@ -39,12 +39,8 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/api-types";
-import type {
-  BookingUpdate,
-  OrderItem,
-  PaymentTransactionCreate,
-  Registration,
-} from "@/types/registration";
+import type { PaymentTransactionCreate } from "@/api-types";
+import type { BookingUpdate, OrderItem, Registration } from "@/types/registration";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,

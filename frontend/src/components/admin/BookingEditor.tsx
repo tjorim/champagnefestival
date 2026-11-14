@@ -19,9 +19,9 @@ import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS, type Product } from "@/types/event";
+import type { PaymentTransactionCreate } from "@/api-types";
 import type {
   BookingUpdate,
-  PaymentTransactionCreate,
   Registration,
   RegistrationStatus,
   TableAllocation,
@@ -152,10 +152,10 @@ export default function BookingEditor({
       try {
         await onAddTransaction(registration.id, {
           amount: Number(value.amount),
-          effectiveDate: value.date,
+          effective_date: value.date,
           reference: value.reference.trim() || undefined,
           note: value.note.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
+          idempotency_key: crypto.randomUUID(),
         });
         transactionForm.setFieldValue("amount", "");
         transactionForm.setFieldValue("reference", "");
@@ -484,13 +484,13 @@ export default function BookingEditor({
                   <PresentationListItem key={entry.id} className="px-0 py-1">
                     <div className="text-sm flex justify-between flex-wrap gap-2">
                       <span>
-                        <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
-                        {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
+                        <strong>{transactionAmountLabel(Number(entry.amount))}</strong>{" "}
+                        {Number(entry.amount) >= 0 ? "+" : ""}€{Number(entry.amount).toFixed(2)}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                       <span className="text-subtle">
-                        {entry.effectiveDate} · {entry.recordedBy}
+                        {entry.effective_date} · {entry.recorded_by}
                       </span>
                     </div>
                   </PresentationListItem>

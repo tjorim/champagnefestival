@@ -6,11 +6,14 @@ import type {
   FaqItemOut,
   FloorArea,
   FloorTableRecord,
+  LedgerTransaction,
   Layout,
   LayoutRestorePreview,
   LayoutRevision,
   LayoutRevisionDiff,
   LayoutWithTablesOut,
+  PaymentTransaction,
+  PaymentTransactionLedgerEnvelope,
   Room,
   TableCreate,
   TableOut,
@@ -18,12 +21,8 @@ import type {
   Venue,
 } from "@/api-types";
 import type { Organization } from "@/types/admin";
-import {
-  apiToLedgerTransaction,
-  apiToPaymentTransaction,
-  apiToRegistration,
-} from "@/types/registrationMapper";
-import type { LedgerTransaction, PaymentTransaction, Registration } from "@/types/registration";
+import { apiToRegistration } from "@/types/registrationMapper";
+import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import {
   downloadFileOrThrow,
@@ -500,11 +499,10 @@ export async function fetchPaymentTransactions(
   authHeaders: () => Record<string, string>,
   registrationId: string,
 ): Promise<PaymentTransaction[]> {
-  return fetchArrayOrThrow(
+  return fetchArrayOrThrow<PaymentTransaction>(
     `/api/registrations/${encodeURIComponent(registrationId)}/transactions`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiToPaymentTransaction,
   );
 }
 
@@ -585,12 +583,8 @@ export interface PaymentTransactionsLedgerPage {
   page: number;
 }
 
-interface PaymentTransactionLedgerEnvelope {
-  items?: Record<string, unknown>[];
-  total?: number;
-  limit?: number;
-  page?: number;
-}
+// Partial on purpose: the check below rejects the pre-#1032 bare array instead of trusting the type.
+type LedgerEnvelope = Partial<PaymentTransactionLedgerEnvelope>;
 
 /**
  * Fetch one page of the payment ledger with booking context, filtered by
@@ -610,7 +604,7 @@ export async function fetchPaymentTransactionsLedger(
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   params.set("limit", String(filters.limit ?? LEDGER_PAGE_SIZE));
   params.set("page", String(filters.page ?? 1));
-  const payload = await fetchJsonOrThrowWithUnauthorized<PaymentTransactionLedgerEnvelope>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<LedgerEnvelope>(
     `/api/registrations/transactions?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
@@ -628,7 +622,7 @@ export async function fetchPaymentTransactionsLedger(
     );
   }
   return {
-    transactions: payload.items.map(apiToLedgerTransaction),
+    transactions: payload.items,
     total: payload.total,
     limit: payload.limit,
     page: payload.page,
