@@ -3,6 +3,7 @@
 //   node scripts/api-types.mjs generate   rewrite openapi.json from the backend (needs uv) and src/api-schema/
 //   node scripts/api-types.mjs check      fail when src/api-schema/ is not what openapi.json generates
 //
+// `generate` runs the backend with `uv run --frozen`, so it never rewrites backend/uv.lock.
 // `check` needs no Python, so `pnpm typecheck` can run it anywhere. The backend tests fail when openapi.json
 // no longer matches the application, so the two checks together catch a stale type in either place.
 // Orval (see `orval.config.mjs`) writes one file per schema plus an `index.ts`, so `./api-schema` resolves.
@@ -49,7 +50,7 @@ function same(a, b) {
 
 const mode = process.argv[2];
 if (mode === "generate") {
-  run("uv", ["run", "--project", "../backend", "python", "-m", "app.openapi_export"]);
+  run("uv", ["run", "--frozen", "--project", "../backend", "python", "-m", "app.openapi_export"]);
   generate(generated);
 } else if (mode === "check") {
   const scratch = mkdtempSync(join(tmpdir(), "champagnefestival-api-types-"));
