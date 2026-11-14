@@ -176,7 +176,7 @@ importers:
         specifier: ^0.5.3
         version: 0.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/charts':
-        specifier: ^1.4.0
+        specifier: ^1.5.0
         version: 1.5.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(svelte@5.57.3)
       '@tanstack/db':
         specifier: 1.0.0-rc.1.3
