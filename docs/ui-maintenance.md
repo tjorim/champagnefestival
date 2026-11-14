@@ -1,10 +1,10 @@
 # UI dependency and component maintenance
 
-This app uses the `base-vega` shadcn registry, locally owned components and the `@base-ui/react` runtime. The exact shadcn CLI version is a dev dependency; Dependabot can update it alongside the other package declarations.
+This app uses the `base-vega` shadcn registry, locally owned components and the `@base-ui/react` runtime. The exact shadcn CLI version is a dev dependency; Renovate can update it alongside the other package declarations.
 
 ## Ownership and records
 
-Dependabot proposes package and lockfile updates. It does not update copied
+Renovate proposes package and lockfile updates. It does not update copied
 component source or prove interaction compatibility. Keep Base UI runtime
 updates separate from registry-source changes so regressions are attributable.
 
