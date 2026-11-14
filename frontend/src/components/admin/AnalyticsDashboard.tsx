@@ -45,7 +45,7 @@ import {
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
-import type { EditionAttendanceStats } from "@/types/admin";
+import type { EditionAttendanceStats } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
@@ -99,6 +99,11 @@ interface AttendanceRow {
   edition: string;
   series: AttendanceSeries;
   count: number;
+}
+
+/** Totals arrive as exact decimal strings; the ledger totals are absent when there is nothing to show. */
+function money(amount: string | undefined): string {
+  return Number(amount ?? 0).toFixed(2);
 }
 
 function editionLabel(edition: EditionAttendanceStats): string {
@@ -209,11 +214,11 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
     if (editions.length === 0) return null;
 
     const rows: AttendanceRow[] = editions.flatMap((edition) => [
-      { edition: edition.editionId, series: "guests", count: edition.totalGuests },
-      { edition: edition.editionId, series: "checkedIn", count: edition.totalCheckedIn },
+      { edition: edition.edition_id, series: "guests", count: edition.total_guests },
+      { edition: edition.edition_id, series: "checkedIn", count: edition.total_checked_in },
     ]);
     const editionLabelById = new Map(
-      editions.map((edition) => [edition.editionId, editionLabel(edition)]),
+      editions.map((edition) => [edition.edition_id, editionLabel(edition)]),
     );
 
     return defineChart({
@@ -269,15 +274,15 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
   const checkinRateChart = useMemo(() => {
     const rows: CheckinRateRow[] = editions
-      .filter((edition) => edition.totalGuests > 0)
+      .filter((edition) => edition.total_guests > 0)
       .map((edition) => ({
-        edition: edition.editionId,
-        rate: Math.round((edition.totalCheckedIn / edition.totalGuests) * 1000) / 10,
+        edition: edition.edition_id,
+        rate: Math.round((edition.total_checked_in / edition.total_guests) * 1000) / 10,
       }));
     if (rows.length === 0) return null;
 
     const editionLabelById = new Map(
-      editions.map((edition) => [edition.editionId, editionLabel(edition)]),
+      editions.map((edition) => [edition.edition_id, editionLabel(edition)]),
     );
 
     return defineChart({
@@ -388,23 +393,23 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           </TableHeader>
           <TableBody>
             {editions.map((edition) => (
-              <TableRow key={edition.editionId}>
+              <TableRow key={edition.edition_id}>
                 <TableCell>{editionLabel(edition)}</TableCell>
-                <TableCell>{edition.eventsCount}</TableCell>
-                <TableCell>{edition.totalRegistrations}</TableCell>
-                <TableCell>{edition.totalGuests}</TableCell>
-                <TableCell>{edition.totalCheckedIn}</TableCell>
+                <TableCell>{edition.events_count}</TableCell>
+                <TableCell>{edition.total_registrations}</TableCell>
+                <TableCell>{edition.total_guests}</TableCell>
+                <TableCell>{edition.total_checked_in}</TableCell>
                 <TableCell>
-                  {edition.totalGuests > 0
-                    ? `${Math.round((edition.totalCheckedIn / edition.totalGuests) * 100)}%`
+                  {edition.total_guests > 0
+                    ? `${Math.round((edition.total_checked_in / edition.total_guests) * 100)}%`
                     : "—"}
                 </TableCell>
-                <TableCell>€{edition.totalPaid.toFixed(2)}</TableCell>
-                <TableCell>€{edition.totalDue.toFixed(2)}</TableCell>
-                <TableCell>€{edition.totalReceived.toFixed(2)}</TableCell>
-                <TableCell>€{edition.totalRefunded.toFixed(2)}</TableCell>
-                <TableCell>€{edition.totalOutstanding.toFixed(2)}</TableCell>
-                <TableCell>€{edition.totalRefundLiability.toFixed(2)}</TableCell>
+                <TableCell>€{money(edition.total_paid)}</TableCell>
+                <TableCell>€{money(edition.total_due)}</TableCell>
+                <TableCell>€{money(edition.total_received)}</TableCell>
+                <TableCell>€{money(edition.total_refunded)}</TableCell>
+                <TableCell>€{money(edition.total_outstanding)}</TableCell>
+                <TableCell>€{money(edition.total_refund_liability)}</TableCell>
                 <TableCell className="flex gap-1">
                   <Button
                     variant="outline"
@@ -414,7 +419,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                       setLedgerPage(1);
                       setLedgerSorting([]);
                       setLedgerEdition({
-                        id: edition.editionId,
+                        id: edition.edition_id,
                         label: editionLabel(edition),
                       });
                     }}
@@ -429,14 +434,14 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     variant="outline"
                     size="sm"
                     className="py-0 px-1"
-                    disabled={exportingEditionId === edition.editionId}
-                    onClick={() => void handleExportLedger(edition.editionId)}
+                    disabled={exportingEditionId === edition.edition_id}
+                    onClick={() => void handleExportLedger(edition.edition_id)}
                     title={m.admin_analytics_export_ledger()}
                     aria-label={m.admin_analytics_export_ledger_for({
                       edition: editionLabel(edition),
                     })}
                   >
-                    {exportingEditionId === edition.editionId ? (
+                    {exportingEditionId === edition.edition_id ? (
                       <Spinner size="sm" />
                     ) : (
                       <Icon icon={FileSpreadsheetIcon} />

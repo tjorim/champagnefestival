@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { AuditEntryOut } from "@/api-types";
 import AuditLogViewer from "@/components/admin/AuditLogViewer";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -52,11 +53,14 @@ describe("AuditLogViewer", () => {
         timestamp: "2026-01-01T12:00:00Z",
         actor: "admin@example.com",
         action: "venue_created",
-        resourceType: "venue",
-        resourceId: "venue_abc123",
-        requestId: null,
+        auth_source: "oidc",
+        subject: null,
+        integration_client_id: null,
+        resource_type: "venue",
+        resource_id: "venue_abc123",
+        request_id: null,
         details: { name: "Test Venue" },
-      },
+      } satisfies AuditEntryOut,
     ]);
     renderAuditLogViewer();
 

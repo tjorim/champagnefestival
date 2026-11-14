@@ -1,3 +1,4 @@
+import type { EditionAttendanceStats, EventCheckInStats } from "@/api-types";
 import type { StampCard, StampCardType } from "@/utils/stampCards";
 import { http, HttpResponse } from "msw/http";
 import {
@@ -706,7 +707,7 @@ export const adminHandlers = [
       total_outstanding: "0",
       total_refund_liability: "0",
     };
-    return HttpResponse.json([
+    const stats: EditionAttendanceStats[] = [
       {
         ...base,
         edition_id: "edition-2024",
@@ -737,7 +738,8 @@ export const adminHandlers = [
         total_guests: 0,
         total_checked_in: 0,
       },
-    ]);
+    ];
+    return HttpResponse.json(stats);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -1215,13 +1217,12 @@ export const adminHandlers = [
       totals.set(eventId, entry);
     }
 
-    return HttpResponse.json(
-      [...totals.entries()].map(([event_id, entry]) => ({
-        event_id,
-        event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
-        ...entry,
-      })),
-    );
+    const stats: EventCheckInStats[] = [...totals.entries()].map(([event_id, entry]) => ({
+      event_id,
+      event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
+      ...entry,
+    }));
+    return HttpResponse.json(stats);
   }),
 
   ...categoryHandlers("event", "/api/event-categories", eventCategories, (key) =>
