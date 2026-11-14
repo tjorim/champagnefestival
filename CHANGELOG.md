@@ -24,6 +24,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Commit the API's OpenAPI document as `frontend/openapi.json` (#1657). `uv run python -m app.openapi_export` rewrites it from `backend/` (`--check` only compares), and `tests/test_openapi_export.py` fails when it is stale. Backend CI also runs when only the snapshot changes. The release version is left out of it, so a release bump never makes it stale.
 - Give every JSON route a response model so the OpenAPI document describes the whole API (#1657): the signage video export and image upload routes, the person registrations list, product change preview, push test, volunteer table lookups, health, metrics and MCP capabilities now declare theirs, file and stream routes list their media type, and `tests/test_openapi_contract.py` fails when a route has none. Video export timestamps now end in `Z` instead of `+00:00`.
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.

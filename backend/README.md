@@ -784,6 +784,10 @@ an expired video export's playlist), declare a union rather than a model that
 hides one of them. `tests/test_openapi_contract.py` fails when a route breaks
 these rules.
 
+The document is committed as `frontend/openapi.json` (release version replaced by
+`snapshot`). After changing a route or schema run `uv run python -m app.openapi_export`
+from `backend/`; `tests/test_openapi_export.py` fails while it is stale.
+
 ## Request schema conventions
 
 Create and update models declare their own defaults, required fields, and
