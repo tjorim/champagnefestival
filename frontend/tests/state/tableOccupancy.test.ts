@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deriveTableRegistrationIds, withTableOccupancy } from "@/state/tableOccupancy";
-import type { FloorTableRecord } from "@/types/admin";
+import type { FloorTableRecord } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
 function registration(id: string, tableIds: string[]): Registration {
@@ -11,14 +11,17 @@ function registration(id: string, tableIds: string[]): Registration {
 }
 
 const table = (id: string): FloorTableRecord => ({
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  event_id: "event-1",
   id,
   name: id,
   capacity: 6,
   x: 10,
   y: 20,
-  tableTypeId: "tt-01",
+  table_type_id: "tt-01",
   rotation: 0,
-  layoutId: "layout-01",
+  layout_id: "layout-01",
 });
 
 describe("deriveTableRegistrationIds", () => {
@@ -50,11 +53,11 @@ describe("withTableOccupancy", () => {
     const rows = [table("t1"), table("t2")];
     const result = withTableOccupancy(rows, [registration("reg-1", ["t1"])]);
 
-    expect(result.map((t) => [t.id, t.registrationIds])).toEqual([
+    expect(result.map((t) => [t.id, t.registration_ids])).toEqual([
       ["t1", ["reg-1"]],
       ["t2", []],
     ]);
-    expect(rows[0]).not.toHaveProperty("registrationIds");
+    expect(rows[0]).not.toHaveProperty("registration_ids");
   });
 
   it("follows a moved registration from one table to another", () => {
@@ -62,12 +65,12 @@ describe("withTableOccupancy", () => {
     const before = withTableOccupancy(rows, [registration("reg-1", ["t1"])]);
     const after = withTableOccupancy(rows, [registration("reg-1", ["t2"])]);
 
-    expect(before[0]!.registrationIds).toEqual(["reg-1"]);
-    expect(after.map((t) => t.registrationIds)).toEqual([[], ["reg-1"]]);
+    expect(before[0]!.registration_ids).toEqual(["reg-1"]);
+    expect(after.map((t) => t.registration_ids)).toEqual([[], ["reg-1"]]);
   });
 
   it("empties the table when the registration's allocation is removed", () => {
     const after = withTableOccupancy([table("t1")], [registration("reg-1", [])]);
-    expect(after[0]!.registrationIds).toEqual([]);
+    expect(after[0]!.registration_ids).toEqual([]);
   });
 });

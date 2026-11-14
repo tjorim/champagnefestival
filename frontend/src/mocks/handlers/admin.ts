@@ -1,4 +1,13 @@
-import type { EditionAttendanceStats, EventCheckInStats } from "@/api-types";
+import type {
+  AreaOut,
+  EditionAttendanceStats,
+  EventCheckInStats,
+  LayoutOut,
+  RoomOut,
+  TableOut,
+  TableTypeOut,
+  VenueOut,
+} from "@/api-types";
 import type { StampCard, StampCardType } from "@/utils/stampCards";
 import { http, HttpResponse } from "msw/http";
 import {
@@ -42,12 +51,12 @@ let people: Record<string, unknown>[] = structuredClone(seedPeople);
 let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
 const eventCategories = { items: structuredClone(seedEventCategories) };
 const productCategories = { items: structuredClone(seedProductCategories) };
-let venues: Record<string, unknown>[] = structuredClone(seedVenues);
-let rooms: Record<string, unknown>[] = structuredClone(seedRooms);
-let tableTypes: Record<string, unknown>[] = structuredClone(seedTableTypes);
-let tables: Record<string, unknown>[] = structuredClone(seedTables);
-let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
-let areas: Record<string, unknown>[] = structuredClone(seedAreas);
+let venues: VenueOut[] = structuredClone(seedVenues);
+let rooms: RoomOut[] = structuredClone(seedRooms);
+let tableTypes: TableTypeOut[] = structuredClone(seedTableTypes);
+let tables: TableOut[] = structuredClone(seedTables);
+let layouts: LayoutOut[] = structuredClone(seedLayouts);
+let areas: AreaOut[] = structuredClone(seedAreas);
 
 let stampTypes: StampCardType[] = [];
 let stampCards: StampCard[] = [];
@@ -1435,7 +1444,7 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newRoom = {
+    const newRoom: RoomOut = {
       id: uid(),
       venue_id: String(body.venue_id ?? ""),
       name: String(body.name ?? ""),
@@ -1443,6 +1452,7 @@ export const adminHandlers = [
       length_m: Number(body.length_m ?? 10),
       color: String(body.color ?? "#4a90d9"),
       active: body.active !== false,
+      dimensions_placeholder: false,
       created_at: now(),
       updated_at: now(),
     };
@@ -1485,14 +1495,14 @@ export const adminHandlers = [
     if (!body.venue_id) {
       return HttpResponse.json({ detail: "venue_id is required." }, { status: 400 });
     }
-    const newTT = {
+    const newTT: TableTypeOut = {
       id: uid(),
       name: String(body.name ?? ""),
       venue_id: String(body.venue_id),
-      shape: String(body.shape ?? "round"),
+      shape: body.shape === "rectangle" ? "rectangle" : "round",
       width_m: Number(body.width_m ?? 1),
       length_m: Number(body.length_m ?? 1),
-      height_type: String(body.height_type ?? "high"),
+      height_type: body.height_type === "low" ? "low" : "high",
       capacity: Number(body.capacity ?? 4),
       active: body.active !== false,
       created_at: now(),
@@ -1544,15 +1554,17 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const tableTypeId = String(body.table_type_id ?? "");
     const tableType = tableTypes.find((candidate) => candidate.id === tableTypeId);
-    const newTable = {
+    const layoutId = String(body.layout_id ?? "");
+    const newTable: TableOut = {
       id: uid(),
+      event_id: layouts.find((layout) => layout.id === layoutId)?.event_id ?? "",
       name: String(body.name ?? ""),
       capacity: Number(tableType?.capacity ?? 4),
       x: Number(body.x ?? 50),
       y: Number(body.y ?? 50),
       table_type_id: tableTypeId,
       rotation: Number(body.rotation ?? 0),
-      layout_id: String(body.layout_id ?? ""),
+      layout_id: layoutId,
       registration_ids: [],
       created_at: now(),
       updated_at: now(),
@@ -1737,11 +1749,12 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newLayout = {
+    const newLayout: LayoutOut = {
       id: uid(),
       edition_id: events.find((e) => e.id === body.event_id)?.edition_id ?? null,
       room_id: String(body.room_id ?? ""),
       event_id: String(body.event_id),
+      event_title: events.find((e) => e.id === body.event_id)?.title ?? "",
       date: events.find((e) => e.id === body.event_id)?.date ?? null,
       label: String(body.label ?? ""),
       created_at: now(),

@@ -1,4 +1,4 @@
-import type { FloorTable, FloorTableRecord } from "@/types/admin";
+import type { FloorTable, FloorTableRecord, TableOut } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
 /**
@@ -24,11 +24,17 @@ export function deriveTableRegistrationIds(
   return byTable;
 }
 
+/** The stored row for a table the API returned: occupancy is derived, so the API's copy is dropped. */
+export function toTableRecord(table: TableOut): FloorTableRecord {
+  const { registration_ids: _occupancy, ...row } = table;
+  return row;
+}
+
 /** Joins the stored table rows with occupancy derived from the registrations. */
 export function withTableOccupancy(
   tables: readonly FloorTableRecord[],
   registrations: readonly Registration[],
 ): FloorTable[] {
   const byTable = deriveTableRegistrationIds(registrations);
-  return tables.map((table) => ({ ...table, registrationIds: byTable.get(table.id) ?? [] }));
+  return tables.map((table) => ({ ...table, registration_ids: byTable.get(table.id) ?? [] }));
 }

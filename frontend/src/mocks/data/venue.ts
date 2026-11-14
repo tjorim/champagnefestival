@@ -1,6 +1,8 @@
+import type { AreaOut, LayoutOut, RoomOut, TableOut, TableTypeOut, VenueOut } from "@/api-types";
+
 /** Seed data for venue-related resources (venues, rooms, table types, tables, layouts, areas). */
 
-export const seedVenues = [
+export const seedVenues: VenueOut[] = [
   {
     id: "venue-01",
     name: "Brussels Expo",
@@ -16,7 +18,7 @@ export const seedVenues = [
   },
 ];
 
-export const seedRooms = [
+export const seedRooms: RoomOut[] = [
   {
     id: "room-01",
     venue_id: "venue-01",
@@ -25,6 +27,7 @@ export const seedRooms = [
     length_m: 80,
     color: "#4a90d9",
     active: true,
+    dimensions_placeholder: false,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
   },
@@ -36,12 +39,13 @@ export const seedRooms = [
     length_m: 60,
     color: "#7b68ee",
     active: true,
+    dimensions_placeholder: false,
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
   },
 ];
 
-export const seedTableTypes = [
+export const seedTableTypes: TableTypeOut[] = [
   {
     id: "tt-01",
     name: "Round 6-top",
@@ -83,12 +87,13 @@ export const seedTableTypes = [
   },
 ];
 
-export const seedLayouts = [
+export const seedLayouts: LayoutOut[] = [
   {
     id: "layout-01",
     edition_id: "march-2027",
     room_id: "room-01",
     event_id: "event-01",
+    event_title: "Friday",
     date: "2027-03-06",
     label: "Friday – Hall 5",
     created_at: "2024-01-01T00:00:00Z",
@@ -99,6 +104,7 @@ export const seedLayouts = [
     edition_id: "march-2027",
     room_id: "room-01",
     event_id: "event-02",
+    event_title: "Saturday",
     date: "2027-03-07",
     label: "Saturday – Hall 5",
     created_at: "2024-01-01T00:00:00Z",
@@ -109,6 +115,7 @@ export const seedLayouts = [
     edition_id: "march-2027",
     room_id: "room-02",
     event_id: "event-01",
+    event_title: "Friday",
     date: "2027-03-06",
     label: "Friday – Hall 6",
     created_at: "2024-01-01T00:00:00Z",
@@ -116,7 +123,7 @@ export const seedLayouts = [
   },
 ];
 
-export const seedTables = [
+export const seedTables: TableOut[] = [
   {
     id: "table-01",
     name: "T1",
@@ -126,6 +133,7 @@ export const seedTables = [
     table_type_id: "tt-01",
     rotation: 0,
     layout_id: "layout-01",
+    event_id: "event-01",
     registration_ids: ["reg-01", "reg-02"],
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
@@ -139,6 +147,7 @@ export const seedTables = [
     table_type_id: "tt-02",
     rotation: 0,
     layout_id: "layout-01",
+    event_id: "event-01",
     registration_ids: [],
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
@@ -152,13 +161,14 @@ export const seedTables = [
     table_type_id: "tt-03",
     rotation: 45,
     layout_id: "layout-02",
+    event_id: "event-02",
     registration_ids: ["reg-03"],
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
   },
 ];
 
-export const seedAreas = [
+export const seedAreas: AreaOut[] = [
   {
     id: "area-01",
     layout_id: "layout-01",

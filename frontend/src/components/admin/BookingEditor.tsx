@@ -17,7 +17,7 @@ import { Alert } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import type { FloorTable } from "@/types/admin";
+import type { FloorTable } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS, type Product } from "@/types/event";
 import type {
   BookingUpdate,

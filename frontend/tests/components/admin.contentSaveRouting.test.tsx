@@ -18,7 +18,7 @@ import ItemModal from "@/components/admin/ItemModal";
 import { saveContentSectionItem } from "@/utils/adminContentApi";
 import { server } from "@/mocks/server";
 import type { Edition } from "@/components/admin/editionTypes";
-import type { Venue } from "@/types/admin";
+import type { Venue } from "@/api-types";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({

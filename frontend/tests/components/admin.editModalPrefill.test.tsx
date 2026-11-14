@@ -20,7 +20,7 @@ import PersonFormModal from "@/components/admin/PersonFormModal";
 import VolunteerFormModal from "@/components/admin/VolunteerFormModal";
 import type { Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
-import type { Venue } from "@/types/admin";
+import type { Venue } from "@/api-types";
 import type { Event } from "@/types/event";
 import type { Person } from "@/types/person";
 import { createTestQueryClient } from "../utils/queryClient";

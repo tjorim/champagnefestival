@@ -63,10 +63,10 @@ async function renderLoaded() {
 }
 
 function occupancy(
-  tables: { id: string; registrationIds: string[] }[] | undefined,
+  tables: { id: string; registration_ids: string[] }[] | undefined,
   tableId: string,
 ): string[] {
-  return tables?.find((t) => t.id === tableId)?.registrationIds ?? [];
+  return tables?.find((t) => t.id === tableId)?.registration_ids ?? [];
 }
 
 describe("admin tables collection in the admin hooks", () => {
@@ -139,13 +139,15 @@ describe("admin tables collection in the admin hooks", () => {
     await act(() => result.current.actions.handleAddTable("T9", "layout-01", "tt-01"));
     await waitFor(() => expect(rows()).toHaveLength(seedTables.length + 1));
     const created = rows().find((t) => t.name === "T9")!;
-    expect(created.registrationIds).toEqual([]);
+    expect(created.registration_ids).toEqual([]);
 
     await act(() => result.current.actions.handleUpdateTable(created.id, "T9b"));
     await waitFor(() => expect(rows().find((t) => t.id === created.id)?.name).toBe("T9b"));
 
     await act(() => result.current.actions.handleChangeTableType(created.id, "tt-02"));
-    await waitFor(() => expect(rows().find((t) => t.id === created.id)?.tableTypeId).toBe("tt-02"));
+    await waitFor(() =>
+      expect(rows().find((t) => t.id === created.id)?.table_type_id).toBe("tt-02"),
+    );
 
     act(() => result.current.actions.handleMoveTable(created.id, 33, 44));
     await waitFor(() =>

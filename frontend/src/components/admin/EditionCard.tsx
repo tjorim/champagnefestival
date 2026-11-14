@@ -37,7 +37,7 @@ import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
-import type { Venue } from "@/types/admin";
+import type { Venue } from "@/api-types";
 import type { Event, EventFormData } from "@/types/event";
 
 interface EditionCardProps {

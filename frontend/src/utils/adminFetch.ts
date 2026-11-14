@@ -1,21 +1,23 @@
 import type {
+  AreaOut,
   AuditEntryOut,
   EditionAttendanceStats,
   EventCheckInStats,
   FaqItemOut,
-} from "@/api-types";
-import type {
-  Room,
-  FloorTableRecord,
   FloorArea,
-  TableType,
+  FloorTableRecord,
   Layout,
-  Venue,
-  Organization,
+  LayoutRestorePreview,
   LayoutRevision,
   LayoutRevisionDiff,
-  LayoutRestorePreview,
-} from "@/types/admin";
+  LayoutWithTablesOut,
+  Room,
+  TableCreate,
+  TableOut,
+  TableType,
+  Venue,
+} from "@/api-types";
+import type { Organization } from "@/types/admin";
 import {
   apiToLedgerTransaction,
   apiToPaymentTransaction,
@@ -30,17 +32,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
-import {
-  apiVenueToVenue,
-  apiLayoutToLayout,
-  apiTableTypeToTableType,
-  apiRoomToRoom,
-  apiTableToTable,
-  apiAreaToArea,
-  apiLayoutRevisionToLayoutRevision,
-  apiLayoutRevisionDiffToLayoutRevisionDiff,
-  apiLayoutRestorePreviewToLayoutRestorePreview,
-} from "@/utils/adminApiMappers";
+import { toTableRecord } from "@/state/tableOccupancy";
 
 export interface RegistrationsPage {
   registrations: Registration[];
@@ -193,62 +185,51 @@ export async function fetchRegistration(
 export async function fetchTables(
   authHeaders: () => Record<string, string>,
 ): Promise<FloorTableRecord[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  const payload = await fetchArrayOrThrow<TableOut>(
     "/api/tables",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiTableToTable) : [];
+  return payload.map(toTableRecord);
 }
 
 export async function fetchTable(
   tableId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiTableToTable(payload);
+  return toTableRecord(payload);
 }
 
-export interface TableCreateInput {
-  name: string;
-  layoutId: string;
-  tableTypeId: string;
-}
+export type TableCreateInput = Pick<TableCreate, "name" | "layout_id" | "table_type_id">;
 
 export async function createTable(
   authHeaders: () => Record<string, string>,
-  { name, layoutId, tableTypeId }: TableCreateInput,
+  { name, layout_id, table_type_id }: TableCreateInput,
 ): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
     "/api/tables",
     {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({
-        name,
-        x: 10,
-        y: 10,
-        rotation: 0,
-        layout_id: layoutId,
-        table_type_id: tableTypeId,
-      }),
+      body: JSON.stringify({ name, x: 10, y: 10, rotation: 0, layout_id, table_type_id }),
     },
     m.admin_error_add_table(),
   );
-  return apiTableToTable((payload.table ?? payload) as Record<string, unknown>);
+  return toTableRecord(payload);
 }
 
 /** The fields an admin can change on an existing table. */
 export type TableUpdateChanges = Partial<
-  Pick<FloorTableRecord, "name" | "x" | "y" | "rotation" | "tableTypeId">
+  Pick<FloorTableRecord, "name" | "x" | "y" | "rotation" | "table_type_id">
 >;
 
 function tableUpdateErrorMessage(changes: TableUpdateChanges): string {
-  if (changes.tableTypeId !== undefined) {
+  if (changes.table_type_id !== undefined) {
     return m.admin_error_change_table_type_status({ status: 500 });
   }
   if (changes.name !== undefined) return m.admin_error_update_table_name_status({ status: 500 });
@@ -261,19 +242,12 @@ export async function updateTable(
   tableId: string,
   changes: TableUpdateChanges,
 ): Promise<void> {
-  const { name, x, y, rotation, tableTypeId } = changes;
-  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  await fetchJsonOrThrowWithUnauthorized<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
     {
       method: "PUT",
       headers: authHeaders(),
-      body: JSON.stringify({
-        ...(name !== undefined ? { name } : {}),
-        ...(x !== undefined ? { x } : {}),
-        ...(y !== undefined ? { y } : {}),
-        ...(rotation !== undefined ? { rotation } : {}),
-        ...(tableTypeId !== undefined ? { table_type_id: tableTypeId } : {}),
-      }),
+      body: JSON.stringify(changes),
     },
     tableUpdateErrorMessage(changes),
   );
@@ -292,11 +266,11 @@ export async function deleteTable(
 
 /** The fields an admin can change on an existing area (the canvas edits, not the organization assignment). */
 export type AreaUpdateChanges = Partial<
-  Pick<FloorArea, "label" | "x" | "y" | "rotation" | "widthM" | "lengthM">
+  Pick<FloorArea, "label" | "x" | "y" | "rotation" | "width_m" | "length_m">
 >;
 
 function areaUpdateErrorMessage(changes: AreaUpdateChanges): string {
-  if (changes.widthM !== undefined || changes.lengthM !== undefined) {
+  if (changes.width_m !== undefined || changes.length_m !== undefined) {
     return m.admin_error_resize_area_status({ status: 500 });
   }
   if (changes.label !== undefined) return m.admin_error_persist_area_label();
@@ -310,61 +284,49 @@ export async function updateArea(
   areaId: string,
   changes: AreaUpdateChanges,
 ): Promise<void> {
-  const { label, x, y, rotation, widthM, lengthM } = changes;
-  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  await fetchJsonOrThrowWithUnauthorized<AreaOut>(
     `/api/areas/${encodeURIComponent(areaId)}`,
     {
       method: "PUT",
       headers: authHeaders(),
-      body: JSON.stringify({
-        ...(label !== undefined ? { label } : {}),
-        ...(x !== undefined ? { x } : {}),
-        ...(y !== undefined ? { y } : {}),
-        ...(rotation !== undefined ? { rotation } : {}),
-        ...(widthM !== undefined ? { width_m: widthM } : {}),
-        ...(lengthM !== undefined ? { length_m: lengthM } : {}),
-      }),
+      body: JSON.stringify(changes),
     },
     areaUpdateErrorMessage(changes),
   );
 }
 
 export async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Venue>(
     "/api/venues",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiVenueToVenue) : [];
 }
 
 export async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Room>(
     "/api/rooms",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiRoomToRoom) : [];
 }
 
 export async function fetchTableTypes(
   authHeaders: () => Record<string, string>,
 ): Promise<TableType[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<TableType>(
     "/api/table-types",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiTableTypeToTableType) : [];
 }
 
 export async function fetchLayouts(authHeaders: () => Record<string, string>): Promise<Layout[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Layout>(
     "/api/layouts",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiLayoutToLayout) : [];
 }
 
 /** List one layout's saved revisions, newest first (#1021). */
@@ -373,11 +335,10 @@ export async function fetchLayoutRevisions(
   layoutId: string,
   signal?: AbortSignal,
 ): Promise<LayoutRevision[]> {
-  return fetchArrayOrThrow(
+  return fetchArrayOrThrow<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
     { headers: authHeaders(), signal },
     m.admin_error_load_layout_revisions(),
-    apiLayoutRevisionToLayoutRevision,
   );
 }
 
@@ -388,7 +349,7 @@ export async function saveLayoutRevision(
   label: string,
   changeNote?: string,
 ): Promise<LayoutRevision> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
     {
       method: "POST",
@@ -400,7 +361,6 @@ export async function saveLayoutRevision(
     },
     m.admin_error_save_layout_revision(),
   );
-  return apiLayoutRevisionToLayoutRevision(payload);
 }
 
 /** Compare two snapshots of one layout — each a revision number or the
@@ -413,12 +373,11 @@ export async function compareLayoutRevisions(
   signal?: AbortSignal,
 ): Promise<LayoutRevisionDiff> {
   const params = new URLSearchParams({ from: fromRef, to: toRef });
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRevisionDiff>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/compare?${params.toString()}`,
     { headers: authHeaders(), signal },
     m.admin_error_compare_layout_revisions(),
   );
-  return apiLayoutRevisionDiffToLayoutRevisionDiff(payload);
 }
 
 /** Preview what restoring a revision would change, including any live
@@ -428,12 +387,11 @@ export async function previewLayoutRestore(
   layoutId: string,
   revisionNumber: number,
 ): Promise<LayoutRestorePreview> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRestorePreview>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore/preview`,
     { method: "POST", headers: authHeaders() },
     m.admin_error_preview_layout_restore(),
   );
-  return apiLayoutRestorePreviewToLayoutRestorePreview(payload);
 }
 
 /** Apply a saved revision's snapshot back onto the layout's tables/areas
@@ -444,8 +402,8 @@ export async function restoreLayoutRevision(
   layoutId: string,
   revisionNumber: number,
   resolveAllocations = false,
-): Promise<Record<string, unknown>> {
-  return fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+): Promise<LayoutWithTablesOut> {
+  return fetchJsonOrThrowWithUnauthorized<LayoutWithTablesOut>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore`,
     {
       method: "POST",
@@ -482,12 +440,11 @@ export async function fetchOrganizations(
 }
 
 export async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<FloorArea>(
     "/api/areas",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
 }
 
 /** One volunteer with their help periods (`GET /api/volunteers/{id}`). */

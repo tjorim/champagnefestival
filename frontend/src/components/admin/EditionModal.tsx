@@ -49,7 +49,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
-import type { Venue } from "@/types/admin";
+import type { Venue } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchEditionModalOrganizations, saveEdition } from "@/utils/adminContentApi";
 import { editionDisplayName } from "@/utils/editionName";

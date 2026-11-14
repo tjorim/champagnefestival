@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
-import type { FloorTable } from "@/types/admin";
+import type { FloorTable } from "@/api-types";
 import type {
   BookingUpdate,
   OrderItem,

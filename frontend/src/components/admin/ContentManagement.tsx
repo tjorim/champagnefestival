@@ -42,7 +42,7 @@ import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
-import type { Venue } from "@/types/admin";
+import type { Venue } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import {
   deleteContentSectionItem,

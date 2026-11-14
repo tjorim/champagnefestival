@@ -35,7 +35,7 @@ import type {
   LayoutRevisionSnapshotTable,
   LayoutRevisionTableChange,
   LayoutRestorePreview,
-} from "@/types/admin";
+} from "@/api-types";
 import {
   compareLayoutRevisions,
   fetchLayoutRevisions,
@@ -233,7 +233,7 @@ function LayoutRevisionsSession({
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const revisionOptions = useMemo(
-    () => [...revisions].sort((a, b) => b.revisionNumber - a.revisionNumber),
+    () => [...revisions].sort((a, b) => b.revision_number - a.revision_number),
     [revisions],
   );
 
@@ -290,20 +290,24 @@ function LayoutRevisionsSession({
   const comparisonDiff = compareFrom === compareTo ? null : diff;
   const tableDiffRows = comparisonDiff
     ? tableRows(
-        comparisonDiff.addedTables,
-        comparisonDiff.removedTables,
-        comparisonDiff.changedTables,
+        comparisonDiff.added_tables,
+        comparisonDiff.removed_tables,
+        comparisonDiff.changed_tables,
       )
     : [];
   const areaDiffRows = comparisonDiff
-    ? areaRows(comparisonDiff.addedAreas, comparisonDiff.removedAreas, comparisonDiff.changedAreas)
+    ? areaRows(
+        comparisonDiff.added_areas,
+        comparisonDiff.removed_areas,
+        comparisonDiff.changed_areas,
+      )
     : [];
 
   const previewTableRows = preview
-    ? tableRows(preview.tablesToAdd, preview.tablesToRemove, preview.tablesToUpdate)
+    ? tableRows(preview.tables_to_add, preview.tables_to_remove, preview.tables_to_update)
     : [];
   const previewAreaRows = preview
-    ? areaRows(preview.areasToAdd, preview.areasToRemove, preview.areasToUpdate)
+    ? areaRows(preview.areas_to_add, preview.areas_to_remove, preview.areas_to_update)
     : [];
 
   return (
@@ -381,19 +385,19 @@ function LayoutRevisionsSession({
                 >
                   <div className="min-w-0">
                     <div className="font-semibold text-sm">
-                      #{revision.revisionNumber} {revision.label}
+                      #{revision.revision_number} {revision.label}
                     </div>
                     <div className="text-subtle text-micro">
-                      {m.admin_layout_revisions_created_by({ actor: revision.createdBy })} ·{" "}
-                      {new Date(revision.createdAt).toLocaleString()}
-                      {revision.changeNote ? ` — ${revision.changeNote}` : ""}
+                      {m.admin_layout_revisions_created_by({ actor: revision.created_by })} ·{" "}
+                      {new Date(revision.created_at).toLocaleString()}
+                      {revision.change_note ? ` — ${revision.change_note}` : ""}
                     </div>
                   </div>
                   <Button
                     size="sm"
                     variant="outline-warning"
                     className="shrink-0"
-                    onClick={() => void openRestorePreview(revision.revisionNumber)}
+                    onClick={() => void openRestorePreview(revision.revision_number)}
                   >
                     {m.admin_layout_revisions_restore()}
                   </Button>
@@ -420,8 +424,8 @@ function LayoutRevisionsSession({
                       {m.admin_layout_revisions_compare_current()}
                     </AdminOption>
                     {revisionOptions.map((revision) => (
-                      <AdminOption key={revision.id} value={String(revision.revisionNumber)}>
-                        #{revision.revisionNumber} {revision.label}
+                      <AdminOption key={revision.id} value={String(revision.revision_number)}>
+                        #{revision.revision_number} {revision.label}
                       </AdminOption>
                     ))}
                   </AdminSelect>
@@ -439,8 +443,8 @@ function LayoutRevisionsSession({
                       {m.admin_layout_revisions_compare_current()}
                     </AdminOption>
                     {revisionOptions.map((revision) => (
-                      <AdminOption key={revision.id} value={String(revision.revisionNumber)}>
-                        #{revision.revisionNumber} {revision.label}
+                      <AdminOption key={revision.id} value={String(revision.revision_number)}>
+                        #{revision.revision_number} {revision.label}
                       </AdminOption>
                     ))}
                   </AdminSelect>
@@ -522,23 +526,23 @@ function LayoutRevisionsSession({
                         )}
                       </>
                     )}
-                    {preview.hasConflicts && (
+                    {preview.has_conflicts && (
                       <Alert variant="warning" className="py-2 text-sm">
                         <div className="font-semibold mb-1">
                           {m.admin_layout_revisions_restore_conflicts_title()}
                         </div>
                         <ul className="mb-2 ps-4">
-                          {preview.allocationConflicts.map((conflict) => (
+                          {preview.allocation_conflicts.map((conflict) => (
                             <li key={`${conflict.kind}-${conflict.id}`}>
                               {conflict.kind === "table" && conflict.reason === "deleted"
                                 ? m.admin_layout_revisions_restore_conflict_table_deleted({
                                     name: conflict.name,
-                                    count: conflict.registrationIds.length,
+                                    count: conflict.registration_ids.length,
                                   })
                                 : conflict.kind === "table"
                                   ? m.admin_layout_revisions_restore_conflict_table_moved({
                                       name: conflict.name,
-                                      count: conflict.registrationIds.length,
+                                      count: conflict.registration_ids.length,
                                     })
                                   : m.admin_layout_revisions_restore_conflict_area_deleted({
                                       name: conflict.name,
@@ -574,7 +578,7 @@ function LayoutRevisionsSession({
                       <Button
                         size="sm"
                         variant="warning"
-                        disabled={restoring || (preview.hasConflicts && !resolveAllocations)}
+                        disabled={restoring || (preview.has_conflicts && !resolveAllocations)}
                         onClick={() => void confirmRestore()}
                       >
                         {m.admin_layout_revisions_restore_confirm()}

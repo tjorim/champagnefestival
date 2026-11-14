@@ -61,7 +61,7 @@ describe("venue group collections in the admin hooks", () => {
     );
     await waitFor(() => expect(rows()).toHaveLength(seedVenues.length + 1));
     const created = rows().find((venue) => venue.name === "Annex")!;
-    expect(created.postalCode).toBe("9000");
+    expect(created.postal_code).toBe("9000");
 
     await act(() =>
       view.result.current.actions.handleUpdateVenue(created.id, { name: "Annex II" }),
@@ -87,7 +87,7 @@ describe("venue group collections in the admin hooks", () => {
     );
     await waitFor(() => expect(rooms()).toHaveLength(seedRooms.length + 1));
     const created = rooms().find((room) => room.name === "Hall 7")!;
-    expect(rooms().filter((room) => room.venueId === "venue-01")).toHaveLength(
+    expect(rooms().filter((room) => room.venue_id === "venue-01")).toHaveLength(
       seedRooms.length + 1,
     );
 
@@ -148,7 +148,7 @@ describe("venue group collections in the admin hooks", () => {
     const area = () => view.result.current.queries.areasQuery.data?.find((a) => a.id === "area-03");
 
     await act(() => view.result.current.actions.handleResizeArea("area-03", 5, 4));
-    await waitFor(() => expect(area()).toMatchObject({ widthM: 5, lengthM: 4 }));
+    await waitFor(() => expect(area()).toMatchObject({ width_m: 5, length_m: 4 }));
 
     act(() => view.result.current.actions.handleUpdateAreaLabel("area-03", "Main entrance"));
     await waitFor(() => expect(area()?.label).toBe("Main entrance"));
@@ -156,7 +156,7 @@ describe("venue group collections in the admin hooks", () => {
     await act(() =>
       view.result.current.actions.handleAssignAreaToItem("area-03", 2, "Bollinger", "bi-shop"),
     );
-    await waitFor(() => expect(area()).toMatchObject({ organizationId: 2, label: "Bollinger" }));
+    await waitFor(() => expect(area()).toMatchObject({ organization_id: 2, label: "Bollinger" }));
   });
 
   it("adds and deletes an area and a table type", async () => {
@@ -174,11 +174,11 @@ describe("venue group collections in the admin hooks", () => {
     await act(() =>
       view.result.current.actions.handleAddTableType({
         name: "Bar high",
-        venueId: "venue-01",
+        venue_id: "venue-01",
         shape: "round",
-        widthM: 1,
-        lengthM: 1,
-        heightType: "high",
+        width_m: 1,
+        length_m: 1,
+        height_type: "high",
         capacity: 3,
         active: true,
       }),

@@ -4,7 +4,15 @@ import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
 import { ApiError } from "@/utils/apiErrors";
-import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
+import type {
+  FloorTable,
+  Layout,
+  Room,
+  TableType,
+  TableTypeCreate,
+  TableTypeUpdate,
+  Venue,
+} from "@/api-types";
 
 /** The active confirmation, which may be nested inside a form dialog. */
 function latestDialog(): HTMLElement {
@@ -29,11 +37,13 @@ vi.mock("@/components/MapComponent", () => ({
 }));
 
 const activeVenue: Venue = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "venue-1",
   name: "Grand Hall",
   address: "1 Main St",
   city: "Ghent",
-  postalCode: "9000",
+  postal_code: "9000",
   country: "BE",
   lat: 51.05,
   lng: 3.72,
@@ -41,11 +51,13 @@ const activeVenue: Venue = {
 };
 
 const archivedVenue: Venue = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "venue-2",
   name: "Old Barn",
   address: "2 Side St",
   city: "Bruges",
-  postalCode: "8000",
+  postal_code: "8000",
   country: "BE",
   lat: 51.21,
   lng: 3.22,
@@ -53,72 +65,84 @@ const archivedVenue: Venue = {
 };
 
 const room1: Room = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "room-1",
-  venueId: "venue-1",
+  venue_id: "venue-1",
   name: "Room A",
-  widthM: 20,
-  lengthM: 15,
+  width_m: 20,
+  length_m: 15,
   color: "#ffc107",
   active: true,
-  dimensionsPlaceholder: false,
+  dimensions_placeholder: false,
 };
 
 const room2: Room = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "room-2",
-  venueId: "venue-1",
+  venue_id: "venue-1",
   name: "Room B",
-  widthM: 10,
-  lengthM: 10,
+  width_m: 10,
+  length_m: 10,
   color: "#123456",
   active: false,
-  dimensionsPlaceholder: false,
+  dimensions_placeholder: false,
 };
 
 const activeTableType: TableType = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "tt-1",
   name: "Standard Rectangle",
-  venueId: "venue-1",
+  venue_id: "venue-1",
   shape: "rectangle",
-  widthM: 0.7,
-  lengthM: 1.8,
-  heightType: "low",
+  width_m: 0.7,
+  length_m: 1.8,
+  height_type: "low",
   capacity: 4,
   active: true,
 };
 
 const archivedTableType: TableType = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "tt-2",
   name: "Retired Round",
-  venueId: "venue-1",
+  venue_id: "venue-1",
   shape: "round",
-  widthM: 0.9,
-  lengthM: 0.9,
-  heightType: "high",
+  width_m: 0.9,
+  length_m: 0.9,
+  height_type: "high",
   capacity: 2,
   active: false,
 };
 
 const layout1: Layout = {
+  updated_at: "2026-01-01T00:00:00Z",
   id: "layout-1",
-  eventId: "event-1",
-  eventTitle: "Saturday",
-  editionId: "edition-1",
-  roomId: "room-1",
+  event_id: "event-1",
+  event_title: "Saturday",
+  edition_id: "edition-1",
+  room_id: "room-1",
   date: "2026-08-01",
   label: "",
-  createdAt: "2026-01-01T00:00:00Z",
+  created_at: "2026-01-01T00:00:00Z",
 };
 
 const tableUsingActiveType: FloorTable = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  event_id: "event-1",
   id: "table-1",
   name: "Table A",
   capacity: 4,
   x: 10,
   y: 10,
-  tableTypeId: "tt-1",
+  table_type_id: "tt-1",
   rotation: 0,
-  layoutId: "layout-1",
-  registrationIds: [],
+  layout_id: "layout-1",
+  registration_ids: [],
 };
 
 interface RenderOverrides {
@@ -137,8 +161,8 @@ interface RenderOverrides {
   onArchiveRoom?: (...args: unknown[]) => Promise<void>;
   onRestoreRoom?: (...args: unknown[]) => Promise<void>;
   onDeleteRoom?: (...args: unknown[]) => Promise<void>;
-  onAddTableType?: (data: Omit<TableType, "id">) => Promise<void>;
-  onUpdateTableType?: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
+  onAddTableType?: (data: TableTypeCreate) => Promise<void>;
+  onUpdateTableType?: (id: string, data: TableTypeUpdate) => Promise<void>;
   onArchiveTableType?: (id: string) => Promise<void>;
   onRestoreTableType?: (id: string) => Promise<void>;
   onDeleteTableType?: (id: string) => Promise<void>;
@@ -480,10 +504,10 @@ describe("VenueManagement", () => {
 
     await waitFor(() =>
       expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
-        venueId: "venue-1",
+        venue_id: "venue-1",
         name: "Room A (renamed)",
-        widthM: 22,
-        lengthM: 15,
+        width_m: 22,
+        length_m: 15,
         color: "#ffc107",
       }),
     );
@@ -492,7 +516,7 @@ describe("VenueManagement", () => {
 
   it("omits width/length from onUpdateRoom when an edit doesn't touch dimensions, preserving dimensionsPlaceholder", async () => {
     const { onUpdateRoom } = renderVenueManagement({
-      rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
+      rooms: [{ ...room1, dimensions_placeholder: true }, room2],
     });
 
     fireEvent.click(
@@ -514,7 +538,7 @@ describe("VenueManagement", () => {
 
     await waitFor(() =>
       expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
-        venueId: "venue-1",
+        venue_id: "venue-1",
         name: "Room A (renamed)",
         color: "#ffc107",
       }),
@@ -524,7 +548,7 @@ describe("VenueManagement", () => {
 
   it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", async () => {
     renderVenueManagement({
-      rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
+      rooms: [{ ...room1, dimensions_placeholder: true }, room2],
     });
 
     expect(screen.getByLabelText("admin_room_dimensions_placeholder_badge")).toBeInTheDocument();
@@ -574,14 +598,13 @@ describe("VenueManagement", () => {
 
     await waitFor(() =>
       expect(onAddTableType).toHaveBeenCalledWith({
-        venueId: "venue-1",
+        venue_id: "venue-1",
         name: "Banquet Rect",
         shape: "rectangle",
-        widthM: 0.8,
-        lengthM: 2,
-        heightType: "low",
+        width_m: 0.8,
+        length_m: 2,
+        height_type: "low",
         capacity: 4,
-        active: true,
       }),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -628,12 +651,12 @@ describe("VenueManagement", () => {
 
     await waitFor(() =>
       expect(onUpdateTableType).toHaveBeenCalledWith("tt-1", {
-        venueId: "venue-1",
+        venue_id: "venue-1",
         name: "Renamed Rectangle",
         shape: "rectangle",
-        widthM: 0.7,
-        lengthM: 1.8,
-        heightType: "low",
+        width_m: 0.7,
+        length_m: 1.8,
+        height_type: "low",
         capacity: 4,
       }),
     );

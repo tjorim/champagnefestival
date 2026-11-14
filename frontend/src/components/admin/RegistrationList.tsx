@@ -62,7 +62,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { FloorTable } from "@/types/admin";
+import type { FloorTable } from "@/api-types";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 import { exportToCsv } from "@/utils/csvExport";
@@ -735,7 +735,7 @@ export default function RegistrationList({
               >
                 <AdminOption value="">{m.admin_unassigned()}</AdminOption>
                 {tables
-                  .filter((t) => t.eventId === reg.eventId)
+                  .filter((t) => t.event_id === reg.eventId)
                   .map((t) => {
                     const ownAtTable =
                       reg.allocations?.find((a) => a.tableId === t.id)?.guestCount ?? 0;

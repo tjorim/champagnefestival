@@ -15,7 +15,7 @@ import {
   resetAdminTablesCollection,
 } from "@/state/adminTablesCollection";
 import { seedTables } from "@/mocks/data/venue";
-import type { FloorTableRecord } from "@/types/admin";
+import type { FloorTableRecord } from "@/api-types";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { createTable } from "@/utils/adminFetch";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -61,8 +61,8 @@ describe("admin tables collection", () => {
 
     expect(collection.size).toBe(seedTables.length);
     const row = collection.get("table-01") as FloorTableRecord;
-    expect(row).toMatchObject({ name: "T1", layoutId: "layout-01", tableTypeId: "tt-01" });
-    expect(row).not.toHaveProperty("registrationIds");
+    expect(row).toMatchObject({ name: "T1", layout_id: "layout-01", table_type_id: "tt-01" });
+    expect(row).not.toHaveProperty("registration_ids");
   });
 
   it("applies an update optimistically, sends only the changed fields and refetches", async () => {
@@ -110,7 +110,7 @@ describe("admin tables collection", () => {
       .when("settled");
     await collection
       .update("table-01", (draft) => {
-        draft.tableTypeId = "tt-02";
+        draft.table_type_id = "tt-02";
       })
       .when("settled");
     await collection
@@ -142,8 +142,8 @@ describe("admin tables collection", () => {
 
     const created = await createTable(authHeaders, {
       name: "T9",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
     await collection.utils.writeUpsert(created);
 
@@ -196,14 +196,17 @@ describe("admin tables collection", () => {
     const inLayout = seedTables.filter((t) => t.layout_id === layoutId);
 
     const restored: FloorTableRecord = {
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      event_id: "event-1",
       id: "table-restored",
       name: "Restored",
       capacity: 6,
       x: 5,
       y: 5,
-      tableTypeId: "tt-01",
+      table_type_id: "tt-01",
       rotation: 0,
-      layoutId: layoutId as string,
+      layout_id: layoutId as string,
     };
     await replaceAdminTablesForLayout(collection, layoutId as string, [restored]);
     expect(collection.has("table-restored")).toBe(true);
@@ -246,8 +249,8 @@ describe("admin tables writes after an API call", () => {
 
     await addAdminTable(collection, authHeaders, {
       name: "T9",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
 
     expect(Array.from(collection.values()).some((t) => t.name === "T9")).toBe(true);
@@ -268,8 +271,8 @@ describe("admin tables writes after an API call", () => {
 
     const add = addAdminTable(collection, authHeaders, {
       name: "Late",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
     await resetAdminTablesCollection(collection);
     release();
@@ -328,14 +331,17 @@ describe("admin tables writes after an API call", () => {
 
 function createRow(id: string): FloorTableRecord {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id,
     name: id,
     capacity: 6,
     x: 1,
     y: 1,
-    tableTypeId: "tt-01",
+    table_type_id: "tt-01",
     rotation: 0,
-    layoutId: "layout-01",
+    layout_id: "layout-01",
   };
 }
 

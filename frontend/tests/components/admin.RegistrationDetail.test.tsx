@@ -3,7 +3,7 @@ import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
-import type { FloorTable } from "@/types/admin";
+import type { FloorTable } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { Registration } from "@/types/registration";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -25,26 +25,32 @@ vi.mock("@/utils/adminFetch", () => ({ fetchPaymentTransactions }));
 
 const tables: FloorTable[] = [
   {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id: "table-1",
     name: "Table 10",
     capacity: 8,
     x: 10,
     y: 10,
-    tableTypeId: "type-1",
+    table_type_id: "type-1",
     rotation: 0,
-    layoutId: "layout-1",
-    registrationIds: [],
+    layout_id: "layout-1",
+    registration_ids: [],
   },
   {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id: "table-2",
     name: "Table 2",
     capacity: 6,
     x: 20,
     y: 20,
-    tableTypeId: "type-1",
+    table_type_id: "type-1",
     rotation: 0,
-    layoutId: "layout-1",
-    registrationIds: ["reg-1"],
+    layout_id: "layout-1",
+    registration_ids: ["reg-1"],
   },
 ];
 
