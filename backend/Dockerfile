@@ -1,5 +1,5 @@
-# uv comes from its own FROM stage, not `COPY --from=<image>`: Dependabot's docker updater only reads
-# FROM lines (dependabot/dependabot-core#5103), so this is what lets it propose uv bumps.
+# uv comes from its own FROM stage, not `COPY --from=<image>`, so its version and digest sit on a
+# FROM line that every Dockerfile updater (Renovate included) reads and bumps.
 FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
 
 # ── build stage ──────────────────────────────────────────────────────────────
