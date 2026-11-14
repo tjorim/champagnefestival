@@ -78,6 +78,7 @@ from app.routers import (
 from app.routers import (
     settings as settings_router,
 )
+from app.schemas import McpCapabilitiesOut
 from app.services.errors import ApiHTTPException
 from app.version import APP_VERSION
 
@@ -291,7 +292,7 @@ app.include_router(public_pages.router)
 app.include_router(integration_clients.router)
 
 
-@app.get("/api/mcp/capabilities")
+@app.get("/api/mcp/capabilities", response_model=McpCapabilitiesOut)
 async def mcp_capabilities() -> dict[str, object]:
     """Public capabilities manifest for the MCP server (issue #807).
 

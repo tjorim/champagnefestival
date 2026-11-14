@@ -21,7 +21,7 @@ from app.dialect_functions import dialect_insert
 from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
-from app.schemas import RequestModel
+from app.schemas import OkOut, RequestModel
 from app.services import waitlist_service as service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
@@ -95,12 +95,12 @@ def _to_admin_out(entry: dict) -> WaitlistEntryAdminOut:
     return WaitlistEntryAdminOut(**entry)
 
 
-@router.post("")
+@router.post("", response_model=OkOut)
 async def submit_waitlist_entry(
     body: WaitlistEntryRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, bool]:
+) -> OkOut:
     check_honeypot(body.honeypot or "")
     check_form_timing(body.form_start_time or "")
     client_ip = get_client_ip(request)
@@ -140,7 +140,7 @@ async def submit_waitlist_entry(
         .on_conflict_do_nothing(index_elements=[WaitlistEntry.id])
     )
     await db.commit()
-    return {"ok": True}
+    return OkOut(ok=True)
 
 
 async def _call(operation):

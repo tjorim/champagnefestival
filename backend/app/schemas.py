@@ -3259,3 +3259,134 @@ class StampCardOut(BaseModel):
     completed_at: datetime | None
     stamps: list[StampOut]
     reward: StampRewardOut | None
+
+
+# ---------------------------------------------------------------------------
+# Small operational responses
+#
+# Each model describes the body a route already sends; none changes a wire shape.
+# ---------------------------------------------------------------------------
+
+
+class OkOut(BaseModel):
+    """Acknowledges a retry-safe public write; ``true`` also for an idempotent replay."""
+
+    ok: bool
+
+
+class PushTestQueuedOut(BaseModel):
+    queued: bool
+    job_id: str
+
+
+class ServerTimeOut(BaseModel):
+    server_time: datetime
+
+
+class HealthStatusOut(BaseModel):
+    status: str
+
+
+class HealthOut(HealthStatusOut):
+    version: str
+    commit: str
+    liveness_endpoint: str
+    readiness_endpoint: str
+
+
+class MetricsOut(BaseModel):
+    """Per-process request metrics (``per_process`` is always true)."""
+
+    uptime_seconds: float
+    request_total: int
+    error_total: int
+    request_rate_per_second: float
+    error_rate: float
+    latency_avg_ms: float
+    latency_p50_ms: float
+    latency_p99_ms: float
+    per_process: bool
+
+
+class McpToolCapabilityOut(BaseModel):
+    name: str
+    effect: Literal["read", "write"]
+    requires_confirmation: bool
+    access: dict[str, str]
+    """``{"role": <minimum role>}``."""
+
+
+class McpCapabilitiesOut(BaseModel):
+    contract_version: int
+    enabled: bool
+    mount_path: str
+    version: str | None
+    tools: list[McpToolCapabilityOut]
+    resources: list[object]
+    prompts: list[object]
+
+
+class ProductChangeShortageOut(BaseModel):
+    product_id: str
+    name: str
+    stock: int
+    reserved: int
+    shortage: int
+
+
+class ProductChangeBookingOut(BaseModel):
+    id: str
+    before_total: str
+    after_total: str
+    amount_paid: str
+    refund_due: str
+    before_items: list[OrderItemOut]
+    after_items: list[OrderItemOut]
+
+
+class ProductChangePreviewOut(BaseModel):
+    """What saving a product change would do to existing bookings, without saving it.
+
+    Send ``preview_token`` back with the save to confirm this exact preview was reviewed.
+    """
+
+    preview_token: str
+    bookings: list[ProductChangeBookingOut]
+    shortages: list[ProductChangeShortageOut]
+    price_changed: bool
+    contents_changed: bool
+
+
+class VolunteerTableMatchOut(BaseModel):
+    table_id: str
+    table_name: str
+    capacity: int
+    layout_id: str
+
+
+class VolunteerTableResolveOut(BaseModel):
+    tables: list[VolunteerTableMatchOut]
+    count: int
+
+
+class VolunteerTableCandidateOut(BaseModel):
+    table_id: str
+    table_name: str
+
+
+class VolunteerTableOrdersOut(BaseModel):
+    """PII-free registrations allocated to one table."""
+
+    table_id: str
+    table_name: str
+    registrations: list[CheckInGuestOut]
+    count: int
+
+
+class VolunteerTableOrdersUnresolvedOut(BaseModel):
+    """A table reference matching no table, or several, so no orders are listed."""
+
+    table_reference: str
+    registrations: list[CheckInGuestOut]
+    candidates: list[VolunteerTableCandidateOut]
+    message: str

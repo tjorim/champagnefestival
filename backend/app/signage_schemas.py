@@ -202,3 +202,56 @@ def missing_bindings(layers, kind: str) -> set[str]:
         if layer.visible and layer.kind == "binding"
     }
     return required - present
+
+
+class SignageAssetOut(BaseModel):
+    """The public URL of an uploaded signage image."""
+
+    url: str
+
+
+class VideoExportCapabilityOut(BaseModel):
+    available: bool
+    max_slides: int
+    max_seconds: int
+
+
+VideoExportState = Literal["preparing", "submitted", "queued", "running", "ready", "failed", "cancelled", "expired"]
+
+
+class VideoExportOut(BaseModel):
+    """One creator-owned video export, as ``services.signage_video.summary`` reports it."""
+
+    id: str
+    channel_id: str | None
+    channel_name: str
+    locale: Literal["nl", "fr", "en"]
+    state: VideoExportState
+    cancel_requested: bool
+    retrying: bool
+    created_at: datetime
+    expires_at: datetime
+    slide_count: int
+    duration_seconds: int
+
+
+class ExpiredPlaylistSlide(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    duration: int
+
+
+class ExpiredPlaylist(BaseModel):
+    """What an expired export keeps of its snapshot: durations only, never content."""
+
+    model_config = ConfigDict(extra="forbid")
+    slides: list[ExpiredPlaylistSlide]
+
+
+class VideoExportCreatedOut(VideoExportOut):
+    """A new export with the playlist snapshot the browser renders slides from.
+
+    An idempotent replay of an export that has since expired returns the
+    tombstone instead of the full playlist.
+    """
+
+    playlist: Playlist | ExpiredPlaylist

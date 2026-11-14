@@ -12,6 +12,7 @@ from app.database import get_db
 from app.schema_types import ResourceId
 from app.schemas import FaqLocale
 from app.services import signage_video as service
+from app.signage_schemas import VideoExportCapabilityOut, VideoExportCreatedOut, VideoExportOut
 
 
 def private_response(response: Response):
@@ -31,17 +32,17 @@ class CreateExport(BaseModel):
     locale: FaqLocale = "nl"
 
 
-@router.get("/capability")
+@router.get("/capability", response_model=VideoExportCapabilityOut)
 async def capability():
     return {"available": service.configured(), "max_slides": service.MAX_SLIDES, "max_seconds": service.MAX_SECONDS}
 
 
-@router.get("")
+@router.get("", response_model=list[VideoExportOut])
 async def list_exports(db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     return await service.list_owned(db, actor)
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, response_model=VideoExportCreatedOut)
 async def create_export(
     body: CreateExport,
     idempotency_key: str = Header(),
@@ -52,12 +53,12 @@ async def create_export(
     return {**service.summary(job), "playlist": job.snapshot}
 
 
-@router.get("/{job_id}")
+@router.get("/{job_id}", response_model=VideoExportOut)
 async def get_export(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     return service.summary(await service.owned(db, job_id, actor))
 
 
-@router.put("/{job_id}/slides/{index}")
+@router.put("/{job_id}/slides/{index}", response_model=VideoExportOut)
 async def upload_slide(
     job_id: str, index: int, request: Request, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)
 ):
@@ -80,19 +81,23 @@ async def upload_slide(
     return service.summary(job)
 
 
-@router.post("/{job_id}/submit")
+@router.post("/{job_id}/submit", response_model=VideoExportOut)
 async def submit_export(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     job = await service.owned(db, job_id, actor, lock=True)
     await service.submit(db, job)
     return service.summary(job)
 
 
-@router.post("/{job_id}/cancel")
+@router.post("/{job_id}/cancel", response_model=VideoExportOut)
 async def cancel_export(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     return await service.cancel(db, job_id, actor)
 
 
-@router.get("/{job_id}/download")
+@router.get(
+    "/{job_id}/download",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"video/mp4": {"schema": {"type": "string", "format": "binary"}}}}},
+)
 async def download(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     job = await service.owned(db, job_id, actor)
     if service.summary(job)["state"] != "ready" or not job.artifact:

@@ -18,6 +18,7 @@ from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
 from app.dialect_functions import json_array_elements_text
 from app.models import Event, Person, Registration
+from app.openapi_responses import binary_response
 from app.schemas import (
     EmailConsentOut,
     PeopleCountsOut,
@@ -27,6 +28,7 @@ from app.schemas import (
     PersonOut,
     PersonPaymentSummary,
     PersonUpdate,
+    RegistrationOut,
 )
 from app.services import email_consent_service, payments_service, people_service, settings_service
 from app.services.errors import ServiceError, to_http_exception
@@ -175,7 +177,7 @@ async def people_by_email(
     return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
 
 
-@router.get("/export")
+@router.get("/export", **binary_response("text/csv", "People as CSV"))
 async def export_people_csv(
     db: AsyncSession = Depends(get_db),
     role: str | None = Query(None),
@@ -252,7 +254,7 @@ async def update_person(
     return await people_service.apply_person_update(db, person, body, actor=actor, request_id=request_id)
 
 
-@router.get("/{person_id}/registrations")
+@router.get("/{person_id}/registrations", response_model=list[RegistrationOut])
 async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),

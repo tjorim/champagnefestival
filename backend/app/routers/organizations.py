@@ -14,6 +14,7 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Organization, OrganizationChange
+from app.openapi_responses import binary_response
 from app.schemas import (
     OrganizationChangeDecision,
     OrganizationChangeOut,
@@ -163,7 +164,11 @@ async def upload_logo(
         raise to_http_exception(exc) from exc
 
 
-@router.get("/changes/{change_id}/logo", dependencies=[Depends(require_admin)])
+@router.get(
+    "/changes/{change_id}/logo",
+    dependencies=[Depends(require_admin)],
+    **binary_response("image/png", "Proposed logo"),
+)
 async def preview_logo(change_id: str, db: AsyncSession = Depends(get_db)) -> Response:
     change = await db.get(OrganizationChange, change_id)
     if change is None:

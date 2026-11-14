@@ -766,6 +766,24 @@ image storage/hosting and retry decisions. The player and editors remain separat
 work (#1262–#1264).
 
 
+## Response models (#1657)
+
+Every route says what it returns, so `/openapi.json` is the API contract the
+frontend generates its types from:
+
+- a JSON route declares `response_model=` (a Pydantic model, or a list of one;
+  never a bare `dict`, `list[dict]` or `Any`);
+- a route that answers 204 declares `status_code=204`;
+- a file, stream or image route spreads
+  `**binary_response("text/csv", "...")` from `app/openapi_responses.py` into its
+  decorator, so the document lists the media type instead of an empty JSON body.
+
+A model describes the body the route already sends; it never changes a wire shape.
+Where the real output has two sensible shapes (the volunteer table-orders lookup,
+an expired video export's playlist), declare a union rather than a model that
+hides one of them. `tests/test_openapi_contract.py` fails when a route breaks
+these rules.
+
 ## Request schema conventions
 
 Create and update models declare their own defaults, required fields, and

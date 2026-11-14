@@ -24,6 +24,7 @@ from app.schemas import (
     EmailPreferencesOut,
     EmailPreferencesUpdate,
     MyRegistrationOut,
+    OkOut,
     PaymentStatus,
     PebbleAccessTokenOut,
     RegistrationGuestOut,
@@ -265,14 +266,14 @@ async def list_my_registrations(
     return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
 
 
-@router.post("/registrations/{registration_id}/request")
+@router.post("/registrations/{registration_id}/request", response_model=OkOut)
 async def request_registration_change(
     registration_id: str,
     body: BookingRequestCreate,
     request: Request,
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, bool]:
+) -> OkOut:
     user, claims = user_and_claims
     row = (
         await db.execute(
@@ -325,7 +326,7 @@ async def request_registration_change(
         # until it succeeds or exhausts its attempts. See docs/retry-safety.md.
         await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
     await db.commit()
-    return {"ok": True}
+    return OkOut(ok=True)
 
 
 @router.get("/registrations/claimable", response_model=list[RegistrationGuestOut])

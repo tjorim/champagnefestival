@@ -24,6 +24,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Give every JSON route a response model so the OpenAPI document describes the whole API (#1657): the signage video export and image upload routes, the person registrations list, product change preview, push test, volunteer table lookups, health, metrics and MCP capabilities now declare theirs, file and stream routes list their media type, and `tests/test_openapi_contract.py` fails when a route has none. Video export timestamps now end in `Z` instead of `+00:00`.
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.
 - Report the built source commit alongside the app version in the health response; VPS builds receive the full commit from the shared deployment tooling (tjorim/apps#345).

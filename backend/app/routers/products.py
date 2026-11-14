@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import ProductCreate, ProductOut, ProductUpdate
+from app.schemas import ProductChangePreviewOut, ProductCreate, ProductOut, ProductUpdate
 from app.services import products_service
 from app.utils import product_to_dict
 
@@ -66,7 +66,7 @@ async def update_product(
     return product_to_dict(product)
 
 
-@router.post("/{product_id}/preview")
+@router.post("/{product_id}/preview", response_model=ProductChangePreviewOut)
 async def preview_product(product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)) -> dict:
     return await products_service.preview_product_update(db, product_id, body)
 
