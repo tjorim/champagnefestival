@@ -15,6 +15,7 @@ from app.config import settings
 from app.database import get_db
 from app.observability import metrics
 from app.oidc_config import OIDCTokenError, _resolve_jwks_uri
+from app.schemas import HealthOut, HealthStatusOut, MetricsOut
 from app.version import APP_COMMIT, APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ def _require_metrics_access(request: Request) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
-@router.get("/health/liveness")
+@router.get("/health/liveness", response_model=HealthStatusOut)
 def liveness_check() -> dict[str, str]:
     """Fast alive check — no DB hit. Suitable for load-balancer liveness probes."""
     return {"status": "alive"}
@@ -96,7 +97,7 @@ async def _jwks_reachable() -> bool:
         return reachable
 
 
-@router.get("/health/readiness")
+@router.get("/health/readiness", response_model=HealthStatusOut)
 async def readiness_check(
     response: Response,
     db: AsyncSession = Depends(get_db),
@@ -133,7 +134,7 @@ async def readiness_check(
     return {"status": "ready"}
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthOut)
 def health_check() -> dict[str, str]:
     """Summary health response with links to liveness and readiness probes."""
     return {
@@ -145,7 +146,7 @@ def health_check() -> dict[str, str]:
     }
 
 
-@router.get("/metrics")
+@router.get("/metrics", response_model=MetricsOut)
 def metrics_endpoint(
     _: None = Depends(_require_metrics_access),
 ) -> dict[str, float | int | bool]:

@@ -27,7 +27,15 @@ from app.dependencies import Pagination
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, Person, Registration, RegistrationAllocation, Table
-from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
+from app.schemas import (
+    CheckInGuestOut,
+    CheckInOut,
+    VolunteerCheckInRequest,
+    VolunteerRegistrationUpdate,
+    VolunteerTableOrdersOut,
+    VolunteerTableOrdersUnresolvedOut,
+    VolunteerTableResolveOut,
+)
 from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
@@ -79,7 +87,7 @@ async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
     return [table for _, table in ranked[:DEFAULT_RESULT_LIMIT]]
 
 
-@router.get("/tables/resolve")
+@router.get("/tables/resolve", response_model=VolunteerTableResolveOut)
 async def resolve_table_reference(
     reference: str = Query(min_length=1, description="Visible table number, name, or label"),
     db: AsyncSession = Depends(get_db),
@@ -96,7 +104,10 @@ async def resolve_table_reference(
     }
 
 
-@router.get("/table-orders")
+@router.get(
+    "/table-orders",
+    response_model=VolunteerTableOrdersOut | VolunteerTableOrdersUnresolvedOut,
+)
 async def get_table_order_summary(
     table_id: str | None = Query(default=None),
     table_reference: str | None = Query(default=None),

@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import FaqLocale
+from app.openapi_responses import binary_response
+from app.schemas import FaqLocale, ServerTimeOut
 from app.services import edition_artwork
 from app.services import signage_service as service
 from app.services.errors import ServiceError
@@ -19,6 +20,7 @@ from app.signage_schemas import (
     Playlist,
     PlaylistPreview,
     Reorder,
+    SignageAssetOut,
     SlideOut,
     SlideWrite,
     TemplateOut,
@@ -29,7 +31,7 @@ router = APIRouter(prefix="/api/signage", tags=["signage"])
 assets_router = APIRouter(tags=["signage"])
 
 
-@router.get("/time")
+@router.get("/time", response_model=ServerTimeOut)
 async def server_time(response: Response) -> dict[str, datetime]:
     response.headers["Cache-Control"] = "no-store"
     return {"server_time": datetime.now(UTC)}
@@ -58,7 +60,7 @@ def asset_root() -> Path:
     return root
 
 
-@router.post("/assets", dependencies=[Depends(require_admin)], status_code=201)
+@router.post("/assets", dependencies=[Depends(require_admin)], status_code=201, response_model=SignageAssetOut)
 async def upload_asset(
     file: UploadFile, request: Request, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)
 ):
@@ -85,7 +87,7 @@ async def upload_asset(
     return {"url": url}
 
 
-@assets_router.get("/uploads/signage/{name}")
+@assets_router.get("/uploads/signage/{name}", **binary_response("image/jpeg", "Signage image"))
 async def public_asset(name: str):
     from app.services.errors import ApiHTTPException
 

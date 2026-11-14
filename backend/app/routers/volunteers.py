@@ -15,6 +15,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
+from app.openapi_responses import binary_response
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
 from app.services.people_exports import stream_people_csv
@@ -64,7 +65,7 @@ async def list_volunteers(
     return list_query.envelope(items, total)
 
 
-@router.get("/export")
+@router.get("/export", **binary_response("text/csv", "Volunteers as CSV"))
 async def export_volunteers_csv(
     db: AsyncSession = Depends(get_db),
     active: bool | None = Query(None),

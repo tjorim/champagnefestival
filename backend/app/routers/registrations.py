@@ -34,6 +34,7 @@ from app.email import send_email_consent_confirmation
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, Table
+from app.openapi_responses import binary_response
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
@@ -335,7 +336,7 @@ async def list_registrations(
     return {"items": items, "total": total, "limit": limit, "page": page}
 
 
-@router.get("/export", dependencies=[Depends(require_admin)])
+@router.get("/export", dependencies=[Depends(require_admin)], **binary_response("text/csv", "Registrations as CSV"))
 async def export_registrations_csv(
     event_id: str,
     db: AsyncSession = Depends(get_db),
@@ -537,7 +538,11 @@ async def _stream_ledger_csv(
         offset += _LEDGER_CSV_BATCH_SIZE
 
 
-@router.get("/transactions/export", dependencies=[Depends(require_admin)])
+@router.get(
+    "/transactions/export",
+    dependencies=[Depends(require_admin)],
+    **binary_response("text/csv", "Payment transactions as CSV"),
+)
 async def export_payment_transactions_csv(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),

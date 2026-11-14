@@ -3,12 +3,13 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from app.openapi_responses import binary_response
 from app.services.organization_logos import NAME, PREFIX, roots
 
 router = APIRouter(tags=["organizations"])
 
 
-@router.get(PREFIX + "{name}")
+@router.get(PREFIX + "{name}", **binary_response("image/png", "Organization logo"))
 async def public_logo(name: str) -> Response:
     if not NAME.fullmatch(name):
         raise HTTPException(404, "Logo not found.")

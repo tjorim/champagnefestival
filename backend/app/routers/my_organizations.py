@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Organization, OrganizationChange, Person, User
+from app.openapi_responses import binary_response
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
@@ -161,7 +162,7 @@ async def upload_logo(
         raise to_http_exception(exc) from exc
 
 
-@router.get("/{organization_id}/changes/{change_id}/logo")
+@router.get("/{organization_id}/changes/{change_id}/logo", **binary_response("image/png", "Proposed logo"))
 async def preview_logo(
     organization_id: int,
     change_id: str,
