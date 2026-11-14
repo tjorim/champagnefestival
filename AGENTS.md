@@ -26,7 +26,9 @@ pnpm lint
 pnpm format         # rewrites files in place
 pnpm format:check   # what CI runs — fails on unformatted files, doesn't rewrite
 pnpm format:repo    # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck
+pnpm typecheck      # includes api:check
+pnpm api:generate   # rewrites openapi.json (needs uv) and src/api-schema/
+pnpm api:check      # fails when src/api-schema/ is stale against openapi.json
 pnpm test
 pnpm build
 ```
@@ -118,6 +120,7 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 - `frontend/src/config/navigation.ts` for site navigation
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
+- `backend/` for API shapes: `frontend/openapi.json` is the committed OpenAPI document (`uv run python -m app.openapi_export`), `frontend/src/api-schema/` is generated from it by Orval, and `frontend/src/api-types.ts` is the one place screens import API types from
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
 - `docs/floor-plan-coordinates.md` for the `Table`/`Area` `x`/`y`/`rotation` coordinate contract
 - `docs/product-audit-2026-08.md` for the combined product audit, feature-request scope, dependencies, and preferred implementation order

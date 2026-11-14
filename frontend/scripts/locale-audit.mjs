@@ -174,7 +174,8 @@ export function frozenMessageCalls(source, file = "source.tsx") {
 function files(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(directory, entry.name);
-    if (entry.isDirectory()) return entry.name === "paraglide" ? [] : files(file);
+    if (entry.isDirectory())
+      return entry.name === "paraglide" || entry.name === "api-schema" ? [] : files(file);
     return /\.(?:tsx?|js)$/.test(file) &&
       !/(?:\.test\.|\.spec\.|test-|fake-api|test-utils)/.test(file)
       ? [file]
