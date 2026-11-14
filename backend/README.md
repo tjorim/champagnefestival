@@ -789,7 +789,7 @@ A response model derives from `ResponseModel` (`app/schemas.py`), which sets
 always sent, so the document lists it as required and the generated TypeScript type
 has `field: T` rather than `field?: T`. Request bodies derive from `RequestModel`
 and keep their defaults optional. A schema used both as a request body and inside a
-response (`Layer`, `Background`, `TableAllocation` and a few others, listed in
+response (`Layer`, `Background`, `TableAllocation` and `PollAttendanceItem`, listed in
 `tests/test_openapi_contract.py`) keeps optional defaults, because the request side
 must.
 

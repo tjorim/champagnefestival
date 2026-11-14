@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
 from app.models import Event, Registration
-from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate, OrderQuestionList, OrderQuestionWrite
+from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate, OrderQuestionList, OrderQuestionOut
 from app.services import events_service
 from app.services import organization_translation as translation
 from app.utils import event_to_summary_dict
@@ -169,9 +169,7 @@ async def delete_event(
     await events_service.delete_event(db, event, actor=actor, request_id=getattr(request.state, "request_id", None))
 
 
-@router.put(
-    "/{event_id}/order-questions", response_model=list[OrderQuestionWrite], dependencies=[Depends(require_admin)]
-)
+@router.put("/{event_id}/order-questions", response_model=list[OrderQuestionOut], dependencies=[Depends(require_admin)])
 async def set_order_questions(
     event_id: str,
     body: OrderQuestionList,

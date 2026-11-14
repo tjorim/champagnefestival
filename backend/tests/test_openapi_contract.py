@@ -102,9 +102,7 @@ def test_documented_responses_never_have_an_empty_json_schema():
 SHARED_REQUEST_RESPONSE_SCHEMAS = {
     "Background",
     "Layer",
-    "OrderQuestionWrite",
     "PollAttendanceItem",
-    "ProductInclusion",
     "TableAllocation",
 }
 

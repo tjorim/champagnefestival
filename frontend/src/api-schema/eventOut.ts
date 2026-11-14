@@ -6,7 +6,7 @@
  * OpenAPI spec version: snapshot
  */
 import type { EditionSummaryOut } from './editionSummaryOut';
-import type { OrderQuestionWrite } from './orderQuestionWrite';
+import type { OrderQuestionOut } from './orderQuestionOut';
 import type { ProductOut } from './productOut';
 
 export type EventOut = {
@@ -31,7 +31,7 @@ export type EventOut = {
   registrations_close_at: string | null;
   active: boolean;
   edition: EditionSummaryOut | null;
-  order_questions: OrderQuestionWrite[];
+  order_questions: OrderQuestionOut[];
   products: ProductOut[];
   created_at: string;
   updated_at: string;

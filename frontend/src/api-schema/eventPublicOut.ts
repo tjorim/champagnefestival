@@ -5,7 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
-import type { OrderQuestionWrite } from './orderQuestionWrite';
+import type { OrderQuestionOut } from './orderQuestionOut';
 import type { ProductPublicOut } from './productPublicOut';
 
 /**
@@ -33,7 +33,7 @@ export type EventPublicOut = {
   registrations_open_from: string | null;
   registrations_close_at: string | null;
   active: boolean;
-  order_questions: OrderQuestionWrite[];
+  order_questions: OrderQuestionOut[];
   products: ProductPublicOut[];
   created_at: string;
   updated_at: string;

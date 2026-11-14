@@ -5,16 +5,17 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
-import type { ProductInclusion } from './productInclusion';
+import type { ProductInclusionOut } from './productInclusionOut';
+import type { ProductOutUnit } from './productOutUnit';
 
 export type ProductOut = {
-  unit: string;
+  unit: ProductOutUnit;
   stock: number | null;
   reserved_quantity: number;
   available_quantity: number | null;
   shortage: number;
   sold_out: boolean;
-  inclusions: ProductInclusion[] | null;
+  inclusions: ProductInclusionOut[] | null;
   id: string;
   event_id: string;
   name: string;

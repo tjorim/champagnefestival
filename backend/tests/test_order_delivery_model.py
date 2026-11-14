@@ -43,3 +43,23 @@ def test_order_item_rejects_delivered_quantity_above_ordered_quantity():
             price=65.0,
             category="champagne",
         )
+
+
+def test_stored_line_with_null_delivered_quantity_is_filled_in_from_the_legacy_flag():
+    # Stored order lines are plain dicts; the response always carries a number, never null.
+    delivered = OrderItemBase.model_validate(
+        {"product_id": "p", "name": "P", "quantity": 3, "price": 1.0, "category": "x", "delivered": True}
+    )
+    pending = OrderItemBase.model_validate(
+        {
+            "product_id": "p",
+            "name": "P",
+            "quantity": 3,
+            "price": 1.0,
+            "category": "x",
+            "delivered_quantity": None,
+            "delivered": False,
+        }
+    )
+    assert (delivered.delivered_quantity, delivered.delivered) == (3, True)
+    assert (pending.delivered_quantity, pending.delivered) == (0, False)

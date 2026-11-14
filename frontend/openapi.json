@@ -4261,7 +4261,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/OrderQuestionWrite"
+                    "$ref": "#/components/schemas/OrderQuestionOut"
                   },
                   "title": "Response Set Order Questions Api Events  Event Id  Order Questions Put"
                 }
@@ -18901,7 +18901,7 @@
           },
           "order_questions": {
             "items": {
-              "$ref": "#/components/schemas/OrderQuestionWrite"
+              "$ref": "#/components/schemas/OrderQuestionOut"
             },
             "type": "array",
             "title": "Order Questions"
@@ -19106,7 +19106,7 @@
           },
           "order_questions": {
             "items": {
-              "$ref": "#/components/schemas/OrderQuestionWrite"
+              "$ref": "#/components/schemas/OrderQuestionOut"
             },
             "type": "array",
             "title": "Order Questions"
@@ -21535,7 +21535,7 @@
             "title": "Rating"
           },
           "question": {
-            "$ref": "#/components/schemas/OrderQuestionWrite"
+            "$ref": "#/components/schemas/OrderQuestionOut"
           }
         },
         "additionalProperties": false,
@@ -21607,16 +21607,10 @@
             "title": "Category"
           },
           "delivered_quantity": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Delivered Quantity"
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Delivered Quantity",
+            "default": 0
           },
           "delivered": {
             "type": "boolean",
@@ -21674,6 +21668,48 @@
         ],
         "title": "OrderItemRequest",
         "description": "What a registration request supplies for an order line item.\n\nOnly `product_id` and `quantity` are client-supplied; `name`/`price`/`category`\nare resolved server-side against the event's real products (see\n`app.services.registrations_service.resolve_order_items`) so a client can never set an\narbitrary or zero price, or order a product that doesn't exist."
+      },
+      "OrderOptionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label_nl": {
+            "type": "string",
+            "title": "Label Nl"
+          },
+          "label_fr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label Fr"
+          },
+          "label_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label_nl",
+          "label_fr",
+          "label_en"
+        ],
+        "title": "OrderOptionOut"
       },
       "OrderOptionWrite": {
         "properties": {
@@ -21741,6 +21777,108 @@
         "additionalProperties": false,
         "type": "object",
         "title": "OrderQuestionList"
+      },
+      "OrderQuestionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "single_choice",
+              "free_text",
+              "rating"
+            ],
+            "title": "Kind"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "title_nl": {
+            "type": "string",
+            "title": "Title Nl"
+          },
+          "title_fr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Fr"
+          },
+          "title_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title En"
+          },
+          "description_nl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Nl"
+          },
+          "description_fr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description Fr"
+          },
+          "description_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description En"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/OrderOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "active",
+          "title_nl",
+          "title_fr",
+          "title_en",
+          "description_nl",
+          "description_fr",
+          "description_en",
+          "options"
+        ],
+        "title": "OrderQuestionOut",
+        "description": "An event's order question as stored: Dutch text is always present (`OrderQuestionWrite` enforces it)."
       },
       "OrderQuestionWrite": {
         "properties": {
@@ -25592,10 +25730,47 @@
         ],
         "title": "ProductInclusion"
       },
+      "ProductInclusionOut": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "title": "Product Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "per_quantity": {
+            "type": "integer",
+            "title": "Per Quantity"
+          },
+          "rounding": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Rounding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity",
+          "per_quantity",
+          "rounding"
+        ],
+        "title": "ProductInclusionOut"
+      },
       "ProductOut": {
         "properties": {
           "unit": {
             "type": "string",
+            "enum": [
+              "item",
+              "table",
+              "person"
+            ],
             "title": "Unit",
             "default": "item"
           },
@@ -25640,7 +25815,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/ProductInclusion"
+                  "$ref": "#/components/schemas/ProductInclusionOut"
                 },
                 "type": "array"
               },
@@ -25903,6 +26078,11 @@
           },
           "unit": {
             "type": "string",
+            "enum": [
+              "item",
+              "table",
+              "person"
+            ],
             "title": "Unit",
             "default": "item"
           },
@@ -25934,7 +26114,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/ProductInclusion"
+                  "$ref": "#/components/schemas/ProductInclusionOut"
                 },
                 "type": "array"
               },

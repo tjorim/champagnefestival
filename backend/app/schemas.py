@@ -112,7 +112,8 @@ class OrderItemBase(ResponseModel):
     quantity: PositiveQuantity
     price: float = Field(ge=0)
     category: str
-    delivered_quantity: NonNegativeQuantity | None = None
+    delivered_quantity: NonNegativeQuantity = 0
+    """Always set: a stored line that only has the legacy `delivered` flag gets the whole quantity."""
     delivered: bool = False
     included_quantity: NonNegativeQuantity = 0
     """How many of `quantity` came free via a product bundle (see
@@ -124,11 +125,18 @@ class OrderItemBase(ResponseModel):
     product is itself `purchasable` (see Product.purchasable). Always counted
     for stock/prep regardless."""
 
+    @model_validator(mode="before")
+    @classmethod
+    def derive_delivered_quantity(cls, data: Any) -> Any:
+        if isinstance(data, dict) and data.get("delivered_quantity") is None:
+            quantity = data.get("quantity")
+            delivered = bool(data.get("delivered")) and isinstance(quantity, int)
+            return {**data, "delivered_quantity": quantity if delivered else 0}
+        return data
+
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
         delivered_quantity = self.delivered_quantity
-        if delivered_quantity is None:
-            delivered_quantity = self.quantity if self.delivered else 0
         if delivered_quantity > self.quantity:
             raise ValueError("delivered_quantity cannot exceed quantity.")
         if self.included_quantity > self.quantity:
@@ -543,6 +551,28 @@ class OrderQuestionWrite(PollQuestionTexts):
         return self
 
 
+class OrderOptionOut(ResponseModel):
+    id: str
+    label_nl: str
+    label_fr: str | None
+    label_en: str | None
+
+
+class OrderQuestionOut(ResponseModel):
+    """An event's order question as stored: Dutch text is always present (`OrderQuestionWrite` enforces it)."""
+
+    id: str
+    kind: OrderQuestionKind
+    active: bool
+    title_nl: str
+    title_fr: str | None
+    title_en: str | None
+    description_nl: str | None
+    description_fr: str | None
+    description_en: str | None
+    options: list[OrderOptionOut]
+
+
 class OrderQuestionList(RequestModel):
     questions: list[OrderQuestionWrite] = Field(default_factory=list, max_length=50)
 
@@ -565,7 +595,7 @@ class OrderAnswerIn(RequestModel):
 class OrderAnswerOut(OrderAnswerIn):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
 
-    question: OrderQuestionWrite
+    question: OrderQuestionOut
 
 
 class EventTextFields(RequestModel):
@@ -668,7 +698,7 @@ class EventOut(EventTextOut):
     registrations_close_at: datetime | None
     active: bool
     edition: EditionSummaryOut | None = None
-    order_questions: list[OrderQuestionWrite] = Field(default_factory=list)
+    order_questions: list[OrderQuestionOut] = Field(default_factory=list)
     products: list[ProductOut] = Field(default_factory=list)
     """Purchasable products only — see ProductOut. Empty means nothing to order."""
     created_at: datetime
@@ -693,12 +723,19 @@ class EventPublicOut(EventTextOut):
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
     active: bool
-    order_questions: list[OrderQuestionWrite] = Field(default_factory=list)
+    order_questions: list[OrderQuestionOut] = Field(default_factory=list)
     products: list[ProductPublicOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductInclusionOut(ResponseModel):
+    product_id: str
+    quantity: int
+    per_quantity: int
+    rounding: Literal["up", "down"]
 
 
 class ProductInclusion(RequestModel):
@@ -787,7 +824,7 @@ class ProductUpdate(ProductTextFields):
 
 
 class ProductOut(ResponseModel):
-    unit: str = "item"
+    unit: Literal["item", "table", "person"] = "item"
     stock: int | None = None
     reserved_quantity: int = 0
     available_quantity: int | None = None
@@ -796,7 +833,7 @@ class ProductOut(ResponseModel):
     """A purchasable product with no remaining stock. Distinct from
     `purchasable` — a sold-out product stays purchasable (and visible), just
     unorderable until restocked."""
-    inclusions: list[ProductInclusion] | None = None
+    inclusions: list[ProductInclusionOut] | None = None
     id: str
     event_id: str
     name: str
@@ -838,12 +875,12 @@ class ProductPublicOut(ResponseModel):
     description_en: str | None = None
     price: Decimal
     category: str
-    unit: str = "item"
+    unit: Literal["item", "table", "person"] = "item"
     required: bool
     purchasable: bool
     available_quantity: int | None = None
     sold_out: bool = False
-    inclusions: list[ProductInclusion] | None = None
+    inclusions: list[ProductInclusionOut] | None = None
     included_product_id: str | None = None
     included_per_guests: int | None = None
 

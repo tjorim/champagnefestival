@@ -17,7 +17,8 @@ export type OrderItemOut = {
   /** @minimum 0 */
   price: number;
   category: string;
-  delivered_quantity: number | null;
+  /** @minimum 0 */
+  delivered_quantity: number;
   delivered: boolean;
   /** @minimum 0 */
   included_quantity: number;

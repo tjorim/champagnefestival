@@ -5,7 +5,8 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
-import type { ProductInclusion } from './productInclusion';
+import type { ProductInclusionOut } from './productInclusionOut';
+import type { ProductPublicOutUnit } from './productPublicOutUnit';
 
 /**
  * The visitor-facing shape of a product: always `purchasable=True` —
@@ -25,12 +26,12 @@ export type ProductPublicOut = {
   description_en: string | null;
   price: string;
   category: string;
-  unit: string;
+  unit: ProductPublicOutUnit;
   required: boolean;
   purchasable: boolean;
   available_quantity: number | null;
   sold_out: boolean;
-  inclusions: ProductInclusion[] | null;
+  inclusions: ProductInclusionOut[] | null;
   included_product_id: string | null;
   included_per_guests: number | null;
 };

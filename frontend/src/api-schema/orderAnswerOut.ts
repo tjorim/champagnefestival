@@ -5,7 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
-import type { OrderQuestionWrite } from './orderQuestionWrite';
+import type { OrderQuestionOut } from './orderQuestionOut';
 
 export type OrderAnswerOut = {
   /**
@@ -16,5 +16,5 @@ export type OrderAnswerOut = {
   option_id: string | null;
   text: string | null;
   rating: number | null;
-  question: OrderQuestionWrite;
+  question: OrderQuestionOut;
 };
