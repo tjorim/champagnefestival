@@ -12,6 +12,7 @@ import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { server } from "@/mocks/server";
+import { registrationRow } from "../utils/registrationFixtures";
 import { createTestQueryClient } from "../utils/queryClient";
 import { noEventTranslations } from "../utils/eventFixtures";
 
@@ -44,15 +45,17 @@ const activeEdition: ActiveEdition = {
 
 function buildRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
+    ...registrationRow(),
     id: "reg-1",
-    personId: "person-1",
+    person_id: "person-1",
     person: {
       id: "person-1",
       name: "Jane Doe",
       email: "jane@example.com",
       phone: "+32 470 00 00 00",
+      preferred_language: null,
     },
-    eventId: "event-1",
+    event_id: "event-1",
     event: {
       id: "event-1",
       editionId: "edition-1",
@@ -75,16 +78,16 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         active: true,
       },
     },
-    guestCount: 2,
-    orderItems: [],
+    guest_count: 2,
+    order_items: [],
     notes: "",
     status: "confirmed",
-    paymentStatus: "unpaid",
-    checkedIn: false,
-    strapIssued: false,
-    checkInToken: "token-abc",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z",
+    payment_status: "unpaid",
+    checked_in: false,
+    strap_issued: false,
+    check_in_token: "token-abc",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -150,7 +153,7 @@ describe("RegistrationList — per-event capacity panel", () => {
 
     renderRegistrationList([
       buildRegistration(),
-      buildRegistration({ id: "reg-2", checkedIn: true, guestCount: 3 }),
+      buildRegistration({ id: "reg-2", checked_in: true, guest_count: 3 }),
     ]);
 
     await waitFor(() => expect(screen.getByText(/admin_checked_in: 3\/5/)).toBeInTheDocument());
@@ -170,7 +173,7 @@ describe("RegistrationList — per-event capacity panel", () => {
       buildRegistration(),
       buildRegistration({
         id: "reg-2",
-        eventId: "event-2",
+        event_id: "event-2",
         event: {
           ...buildRegistration().event!,
           id: "event-2",

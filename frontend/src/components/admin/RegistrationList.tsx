@@ -99,10 +99,10 @@ const BULK_ACTION_BATCH_SIZE = 20;
 const SORT_KEY_BY_COLUMN: Record<string, RegistrationSortKey> = {
   name: "name",
   event: "event",
-  guestCount: "guest_count",
+  guest_count: "guest_count",
   status: "status",
-  paymentStatus: "payment_status",
-  checkedIn: "checked_in",
+  payment_status: "payment_status",
+  checked_in: "checked_in",
 };
 
 interface AllocationRef {
@@ -439,8 +439,8 @@ export default function RegistrationList({
       if (r.status === "cancelled") continue;
       for (const allocation of r.allocations ?? []) {
         occupied.set(
-          allocation.tableId,
-          (occupied.get(allocation.tableId) ?? 0) + allocation.guestCount,
+          allocation.table_id,
+          (occupied.get(allocation.table_id) ?? 0) + allocation.guest_count,
         );
       }
     }
@@ -653,10 +653,10 @@ export default function RegistrationList({
                   </Badge>
                 </div>
                 <div className="text-subtle text-sm">{reg.person.email}</div>
-                {!isStandalone && reg.orderItems.length > 0 && (
+                {!isStandalone && reg.order_items.length > 0 && (
                   <div className="text-highlight text-sm">
                     <Icon icon={ShoppingCartIcon} className="me-1" />
-                    {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
+                    {reg.order_items.filter((o) => o.delivered).length}/{reg.order_items.length}{" "}
                     {m.admin_order_items()}
                   </div>
                 )}
@@ -664,13 +664,13 @@ export default function RegistrationList({
             );
           },
         }),
-        columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
+        columnHelper.accessor((row) => row.event?.title ?? row.event_id, {
           id: "event",
           header: m.admin_event_label(),
           cell: ({ getValue }) => <span className="text-sm">{String(getValue())}</span>,
           meta: { tdClassName: "hidden md:table-cell" },
         }),
-        columnHelper.accessor("guestCount", {
+        columnHelper.accessor("guest_count", {
           header: m.admin_guests_count(),
         }),
         columnHelper.accessor("status", {
@@ -679,21 +679,21 @@ export default function RegistrationList({
             <Badge variant={statusBadgeVariant(getValue())}>{statusLabel(getValue())}</Badge>
           ),
         }),
-        columnHelper.accessor("paymentStatus", {
+        columnHelper.accessor("payment_status", {
           header: m.admin_payment_label(),
           cell: ({ getValue }) => (
             <Badge variant={paymentBadgeVariant(getValue())}>{paymentLabel(getValue())}</Badge>
           ),
           meta: { tdClassName: "hidden lg:table-cell" },
         }),
-        columnHelper.accessor("checkedIn", {
+        columnHelper.accessor("checked_in", {
           header: m.admin_check_in_title(),
           cell: ({ row }) => {
             const reg = row.original;
             const isStandalone = isStandaloneRegistration(reg);
             return (
               <>
-                {reg.checkedIn ? (
+                {reg.checked_in ? (
                   <Badge variant="success">
                     <Icon icon={CircleCheckIcon} className="me-1" />
                     {m.admin_checked_in()}
@@ -701,7 +701,7 @@ export default function RegistrationList({
                 ) : (
                   <Badge variant="secondary">{m.admin_not_checked_in()}</Badge>
                 )}
-                {!isStandalone && reg.strapIssued && (
+                {!isStandalone && reg.strap_issued && (
                   <Badge variant="info" className="ms-1" title={m.admin_strap_issued()}>
                     <Icon icon={ContactRoundIcon} />
                     <span className="sr-only">{m.admin_strap_issued()}</span>
@@ -723,22 +723,22 @@ export default function RegistrationList({
               <span>
                 {reg.allocations?.length} {m.admin_tables_tab()}
               </span>
-            ) : isStandalone && !(reg.bookedTableQuantity ?? 0) ? (
+            ) : isStandalone && !(reg.booked_table_quantity ?? 0) ? (
               <span className="text-subtle text-sm">—</span>
             ) : (
               <AdminSelect
                 size="sm"
                 className={ADMIN_CONTROL_CLASS}
-                value={reg.tableId ?? ""}
+                value={reg.table_id ?? ""}
                 onValueChange={(e) => handleAssignTable(reg.id, e)}
                 aria-label={m.admin_action_assign_table()}
               >
                 <AdminOption value="">{m.admin_unassigned()}</AdminOption>
                 {tables
-                  .filter((t) => t.event_id === reg.eventId)
+                  .filter((t) => t.event_id === reg.event_id)
                   .map((t) => {
                     const ownAtTable =
-                      reg.allocations?.find((a) => a.tableId === t.id)?.guestCount ?? 0;
+                      reg.allocations?.find((a) => a.table_id === t.id)?.guest_count ?? 0;
                     const remaining = Math.max(
                       0,
                       t.capacity - (tableOccupancy.get(t.id) ?? 0) + ownAtTable,
@@ -782,7 +782,7 @@ export default function RegistrationList({
                     <Icon icon={CheckIcon} />
                   </Button>
                 )}
-                {!reg.checkedIn && reg.status !== "cancelled" && (
+                {!reg.checked_in && reg.status !== "cancelled" && (
                   <Button
                     size="sm"
                     variant="outline-success"
@@ -795,7 +795,7 @@ export default function RegistrationList({
                     <span>{m.admin_mark_checked_in()}</span>
                   </Button>
                 )}
-                {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
+                {reg.checked_in && !reg.strap_issued && !isStandaloneRegistration(reg) && (
                   <Button
                     size="sm"
                     variant="outline-info"
@@ -820,7 +820,7 @@ export default function RegistrationList({
                     align="end"
                     finalFocus={() => document.getElementById(`reg-more-${reg.id}`) ?? false}
                   >
-                    {reg.checkedIn && (
+                    {reg.checked_in && (
                       <DropdownMenuItem
                         disabled={!isOnline || processingIds.has(reg.id)}
                         onClick={() => void handleCheckIn(reg.id, false)}
@@ -846,7 +846,7 @@ export default function RegistrationList({
                         {m.admin_action_cancel()}
                       </DropdownMenuItem>
                     )}
-                    {reg.paymentStatus !== "paid" && (
+                    {reg.payment_status !== "paid" && (
                       <DropdownMenuItem
                         disabled={processingIds.has(reg.id)}
                         onClick={() => void handleRecordPayment(reg.id)}
@@ -950,21 +950,21 @@ export default function RegistrationList({
 
     for (const registration of registrations) {
       if (registration.status === "cancelled") continue;
-      if (!registration.eventId) continue;
-      const existing = statsByEvent.get(registration.eventId);
-      const guestCount = Math.max(0, registration.guestCount ?? 0);
-      const checkedInGuests = registration.checkedIn ? guestCount : 0;
+      if (!registration.event_id) continue;
+      const existing = statsByEvent.get(registration.event_id);
+      const guestCount = Math.max(0, registration.guest_count ?? 0);
+      const checkedInGuests = registration.checked_in ? guestCount : 0;
       if (existing) {
         existing.checkedIn += checkedInGuests;
         existing.total += guestCount;
-        if (existing.title === registration.eventId && registration.event?.title) {
+        if (existing.title === registration.event_id && registration.event?.title) {
           existing.title = registration.event.title;
         }
       } else {
-        statsByEvent.set(registration.eventId, {
+        statsByEvent.set(registration.event_id, {
           checkedIn: checkedInGuests,
           total: guestCount,
-          title: registration.event?.title ?? registration.eventId,
+          title: registration.event?.title ?? registration.event_id,
         });
       }
     }
@@ -994,13 +994,13 @@ export default function RegistrationList({
         [m.registration_name()]: reg.person.name,
         [m.registration_email()]: reg.person.email,
         [m.registration_phone()]: reg.person.phone,
-        [m.admin_event_label()]: reg.event?.title ?? reg.eventId,
-        [m.admin_guests_count()]: reg.guestCount,
+        [m.admin_event_label()]: reg.event?.title ?? reg.event_id,
+        [m.admin_guests_count()]: reg.guest_count,
         [m.admin_status_label()]: reg.status,
-        [m.admin_payment_label()]: reg.paymentStatus,
-        [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
-        [m.admin_created_at()]: reg.createdAt,
-        [m.order_questions_heading()]: (reg.orderAnswers ?? [])
+        [m.admin_payment_label()]: reg.payment_status,
+        [m.admin_check_in_title()]: reg.checked_in ? m.admin_value_yes() : m.admin_value_no(),
+        [m.admin_created_at()]: reg.created_at,
+        [m.order_questions_heading()]: (reg.order_answers ?? [])
           .map((a) => `${questionText(a.question ?? {}, "title")}: ${orderAnswerText(a)}`)
           .join("\n"),
       }));
@@ -1093,9 +1093,9 @@ export default function RegistrationList({
     .filter((record): record is Registration => record !== undefined);
   const selectedEvents = new Map<string, { title: string; count: number }>();
   for (const record of selectedRecords) {
-    const previous = selectedEvents.get(record.eventId);
-    selectedEvents.set(record.eventId, {
-      title: `${record.event?.title ?? record.eventId}${record.event?.date ? ` · ${record.event.date}` : ""}`,
+    const previous = selectedEvents.get(record.event_id);
+    selectedEvents.set(record.event_id, {
+      title: `${record.event?.title ?? record.event_id}${record.event?.date ? ` · ${record.event.date}` : ""}`,
       count: (previous?.count ?? 0) + 1,
     });
   }
@@ -1107,7 +1107,7 @@ export default function RegistrationList({
         className={attendanceFeedback ? "mb-2 text-sm text-success-text" : "sr-only"}
       >
         {attendanceFeedback ||
-          `${pageRegistrations.filter((registration) => registration.checkedIn).length} ${m.admin_checked_in()}`}
+          `${pageRegistrations.filter((registration) => registration.checked_in).length} ${m.admin_checked_in()}`}
       </p>
       {!isOnline && (
         <Alert variant="warning" role="status">
@@ -1508,16 +1508,16 @@ export default function RegistrationList({
                             "select",
                             "name",
                             "event",
-                            "guestCount",
+                            "guest_count",
                             "status",
-                            "paymentStatus",
-                            "checkedIn",
+                            "payment_status",
+                            "checked_in",
                             "actions",
                           ].includes(cell.column.id),
                         )
                         .map((cell) => (
                           <div key={cell.id}>
-                            {["guestCount", "status", "paymentStatus"].includes(cell.column.id) &&
+                            {["guest_count", "status", "payment_status"].includes(cell.column.id) &&
                               typeof cell.column.columnDef.header === "string" && (
                                 <span className="me-2 text-subtle">
                                   {cell.column.columnDef.header}:
@@ -1576,7 +1576,7 @@ export default function RegistrationList({
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 p-4 text-center">
-            <p>{qrRegistration?.event?.title ?? qrRegistration?.eventId}</p>
+            <p>{qrRegistration?.event?.title ?? qrRegistration?.event_id}</p>
             <p>{m.admin_qr_scan_info()}</p>
             {qrRegistration?.status === "cancelled" && (
               <Alert variant="warning">{m.admin_status_cancelled()}</Alert>
@@ -1592,14 +1592,14 @@ export default function RegistrationList({
                 <Alert variant="warning">{m.admin_status_cancelled()}</Alert>
               )}
             {!qrDetailQuery.isError &&
-              qrDetailQuery.data?.checkInToken &&
+              qrDetailQuery.data?.check_in_token &&
               qrDetailQuery.data.status !== "cancelled" &&
               qrRegistration?.status !== "cancelled" && (
                 <div className="inline-block rounded-md bg-white p-4">
                   <QRCodeSVG
                     role="img"
                     aria-label={m.admin_qr_code()}
-                    value={`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/check-in?id=${encodeURIComponent(qrDetailQuery.data.id)}#token=${encodeURIComponent(qrDetailQuery.data.checkInToken)}`}
+                    value={`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/check-in?id=${encodeURIComponent(qrDetailQuery.data.id)}#token=${encodeURIComponent(qrDetailQuery.data.check_in_token)}`}
                     size={180}
                     level="M"
                   />
@@ -1655,9 +1655,9 @@ export default function RegistrationList({
                 >
                   {selectedRecords.map((record) => (
                     <li key={record.id}>
-                      {record.person.name} · {record.event?.title ?? record.eventId}
+                      {record.person.name} · {record.event?.title ?? record.event_id}
                       {record.event?.date ? ` · ${record.event.date}` : ""} ·{" "}
-                      {m.admin_guests_count()}: {record.guestCount}
+                      {m.admin_guests_count()}: {record.guest_count}
                     </li>
                   ))}
                 </ul>

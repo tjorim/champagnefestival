@@ -7,7 +7,7 @@ describe("bookingUpdatePayload", () => {
       bookingUpdatePayload({
         guestCount: 2,
         quantities: { table: 1, unused: 0 },
-        allocations: [{ tableId: "keep", guestCount: 0, exclusive: true }],
+        allocations: [{ table_id: "keep", guest_count: 0, exclusive: true }],
         notes: "Keep near the door",
         status: "confirmed",
       }),

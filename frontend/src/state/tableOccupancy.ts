@@ -16,8 +16,8 @@ export function deriveTableRegistrationIds(
   const byTable = new Map<string, string[]>();
   for (const registration of registrations) {
     for (const allocation of registration.allocations ?? []) {
-      const ids = byTable.get(allocation.tableId);
-      if (!ids) byTable.set(allocation.tableId, [registration.id]);
+      const ids = byTable.get(allocation.table_id);
+      if (!ids) byTable.set(allocation.table_id, [registration.id]);
       else if (!ids.includes(registration.id)) ids.push(registration.id);
     }
   }

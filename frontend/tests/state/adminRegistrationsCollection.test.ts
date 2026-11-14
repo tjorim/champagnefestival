@@ -1,3 +1,5 @@
+import { registrationOut } from "@/mocks/data/builders";
+import type { RegistrationOut } from "@/api-types";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
@@ -101,7 +103,7 @@ describe("admin registrations pilot collection", () => {
     await collection.preload();
 
     expect(collection.size).toBe(seedRegistrations.length);
-    expect(collection.get("reg-01")?.tableId).toBe("table-01");
+    expect(collection.get("reg-01")?.table_id).toBe("table-01");
   });
 
   it("applies mutation updates for check-in, table assignment and cancellation", async () => {
@@ -124,12 +126,12 @@ describe("admin registrations pilot collection", () => {
       }),
     });
     expect(response.ok).toBe(true);
-    const updated = apiToRegistration((await response.json()) as Record<string, unknown>);
+    const updated = apiToRegistration((await response.json()) as RegistrationOut);
     collection.utils.writeUpsert(updated);
 
     const registration = collection.get("reg-01");
-    expect(registration?.checkedIn).toBe(true);
-    expect(registration?.tableId).toBeUndefined();
+    expect(registration?.checked_in).toBe(true);
+    expect(registration?.table_id).toBeNull();
     expect(registration?.allocations).toEqual([]);
     expect(registration?.status).toBe("cancelled");
   });
@@ -238,7 +240,7 @@ describe("admin registrations pilot collection", () => {
     server.use(
       http.get("/api/registrations/:id", async () => {
         await gate;
-        return HttpResponse.json({ id: "reg-01", notes: "Late response" });
+        return HttpResponse.json(registrationOut({ id: "reg-01", notes: "Late response" }));
       }),
     );
 

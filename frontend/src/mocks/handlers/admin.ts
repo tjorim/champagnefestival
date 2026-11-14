@@ -1,5 +1,6 @@
 import type {
   AreaOut,
+  EventOut,
   EditionAttendanceStats,
   EventCheckInStats,
   LayoutOut,
@@ -10,6 +11,7 @@ import type {
 } from "@/api-types";
 import type { StampCard, StampCardType } from "@/utils/stampCards";
 import { http, HttpResponse } from "msw/http";
+import { orderItemOut, registrationOut } from "../data/builders";
 import {
   editions,
   events,
@@ -667,35 +669,33 @@ export const adminHandlers = [
         { status: 400 },
       );
     }
-    const newReg = {
+    if (!person || !event) {
+      return HttpResponse.json(
+        { detail: person ? "Event not found." : "Person not found." },
+        { status: 404 },
+      );
+    }
+    const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const newReg = registrationOut({
       id: uid(),
-      person_id: String(body.person_id ?? ""),
-      person: person
-        ? {
-            id: String(person.id ?? ""),
-            name: String(person.name ?? ""),
-            email: String(person.email ?? ""),
-            phone: String(person.phone ?? ""),
-          }
-        : { id: "", name: "", email: "", phone: "" },
-      event_id: String(body.event_id ?? ""),
-      event: event ?? null,
+      person_id: String(person.id),
+      person: {
+        id: String(person.id),
+        name: String(person.name ?? ""),
+        email: String(person.email ?? ""),
+        phone: String(person.phone ?? ""),
+        preferred_language: null,
+      },
+      event_id: String(event.id),
+      event: event as unknown as EventOut,
       guest_count: Number(body.guest_count ?? 1),
-      order_items: orderItems,
-      amount_due: orderItems.length
-        ? orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        : null,
+      order_items: orderItems.map((item) => orderItemOut(item)),
+      amount_due: orderItems.length ? total.toFixed(2) : null,
       notes: String(body.notes ?? ""),
-      table_id: null,
-      status: "confirmed",
-      payment_status: "unpaid",
-      checked_in: false,
-      checked_in_at: null,
-      strap_issued: false,
       check_in_token: `mock-token-${uid()}`,
       created_at: now(),
       updated_at: now(),
-    };
+    });
     sharedStore.registrations.push(newReg);
     return HttpResponse.json(newReg, { status: 201 });
   }),

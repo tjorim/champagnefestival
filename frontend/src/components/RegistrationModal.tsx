@@ -38,7 +38,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
-import type { RegistrationFormData, OrderItem } from "@/types/registration";
+import type { OrderItemRequest } from "@/api-types";
+import type { RegistrationFormData } from "@/types/registration";
 import type { Event } from "@/types/event";
 import { eventTitle, productDescription, productName } from "@/utils/eventText";
 import {
@@ -70,7 +71,7 @@ interface RegistrationFields {
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const auth = useAuth();
   const [orderAnswers, setOrderAnswers] = useState<OrderAnswer[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItemRequest[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -134,30 +135,19 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   const handleQuantityChange = useCallback(
     (productId: string, quantity: number) => {
       setOrderItems((prev) => {
-        const existing = prev.find((o) => o.productId === productId);
+        const existing = prev.find((o) => o.product_id === productId);
         if (quantity <= 0) {
-          return prev.filter((o) => o.productId !== productId);
+          return prev.filter((o) => o.product_id !== productId);
         }
         const product = products.find((p) => p.id === productId);
         if (!product) return prev;
 
-        const item: OrderItem = {
-          productId,
-          name: productName(product, getLocale()),
-          quantity,
-          deliveredQuantity: 0,
-          remainingQuantity: quantity,
-          price: product.price,
-          category: product.category,
-          delivered: false,
-          // The server computes and merges any bundle-included quantity on top
-          // of this — the client only ever asks for what's explicitly chosen.
-          includedQuantity: 0,
-          visible: true,
-        };
+        // The server resolves name, price and category, and computes and merges any bundle-included
+        // quantity on top of this — the client only ever asks for what is explicitly chosen.
+        const item: OrderItemRequest = { product_id: productId, quantity };
 
         if (existing) {
-          return prev.map((o) => (o.productId === productId ? item : o));
+          return prev.map((o) => (o.product_id === productId ? item : o));
         }
         return [...prev, item];
       });
@@ -224,7 +214,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     [purchasableProducts],
   );
   const hasRequiredSelected = useMemo(
-    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
+    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.product_id)),
     [orderItems, requiredProducts],
   );
 
@@ -264,9 +254,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       }
     };
     for (const order of orderItems) {
-      const ordered = products.find((p) => p.id === order.productId);
+      const ordered = products.find((p) => p.id === order.product_id);
       expand(
-        order.productId,
+        order.product_id,
         order.quantity,
         ordered ? productName(ordered, getLocale()) : "",
         new Set(),
@@ -542,7 +532,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   )}
 
                   {purchasableProducts.map((product) => {
-                    const currentItem = orderItems.find((o) => o.productId === product.id);
+                    const currentItem = orderItems.find((o) => o.product_id === product.id);
                     const qty = currentItem?.quantity ?? 0;
                     const label = `${productName(product, getLocale())} - €${product.price}`;
                     const isLockedOptional =

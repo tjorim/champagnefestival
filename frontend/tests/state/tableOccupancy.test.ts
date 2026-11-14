@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import { deriveTableRegistrationIds, withTableOccupancy } from "@/state/tableOccupancy";
 import type { FloorTableRecord } from "@/api-types";
 import type { Registration } from "@/types/registration";
+import { registrationRow } from "../utils/registrationFixtures";
 
 function registration(id: string, tableIds: string[]): Registration {
-  return {
+  return registrationRow({
     id,
-    allocations: tableIds.map((tableId) => ({ tableId, guestCount: 1, exclusive: false })),
-  } as Registration;
+    allocations: tableIds.map((table_id) => ({ table_id, guest_count: 1, exclusive: false })),
+  });
 }
 
 const table = (id: string): FloorTableRecord => ({

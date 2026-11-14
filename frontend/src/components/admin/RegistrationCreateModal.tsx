@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
+import { toAmount } from "@/utils/money";
 import { isDraftDirty, useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
@@ -96,7 +97,7 @@ const BLANK_FORM: RegistrationCreateForm = {
 
 const formatMoney = (amount: number) => `€${amount.toFixed(2)}`;
 
-const paymentStatusLabel = (status: Registration["paymentStatus"]) =>
+const paymentStatusLabel = (status: Registration["payment_status"]) =>
   status === "paid"
     ? m.admin_payment_paid()
     : status === "partial"
@@ -311,13 +312,13 @@ export default function RegistrationCreateModal({
                   {m.admin_registration_created_summary({
                     person: created.person?.name ?? values.personOption?.label ?? "",
                     event: created.event?.title ?? selectedEvent?.title ?? "",
-                    guests: created.guestCount,
+                    guests: created.guest_count,
                   })}
                 </div>
                 <div>
                   {m.admin_registration_created_total({
-                    total: formatMoney(created.amountDue ?? 0),
-                    status: paymentStatusLabel(created.paymentStatus),
+                    total: formatMoney(toAmount(created.amount_due)),
+                    status: paymentStatusLabel(created.payment_status),
                   })}
                 </div>
               </Alert>

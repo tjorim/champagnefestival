@@ -15,7 +15,9 @@ import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { RegistrationStatus } from "@/types/registration";
+import type { RegistrationListOut } from "@/api-types";
 import { apiToRegistration } from "@/types/registrationMapper";
+import { eventOut, registrationOut } from "../utils/registrationFixtures";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -55,9 +57,9 @@ const activeEdition: ActiveEdition = {
 // contain the whole matching set.
 const TOTAL_REGISTRATIONS = 60;
 
-function buildRawRegistration(index: number): Record<string, unknown> {
+function buildRawRegistration(index: number): RegistrationListOut {
   const n = String(index).padStart(2, "0");
-  return {
+  return registrationOut({
     id: `reg-bulk-${n}`,
     person_id: `person-bulk-${n}`,
     person: {
@@ -65,21 +67,13 @@ function buildRawRegistration(index: number): Record<string, unknown> {
       name: `Bulk Guest ${n}`,
       email: `bulk${n}@example.com`,
       phone: "",
+      preferred_language: null,
     },
     event_id: "event-bulk-test",
-    event: {
+    event: eventOut({
       id: "event-bulk-test",
-      edition_id: "edition-1",
       title: "Bulk Selection Test Event",
-      description: "",
-      date: "2026-03-06",
-      start_time: "18:00",
       end_time: "22:00",
-      category: "festival",
-      registration_required: true,
-      active: true,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-01T00:00:00Z",
       edition: {
         id: "edition-1",
         year: 2026,
@@ -87,26 +81,17 @@ function buildRawRegistration(index: number): Record<string, unknown> {
         edition_type: "festival",
         active: true,
       },
-    },
-    guest_count: 1,
-    order_items: [],
-    notes: "",
-    accessibility_note: "",
-    table_id: null,
+    }),
     status: "pending",
-    payment_status: "unpaid",
-    checked_in: false,
-    checked_in_at: null,
-    strap_issued: false,
     created_at: `2024-01-01T00:00:${n}Z`,
     updated_at: `2024-01-01T00:00:${n}Z`,
-  };
+  });
 }
 
 const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
   buildRawRegistration(i + 1),
 );
-const registrations = rawRegistrations.map(apiToRegistration);
+const registrations = rawRegistrations.map((row) => apiToRegistration(row));
 
 function installPaginatedHandler() {
   server.use(

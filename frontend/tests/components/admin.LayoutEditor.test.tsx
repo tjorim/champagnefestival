@@ -2,6 +2,7 @@ import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { registrationRow } from "../utils/registrationFixtures";
 import { createTestQueryClient } from "../utils/queryClient";
 import type { ReactElement } from "react";
 
@@ -138,19 +139,26 @@ function makeArea(overrides: Partial<FloorArea> = {}): FloorArea {
 
 function makeRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
+    ...registrationRow(),
     id: "reg-1",
-    personId: "person-1",
-    person: { id: "person-1", name: "Jane Doe", email: "jane@example.com", phone: "+32000" },
-    eventId: "event-1",
-    guestCount: 2,
-    orderItems: [],
+    person_id: "person-1",
+    person: {
+      id: "person-1",
+      name: "Jane Doe",
+      email: "jane@example.com",
+      phone: "+32000",
+      preferred_language: null,
+    },
+    event_id: "event-1",
+    guest_count: 2,
+    order_items: [],
     notes: "",
     status: "confirmed",
-    paymentStatus: "paid",
-    checkedIn: false,
-    strapIssued: false,
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
+    payment_status: "paid",
+    checked_in: false,
+    strap_issued: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -289,7 +297,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     fixture.registrations = [
       makeRegistration({
-        allocations: [{ tableId: fixture.tables[0]!.id, guestCount: 2, exclusive: false }],
+        allocations: [{ table_id: fixture.tables[0]!.id, guest_count: 2, exclusive: false }],
       }),
     ];
     vi.mocked(fetchAllRegistrationPages).mockResolvedValueOnce(fixture.registrations);
@@ -347,7 +355,7 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_assign_booking" }));
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-        { tableId: "table-1", guestCount: 2, exclusive: false },
+        { table_id: "table-1", guest_count: 2, exclusive: false },
       ]),
     );
   });
@@ -356,7 +364,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     fixture.tables[0] = makeTable({ registration_ids: ["reg-1"] });
     fixture.registrations[0] = makeRegistration({
-      allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+      allocations: [{ table_id: "table-1", guest_count: 2, exclusive: false }],
     });
     const { callbacks } = renderLayoutEditor(fixture);
     fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
@@ -366,7 +374,7 @@ describe("LayoutEditor", () => {
     );
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-        { tableId: "table-2", guestCount: 2, exclusive: false },
+        { table_id: "table-2", guest_count: 2, exclusive: false },
       ]),
     );
 

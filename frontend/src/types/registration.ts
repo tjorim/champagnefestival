@@ -1,89 +1,44 @@
+import type {
+  OrderItemOut,
+  OrderItemRequest,
+  RegistrationListOut,
+  TableAllocation,
+} from "@/api-types";
 import type { OrderAnswer } from "@/utils/orderQuestions";
 import type { Event } from "./event";
-
-export interface TableAllocation {
-  tableId: string;
-  guestCount: number;
-  exclusive: boolean;
-}
 
 export interface BookingUpdate {
   orderAnswers?: OrderAnswer[];
   guestCount: number;
   quantities: Record<string, number>;
+  /** Typed as the API's own allocation (`table_id`, `guest_count`), so it is sent as it is. */
   allocations: TableAllocation[];
   notes: string;
   status: RegistrationStatus;
 }
 
-export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
+export type RegistrationStatus = RegistrationListOut["status"];
 
-export type PaymentStatus = "unpaid" | "partial" | "paid";
+export type PaymentStatus = RegistrationListOut["payment_status"];
 
-export interface OrderItem {
-  productId: string;
-  name: string;
-  quantity: number;
-  deliveredQuantity: number;
-  remainingQuantity: number;
-  price: number;
-  category: string;
-  /** Whether back-of-house has physically delivered/brought this item */
-  delivered: boolean;
-  /**
-   * How many of `quantity` came free via a product bundle (e.g. bottles
-   * included with a VIP table) — only `quantity - includedQuantity` is
-   * billed at `price` per unit.
-   */
-  includedQuantity: number;
-  /** Whether this line should appear in the visitor-facing order summary. */
-  visible: boolean;
-}
+/**
+ * A booking as the admin screens read it: the generated list row, as the API sends it, with the nested
+ * `event` still in the camelCase `Event` shape until the event slice of #1657 replaces it (see
+ * `registrationMapper.ts`). `check_in_token` exists only on the admin detail response.
+ */
+export type Registration = Omit<RegistrationListOut, "event"> & {
+  event: Event | null;
+  check_in_token?: string;
+};
 
-export interface PersonSummary {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  preferredLanguage?: "nl" | "fr" | "en" | null;
-}
-
-export interface Registration {
-  orderAnswers?: OrderAnswer[];
-  allocations?: TableAllocation[];
-  bookedTableQuantity?: number;
-  id: string;
-  personId: string;
-  person: PersonSummary;
-  eventId: string;
-  event?: Event | null;
-  guestCount: number;
-  orderItems: OrderItem[];
-  notes: string;
-  /** First allocated table for compact displays; allocations hold the complete seating. */
-  tableId?: string;
-  status: RegistrationStatus;
-  paymentStatus: PaymentStatus;
-  /**
-   * What this booking owes in euro — e.g. a bourse table rental fee.
-   * Recorded by an admin and settled offline; undefined means nothing is owed.
-   */
-  amountDue?: number;
-  amountPaid?: number;
-  refundDue?: number;
-  /** Whether the guest has physically checked in at the entrance */
-  checkedIn: boolean;
-  checkedInAt?: string;
-  /** Whether the guest has received their wristband/strap */
-  strapIssued: boolean;
-  /**
-   * One-time token included in the QR code.
-   * Never exposed to the general public listing; only in individual registration details.
-   * Optional because the list endpoint omits it — only the admin detail endpoint returns it.
-   */
-  checkInToken?: string;
-  createdAt: string;
-  updatedAt: string;
+/**
+ * What is still to be delivered on an order line. The API guarantees `0 <= delivered_quantity <= quantity`
+ * (`OrderItemBase` rejects anything else), so this is plain subtraction.
+ */
+export function remainingQuantity(
+  item: Pick<OrderItemOut, "quantity" | "delivered_quantity">,
+): number {
+  return item.quantity - item.delivered_quantity;
 }
 
 export interface RegistrationFormData {
@@ -94,7 +49,8 @@ export interface RegistrationFormData {
   preferredLanguage: "nl" | "fr" | "en";
   eventId: string;
   guestCount: number;
-  orderItems: OrderItem[];
+  /** The lines the visitor ordered: what the API accepts (the server resolves name and price). */
+  orderItems: OrderItemRequest[];
   notes: string;
   newEditionsOptIn: boolean;
   honeypot?: string;

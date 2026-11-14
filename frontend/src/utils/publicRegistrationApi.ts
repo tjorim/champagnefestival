@@ -509,7 +509,7 @@ export async function submitRegistration(
       // The server resolves name/price/category from the event's real products —
       // see OrderItemRequest in the backend schema — so only these two are sent.
       order_items: payload.orderItems.map((order) => ({
-        product_id: order.productId,
+        product_id: order.product_id,
         quantity: order.quantity,
       })),
       notes: payload.notes,

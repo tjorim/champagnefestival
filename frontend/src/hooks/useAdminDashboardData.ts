@@ -32,9 +32,9 @@ export function useAdminDashboardData({
     for (const registration of registrations) {
       if (registration.status === "cancelled") continue;
       if (!isRegistrationInEdition(registration, activeEdition.id)) continue;
-      const guestCount = Math.max(0, registration.guestCount ?? 0);
+      const guestCount = Math.max(0, registration.guest_count ?? 0);
       total += guestCount;
-      if (registration.checkedIn) checkedIn += guestCount;
+      if (registration.checked_in) checkedIn += guestCount;
     }
 
     return { checkedIn, total, eventsToday: eventIdsToday.size };

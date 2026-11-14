@@ -3,6 +3,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 import { apiToEvent, type Event } from "@/types/event";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
+import type { RegistrationOut } from "@/api-types";
 import { apiToRegistration } from "@/types/registrationMapper";
 import { editionDisplayName } from "@/utils/editionName";
 
@@ -258,5 +259,5 @@ export async function createAdminRegistration(
   if (!res.ok) throw await apiErrorFromResponse(res, m.admin_error_create_registration());
 
   const data = await res.json();
-  return apiToRegistration(data as Record<string, unknown>);
+  return apiToRegistration(data as RegistrationOut);
 }

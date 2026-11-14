@@ -14,6 +14,8 @@ import type {
   LayoutWithTablesOut,
   PaymentTransaction,
   PaymentTransactionLedgerEnvelope,
+  RegistrationListEnvelope,
+  RegistrationOutWithToken,
   Room,
   TableCreate,
   TableOut,
@@ -40,12 +42,8 @@ export interface RegistrationsPage {
   page: number;
 }
 
-interface RegistrationListEnvelope {
-  items?: Record<string, unknown>[];
-  total?: number;
-  limit?: number;
-  page?: number;
-}
+// Partial on purpose: the check below rejects the pre-#931 bare array instead of trusting the type.
+type RegistrationListPayload = Partial<RegistrationListEnvelope>;
 
 export type RegistrationSortKey =
   | "name"
@@ -98,7 +96,7 @@ export async function fetchRegistrationsPage(
   if (options.limit) params.set("limit", String(options.limit));
   if (options.page) params.set("page", String(options.page));
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListEnvelope>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListPayload>(
     `/api/registrations${suffix}`,
     { headers: authHeaders(), signal: options.signal },
     m.admin_error_load_data(),
@@ -115,7 +113,7 @@ export async function fetchRegistrationsPage(
     throw new Error("Invalid /api/registrations response: expected {items, total, limit, page}.");
   }
   return {
-    registrations: payload.items.map(apiToRegistration),
+    registrations: payload.items.map((item) => apiToRegistration(item)),
     total: payload.total,
     limit: payload.limit,
     page: payload.page,
@@ -173,7 +171,7 @@ export async function fetchRegistration(
   registrationId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<Registration> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
     `/api/registrations/${encodeURIComponent(registrationId)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),

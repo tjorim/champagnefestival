@@ -1,17 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { buildMailto, buildRegistrationEmailDraft } from "./emailComposer";
 import type { Registration } from "@/types/registration";
+import { registrationRow } from "../../tests/utils/registrationFixtures";
 
 const registration = {
-  id: "reg/1?x",
-  person: { name: "Zoë", email: "zoe+vip@example.com" },
-  eventId: "event-1",
+  ...registrationRow({
+    id: "reg/1?x",
+    person: {
+      id: "p1",
+      name: "Zoë",
+      email: "zoe+vip@example.com",
+      phone: "",
+      preferred_language: null,
+    },
+    event_id: "event-1",
+    order_items: [
+      {
+        product_id: "brut",
+        name: "Brut Réserve",
+        name_nl: null,
+        name_fr: null,
+        name_en: null,
+        quantity: 2,
+        price: 30,
+        category: "champagne",
+        delivered_quantity: 0,
+        delivered: false,
+        included_quantity: 0,
+        visible: true,
+      },
+    ],
+    payment_status: "partial",
+    amount_due: "12.50",
+    notes: "SECRET NOTE",
+    check_in_token: "SECRET TOKEN",
+  }),
   event: { title: "Fizz & Food", date: "2026-09-12", startTime: "18:30" },
-  orderItems: [{ name: "Brut Réserve", quantity: 2 }],
-  paymentStatus: "partial",
-  amountDue: 12.5,
-  notes: "SECRET NOTE",
-  checkInToken: "SECRET TOKEN",
 } as Registration;
 
 describe("emailComposer", () => {

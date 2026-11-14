@@ -1,3 +1,4 @@
+import { registrationOut } from "@/mocks/data/builders";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
@@ -227,7 +228,7 @@ describe("createAdminRegistration", () => {
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "reg-1", guest_count: 2 }, { status: 201 });
+        return HttpResponse.json(registrationOut({ id: "reg-1", guest_count: 2 }), { status: 201 });
       }),
     );
 
@@ -255,7 +256,7 @@ describe("createAdminRegistration", () => {
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "reg-1" }, { status: 201 });
+        return HttpResponse.json(registrationOut({ id: "reg-1" }), { status: 201 });
       }),
     );
 

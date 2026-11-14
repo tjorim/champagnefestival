@@ -61,8 +61,15 @@ import {
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Registration } from "@/types/registration";
-import type { TableAllocation } from "@/types/registration";
-import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/api-types";
+import type {
+  Room,
+  FloorTable,
+  TableAllocation,
+  FloorArea,
+  TableType,
+  Layout,
+  LayoutRevision,
+} from "@/api-types";
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx, safeRoomColor } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
@@ -591,7 +598,7 @@ function RoomCanvas({
               .filter((r) => r.status !== "cancelled" && table.registration_ids.includes(r.id))
               .reduce(
                 (sum, r) =>
-                  sum + (r.allocations?.find((a) => a.tableId === table.id)?.guestCount ?? 0),
+                  sum + (r.allocations?.find((a) => a.table_id === table.id)?.guest_count ?? 0),
                 0,
               );
             const isInSelectedArea = selectedArea
@@ -611,7 +618,7 @@ function RoomCanvas({
                 exclusive={registrations.some(
                   (r) =>
                     r.status !== "cancelled" &&
-                    r.allocations?.some((a) => a.tableId === table.id && a.exclusive),
+                    r.allocations?.some((a) => a.table_id === table.id && a.exclusive),
                 )}
                 isSelected={selectedTable === table.id}
                 isInteractive={layer === "seating"}
@@ -906,17 +913,17 @@ export default function LayoutEditor({
   );
   const eventTables = tables.filter((table) => eventLayoutIds.has(table.layout_id));
   const assignableRegistrations = registrations.filter((registration) => {
-    if (registration.status === "cancelled" || registration.eventId !== activeLayout?.event_id)
+    if (registration.status === "cancelled" || registration.event_id !== activeLayout?.event_id)
       return false;
     if (
-      registration.allocations?.some((allocation) => allocation.tableId === selectedTableData?.id)
+      registration.allocations?.some((allocation) => allocation.table_id === selectedTableData?.id)
     )
       return false;
-    const used = registration.bookedTableQuantity
+    const used = registration.booked_table_quantity
       ? (registration.allocations?.length ?? 0)
-      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guestCount, 0) ??
+      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guest_count, 0) ??
         0);
-    return used < (registration.bookedTableQuantity || registration.guestCount);
+    return used < (registration.booked_table_quantity || registration.guest_count);
   });
   const selectedBookingToAssign = assignableRegistrations.find(
     (item) => item.id === bookingToAssign,
@@ -1373,7 +1380,7 @@ export default function LayoutEditor({
                           <span className="font-semibold me-auto">{r.person.name}</span>
                           {(() => {
                             const allocation = r.allocations?.find(
-                              (item) => item.tableId === selectedTableData.id,
+                              (item) => item.table_id === selectedTableData.id,
                             );
                             if (!allocation) return null;
                             return (
@@ -1383,7 +1390,7 @@ export default function LayoutEditor({
                                   type="number"
                                   min={allocation.exclusive ? 0 : 1}
                                   max={20}
-                                  defaultValue={allocation.guestCount}
+                                  defaultValue={allocation.guest_count}
                                   disabled={allocationPending || allocation.exclusive}
                                   className="bg-muted text-content border-input w-20"
 
@@ -1392,13 +1399,13 @@ export default function LayoutEditor({
                                     if (
                                       Number.isInteger(guestCount) &&
                                       guestCount >= 1 &&
-                                      guestCount !== allocation.guestCount
+                                      guestCount !== allocation.guest_count
                                     ) {
                                       void savePlanAllocations(
                                         r,
                                         (r.allocations ?? []).map((item) =>
-                                          item.tableId === selectedTableData.id
-                                            ? { ...item, guestCount }
+                                          item.table_id === selectedTableData.id
+                                            ? { ...item, guest_count: guestCount }
                                             : item,
                                         ),
                                       );
@@ -1414,8 +1421,8 @@ export default function LayoutEditor({
                                     void savePlanAllocations(
                                       r,
                                       (r.allocations ?? []).map((item) =>
-                                        item.tableId === selectedTableData.id
-                                          ? { ...item, tableId: event }
+                                        item.table_id === selectedTableData.id
+                                          ? { ...item, table_id: event }
                                           : item,
                                       ),
                                     )
@@ -1426,7 +1433,7 @@ export default function LayoutEditor({
                                       (table) =>
                                         table.id === selectedTableData.id ||
                                         !(r.allocations ?? []).some(
-                                          (item) => item.tableId === table.id,
+                                          (item) => item.table_id === table.id,
                                         ),
                                     )
                                     .map((table) => (
@@ -1443,7 +1450,7 @@ export default function LayoutEditor({
                                     void savePlanAllocations(
                                       r,
                                       (r.allocations ?? []).filter(
-                                        (item) => item.tableId !== selectedTableData.id,
+                                        (item) => item.table_id !== selectedTableData.id,
                                       ),
                                     )
                                   }
@@ -1471,13 +1478,13 @@ export default function LayoutEditor({
                         const id = event;
                         const booking = assignableRegistrations.find((item) => item.id === id);
                         const alreadyAssigned =
-                          booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ??
+                          booking?.allocations?.reduce((sum, item) => sum + item.guest_count, 0) ??
                           0;
                         setBookingToAssign(id);
                         setGuestsToAssign(
-                          booking?.bookedTableQuantity
+                          booking?.booked_table_quantity
                             ? 0
-                            : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
+                            : Math.max(1, (booking?.guest_count ?? 1) - alreadyAssigned),
                         );
                       }}
                     >
@@ -1491,13 +1498,13 @@ export default function LayoutEditor({
                     <AdminInput
                       aria-label={m.admin_guests_count()}
                       type="number"
-                      min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
+                      min={selectedBookingToAssign?.booked_table_quantity ? 0 : 1}
                       max={20}
                       value={guestsToAssign}
                       disabled={
                         allocationPending ||
                         !bookingToAssign ||
-                        Boolean(selectedBookingToAssign?.bookedTableQuantity)
+                        Boolean(selectedBookingToAssign?.booked_table_quantity)
                       }
                       onChange={(event) => setGuestsToAssign(Number(event.target.value))}
                       className="w-24"
@@ -1510,11 +1517,11 @@ export default function LayoutEditor({
                         await savePlanAllocations(selectedBookingToAssign, [
                           ...(selectedBookingToAssign.allocations ?? []),
                           {
-                            tableId: selectedTableData.id,
-                            guestCount: selectedBookingToAssign.bookedTableQuantity
+                            table_id: selectedTableData.id,
+                            guest_count: selectedBookingToAssign.booked_table_quantity
                               ? 0
                               : guestsToAssign,
-                            exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
+                            exclusive: Boolean(selectedBookingToAssign.booked_table_quantity),
                           },
                         ]);
                         setBookingToAssign("");

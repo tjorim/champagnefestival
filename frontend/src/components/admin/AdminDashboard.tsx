@@ -774,7 +774,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}
           tables={tables.filter((t) =>
-            layouts.some((l) => l.id === t.layout_id && l.event_id === detailRegistration.eventId),
+            layouts.some((l) => l.id === t.layout_id && l.event_id === detailRegistration.event_id),
           )}
           onSaveBooking={handleSaveBooking}
           onAddTransaction={handleAddTransaction}

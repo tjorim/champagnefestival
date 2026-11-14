@@ -1,3 +1,4 @@
+import { registrationOut } from "@/mocks/data/builders";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
@@ -99,7 +100,7 @@ describe("useAdminRegistrationActions errors", () => {
             { status: 409 },
           );
         }
-        return HttpResponse.json({ id: "reg-1", guest_count: 4 });
+        return HttpResponse.json(registrationOut({ id: "reg-1", guest_count: 4 }));
       }),
     );
     const confirmOverCapacity = vi.fn().mockResolvedValue(true);
@@ -153,7 +154,9 @@ describe("admin attendance correction", () => {
       http.put("/api/registrations/reg-1", async ({ request }) => {
         const body = await request.json();
         bodies.push(body);
-        return HttpResponse.json({ id: "reg-1", checked_in: false, strap_issued: true });
+        return HttpResponse.json(
+          registrationOut({ id: "reg-1", checked_in: false, strap_issued: true }),
+        );
       }),
     );
     const { result, setRegistrationError } = setup();

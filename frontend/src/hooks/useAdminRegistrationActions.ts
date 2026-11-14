@@ -3,14 +3,15 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage, hasApiErrorCode } from "@/utils/apiErrors";
-import type { PaymentTransactionCreate } from "@/api-types";
 import type {
+  OrderItemOut,
+  PaymentTransactionCreate,
+  RegistrationOut,
+  RegistrationOutWithToken,
   TableAllocation,
-  BookingUpdate,
-  OrderItem,
-  Registration,
-  RegistrationStatus,
-} from "@/types/registration";
+} from "@/api-types";
+import { toAmount } from "@/utils/money";
+import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
@@ -49,8 +50,8 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
         }
       : {}),
     allocations: update.allocations.map((allocation) => ({
-      table_id: allocation.tableId,
-      guest_count: allocation.guestCount,
+      table_id: allocation.table_id,
+      guest_count: allocation.guest_count,
       exclusive: allocation.exclusive,
     })),
     notes: update.notes,
@@ -89,14 +90,14 @@ export function useAdminRegistrationActions({
           prev
             ? prev.map((registration) =>
                 registration.id === id
-                  ? { ...registration, status: updated.status, updatedAt: updated.updatedAt }
+                  ? { ...registration, status: updated.status, updatedAt: updated.updated_at }
                   : registration,
               )
             : prev,
         );
         setDetailRegistration((prev) =>
           prev?.id === id
-            ? { ...prev, status: updated.status, updatedAt: updated.updatedAt }
+            ? { ...prev, status: updated.status, updatedAt: updated.updated_at }
             : prev,
         );
       } catch (err) {
@@ -178,7 +179,7 @@ export function useAdminRegistrationActions({
       // clean return, and a retry after a thrown error reuses a fresh
       // idempotency key, which would record this same payment a second time.
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
           `/api/registrations/${registrationId}`,
           { headers: authHeaders() },
           m.admin_error_load_data(),
@@ -213,7 +214,7 @@ export function useAdminRegistrationActions({
         (await fetchRegistration(id, authHeaders));
       const outstanding = Math.max(
         0,
-        (registration?.amountDue ?? 0) - (registration?.amountPaid ?? 0),
+        toAmount(registration?.amount_due) - toAmount(registration?.amount_paid),
       );
       if (outstanding <= 0) return;
       await handleAddTransaction(id, {
@@ -232,8 +233,8 @@ export function useAdminRegistrationActions({
           id: registrationId,
           payload: {
             allocations: allocations.map((a) => ({
-              table_id: a.tableId,
-              guest_count: a.guestCount,
+              table_id: a.table_id,
+              guest_count: a.guest_count,
               exclusive: a.exclusive,
             })),
             confirm_over_capacity: confirm,
@@ -241,7 +242,7 @@ export function useAdminRegistrationActions({
           fallbackMessage: m.admin_error_assign_table(),
         });
       try {
-        let response: Record<string, unknown>;
+        let response: RegistrationOut;
         try {
           response = await save();
         } catch (error) {
@@ -277,7 +278,7 @@ export function useAdminRegistrationActions({
           fallbackMessage: m.admin_error_update_registration(),
         });
       try {
-        let response: Record<string, unknown>;
+        let response: RegistrationOut;
         try {
           response = await save();
         } catch (error) {
@@ -318,11 +319,11 @@ export function useAdminRegistrationActions({
           tableId
             ? [
                 {
-                  tableId,
-                  guestCount:
-                    registration.allocations?.[0]?.guestCount ??
-                    ((registration.bookedTableQuantity ?? 0) > 0 ? 0 : registration.guestCount),
-                  exclusive: (registration.bookedTableQuantity ?? 0) > 0,
+                  table_id: tableId,
+                  guest_count:
+                    registration.allocations?.[0]?.guest_count ??
+                    ((registration.booked_table_quantity ?? 0) > 0 ? 0 : registration.guest_count),
+                  exclusive: (registration.booked_table_quantity ?? 0) > 0,
                 },
               ]
             : [],
@@ -351,7 +352,7 @@ export function useAdminRegistrationActions({
   const handleViewDetail = useCallback(
     async (registration: Registration) => {
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
           `/api/registrations/${registration.id}`,
           { headers: authHeaders() },
           m.admin_error_load_data(),
@@ -366,17 +367,17 @@ export function useAdminRegistrationActions({
   );
 
   const handleToggleDelivered = useCallback(
-    async (registrationId: string, updatedOrders: OrderItem[]) => {
+    async (registrationId: string, updatedOrders: OrderItemOut[]) => {
       try {
         const updated = apiToRegistration(
           await updateEntranceMutation.mutateAsync({
             id: registrationId,
             payload: {
               order_items: updatedOrders.map((order) => ({
-                product_id: order.productId,
+                product_id: order.product_id,
                 name: order.name,
                 quantity: order.quantity,
-                delivered_quantity: order.deliveredQuantity,
+                delivered_quantity: order.delivered_quantity,
                 price: order.price,
                 category: order.category,
                 delivered: order.delivered,

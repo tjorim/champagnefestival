@@ -40,7 +40,9 @@ import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/api-types";
 import type { PaymentTransactionCreate } from "@/api-types";
-import type { BookingUpdate, OrderItem, Registration } from "@/types/registration";
+import type { OrderItemOut } from "@/api-types";
+import { remainingQuantity, type BookingUpdate, type Registration } from "@/types/registration";
+import { toAmount } from "@/utils/money";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
@@ -60,7 +62,7 @@ interface RegistrationDetailProps {
   emailDuplicates?: { id: string; name: string }[];
   tables?: FloorTable[] | null;
   onClose: () => void;
-  onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
+  onToggleDelivered: (registrationId: string, updatedOrders: OrderItemOut[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
   onSaveBooking?: (registrationId: string, update: BookingUpdate) => Promise<void>;
@@ -99,7 +101,7 @@ export default function RegistrationDetail({
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailTemplate, setEmailTemplate] = useState<RegistrationEmailTemplate>("general");
   const checkInUrl = registration
-    ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}#token=${encodeURIComponent(registration.checkInToken ?? "")}`
+    ? `${baseUrl}/check-in?id=${encodeURIComponent(registration.id)}#token=${encodeURIComponent(registration.check_in_token ?? "")}`
     : "";
 
   const sortedTables = useMemo(
@@ -113,13 +115,13 @@ export default function RegistrationDetail({
   const handleSetDeliveredQuantity = useCallback(
     (productId: string, quantity: number) => {
       if (!isOnline || !registration || !Number.isFinite(quantity)) return;
-      const updatedOrders = registration.orderItems.map((item) => {
-        if (item.productId !== productId) return item;
+      const updatedOrders = registration.order_items.map((item) => {
+        if (item.product_id !== productId) return item;
+        // The input is the admin's, so it is clamped here; the API rejects anything outside [0, quantity].
         const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
           ...item,
-          deliveredQuantity,
-          remainingQuantity: item.quantity - deliveredQuantity,
+          delivered_quantity: deliveredQuantity,
           delivered: deliveredQuantity === item.quantity,
         };
       });
@@ -131,18 +133,18 @@ export default function RegistrationDetail({
   const handleAdjustDeliveredQuantity = useCallback(
     (productId: string, delta: number) => {
       if (!registration) return;
-      const item = registration.orderItems.find((order) => order.productId === productId);
+      const item = registration.order_items.find((order) => order.product_id === productId);
       if (!item) return;
-      handleSetDeliveredQuantity(productId, item.deliveredQuantity + delta);
+      handleSetDeliveredQuantity(productId, item.delivered_quantity + delta);
     },
     [handleSetDeliveredQuantity, registration],
   );
 
   if (!registration) return null;
   const simpleRsvp = isSimpleRsvp(registration);
-  const changedPrices = registration.orderItems.flatMap((item) => {
-    const current = registration.event?.products?.find((product) => product.id === item.productId);
-    return current && current.price !== item.price && item.quantity > item.includedQuantity
+  const changedPrices = registration.order_items.flatMap((item) => {
+    const current = registration.event?.products?.find((product) => product.id === item.product_id);
+    return current && current.price !== item.price && item.quantity > item.included_quantity
       ? [{ name: item.name, booked: item.price, current: current.price }]
       : [];
   });
@@ -161,13 +163,16 @@ export default function RegistrationDetail({
             {registration.person.name}
           </DialogTitle>
           <p className="text-sm text-subtle">
-            {registration.event?.title ?? registration.eventId} · {m.admin_guests_count()}:{" "}
-            {registration.guestCount}
+            {registration.event?.title ?? registration.event_id} · {m.admin_guests_count()}:{" "}
+            {registration.guest_count}
           </p>
           <p className="text-sm">
-            {m.admin_inventory_paid()}: €{(registration.amountPaid ?? 0).toFixed(2)} ·{" "}
+            {m.admin_inventory_paid()}: €{toAmount(registration.amount_paid).toFixed(2)} ·{" "}
             {m.admin_booking_balance()}: €
-            {Math.max(0, (registration.amountDue ?? 0) - (registration.amountPaid ?? 0)).toFixed(2)}
+            {Math.max(
+              0,
+              toAmount(registration.amount_due) - toAmount(registration.amount_paid),
+            ).toFixed(2)}
           </p>
           <nav className="flex flex-wrap gap-2" aria-label={m.admin_booking_editor()}>
             {onSaveBooking && (
@@ -190,7 +195,7 @@ export default function RegistrationDetail({
                 {m.admin_email_registration_title()}
               </a>
             )}
-            {!simpleRsvp && registration.orderItems.length > 0 && (
+            {!simpleRsvp && registration.order_items.length > 0 && (
               <a className="text-primary underline" href="#registration-fulfillment">
                 {m.admin_bottle_fulfillment()}
               </a>
@@ -198,7 +203,7 @@ export default function RegistrationDetail({
             <a className="text-primary underline" href="#registration-entrance">
               {m.admin_check_in_title()}
             </a>
-            {registration.checkInToken && (
+            {registration.check_in_token && (
               <a className="text-primary underline" href="#registration-qr">
                 {m.admin_qr_code()}
               </a>
@@ -212,9 +217,9 @@ export default function RegistrationDetail({
               {m.checkin_offline_banner()}
             </Alert>
           )}
-          {(registration.refundDue ?? 0) > 0 && (
+          {toAmount(registration.refund_due) > 0 && (
             <Alert variant="warning">
-              {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
+              {m.admin_inventory_refund()}: €{toAmount(registration.refund_due).toFixed(2)}
             </Alert>
           )}
           {changedPrices.length > 0 && (
@@ -252,33 +257,33 @@ export default function RegistrationDetail({
             </Badge>
             <Badge
               variant={
-                registration.paymentStatus === "paid"
+                registration.payment_status === "paid"
                   ? "success"
-                  : registration.paymentStatus === "partial"
+                  : registration.payment_status === "partial"
                     ? "warning"
                     : "secondary"
               }
             >
-              {registration.paymentStatus === "paid"
+              {registration.payment_status === "paid"
                 ? m.admin_payment_paid()
-                : registration.paymentStatus === "partial"
+                : registration.payment_status === "partial"
                   ? m.admin_payment_partial()
                   : m.admin_payment_unpaid()}
-              {registration.amountDue != null && (
+              {registration.amount_due != null && (
                 <span className="ms-1 font-normal">
                   {m.admin_registration_amount_due({
-                    amount: registration.amountDue.toFixed(2),
+                    amount: toAmount(registration.amount_due).toFixed(2),
                   })}
                 </span>
               )}
             </Badge>
-            {registration.checkedIn ? (
+            {registration.checked_in ? (
               <Badge variant="success">
                 <Icon icon={CircleCheckIcon} className="me-1" />
                 {m.admin_checked_in()}
-                {registration.checkedInAt && (
+                {registration.checked_in_at && (
                   <span className="ms-1 font-normal">
-                    {new Date(registration.checkedInAt).toLocaleTimeString()}
+                    {new Date(registration.checked_in_at).toLocaleTimeString()}
                   </span>
                 )}
               </Badge>
@@ -286,7 +291,7 @@ export default function RegistrationDetail({
               <Badge variant="secondary">{m.admin_not_checked_in()}</Badge>
             )}
             {!simpleRsvp &&
-              (registration.strapIssued ? (
+              (registration.strap_issued ? (
                 <Badge variant="info">
                   <Icon icon={ContactRoundIcon} className="me-1" />
                   {m.admin_strap_issued()}
@@ -309,7 +314,7 @@ export default function RegistrationDetail({
                     key={dup.id}
                     size="sm"
                     variant="warning"
-                    onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
+                    onClick={() => onMergeDuplicate?.(registration.person_id, dup.id)}
                   >
                     <Icon icon={UserRoundCogIcon} />
                     {m.admin_people_merge_title()}: {dup.name}
@@ -329,7 +334,7 @@ export default function RegistrationDetail({
             {!onSaveBooking && (
               <PresentationListItem className="flex justify-between">
                 <span className="text-subtle">{m.admin_guests_count()}</span>
-                <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
+                <span aria-label={m.admin_guests_count()}>{registration.guest_count}</span>
               </PresentationListItem>
             )}
             <PresentationListItem className="flex justify-between">
@@ -338,7 +343,7 @@ export default function RegistrationDetail({
             </PresentationListItem>
             <PresentationListItem className="flex justify-between">
               <span className="text-subtle">{m.admin_event_label()}</span>
-              <span>{registration.event?.title ?? registration.eventId}</span>
+              <span>{registration.event?.title ?? registration.event_id}</span>
             </PresentationListItem>
             <PresentationListItem className="flex justify-between">
               <span className="text-subtle">{m.registration_edition_type_label()}</span>
@@ -358,7 +363,7 @@ export default function RegistrationDetail({
                 tabIndex={-1}
               >
                 <BookingEditor
-                  key={`${registration.id}:${registration.updatedAt}`}
+                  key={`${registration.id}:${registration.updated_at}`}
                   registration={registration}
                   registrations={registrations}
                   authHeaders={authHeaders}
@@ -368,7 +373,7 @@ export default function RegistrationDetail({
                 />
               </PresentationListItem>
             )}
-            {!onSaveBooking && <OrderAnswerSummary answers={registration.orderAnswers} />}
+            {!onSaveBooking && <OrderAnswerSummary answers={registration.order_answers} />}
             {!onSaveBooking && registration.notes && (
               <PresentationListItem className="border-border">
                 <span className="text-subtle block mb-1">{m.admin_notes()}</span>
@@ -412,7 +417,7 @@ export default function RegistrationDetail({
             </section>
           )}
 
-          {!simpleRsvp && registration.orderItems.length > 0 && (
+          {!simpleRsvp && registration.order_items.length > 0 && (
             <div className="mb-6">
               <h3
                 id="registration-fulfillment"
@@ -423,9 +428,9 @@ export default function RegistrationDetail({
                 {m.admin_bottle_fulfillment()}
               </h3>
               <PresentationList>
-                {registration.orderItems.map((item) => (
+                {registration.order_items.map((item) => (
                   <PresentationListItem
-                    key={item.productId}
+                    key={item.product_id}
                     className="flex flex-wrap items-center justify-between gap-3"
                   >
                     <span>
@@ -436,24 +441,24 @@ export default function RegistrationDetail({
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={item.delivered ? "success" : "secondary"}>
-                        {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
+                        {m.admin_bottle_delivered()}: {item.delivered_quantity}/{item.quantity}
                       </Badge>
-                      <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
-                        {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
+                      <Badge variant={remainingQuantity(item) > 0 ? "warning" : "success"}>
+                        {m.admin_bottle_not_delivered()}: {remainingQuantity(item)}
                       </Badge>
                       <div className="flex items-center gap-1">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
-                          disabled={!isOnline || item.deliveredQuantity <= 0}
+                          onClick={() => handleAdjustDeliveredQuantity(item.product_id, -1)}
+                          disabled={!isOnline || item.delivered_quantity <= 0}
                           title={m.admin_mark_not_delivered()}
                           aria-label={`${m.admin_mark_not_delivered()}: ${item.name}`}
                         >
                           <Icon icon={MinusIcon} />
                         </Button>
                         <AdminInput
-                          key={item.deliveredQuantity}
+                          key={item.delivered_quantity}
                           disabled={!isOnline}
                           aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
                           className="text-center w-20"
@@ -468,11 +473,11 @@ export default function RegistrationDetail({
                                 Math.min(item.quantity, Math.trunc(value)),
                               );
                               event.currentTarget.value = String(bounded);
-                              if (bounded !== item.deliveredQuantity) {
-                                handleSetDeliveredQuantity(item.productId, bounded);
+                              if (bounded !== item.delivered_quantity) {
+                                handleSetDeliveredQuantity(item.product_id, bounded);
                               }
                             } else {
-                              event.currentTarget.value = String(item.deliveredQuantity);
+                              event.currentTarget.value = String(item.delivered_quantity);
                             }
                           }}
                           onKeyDown={(event) => {
@@ -483,13 +488,13 @@ export default function RegistrationDetail({
                           size="sm"
 
                           type="number"
-                          defaultValue={item.deliveredQuantity}
+                          defaultValue={item.delivered_quantity}
                         />
                         <Button
                           size="sm"
                           variant={item.delivered ? "success" : "outline-success"}
-                          onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
-                          disabled={!isOnline || item.deliveredQuantity >= item.quantity}
+                          onClick={() => handleAdjustDeliveredQuantity(item.product_id, 1)}
+                          disabled={!isOnline || item.delivered_quantity >= item.quantity}
                           title={m.admin_mark_delivered()}
                           aria-label={`${m.admin_mark_delivered()}: ${item.name}`}
                         >
@@ -513,7 +518,7 @@ export default function RegistrationDetail({
               {m.admin_check_in_title()}
             </h3>
             <div className="flex gap-2 flex-wrap">
-              {!registration.checkedIn && (
+              {!registration.checked_in && (
                 <Button
                   variant="outline-success"
                   size="sm"
@@ -524,7 +529,7 @@ export default function RegistrationDetail({
                   {m.admin_mark_checked_in()}
                 </Button>
               )}
-              {!simpleRsvp && !registration.strapIssued && (
+              {!simpleRsvp && !registration.strap_issued && (
                 <Button
                   variant="outline-info"
                   size="sm"
@@ -538,7 +543,7 @@ export default function RegistrationDetail({
             </div>
           </div>
 
-          {registration.checkInToken && (
+          {registration.check_in_token && (
             <div className="text-center">
               <h3
                 id="registration-qr"
