@@ -47,7 +47,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { FaqItem } from "@/types/admin";
+import type { FaqItemOut } from "@/api-types";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { fetchFaqItemsAdmin } from "@/utils/adminFetch";
 import {
@@ -72,7 +72,7 @@ const emptyForm: FaqFormState = {
   answer: EMPTY_LOCALIZED_TEXT,
 };
 
-const columnHelper = createAppColumnHelper<FaqItem>();
+const columnHelper = createAppColumnHelper<FaqItemOut>();
 
 /** Blank translations are sent as `null`, which clears them on update. */
 function faqPayload(form: FaqFormState) {
@@ -87,16 +87,20 @@ function faqPayload(form: FaqFormState) {
   };
 }
 
-function toForm(item: FaqItem): FaqFormState {
+function toForm(item: FaqItemOut): FaqFormState {
   return {
-    question: { nl: item.questionNl ?? "", fr: item.questionFr ?? "", en: item.questionEn ?? "" },
-    answer: { nl: item.answerNl ?? "", fr: item.answerFr ?? "", en: item.answerEn ?? "" },
+    question: {
+      nl: item.question_nl ?? "",
+      fr: item.question_fr ?? "",
+      en: item.question_en ?? "",
+    },
+    answer: { nl: item.answer_nl ?? "", fr: item.answer_fr ?? "", en: item.answer_en ?? "" },
   };
 }
 
 /** The item's Dutch text, for the list. */
-function dutchText(item: FaqItem) {
-  return { question: item.questionNl ?? "", answer: item.answerNl ?? "" };
+function dutchText(item: FaqItemOut) {
+  return { question: item.question_nl ?? "", answer: item.answer_nl ?? "" };
 }
 
 export default function FaqManagement({ authHeaders }: FaqManagementProps) {
@@ -164,7 +168,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     setShowModal(true);
   }, []);
 
-  const openEdit = useCallback((item: FaqItem) => {
+  const openEdit = useCallback((item: FaqItemOut) => {
     setEditingId(item.id);
     setForm(toForm(item));
     setError(null);
@@ -190,7 +194,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   }, [form, editingId, saveMutation]);
 
   const handleToggleActive = useCallback(
-    async (item: FaqItem) => {
+    async (item: FaqItemOut) => {
       setRowError(null);
       try {
         await saveMutation.mutateAsync({ id: item.id, data: { active: !item.active } });
@@ -202,7 +206,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   );
 
   const handleDelete = useCallback(
-    async (item: FaqItem) => {
+    async (item: FaqItemOut) => {
       const confirmed = await confirm({
         title: m.admin_faq_delete_title(),
         body: m.admin_faq_delete_confirm({ question: dutchText(item).question }),
@@ -221,8 +225,8 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   );
 
   const handleMove = useCallback(
-    async (item: FaqItem, direction: "up" | "down") => {
-      const sorted = [...faqItems].sort((a, b) => a.sortOrder - b.sortOrder);
+    async (item: FaqItemOut, direction: "up" | "down") => {
+      const sorted = [...faqItems].sort((a, b) => a.sort_order - b.sort_order);
       const index = sorted.findIndex((i) => i.id === item.id);
       const swapIndex = direction === "up" ? index - 1 : index + 1;
       if (index === -1 || swapIndex < 0 || swapIndex >= sorted.length) return;
@@ -245,7 +249,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   );
 
   const sortedItems = useMemo(
-    () => [...faqItems].sort((a, b) => a.sortOrder - b.sortOrder),
+    () => [...faqItems].sort((a, b) => a.sort_order - b.sort_order),
     [faqItems],
   );
 
@@ -313,9 +317,9 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                       {m.admin_faq_hidden_badge()}
                     </Badge>
                   )}
-                  {languageBadge("NL", Boolean(item.questionNl && item.answerNl))}
-                  {languageBadge("FR", Boolean(item.questionFr && item.answerFr))}
-                  {languageBadge("EN", Boolean(item.questionEn && item.answerEn))}
+                  {languageBadge("NL", Boolean(item.question_nl && item.answer_nl))}
+                  {languageBadge("FR", Boolean(item.question_fr && item.answer_fr))}
+                  {languageBadge("EN", Boolean(item.question_en && item.answer_en))}
                 </div>
                 <div className="text-subtle text-sm">{original.answer}</div>
               </>

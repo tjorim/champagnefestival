@@ -5,10 +5,6 @@ import type {
   TableType,
   Layout,
   Venue,
-  AuditEntry,
-  EditionAttendanceStats,
-  EventCheckInStats,
-  FaqItem,
   LayoutRevision,
   LayoutRevisionAreaChange,
   LayoutRevisionDiff,
@@ -21,55 +17,6 @@ import type {
 } from "@/types/admin";
 import type { Person } from "@/types/person";
 
-/** Map FastAPI snake_case audit entry response to frontend camelCase AuditEntry type */
-export function apiAuditEntryToAuditEntry(d: Record<string, unknown>): AuditEntry {
-  return {
-    id: d.id as string,
-    timestamp: d.timestamp as string,
-    actor: d.actor as string,
-    action: d.action as string,
-    resourceType: d.resource_type as string,
-    resourceId: d.resource_id as string,
-    requestId: (d.request_id ?? null) as string | null,
-    details: (d.details ?? {}) as Record<string, unknown>,
-  };
-}
-
-/** Map FastAPI snake_case per-event check-in stats response to frontend camelCase type */
-export function apiEventCheckInStatsToEventCheckInStats(
-  d: Record<string, unknown>,
-): EventCheckInStats {
-  return {
-    eventId: d.event_id as string,
-    eventTitle: typeof d.event_title === "string" ? d.event_title : undefined,
-    total: d.total as number,
-    checkedIn: d.checked_in as number,
-  };
-}
-
-/** Map FastAPI snake_case edition attendance stats response to frontend camelCase type */
-export function apiEditionStatsToEditionAttendanceStats(
-  d: Record<string, unknown>,
-): EditionAttendanceStats {
-  return {
-    editionId: d.edition_id as string,
-    year: d.year as number,
-    month: d.month as string,
-    editionType: d.edition_type as string,
-    startDate: (d.start_date ?? null) as string | null,
-    eventsCount: d.events_count as number,
-    totalRegistrations: d.total_registrations as number,
-    totalGuests: d.total_guests as number,
-    totalCheckedIn: d.total_checked_in as number,
-    totalPaid: Number(d.total_paid ?? 0),
-    totalDue: Number(d.total_due ?? 0),
-    totalReceived: Number(d.total_received ?? 0),
-    totalRefunded: Number(d.total_refunded ?? 0),
-    totalOutstanding: Number(d.total_outstanding ?? 0),
-    totalRefundLiability: Number(d.total_refund_liability ?? 0),
-  };
-}
-
 /** Map FastAPI snake_case venue response to frontend camelCase Venue type */
 export function apiVenueToVenue(d: Record<string, unknown>): Venue {
   return {
@@ -81,22 +28,6 @@ export function apiVenueToVenue(d: Record<string, unknown>): Venue {
     country: (d.country ?? "") as string,
     lat: (d.lat ?? 0) as number,
     lng: (d.lng ?? 0) as number,
-    active: (d.active ?? true) as boolean,
-  };
-}
-
-/** Map FastAPI snake_case FAQ item response to frontend camelCase FaqItem type */
-export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
-  const text = (value: unknown) => (typeof value === "string" && value.trim() ? value : null);
-  return {
-    id: d.id as string,
-    questionNl: text(d.question_nl),
-    questionFr: text(d.question_fr),
-    questionEn: text(d.question_en),
-    answerNl: text(d.answer_nl),
-    answerFr: text(d.answer_fr),
-    answerEn: text(d.answer_en),
-    sortOrder: (d.sort_order ?? 0) as number,
     active: (d.active ?? true) as boolean,
   };
 }

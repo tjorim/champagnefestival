@@ -1,15 +1,17 @@
 import type {
+  AuditEntryOut,
+  EditionAttendanceStats,
+  EventCheckInStats,
+  FaqItemOut,
+} from "@/api-types";
+import type {
   Room,
   FloorTableRecord,
   FloorArea,
   TableType,
   Layout,
   Venue,
-  AuditEntry,
-  EditionAttendanceStats,
-  EventCheckInStats,
   Organization,
-  FaqItem,
   LayoutRevision,
   LayoutRevisionDiff,
   LayoutRestorePreview,
@@ -35,10 +37,6 @@ import {
   apiRoomToRoom,
   apiTableToTable,
   apiAreaToArea,
-  apiAuditEntryToAuditEntry,
-  apiEditionStatsToEditionAttendanceStats,
-  apiEventCheckInStatsToEventCheckInStats,
-  apiFaqItemToFaqItem,
   apiLayoutRevisionToLayoutRevision,
   apiLayoutRevisionDiffToLayoutRevisionDiff,
   apiLayoutRestorePreviewToLayoutRestorePreview,
@@ -521,7 +519,7 @@ export interface AuditEntryFilters {
 export async function fetchAuditEntries(
   authHeaders: () => Record<string, string>,
   filters: AuditEntryFilters = {},
-): Promise<AuditEntry[]> {
+): Promise<AuditEntryOut[]> {
   const params = new URLSearchParams();
   if (filters.resourceType) params.set("resource_type", filters.resourceType);
   if (filters.resourceId) params.set("resource_id", filters.resourceId);
@@ -536,7 +534,6 @@ export async function fetchAuditEntries(
     `/api/audit?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiAuditEntryToAuditEntry,
   );
 }
 
@@ -578,7 +575,6 @@ export async function fetchEventCheckInStats(
     `/api/events/checkin-stats${suffix}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiEventCheckInStatsToEventCheckInStats,
   );
 }
 
@@ -589,19 +585,13 @@ export async function fetchEditionStats(
     "/api/editions/stats",
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiEditionStatsToEditionAttendanceStats,
   );
 }
 
 export async function fetchFaqItemsAdmin(
   authHeaders: () => Record<string, string>,
-): Promise<FaqItem[]> {
-  return fetchArrayOrThrow(
-    "/api/faq",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    apiFaqItemToFaqItem,
-  );
+): Promise<FaqItemOut[]> {
+  return fetchArrayOrThrow("/api/faq", { headers: authHeaders() }, m.admin_error_load_data());
 }
 
 export async function downloadRegistrationsCsv(

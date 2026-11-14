@@ -970,11 +970,11 @@ export default function RegistrationList({
     }
 
     for (const serverStats of checkInStatsQuery.data ?? []) {
-      const existing = statsByEvent.get(serverStats.eventId);
-      statsByEvent.set(serverStats.eventId, {
-        checkedIn: serverStats.checkedIn,
+      const existing = statsByEvent.get(serverStats.event_id);
+      statsByEvent.set(serverStats.event_id, {
+        checkedIn: serverStats.checked_in,
         total: serverStats.total,
-        title: serverStats.eventTitle ?? existing?.title ?? serverStats.eventId,
+        title: serverStats.event_title ?? existing?.title ?? serverStats.event_id,
       });
     }
 
