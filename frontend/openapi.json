@@ -29039,6 +29039,10 @@
           },
           "shape": {
             "type": "string",
+            "enum": [
+              "rectangle",
+              "round"
+            ],
             "title": "Shape"
           },
           "width_m": {
@@ -29051,6 +29055,10 @@
           },
           "height_type": {
             "type": "string",
+            "enum": [
+              "low",
+              "high"
+            ],
             "title": "Height Type"
           },
           "capacity": {

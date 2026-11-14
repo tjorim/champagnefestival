@@ -415,6 +415,8 @@ export * from './tableTypeCreate';
 export * from './tableTypeCreateHeightType';
 export * from './tableTypeCreateShape';
 export * from './tableTypeOut';
+export * from './tableTypeOutHeightType';
+export * from './tableTypeOutShape';
 export * from './tableTypeUpdate';
 export * from './tableTypeUpdateHeightType';
 export * from './tableTypeUpdateShape';

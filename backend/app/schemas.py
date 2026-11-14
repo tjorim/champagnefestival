@@ -1894,10 +1894,10 @@ class TableTypeOut(ResponseModel):
     id: str
     name: str
     venue_id: str
-    shape: str
+    shape: Literal["rectangle", "round"]
     width_m: float
     length_m: float
-    height_type: str
+    height_type: Literal["low", "high"]
     capacity: int
     active: bool
     created_at: datetime

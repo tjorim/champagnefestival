@@ -5,15 +5,17 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { TableTypeOutHeightType } from './tableTypeOutHeightType';
+import type { TableTypeOutShape } from './tableTypeOutShape';
 
 export type TableTypeOut = {
   id: string;
   name: string;
   venue_id: string;
-  shape: string;
+  shape: TableTypeOutShape;
   width_m: number;
   length_m: number;
-  height_type: string;
+  height_type: TableTypeOutHeightType;
   capacity: number;
   active: boolean;
   created_at: string;
