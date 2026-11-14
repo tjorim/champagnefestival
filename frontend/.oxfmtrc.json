@@ -1,4 +1,12 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/node_modules", "**/dist", "**/build", "**/coverage", "openapi.json"]
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/coverage",
+    "openapi.json",
+    "src/api-schema",
+    "project.inlang/cache"
+  ]
 }

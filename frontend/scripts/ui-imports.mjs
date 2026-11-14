@@ -71,7 +71,7 @@ async function files(root, directory = "src") {
   const result = [];
   for (const entry of await readdir(resolve(root, directory), { withFileTypes: true })) {
     const path = `${directory}/${entry.name}`;
-    if (path === "src/paraglide") continue;
+    if (path === "src/paraglide" || path === "src/api-schema") continue;
     if (entry.isDirectory()) result.push(...(await files(root, path)));
     else if (/\.[jt]sx?$/.test(path) && !/\.(test|spec)\./.test(path)) result.push(path);
   }
