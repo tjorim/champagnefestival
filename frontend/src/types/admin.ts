@@ -115,34 +115,6 @@ export interface Room {
   dimensionsPlaceholder: boolean;
 }
 
-/**
- * A FAQ item's admin-facing shape: every language's content. Dutch must have a
- * question and an answer; a language is shown to visitors only when both are
- * filled there, otherwise they see Dutch.
- */
-export interface FaqItem {
-  id: string;
-  questionNl: string | null;
-  questionFr: string | null;
-  questionEn: string | null;
-  answerNl: string | null;
-  answerFr: string | null;
-  answerEn: string | null;
-  sortOrder: number;
-  active: boolean;
-}
-
-export interface AuditEntry {
-  id: string;
-  timestamp: string;
-  actor: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  requestId: string | null;
-  details: Record<string, unknown>;
-}
-
 /** One table's stable identity and geometry, captured at save-revision time
  * (or read live for the "current" side of a compare/restore preview). `id`
  * is the source FloorTable.id — the stable identity compare/restore match
@@ -250,40 +222,4 @@ export interface LayoutRestorePreview {
   areasToRemove: LayoutRevisionSnapshotArea[];
   allocationConflicts: LayoutRestoreAllocationConflict[];
   hasConflicts: boolean;
-}
-
-/**
- * Per-event check-in progress, as counted by the backend.
- *
- * Guest counts, not booking counts — a booking can carry several guests, and a
- * headcount is what a capacity limit and an entrance display both care about.
- * Cancelled bookings are excluded on both sides.
- */
-export interface EventCheckInStats {
-  eventId: string;
-  eventTitle?: string;
-  total: number;
-  checkedIn: number;
-}
-
-export interface EditionAttendanceStats {
-  editionId: string;
-  year: number;
-  month: string;
-  editionType: string;
-  startDate: string | null;
-  eventsCount: number;
-  totalRegistrations: number;
-  totalGuests: number;
-  totalCheckedIn: number;
-  totalPaid: number;
-  totalDue: number;
-  /** Sum of `payment`-kind ledger entries (#1019) — gross received, before refunds. */
-  totalReceived: number;
-  /** Sum of `refund`-kind ledger entries, as a positive amount. */
-  totalRefunded: number;
-  /** Sum, per booking, of max(amountDue - net paid, 0) — money still owed. */
-  totalOutstanding: number;
-  /** Sum, per booking, of max(net paid - amountDue, 0) — a refund may be owed. */
-  totalRefundLiability: number;
 }

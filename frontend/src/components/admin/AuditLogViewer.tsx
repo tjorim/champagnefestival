@@ -250,7 +250,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
                     <TableCell className="break-words">{entry.actor}</TableCell>
                     <TableCell>{entry.action}</TableCell>
                     <TableCell className="break-words">
-                      {entry.resourceType} / {entry.resourceId}
+                      {entry.resource_type} / {entry.resource_id}
                     </TableCell>
                     <TableCell className="break-words">
                       {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}

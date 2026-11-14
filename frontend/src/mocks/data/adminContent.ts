@@ -1,4 +1,5 @@
 /** Deterministic seed data for the read-only admin queue and content screens. */
+import type { AuditEntryOut, FaqItemOut } from "@/api-types";
 
 export const seedWaitlistEntries = [
   {
@@ -28,7 +29,7 @@ export const seedContactMessages = [
   },
 ];
 
-export const seedFaqItems = [
+export const seedFaqItems: FaqItemOut[] = [
   {
     id: "faq-1",
     question_nl: "Waar vindt het festival plaats?",
@@ -39,6 +40,8 @@ export const seedFaqItems = [
     answer_en: "In the village hall.",
     sort_order: 0,
     active: true,
+    created_at: "2026-09-01T09:00:00Z",
+    updated_at: "2026-09-01T09:00:00Z",
   },
 ];
 
@@ -83,11 +86,14 @@ export const seedPrivacyPolicy = {
   ],
 };
 
-export const seedAuditEntries = [
+export const seedAuditEntries: AuditEntryOut[] = [
   {
     id: "audit-1",
     timestamp: "2026-10-03T12:00:00Z",
     actor: "admin",
+    auth_source: "oidc",
+    subject: null,
+    integration_client_id: null,
     action: "update",
     resource_type: "event",
     resource_id: "event-1",

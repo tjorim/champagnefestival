@@ -69,7 +69,8 @@ export async function fetchArrayOrThrow<T>(
   url: string,
   options: RequestInit,
   fallbackMessage: string,
-  mapper: (item: Record<string, unknown>) => T,
+  // Without a mapper the payload is trusted to be `T`: pass the generated type from `@/api-types`.
+  mapper: (item: Record<string, unknown>) => T = (item) => item as T,
 ): Promise<T[]> {
   const response = await requestApi(url, options);
   throwAuthError(response);

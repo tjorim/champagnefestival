@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import type { EditionAttendanceStats } from "@/api-types";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -27,22 +28,22 @@ const chartExport = vi.hoisted(() => ({
 
 vi.mock("@/components/admin/analyticsChartExport", () => chartExport);
 
-const edition = {
-  editionId: "edition-2026",
+const edition: EditionAttendanceStats = {
+  edition_id: "edition-2026",
   year: 2026,
   month: "march",
-  editionType: "festival",
-  startDate: "2026-03-20",
-  eventsCount: 2,
-  totalRegistrations: 10,
-  totalGuests: 25,
-  totalCheckedIn: 18,
-  totalPaid: 500,
-  totalDue: 600,
-  totalReceived: 500,
-  totalRefunded: 0,
-  totalOutstanding: 100,
-  totalRefundLiability: 0,
+  edition_type: "festival",
+  start_date: "2026-03-20",
+  events_count: 2,
+  total_registrations: 10,
+  total_guests: 25,
+  total_checked_in: 18,
+  total_paid: "500",
+  total_due: "600",
+  total_received: "500",
+  total_refunded: "0",
+  total_outstanding: "100",
+  total_refund_liability: "0",
 };
 
 function renderAnalyticsDashboard() {
@@ -71,21 +72,21 @@ describe("AnalyticsDashboard", () => {
   it("renders a chart by default with a legend for both series", async () => {
     fetchEditionStats.mockResolvedValue([
       {
-        editionId: "edition-2026",
+        edition_id: "edition-2026",
         year: 2026,
         month: "march",
-        editionType: "festival",
-        startDate: "2026-03-20",
-        eventsCount: 2,
-        totalRegistrations: 10,
-        totalGuests: 25,
-        totalCheckedIn: 18,
-        totalPaid: 500,
-        totalDue: 600,
-        totalReceived: 500,
-        totalRefunded: 0,
-        totalOutstanding: 100,
-        totalRefundLiability: 0,
+        edition_type: "festival",
+        start_date: "2026-03-20",
+        events_count: 2,
+        total_registrations: 10,
+        total_guests: 25,
+        total_checked_in: 18,
+        total_paid: "500",
+        total_due: "600",
+        total_received: "500",
+        total_refunded: "0",
+        total_outstanding: "100",
+        total_refund_liability: "0",
       },
     ]);
     renderAnalyticsDashboard();
@@ -100,21 +101,21 @@ describe("AnalyticsDashboard", () => {
   it("hides a series' bars when its legend item is toggled off", async () => {
     fetchEditionStats.mockResolvedValue([
       {
-        editionId: "edition-2026",
+        edition_id: "edition-2026",
         year: 2026,
         month: "march",
-        editionType: "festival",
-        startDate: "2026-03-20",
-        eventsCount: 2,
-        totalRegistrations: 10,
-        totalGuests: 25,
-        totalCheckedIn: 18,
-        totalPaid: 500,
-        totalDue: 600,
-        totalReceived: 500,
-        totalRefunded: 0,
-        totalOutstanding: 100,
-        totalRefundLiability: 0,
+        edition_type: "festival",
+        start_date: "2026-03-20",
+        events_count: 2,
+        total_registrations: 10,
+        total_guests: 25,
+        total_checked_in: 18,
+        total_paid: "500",
+        total_due: "600",
+        total_received: "500",
+        total_refunded: "0",
+        total_outstanding: "100",
+        total_refund_liability: "0",
       },
     ]);
     render(
@@ -142,21 +143,21 @@ describe("AnalyticsDashboard", () => {
   it("switches to a table view showing the same data", async () => {
     fetchEditionStats.mockResolvedValue([
       {
-        editionId: "edition-2026",
+        edition_id: "edition-2026",
         year: 2026,
         month: "march",
-        editionType: "festival",
-        startDate: "2026-03-20",
-        eventsCount: 2,
-        totalRegistrations: 10,
-        totalGuests: 25,
-        totalCheckedIn: 18,
-        totalPaid: 500,
-        totalDue: 600,
-        totalReceived: 500,
-        totalRefunded: 0,
-        totalOutstanding: 100,
-        totalRefundLiability: 0,
+        edition_type: "festival",
+        start_date: "2026-03-20",
+        events_count: 2,
+        total_registrations: 10,
+        total_guests: 25,
+        total_checked_in: 18,
+        total_paid: "500",
+        total_due: "600",
+        total_received: "500",
+        total_refunded: "0",
+        total_outstanding: "100",
+        total_refund_liability: "0",
       },
     ]);
     renderAnalyticsDashboard();
@@ -171,7 +172,7 @@ describe("AnalyticsDashboard", () => {
   it("describes both charts for assistive technology", async () => {
     fetchEditionStats.mockResolvedValue([
       edition,
-      { ...edition, editionId: "edition-2027", year: 2027, totalGuests: 0, totalCheckedIn: 0 },
+      { ...edition, edition_id: "edition-2027", year: 2027, total_guests: 0, total_checked_in: 0 },
     ]);
     renderAnalyticsDashboard();
 
@@ -190,7 +191,7 @@ describe("AnalyticsDashboard", () => {
   });
 
   it("hides the rate chart when no edition has registered guests", async () => {
-    fetchEditionStats.mockResolvedValue([{ ...edition, totalGuests: 0, totalCheckedIn: 0 }]);
+    fetchEditionStats.mockResolvedValue([{ ...edition, total_guests: 0, total_checked_in: 0 }]);
     renderAnalyticsDashboard();
 
     await screen.findByRole("img", { name: "admin_analytics_chart_aria" });
