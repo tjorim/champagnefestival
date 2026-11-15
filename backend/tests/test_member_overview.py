@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.mcp.admin import members as mcp_members
 from app.models import Edition, Event, Person, Registration, Venue
+from app.schemas import PersonOut
 from app.services.people_listing import inactivity_cutoff
 from tests.helpers import ADMIN_HEADERS, mcp_session_factory, requires_postgres
 
@@ -238,7 +239,7 @@ async def test_concurrent_member_email_conflict(engine, db_session, monkeypatch)
             )
 
     results = await asyncio.gather(create(), create(), return_exceptions=True)
-    assert sum(isinstance(result, dict) for result in results) == 1
+    assert sum(isinstance(result, PersonOut) for result in results) == 1
     conflicts = [result for result in results if isinstance(result, ApiHTTPException)]
     assert len(conflicts) == 1
     assert conflicts[0].code == "member_email_in_use"
