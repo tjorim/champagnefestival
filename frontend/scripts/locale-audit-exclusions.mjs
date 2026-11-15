@@ -69,12 +69,12 @@ export const exclusions = {
     "https://…": "URL input example",
   },
   "components/admin/EventModal.tsx": {
-    titleNl: "form field key",
-    descriptionNl: "form field key",
-    titleFr: "form field key",
-    descriptionFr: "form field key",
-    titleEn: "form field key",
-    descriptionEn: "form field key",
+    title_nl: "form field key",
+    description_nl: "form field key",
+    title_fr: "form field key",
+    description_fr: "form field key",
+    title_en: "form field key",
+    description_en: "form field key",
   },
   "components/admin/PollQuestionCard.tsx": {
     titleNl: "form field key",
