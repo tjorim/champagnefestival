@@ -25,9 +25,11 @@ from app.schemas import (
     PersonAdminSummaryOut,
     PersonCreate,
     PersonListEnvelope,
+    PersonListItemOut,
     PersonOut,
     PersonPaymentSummary,
     PersonUpdate,
+    RegistrationListOut,
     RegistrationOut,
 )
 from app.services import email_consent_service, payments_service, people_service, settings_service
@@ -43,7 +45,7 @@ from app.services.people_listing import (
     reward_due,
     role_active,
 )
-from app.utils import person_to_dict, registration_to_list_dict
+from app.utils import person_to_out, registration_to_list_out
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
 # 7 years after a person's most recent registration's event date. 365.25 days/year
@@ -64,7 +66,7 @@ async def create_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     return await people_service.create_person(db, body=body, actor=actor, request_id=request_id)
 
 
@@ -118,13 +120,13 @@ async def list_people(
     )
     return list_query.envelope(
         [
-            {
-                **person_to_dict(p),
-                "registration_count": count,
-                "last_attended": attended,
-                "reward_due": due,
-                "inactivity_highlight": bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
-            }
+            PersonListItemOut(
+                **person_to_out(p).model_dump(),
+                registration_count=count,
+                last_attended=attended,
+                reward_due=due,
+                inactivity_highlight=bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
+            )
             for p, count, attended, due in rows
         ],
         total,
@@ -174,7 +176,9 @@ async def people_by_email(
         stmt = stmt.where(Person.id != exclude_person_id)
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(list_query.apply(stmt.add_columns(registration_count).order_by(Person.id)))).all()
-    return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
+    return list_query.envelope(
+        [PersonListItemOut(**person_to_out(p).model_dump(), registration_count=count) for p, count in rows], total
+    )
 
 
 @router.get("/export", **binary_response("text/csv", "People as CSV"))
@@ -200,7 +204,7 @@ async def export_people_csv(
 
 
 @router.get("/due-for-anonymisation", response_model=list[PersonAdminSummaryOut])
-async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) -> list[PersonOut]:
     """People whose identity fields are due for anonymisation.
 
     "Due" means: no NISS/eID on file (a current or former volunteer is never
@@ -233,13 +237,13 @@ async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) 
         .order_by(last_event_date.asc())
     )
     rows = (await db.execute(stmt)).scalars().all()
-    return [person_to_dict(p) for p in rows]
+    return [person_to_out(p) for p in rows]
 
 
 @router.get("/{person_id}", response_model=PersonAdminSummaryOut)
-async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> PersonOut:
     person = await people_service.get_person_or_404(db, person_id)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 @router.put("/{person_id}", response_model=PersonOut)
@@ -249,7 +253,7 @@ async def update_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     person = await people_service.get_person_or_404(db, person_id)
     return await people_service.apply_person_update(db, person, body, actor=actor, request_id=request_id)
 
@@ -258,7 +262,7 @@ async def update_person(
 async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationListOut]:
     person = await people_service.get_person_or_404(db, person_id)
 
     result = await db.execute(
@@ -271,7 +275,7 @@ async def list_person_registrations(
         .order_by(Registration.created_at.desc())
     )
     rows = result.scalars().all()
-    return [registration_to_list_dict(r, person, r.event) for r in rows]
+    return [registration_to_list_out(r, person, r.event) for r in rows]
 
 
 @router.get("/{person_id}/payment-summary", response_model=PersonPaymentSummary)
@@ -289,7 +293,7 @@ async def merge_people(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     """Merge duplicate_id into person_id (admin-only). See
     ``app.services.people_service.merge_people`` for the exact semantics."""
     if person_id == duplicate_id:
@@ -317,7 +321,7 @@ async def anonymise_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     """Blank a person's identity fields, keeping their registrations intact.
 
     See ``app.services.people_service.anonymise_person``. Admin-triggered

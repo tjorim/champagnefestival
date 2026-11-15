@@ -1198,3 +1198,18 @@ The frontend reads event/product/edition and nested registration write responses
 API records. Request methods, payloads and retry policy are unchanged: this migration adds no automatic
 retry. In particular, event/product/edition creation and artwork upload remain unsafe to blindly retry
 after an ambiguous response; reconcile with a read. Updates/deletes keep their existing endpoint strategy.
+
+### Shared response-model construction (#1657)
+
+The response-builder migration changes no write's mutation, locking, transaction,
+notification, idempotency scope, request hash or retry policy. Events/products/editions,
+registrations, people/members/volunteers, organisations, floor plans and settings
+retain their documented decisions above. No new retry is advertised or enabled.
+Bulk room/table-type/table/layout creation explicitly dumps its existing output
+model in Python mode before the existing replay JSON conversion, preserving stored
+date/timestamp representation. Admin registration creation still stores JSON-mode
+`RegistrationOut` and now validates replayed data into that model. Private replay
+metadata preserves MCP's existing JSON-valued cached response (which omits the
+fresh response's extra `edition_id`); it is never serialized or exposed in OpenAPI. The existing
+bulk and registration idempotency tests cover duplicate prevention, matching
+replays and conflicts; MCP/REST parity tests cover the response boundaries.

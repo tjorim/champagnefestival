@@ -10,7 +10,16 @@ from typing import Any, Literal, Self
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    PrivateAttr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
 from app.models import MAX_POLL_PEOPLE, MAX_POLL_QUANTITY
@@ -859,7 +868,7 @@ class ProductOut(ResponseModel):
 
 class ProductPublicOut(ResponseModel):
     """The visitor-facing shape of a product: always `purchasable=True` —
-    see app.utils.event_to_summary_dict, which excludes every hidden
+    see app.utils.event_to_summary_out, which excludes every hidden
     (`purchasable=False`) product from the public response entirely, and
     strips any `inclusions`/`included_product_id` edge that targets one."""
 
@@ -1004,6 +1013,10 @@ class StampProgress(ResponseModel):
 
 
 class RegistrationOut(ResponseModel):
+    # Replay storage is already JSON-serialized. MCP preserves that historical
+    # payload at its boundary; this metadata is never part of the API schema.
+    _from_idempotency_replay: bool = PrivateAttr(default=False)
+
     poll_question_id: str | None = None
     stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)

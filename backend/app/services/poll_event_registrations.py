@@ -105,7 +105,7 @@ async def sync_answer(
             commit=False,
             poll_question_id=question.id,
         )
-        registration = await db.get(Registration, result["id"])
+        registration = await db.get(Registration, result.id)
         assert registration is not None
         if person is not None and person.oidc_subject:
             registration.user_id = (await get_or_create_user(db, person.oidc_subject, commit=False)).id

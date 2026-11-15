@@ -28,7 +28,7 @@ from app.services.public_render import (
     rewrite_head_meta,
 )
 from app.services.public_render_cache import public_render_cache
-from app.utils import faq_item_to_public_dict
+from app.utils import faq_item_to_public_out
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ def _public_url(locale: FaqLocale, path: str = "") -> str:
 
 async def _load_active_faq_items(db: AsyncSession, *, locale: FaqLocale) -> list[dict]:
     result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
-    return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
+    return [faq_item_to_public_out(f, locale).model_dump() for f in result.scalars().all()]
 
 
 async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
@@ -108,7 +108,9 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
     # editions never regresses to a bare site name.
     description = jsonld_service.WELCOME_SUBTITLE[locale]
     if edition is not None:
-        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True, locale=locale)
+        payload = (
+            await editions_service.edition_payload(db, edition, active_only=True, public=True, locale=locale)
+        ).model_dump()
         events = payload["events"]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
         share_image = jsonld_service.edition_share_image(payload, base_url=settings.public_url)

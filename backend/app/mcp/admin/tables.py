@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import MCPToolError, validate_with_schema
+from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import TableBulkCreate, TableCreate, TableUpdate
 from app.services import tables_service
 from app.services.errors import ServiceError
@@ -36,7 +36,7 @@ async def create_table(
     )
     async with session_factory() as db:
         try:
-            return await tables_service.create_table(db, actor=actor, body=body)
+            return dump_response(await tables_service.create_table(db, actor=actor, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -51,8 +51,8 @@ async def bulk_create_tables(
     validate_with_schema(TableBulkCreate, items=items, idempotency_key=idempotency_key)
     async with session_factory() as db:
         try:
-            return await tables_service.bulk_create_tables(
-                db, actor=actor, items=items, idempotency_key=idempotency_key
+            return dump_response(
+                await tables_service.bulk_create_tables(db, actor=actor, items=items, idempotency_key=idempotency_key)
             )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
@@ -60,13 +60,13 @@ async def bulk_create_tables(
 
 async def list_tables(session_factory: Any, layout_id: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"tables": await tables_service.list_tables(db, layout_id)}
+        return {"tables": dump_response(await tables_service.list_tables(db, layout_id))}
 
 
 async def get_table(session_factory: Any, table_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await tables_service.get_table(db, table_id)
+            return dump_response(await tables_service.get_table(db, table_id))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -98,7 +98,7 @@ async def update_table(
     body = validate_with_schema(TableUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await tables_service.update_table(db, actor=actor, table_id=table_id, body=body)
+            return dump_response(await tables_service.update_table(db, actor=actor, table_id=table_id, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

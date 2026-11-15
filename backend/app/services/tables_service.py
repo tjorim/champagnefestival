@@ -17,7 +17,7 @@ from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Layout, Registration, Table, TableType
-from app.schemas import TableCreate, TableUpdate
+from app.schemas import TableBulkOut, TableCreate, TableOut, TableUpdate
 from app.services.allocations_service import allocated_registration_filter, registration_ids_by_table
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
@@ -26,7 +26,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, table_to_dict
+from app.utils import make_id, table_to_out
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def _notify_seating_changed(db: AsyncSession, *, action: str, table_id: st
     await notify_live_event(db, live_mapping.seating_changed(action=action, table_id=table_id, edition_id=edition_id))
 
 
-async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, request_id: str | None = None) -> dict:
+async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, request_id: str | None = None) -> TableOut:
     # Lock the referenced TableType row so a concurrent delete_table_type (which
     # acquires with_for_update on the same row) serializes correctly.
     tt = await db.execute(select(TableType).where(TableType.id == body.table_type_id).with_for_update())
@@ -77,7 +77,7 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
     await db.commit()
     await db.refresh(t)
     # New tables have no reservations yet
-    return table_to_dict(t, [])
+    return table_to_out(t, [])
 
 
 async def bulk_create_tables(
@@ -151,7 +151,7 @@ async def bulk_create_tables(
 
     await db.execute(select(Table).where(Table.id.in_([t.id for t in rows])))
     # New tables have no reservations yet.
-    response = {"items": [table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
+    response = {"items": [table_to_out(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
     # Notify before staging the idempotency row: the notify's execute autoflushes
     # (SQLAlchemy 2.1), and a unique violation on that row must surface at the
     # commit below, inside commit_with_idempotency_guard, not here.
@@ -161,13 +161,18 @@ async def bulk_create_tables(
         )
     if idempotency_key:
         record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+            db,
+            scope=_BULK_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=TableBulkOut.model_validate(response).model_dump(),
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
 
 
-async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[dict]:
+async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[TableOut]:
     stmt = select(Table).order_by(Table.created_at, Table.id)
     if layout_id is not None:
         stmt = stmt.where(Table.layout_id == layout_id)
@@ -176,16 +181,16 @@ async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[di
 
     table_res_map = await registration_ids_by_table(db, [t.id for t in tables])
 
-    return [table_to_dict(t, table_res_map.get(t.id, [])) for t in tables]
+    return [table_to_out(t, table_res_map.get(t.id, [])) for t in tables]
 
 
-async def get_table(db: AsyncSession, table_id: str) -> dict:
+async def get_table(db: AsyncSession, table_id: str) -> TableOut:
     t = (await db.execute(select(Table).where(Table.id == table_id).with_for_update())).scalar_one_or_none()
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
     res_result = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])))
     registration_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, registration_ids)
+    return table_to_out(t, registration_ids)
 
 
 async def update_table(
@@ -195,7 +200,7 @@ async def update_table(
     table_id: str,
     body: TableUpdate,
     request_id: str | None = None,
-) -> dict:
+) -> TableOut:
     t = (
         await db.execute(
             select(Table)
@@ -256,7 +261,7 @@ async def update_table(
     await db.refresh(t)
     res_result = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])))
     registration_ids = [row[0] for row in res_result.all()]
-    return table_to_dict(t, registration_ids)
+    return table_to_out(t, registration_ids)
 
 
 async def delete_table(db: AsyncSession, *, actor: str, table_id: str, request_id: str | None = None) -> dict:

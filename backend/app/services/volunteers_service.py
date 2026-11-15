@@ -29,12 +29,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.dependencies import SortDirection
 from app.models import Person, VolunteerPeriod
-from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
+from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerOut, VolunteerPeriodOut, VolunteerUpdate
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
-from app.utils import get_or_404, make_id, person_to_dict
+from app.utils import get_or_404, make_id, person_to_out
 
 
 def ensure_volunteer_role(person: Person, *, started_on: dt_date | None = None) -> None:
@@ -140,30 +140,14 @@ async def get_volunteer_or_404(db: AsyncSession, volunteer_id: str) -> Person:
     return volunteer
 
 
-def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dict:
-    d = person_to_dict(person)
-    return {
-        "id": d["id"],
-        "name": d["name"],
-        "address": d["address"],
-        "national_register_number": d["national_register_number"],
-        "eid_document_number": d["eid_document_number"],
-        "anonymised": d["anonymised"],
-        "retired_roles": d["retired_roles"],
-        "role_history": d["role_history"],
-        "oidc_subject": person.oidc_subject,
-        "help_periods": [
-            {
-                "id": period.id,
-                "first_help_day": period.first_help_day,
-                "last_help_day": period.last_help_day,
-                "notes": period.notes,
-            }
-            for period in help_periods
-        ],
-        "created_at": d["created_at"],
-        "updated_at": d["updated_at"],
-    }
+def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> VolunteerOut:
+    return VolunteerOut.model_validate(
+        {
+            **person_to_out(person).model_dump(),
+            "oidc_subject": person.oidc_subject,
+            "help_periods": [VolunteerPeriodOut.model_validate(period) for period in help_periods],
+        }
+    )
 
 
 def search_volunteers_stmt(
@@ -183,7 +167,7 @@ def search_volunteers_stmt(
 
 async def create_volunteer(
     db: AsyncSession, *, body: VolunteerCreate, actor: str, request_id: str | None = None
-) -> dict:
+) -> VolunteerOut:
     nrr = normalise_optional_identity(body.national_register_number)
     eid = normalise_optional_identity(body.eid_document_number)
     await ensure_unique_fields(db, national_register_number=nrr, eid_document_number=eid)
@@ -225,7 +209,7 @@ async def create_volunteer(
 
 async def apply_volunteer_update(
     db: AsyncSession, volunteer: Person, body: VolunteerUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> VolunteerOut:
     volunteer_id = volunteer.id
 
     nrr_in_set = "national_register_number" in body.model_fields_set

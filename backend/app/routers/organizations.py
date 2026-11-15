@@ -25,7 +25,7 @@ from app.schemas import (
 from app.services import organization_changes, organization_logos, organizations_service
 from app.services import organization_translation as translation
 from app.services.errors import ServiceError, to_http_exception
-from app.utils import get_or_404, organization_to_dict
+from app.utils import get_or_404, organization_to_out
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
@@ -51,7 +51,7 @@ async def list_organizations(
     organization_type: str | None = Query(default=None, alias="type"),
     db: AsyncSession = Depends(get_db),
     pagination: Pagination = Depends(),
-) -> list[dict]:
+) -> list[OrganizationOut]:
     stmt = select(Organization).order_by(Organization.id)
     if organization_type is not None:
         stmt = stmt.where(Organization.type == organization_type)
@@ -61,7 +61,7 @@ async def list_organizations(
     person_ids = [e.contact_person_id for e in organizations if e.contact_person_id]
     contacts = await organizations_service.load_contacts_by_ids(db, person_ids)
     return [
-        organization_to_dict(e, contacts.get(e.contact_person_id) if e.contact_person_id else None)
+        organization_to_out(e, contacts.get(e.contact_person_id) if e.contact_person_id else None)
         for e in organizations
     ]
 
@@ -77,7 +77,7 @@ async def create_organization(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     try:
         return await organizations_service.create_organization(
             db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -115,7 +115,7 @@ async def update_organization(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     e = await get_or_404(db, Organization, organization_id, "Organization not found.")
     try:
         return await organizations_service.apply_organization_update(
@@ -151,7 +151,7 @@ async def upload_logo(
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     """Publish a validated logo immediately, superseding the manager's logo proposal."""
     try:
         await get_or_404(db, Organization, organization_id, "Organization not found.")

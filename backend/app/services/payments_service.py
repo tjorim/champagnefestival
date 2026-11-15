@@ -15,7 +15,7 @@ rather than becoming computed properties — ``sync_registration_payment_fields`
 recomputes and stores them after every ledger append (and whenever
 ``amount_due`` changes, see ``registrations_service.apply_registration_update``)
 so every existing reader (SQL filters/sorts on ``payment_status``,
-``registration_to_dict``, CSV exports, edition stats, the ``RegistrationOut``
+``registration_to_out``, CSV exports, edition stats, the ``RegistrationOut``
 schema) keeps working unchanged; only the write path moves off direct
 mutation and onto ledger entries.
 """

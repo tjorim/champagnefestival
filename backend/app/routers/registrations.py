@@ -62,9 +62,9 @@ from app.utils import (
     edition_display_name,
     make_id,
     order_answer_text,
-    registration_to_dict,
-    registration_to_dict_with_token,
-    registration_to_list_dict,
+    registration_to_list_out,
+    registration_to_out,
+    registration_to_out_with_token,
 )
 from app.visitor_session import actor_for_user
 
@@ -88,7 +88,7 @@ async def create_registration(
     request: Request,
     claims: dict[str, Any] | None = Depends(get_optional_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> RegistrationPublicOut:
     client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip, scope="registration-create"):
         raise ApiHTTPException(
@@ -222,7 +222,7 @@ async def create_registration(
         )
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)
-    return registration_to_dict(registration, person, event, public=True)
+    return registration_to_out(registration, person, event, public=True)
 
 
 @router.post(
@@ -236,7 +236,7 @@ async def admin_create_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     return await registrations_service.admin_create_registration(
         db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
@@ -332,7 +332,7 @@ async def list_registrations(
 
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await registrations_service.fetch_person_map(db, list(rows))
-    items = [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
+    items = [registration_to_list_out(row, person_map[row.person_id], row.event) for row in rows]
     return {"items": items, "total": total, "limit": limit, "page": page}
 
 
@@ -584,10 +584,10 @@ async def export_payment_transactions_csv(
 async def get_registration(
     registration_id: str,
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> RegistrationOutWithToken:
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     person_map = await registrations_service.fetch_person_map(db, [registration])
-    return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
+    return registration_to_out_with_token(registration, person_map[registration.person_id], registration.event)
 
 
 @router.post(
@@ -647,7 +647,7 @@ async def update_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     return await registrations_service.apply_registration_update(
         db, registration, body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -665,7 +665,7 @@ async def assign_registration_to_volunteer(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     """Attach an unowned registration to a volunteer's own portal account
     (#1044) — an admin override alongside the volunteer's own self-service
     claim flow, for a booking they never confirmed themselves."""

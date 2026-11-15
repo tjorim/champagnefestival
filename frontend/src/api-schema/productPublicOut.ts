@@ -10,7 +10,7 @@ import type { ProductPublicOutUnit } from './productPublicOutUnit';
 
 /**
  * The visitor-facing shape of a product: always `purchasable=True` —
- * see app.utils.event_to_summary_dict, which excludes every hidden
+ * see app.utils.event_to_summary_out, which excludes every hidden
  * (`purchasable=False`) product from the public response entirely, and
  * strips any `inclusions`/`included_product_id` edge that targets one.
  */

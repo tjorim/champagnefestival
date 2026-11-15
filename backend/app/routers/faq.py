@@ -15,7 +15,7 @@ from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemOut, FaqItemPublicOut, FaqItemReorder, FaqItemUpdate, FaqLocale
 from app.services import faq_service
 from app.services.errors import ServiceError, to_http_exception
-from app.utils import faq_item_to_public_dict
+from app.utils import faq_item_to_public_out
 
 router = APIRouter(
     prefix="/api/faq",
@@ -27,14 +27,14 @@ router = APIRouter(
 async def list_active_faq_items(
     locale: FaqLocale = Query(default="nl"),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[FaqItemPublicOut]:
     """Public: active FAQ items in display order, in `locale`.
 
     An item that is not fully translated (question and answer) into `locale`
     is shown in Dutch instead of being omitted.
     """
     result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
-    return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
+    return [faq_item_to_public_out(f, locale) for f in result.scalars().all()]
 
 
 @router.get("", response_model=list[FaqItemOut], dependencies=[Depends(require_admin)])

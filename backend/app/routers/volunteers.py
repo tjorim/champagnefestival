@@ -34,7 +34,7 @@ async def create_volunteer(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerOut:
     return await volunteers_service.create_volunteer(db, body=body, actor=actor, request_id=request_id)
 
 
@@ -93,7 +93,7 @@ async def export_volunteers_csv(
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerOut)
-async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> VolunteerOut:
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
     periods_map = await volunteers_service.load_periods_map(db, [volunteer.id])
     return volunteers_service.to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
@@ -106,7 +106,7 @@ async def update_volunteer(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerOut:
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
     return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor, request_id=request_id)
 

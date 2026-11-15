@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import as_value_error, dump_response, validate_with_schema
 from app.schemas import VolunteerCreate, VolunteerUpdate
 from app.services import volunteers_service
 
@@ -36,7 +36,7 @@ async def create_volunteer(
     )
     async with session_factory() as db:
         try:
-            return await volunteers_service.create_volunteer(db, body=body, actor=actor)
+            return dump_response(await volunteers_service.create_volunteer(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -48,7 +48,9 @@ async def get_volunteer(session_factory: Any, volunteer_id: str) -> dict:
         except HTTPException as exc:
             raise as_value_error(exc) from exc
         periods_map = await volunteers_service.load_periods_map(db, [volunteer.id])
-        return volunteers_service.to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
+        return volunteers_service.to_volunteer_out(volunteer, periods_map.get(volunteer.id, [])).model_dump(
+            exclude_unset=True
+        )
 
 
 async def list_volunteers(
@@ -60,7 +62,12 @@ async def list_volunteers(
         stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
         rows = (await db.execute(stmt)).scalars().all()
         periods_map = await volunteers_service.load_periods_map(db, [row.id for row in rows])
-        return {"volunteers": [volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]}
+        return {
+            "volunteers": [
+                volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])).model_dump(exclude_unset=True)
+                for v in rows
+            ]
+        }
 
 
 async def update_volunteer(
@@ -98,7 +105,7 @@ async def update_volunteer(
     async with session_factory() as db:
         try:
             volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
-            return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor)
+            return dump_response(await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -114,7 +121,7 @@ async def deactivate_volunteer(session_factory: Any, actor: str, volunteer_id: s
             volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor)
+        return dump_response(await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor))
 
 
 async def reactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
@@ -124,4 +131,4 @@ async def reactivate_volunteer(session_factory: Any, actor: str, volunteer_id: s
             volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await volunteers_service.reactivate_volunteer(db, volunteer, actor=actor)
+        return dump_response(await volunteers_service.reactivate_volunteer(db, volunteer, actor=actor))

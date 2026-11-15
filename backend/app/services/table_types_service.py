@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Layout, Room, Table, TableType, Venue
-from app.schemas import TableTypeCreate, TableTypeUpdate
+from app.schemas import TableTypeBulkOut, TableTypeCreate, TableTypeOut, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -21,14 +21,14 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, table_type_to_dict
+from app.utils import make_id, table_type_to_out
 
 _BULK_SCOPE = "table_types.bulk_create"
 
 
 async def create_table_type(
     db: AsyncSession, *, actor: str, body: TableTypeCreate, request_id: str | None = None
-) -> dict:
+) -> TableTypeOut:
     venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
     if venue.scalar_one_or_none() is None:
         raise NotFoundError(f"Venue '{body.venue_id}' not found.")
@@ -60,7 +60,7 @@ async def create_table_type(
     )
     await db.commit()
     await db.refresh(tt)
-    return table_type_to_dict(tt)
+    return table_type_to_out(tt)
 
 
 async def bulk_create_table_types(
@@ -120,33 +120,38 @@ async def bulk_create_table_types(
             details={"name": tt.name, "shape": tt.shape, "venue_id": tt.venue_id, "bulk": True},
         )
 
-    response = {"items": [table_type_to_dict(tt) for tt in rows]}
+    response = {"items": [table_type_to_out(tt) for tt in rows]}
     if idempotency_key:
         record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+            db,
+            scope=_BULK_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=TableTypeBulkOut.model_validate(response).model_dump(),
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
 
 
-async def list_table_types(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[dict]:
+async def list_table_types(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[TableTypeOut]:
     stmt = select(TableType).order_by(TableType.created_at, TableType.id).offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
-    return [table_type_to_dict(tt) for tt in result.scalars().all()]
+    return [table_type_to_out(tt) for tt in result.scalars().all()]
 
 
-async def get_table_type(db: AsyncSession, type_id: str) -> dict:
+async def get_table_type(db: AsyncSession, type_id: str) -> TableTypeOut:
     tt = await db.get(TableType, type_id)
     if tt is None:
         raise NotFoundError(f"Table type '{type_id}' not found.")
-    return table_type_to_dict(tt)
+    return table_type_to_out(tt)
 
 
 async def update_table_type(
     db: AsyncSession, *, actor: str, type_id: str, body: TableTypeUpdate, request_id: str | None = None
-) -> dict:
+) -> TableTypeOut:
     tt = (await db.execute(select(TableType).where(TableType.id == type_id).with_for_update())).scalar_one_or_none()
     if tt is None:
         raise NotFoundError(f"Table type '{type_id}' not found.")
@@ -225,7 +230,7 @@ async def update_table_type(
     )
     await db.commit()
     await db.refresh(tt)
-    return table_type_to_dict(tt)
+    return table_type_to_out(tt)
 
 
 async def delete_table_type(db: AsyncSession, *, actor: str, type_id: str, request_id: str | None = None) -> dict:

@@ -215,7 +215,7 @@ class PaymentTransaction(Base):
     every append recomputes and stores them (see
     ``app.services.payments_service.sync_registration_payment_fields``) so
     every existing reader — SQL filters/sorts on ``payment_status``,
-    ``registration_to_dict``, CSV exports, edition stats — keeps working
+    ``registration_to_out``, CSV exports, edition stats — keeps working
     unchanged; only the write path moves off direct mutation.
     """
 

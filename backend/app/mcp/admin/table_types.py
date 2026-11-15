@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.mcp.utils import MCPToolError, validate_with_schema
+from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import TableTypeBulkCreate, TableTypeCreate, TableTypeUpdate
 from app.services import table_types_service
 from app.services.errors import ServiceError
@@ -40,7 +40,7 @@ async def create_table_type(
     )
     async with session_factory() as db:
         try:
-            return await table_types_service.create_table_type(db, actor=actor, body=body)
+            return dump_response(await table_types_service.create_table_type(db, actor=actor, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -55,8 +55,10 @@ async def bulk_create_table_types(
     validate_with_schema(TableTypeBulkCreate, items=items, idempotency_key=idempotency_key)
     async with session_factory() as db:
         try:
-            return await table_types_service.bulk_create_table_types(
-                db, actor=actor, items=items, idempotency_key=idempotency_key
+            return dump_response(
+                await table_types_service.bulk_create_table_types(
+                    db, actor=actor, items=items, idempotency_key=idempotency_key
+                )
             )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
@@ -64,13 +66,13 @@ async def bulk_create_table_types(
 
 async def list_table_types(session_factory: Any) -> dict:
     async with session_factory() as db:
-        return {"table_types": await table_types_service.list_table_types(db)}
+        return {"table_types": dump_response(await table_types_service.list_table_types(db))}
 
 
 async def get_table_type(session_factory: Any, type_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await table_types_service.get_table_type(db, type_id)
+            return dump_response(await table_types_service.get_table_type(db, type_id))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -106,7 +108,9 @@ async def update_table_type(
     body = validate_with_schema(TableTypeUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await table_types_service.update_table_type(db, actor=actor, type_id=type_id, body=body)
+            return dump_response(
+                await table_types_service.update_table_type(db, actor=actor, type_id=type_id, body=body)
+            )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

@@ -19,7 +19,7 @@ router = APIRouter(
 
 
 @router.get("", response_model=AppSettingsOut)
-async def get_settings(response: Response, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_settings(response: Response, db: AsyncSession = Depends(get_db)) -> AppSettingsOut:
     response.headers["Cache-Control"] = "public, max-age=30"
     return await settings_service.get_settings(db)
 
@@ -31,7 +31,7 @@ async def update_settings(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> AppSettingsOut:
     return await settings_service.update_settings(
         db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
     )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import MCPToolError, validate_with_schema
+from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import RoomBulkCreate, RoomCreate, RoomUpdate
 from app.services import rooms_service
 from app.services.errors import ServiceError
@@ -36,7 +36,7 @@ async def create_room(
     )
     async with session_factory() as db:
         try:
-            return await rooms_service.create_room(db, actor=actor, body=body)
+            return dump_response(await rooms_service.create_room(db, actor=actor, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -54,20 +54,22 @@ async def bulk_create_rooms(
     validate_with_schema(RoomBulkCreate, items=items, idempotency_key=idempotency_key)
     async with session_factory() as db:
         try:
-            return await rooms_service.bulk_create_rooms(db, actor=actor, items=items, idempotency_key=idempotency_key)
+            return dump_response(
+                await rooms_service.bulk_create_rooms(db, actor=actor, items=items, idempotency_key=idempotency_key)
+            )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
 
 async def list_rooms(session_factory: Any, venue_id: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"rooms": await rooms_service.list_rooms(db, venue_id)}
+        return {"rooms": dump_response(await rooms_service.list_rooms(db, venue_id))}
 
 
 async def get_room(session_factory: Any, room_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await rooms_service.get_room(db, room_id)
+            return dump_response(await rooms_service.get_room(db, room_id))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -99,7 +101,7 @@ async def update_room(
     body = validate_with_schema(RoomUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await rooms_service.update_room(db, actor=actor, room_id=room_id, body=body)
+            return dump_response(await rooms_service.update_room(db, actor=actor, room_id=room_id, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

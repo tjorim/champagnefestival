@@ -46,7 +46,7 @@ from app.services.users_service import (
     verified_email_from_claims,
 )
 from app.translations import Language
-from app.utils import registration_to_guest_dict, roles_contains
+from app.utils import registration_to_guest_out, roles_contains
 from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
 from app.visitor_session import get_current_user as get_current_portal_user
 
@@ -245,7 +245,7 @@ async def list_my_registrations(
     response: Response,
     user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Return registrations owned by the authenticated portal user.
 
     ``user`` may be resolved from either an OIDC bearer token or a visitor
@@ -264,7 +264,7 @@ async def list_my_registrations(
             .order_by(Registration.created_at.desc())
         )
     ).all()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+    return [registration_to_guest_out(registration, person, event) for registration, person, event in rows]
 
 
 @router.post("/registrations/{registration_id}/request", response_model=OkOut)
@@ -335,7 +335,7 @@ async def list_claimable_registrations(
     response: Response,
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Preview unowned registrations under the caller's own verified email.
 
     Read-only — nothing is linked here (#1044). The frontend shows these as
@@ -355,7 +355,7 @@ async def list_claimable_registrations(
         return []
     rows = await _load_guest_registrations_by_email(db, email)
     return [
-        registration_to_guest_dict(registration, person, event)
+        registration_to_guest_out(registration, person, event)
         for registration, person, event in rows
         if registration.user_id is None
     ]
@@ -365,7 +365,7 @@ async def list_claimable_registrations(
 async def claim_verified_email_registrations(
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Link unowned registrations under the caller's own verified email,
     after they've explicitly confirmed it — see ``list_claimable_registrations``
     for the read-only preview this follows.
@@ -383,7 +383,7 @@ async def claim_verified_email_registrations(
     await claim_unowned_registrations_for_email(db, user, email, actor=actor, auth_source=auth_source)
     rows = await _load_guest_registrations_by_email(db, email)
     await db.commit()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+    return [registration_to_guest_out(registration, person, event) for registration, person, event in rows]
 
 
 @router.post("/pebble-token", response_model=PebbleAccessTokenOut)

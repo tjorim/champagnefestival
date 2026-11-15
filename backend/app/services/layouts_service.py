@@ -32,7 +32,15 @@ from app.models import (
     Table,
     TableType,
 )
-from app.schemas import CURRENT_REVISION_REF, LayoutCopyCreate, LayoutCreate, LayoutRevisionSaveRequest
+from app.schemas import (
+    CURRENT_REVISION_REF,
+    LayoutBulkOut,
+    LayoutCopyCreate,
+    LayoutCreate,
+    LayoutOut,
+    LayoutRevisionSaveRequest,
+    LayoutWithTablesOut,
+)
 from app.services.allocations_service import registration_ids_by_table
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.idempotency import (
@@ -41,7 +49,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import area_to_dict, layout_to_dict, make_id, table_to_dict
+from app.utils import area_to_out, layout_to_out, make_id, table_to_out
 
 _BULK_SCOPE = "layouts.bulk_create"
 
@@ -151,8 +159,8 @@ async def resolve_layout_event(db: AsyncSession, body: LayoutCreate) -> dt_date:
     return event.date
 
 
-async def layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict]:
-    return [layout_to_dict(layout, date=layout.event.date) for layout in layouts]
+async def layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[LayoutOut]:
+    return [layout_to_out(layout, date=layout.event.date) for layout in layouts]
 
 
 async def _reject_if_duplicate(db: AsyncSession, *, room_id: str, event_id: str) -> None:
@@ -169,7 +177,7 @@ async def create_layout(
     actor: str,
     body: LayoutCreate,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     resolved_date = await resolve_layout_event(db, body)
 
     # Lock the room row so a concurrent room deletion (which refuses to proceed
@@ -204,7 +212,7 @@ async def create_layout(
     )
     await db.commit()
     await db.refresh(lay)
-    return layout_to_dict(lay, date=resolved_date)
+    return layout_to_out(lay, date=resolved_date)
 
 
 async def bulk_create_layouts(
@@ -271,7 +279,7 @@ async def bulk_create_layouts(
             details={"room_id": lay.room_id, "event_id": lay.event_id, "bulk": True},
         )
 
-    # layout_to_dict() reads edition_id via lay.event, which flush() does not
+    # layout_to_out() reads edition_id via lay.event, which flush() does not
     # populate on these freshly constructed rows — reload with it so the
     # hybrid property doesn't need an implicit (and, under AsyncSession,
     # unsafe) lazy load during serialization.
@@ -280,11 +288,16 @@ async def bulk_create_layouts(
         for lay in (await db.execute(select(Layout).where(Layout.id.in_([lay.id for lay in rows])))).scalars().all()
     }
     response = {
-        "items": [layout_to_dict(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
+        "items": [layout_to_out(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
     }
     if idempotency_key:
         record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+            db,
+            scope=_BULK_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=LayoutBulkOut.model_validate(response).model_dump(),
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
@@ -297,7 +310,7 @@ async def copy_layout(
     source_layout_id: str,
     body: LayoutCopyCreate,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     source = await db.get(Layout, source_layout_id)
     if source is None:
         raise NotFoundError(f"Layout '{source_layout_id}' not found.")
@@ -413,7 +426,7 @@ async def copy_layout(
     )
     await db.commit()
     await db.refresh(cloned)
-    return layout_to_dict(cloned, date=resolved_date)
+    return layout_to_out(cloned, date=resolved_date)
 
 
 async def list_layouts(
@@ -424,7 +437,7 @@ async def list_layouts(
     edition_id: str | None = None,
     room_id: str | None = None,
     event_id: str | None = None,
-) -> list[dict]:
+) -> list[LayoutOut]:
     stmt = select(Layout).order_by(Layout.created_at, Layout.id).offset(offset)
     if edition_id is not None:
         stmt = stmt.where(Layout.edition_id == edition_id)
@@ -439,7 +452,7 @@ async def list_layouts(
     return await layout_payloads(db, layouts)
 
 
-async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool = False) -> dict:
+async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool = False) -> LayoutOut:
     if include_tables:
         result = await db.execute(
             select(Layout)
@@ -456,8 +469,11 @@ async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool =
     if include_tables:
         table_ids = [t.id for t in lay.tables]
         table_res_map = await registration_ids_by_table(db, table_ids)
-        payload["tables"] = [table_to_dict(t, table_res_map.get(t.id, [])) for t in lay.tables]
-        payload["areas"] = [area_to_dict(a) for a in lay.areas]
+        return LayoutWithTablesOut(
+            **payload.model_dump(),
+            tables=[table_to_out(t, table_res_map.get(t.id, [])) for t in lay.tables],
+            areas=[area_to_out(a) for a in lay.areas],
+        )
     return payload
 
 
@@ -820,7 +836,7 @@ async def restore_layout_revision(
     revision_number: int,
     resolve_allocations: bool = False,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     layout = await db.get(Layout, layout_id)
     if layout is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")

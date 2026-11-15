@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Layout, Room, Venue
-from app.schemas import RoomCreate, RoomUpdate
+from app.schemas import RoomBulkOut, RoomCreate, RoomOut, RoomUpdate
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -21,12 +21,12 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, room_to_dict
+from app.utils import make_id, room_to_out
 
 _BULK_SCOPE = "rooms.bulk_create"
 
 
-async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request_id: str | None = None) -> dict:
+async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request_id: str | None = None) -> RoomOut:
     venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
     if venue.scalar_one_or_none() is None:
         raise NotFoundError(f"Venue '{body.venue_id}' not found.")
@@ -53,7 +53,7 @@ async def create_room(db: AsyncSession, *, actor: str, body: RoomCreate, request
     )
     await db.commit()
     await db.refresh(r)
-    return room_to_dict(r)
+    return room_to_out(r)
 
 
 async def bulk_create_rooms(
@@ -110,33 +110,38 @@ async def bulk_create_rooms(
             details={"name": r.name, "venue_id": r.venue_id, "bulk": True},
         )
 
-    response = {"items": [room_to_dict(r) for r in rows]}
+    response = {"items": [room_to_out(r) for r in rows]}
     if idempotency_key:
         record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+            db,
+            scope=_BULK_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=RoomBulkOut.model_validate(response).model_dump(),
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
 
 
-async def list_rooms(db: AsyncSession, venue_id: str | None = None) -> list[dict]:
+async def list_rooms(db: AsyncSession, venue_id: str | None = None) -> list[RoomOut]:
     stmt = select(Room).order_by(Room.created_at, Room.id)
     if venue_id is not None:
         stmt = stmt.where(Room.venue_id == venue_id)
     result = await db.execute(stmt)
-    return [room_to_dict(r) for r in result.scalars().all()]
+    return [room_to_out(r) for r in result.scalars().all()]
 
 
-async def get_room(db: AsyncSession, room_id: str) -> dict:
+async def get_room(db: AsyncSession, room_id: str) -> RoomOut:
     r = await db.get(Room, room_id)
     if r is None:
         raise NotFoundError(f"Room '{room_id}' not found.")
-    return room_to_dict(r)
+    return room_to_out(r)
 
 
 async def update_room(
     db: AsyncSession, *, actor: str, room_id: str, body: RoomUpdate, request_id: str | None = None
-) -> dict:
+) -> RoomOut:
     r = (
         await db.execute(
             select(Room).where(Room.id == room_id).with_for_update().execution_options(populate_existing=True)
@@ -167,7 +172,7 @@ async def update_room(
     )
     await db.commit()
     await db.refresh(r)
-    return room_to_dict(r)
+    return room_to_out(r)
 
 
 async def delete_room(db: AsyncSession, *, actor: str, room_id: str, request_id: str | None = None) -> dict:

@@ -44,7 +44,7 @@ async def get_active_edition(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
     locale: Language | None = Query(default=None),
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     """Return the current or next upcoming active edition, optionally filtered by type.
 
     `locale` resolves each event's `title`/`description` for that language, falling
@@ -66,7 +66,7 @@ async def list_upcoming_editions(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
     locale: Language | None = Query(default=None),
-) -> list[dict]:
+) -> list[EditionOut | EditionPublicOut]:
     """List upcoming active editions across all supported edition types.
 
     `locale` behaves as on `get_active_edition`.
@@ -132,7 +132,7 @@ async def get_edition_plan(
 async def list_editions(
     db: AsyncSession = Depends(get_db),
     include_inactive: bool = Query(False),
-) -> list[dict]:
+) -> list[EditionOut | EditionPublicOut]:
     """Admin listing: exposes every event (active or not) for management purposes."""
     editions = await editions_service.load_editions(db, include_inactive=include_inactive)
     return await editions_service.edition_payloads(
@@ -234,7 +234,7 @@ async def list_edition_attendance_stats(
 
 
 @router.get("/{edition_id}", response_model=EditionOut, dependencies=[Depends(require_admin)])
-async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_edition(edition_id: str, db: AsyncSession = Depends(get_db)) -> EditionOut | EditionPublicOut:
     edition = await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.edition_payload(db, edition, active_only=False)
 
@@ -250,7 +250,7 @@ async def create_edition(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     return await editions_service.create_edition(
         db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
@@ -263,7 +263,7 @@ async def update_edition(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     edition = await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.apply_edition_update(
         db, edition, body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -278,7 +278,7 @@ async def upload_edition_artwork(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     """Publish the edition's `flyer`, `hero` or `share` image immediately (#1224).
 
     Multipart field `file`: PNG, JPEG or WebP, validated per slot and re-encoded as
@@ -303,7 +303,7 @@ async def clear_edition_artwork(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     """Empty an artwork slot, deleting its file; the site falls back to its static image."""
     await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.clear_edition_artwork(

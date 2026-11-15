@@ -27,7 +27,7 @@ async def create_table(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> TableOut:
     try:
         return await tables_service.create_table(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -59,12 +59,12 @@ async def bulk_create_tables(
 async def list_tables(
     layout_id: str | None = Query(default=None, description="Filter by layout ID"),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[TableOut]:
     return await tables_service.list_tables(db, layout_id)
 
 
 @router.get("/{table_id}", response_model=TableOut)
-async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_table(table_id: str, db: AsyncSession = Depends(get_db)) -> TableOut:
     try:
         return await tables_service.get_table(db, table_id)
     except ServiceError as exc:
@@ -78,7 +78,7 @@ async def update_table(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> TableOut:
     try:
         return await tables_service.update_table(
             db, actor=actor, table_id=table_id, body=body, request_id=getattr(request.state, "request_id", None)

@@ -806,20 +806,53 @@ one-time key. MCP adapters use `model_dump()` in Python mode so their dictionari
 retain datetime objects until the existing transport serializes them. Do not use
 JSON mode here: that would change the adapter's timestamp representation.
 
-This is a partial migration. Remaining response-builder families are:
+The shared builders in `utils.py` and `to_volunteer_out` also return existing
+output models (#1657): events/products/editions (including localized public and
+admin variants), every registration projection, people/organizations, floor
+plans, application settings and public FAQ. Edition lineup organizations use
+`EditionItemOut`. Public HTML rendering explicitly dumps models in Python mode.
+MCP adapters dump at their boundary, including models inside list envelopes;
+`dump_response` retains Python date/datetime/Decimal values and omits unset
+schema defaults so the adapter payload keeps its existing fields.
+Fresh MCP write responses retain their historical `edition_id` projection;
+private replay metadata keeps cached registration responses JSON-valued, without
+that extra projection, exactly as before.
+Bulk floor-plan writes dump through their existing bulk output models before
+storing replay data; registration replays are validated back into `RegistrationOut`.
 
-- `utils.py`: events/products/editions (including localized/public variants),
-  registrations (admin, check-in, list, guest and token), people/organizations,
-  floor plans (area, venue, table type, layout, table, room), application settings
-  and public FAQ.
-- Services: layout revisions, payment transactions/ledger rows, categories,
-  policies/versions, announcements, waitlist, composed messages, email
-  categories/consents, poll questions and stamp cards. Volunteer responses also
-  still use the dict-returning `to_volunteer_out`.
+Remaining dictionary response construction in this checkout (independent service
+families; this slice does not claim to complete #1657):
+
+| Family | Remaining builders / response assembly |
+| --- | --- |
+| Layout revisions | `layouts_service._revision_to_dict`, `compare_layout_revisions`, `preview_layout_restore` (snapshot/restore-plan dictionaries are internal state) |
+| Payments | `payments_service.payment_transaction_to_dict`, `ledger_row_to_dict`, `person_payment_summary` |
+| Event/product categories | `categories.category_to_dict`; event/product category services delegate to it |
+| Policies | `policies_service._version_to_dict`, `_policy_to_dict` |
+| Announcements | `announcements_service.to_dict` |
+| Waitlist | `waitlist_service.to_admin_dict`, `list_scopes` and paginated envelopes |
+| Composed messages | `composer_service.to_dict` (including `_result_fields`) |
+| Email categories/consents | `email_categories_service.category_to_dict`; `email_consent_service.consent_to_dict`, `preferences` |
+| Polls | `utils.poll_option_to_dict`; `poll_questions_service._question_dict`, `_orders`, `volunteer_poll_view`, answer/note acknowledgements; option services delegate to the shared builder |
+| Stamp cards | `stamp_cards_service.as_dict`, `progress`, card/reward response assembly |
+
+Adjacent specialised projections also remain dictionary-based: organisation
+change proposals (`organization_changes.payload`), published stands/public floor
+plans (`stands_service.load_edition_stands`, `load_edition_plan`), product-change
+previews (`product_changes.change_product`, exposed by
+`products_service.preview_product_update`), and signage export jobs
+(`signage_video.summary`; `manifest` is also a worker/storage contract). These do
+not call the migrated core entity builders. Order-question `as_dict()` and
+registration-answer `as_dict()` model methods still provide nested input to the
+output models; `order_questions_service.configure` returns those dictionaries.
+The separate MCP `registration_base_dict` is an intentional minimal operational
+projection, not the migrated full registration builder.
+Bulk floor-plan response envelopes retain dictionary metadata and cached JSON
+values, with fresh entity items constructed as models.
 
 These are follow-up slices, not builders that inherently require dictionaries.
 They need their REST, MCP and internal callers migrated together. In particular,
-public FAQ feeds the dictionary-based server HTML renderer, while registration
+public FAQ dumps its model for the dictionary-based server HTML renderer, while registration
 and event builders nest one another and expose several intentionally different
 shapes. Internal text fragments, keyed lookup maps, audit details, replay storage
 and delete acknowledgements are not entity output builders and should not be

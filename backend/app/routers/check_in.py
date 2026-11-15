@@ -17,7 +17,7 @@ from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.services.errors import ApiHTTPException
 from app.services.registrations_service import ensure_registration_can_check_in
-from app.utils import registration_to_checkin_dict
+from app.utils import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ async def lookup_check_in(
     # rate limiter or the database (PR #1011 review).
     reservation_id: str = Path(max_length=64),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> CheckInGuestOut:
     """Return minimal reservation details after validating the check-in token.
 
     Called by the register-side tablet to display guest info before check-in.
@@ -69,7 +69,7 @@ async def lookup_check_in(
         if r.table_id
         else None
     )
-    return registration_to_checkin_dict(r, person, event, table_name=table_name)
+    return registration_to_checkin_out(r, person, event, table_name=table_name)
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ async def post_check_in(
     if changed:
         await db.refresh(r)
     return {
-        "registration": registration_to_checkin_dict(r, person, event, table_name=table_name),
+        "registration": registration_to_checkin_out(r, person, event, table_name=table_name),
         "already_checked_in": already,
         "stamp_progress": stamp_progress,
     }

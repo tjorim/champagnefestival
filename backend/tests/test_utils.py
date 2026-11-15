@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.utils import csv_safe, edition_display_name, registration_to_guest_dict
+from app.utils import csv_safe, edition_display_name, registration_to_guest_out
 
 
 @pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r", "\n"])
@@ -59,34 +59,48 @@ def _make_event(title: str = "Friday Tasting"):
     return SimpleNamespace(title=title, date=datetime.now(UTC).date())
 
 
-def test_registration_to_guest_dict_includes_person_name():
+def test_registration_to_guest_out_includes_person_name():
     r = _make_registration()
-    result = registration_to_guest_dict(r, _make_person("Alice"), _make_event())
+    result = registration_to_guest_out(r, _make_person("Alice"), _make_event()).model_dump()
     assert result["name"] == "Alice"
 
 
-def test_registration_to_guest_dict_includes_event_title():
+def test_registration_to_guest_out_includes_event_title():
     r = _make_registration()
-    result = registration_to_guest_dict(r, _make_person(), _make_event("Saturday Gala"))
+    result = registration_to_guest_out(r, _make_person(), _make_event("Saturday Gala")).model_dump()
     assert result["event_title"] == "Saturday Gala"
 
 
-def test_registration_to_guest_dict_includes_check_in_fields():
+def test_registration_to_guest_out_includes_check_in_fields():
     event = _make_event()
-    result = registration_to_guest_dict(_make_registration(), _make_person(), event)
+    result = registration_to_guest_out(_make_registration(), _make_person(), event).model_dump()
     assert result["event_date"] == event.date
     assert result["check_in_token"] == "check-in-secret"
 
 
-def test_registration_to_guest_dict_strips_hidden_order_items():
+def test_registration_to_guest_out_strips_hidden_order_items():
     """This function has no admin caller — every reader is the visitor
     looking at their own booking (guest access token, magic link, `/me`), so
     a hidden line's name/product_id must never appear here, matching the
-    `public=True` path of `registration_to_dict` (#1020)."""
+    `public=True` path of `registration_to_out` (#1020)."""
     r = _make_registration()
     r.order_items = [
-        {"product_id": "napkin", "name": "Napkin", "quantity": 1, "visible": False},
-        {"product_id": "coffee", "name": "Coffee", "quantity": 1, "visible": True},
+        {
+            "product_id": "napkin",
+            "name": "Napkin",
+            "quantity": 1,
+            "price": "2.00",
+            "category": "drink",
+            "visible": False,
+        },
+        {
+            "product_id": "coffee",
+            "name": "Coffee",
+            "quantity": 1,
+            "price": "2.00",
+            "category": "drink",
+            "visible": True,
+        },
     ]
-    result = registration_to_guest_dict(r, _make_person(), _make_event())
+    result = registration_to_guest_out(r, _make_person(), _make_event()).model_dump()
     assert [i["product_id"] for i in result["order_items"]] == ["coffee"]

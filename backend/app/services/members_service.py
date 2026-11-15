@@ -25,12 +25,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Person
-from app.schemas import PersonCreate, PersonUpdate
+from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services.errors import ApiHTTPException
 from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
-from app.utils import get_or_404, make_id, person_to_dict
+from app.utils import get_or_404, make_id, person_to_out
 
 
 def ensure_member_role(person: Person, *, started_on: date | None = None) -> None:
@@ -84,7 +84,9 @@ async def get_member_or_404(db: AsyncSession, person_id: str) -> Person:
     return person
 
 
-async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None) -> dict:
+async def create_member(
+    db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None
+) -> PersonOut:
     nrr = normalise_optional_identity(body.national_register_number)
     eid = normalise_optional_identity(body.eid_document_number)
     await ensure_unique_fields(db, national_register_number=nrr, eid_document_number=eid)
@@ -130,12 +132,12 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
             detail="Person with this national register number or eID document number already exists.",
         ) from exc
     await db.refresh(person)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 async def apply_member_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PersonOut:
     for field in (
         "name",
         "address",
@@ -199,7 +201,7 @@ async def apply_member_update(
             detail="Person with this national register number or eID document number already exists.",
         ) from exc
     await db.refresh(person)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:

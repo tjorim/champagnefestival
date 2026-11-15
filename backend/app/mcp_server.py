@@ -79,6 +79,7 @@ from app.mcp.capabilities import (
     tool_auth,
 )
 from app.mcp.middleware import ToolFailureMiddleware, without_body_validation_payload
+from app.mcp.utils import dump_response
 from app.schemas import (
     ROTATION_DESCRIPTION,
     X_POSITION_DESCRIPTION,
@@ -2396,7 +2397,9 @@ class ChampagneFestivalMcpBackend:
         from app.services.settings_service import update_settings
 
         async with self.session_factory() as db:
-            return await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+            return dump_response(
+                await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+            )
 
     # -- Settings ------------------------------------------------------
 

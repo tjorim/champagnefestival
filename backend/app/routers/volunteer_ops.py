@@ -48,7 +48,7 @@ from app.services.operational_search import (
 )
 from app.services.registrations_service import apply_delivery_updates, ensure_registration_can_check_in
 from app.services.stamp_cards_service import sync_check_in
-from app.utils import registration_to_checkin_dict
+from app.utils import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ async def get_table_order_summary(
         "table_id": table.id,
         "table_name": table.name,
         "registrations": [
-            registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table.name)
+            registration_to_checkin_out(registration, registration.person, registration.event, table_name=table.name)
             for registration in rows
             if registration.person is not None and registration.event is not None
         ],
@@ -172,7 +172,7 @@ async def search_registrations(
     order_category: str | None = Query(default=None, description="Filter by exact normalized order category"),
     delivery_state: Literal["pending", "delivered"] | None = Query(default=None, description="Filter matching orders"),
     pagination: Pagination = Depends(),
-) -> list[dict]:
+) -> list[CheckInGuestOut]:
     """Search registrations by guest or table for on-site volunteer check-in.
 
     Returns a minimal, PII-free view of matching registrations. No email,
@@ -293,7 +293,7 @@ async def search_registrations(
     limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
     offset = (pagination.page - 1) * limit
     return [
-        registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+        registration_to_checkin_out(registration, registration.person, registration.event, table_name=table_name)
         for _, registration, table_name in ranked_rows[offset : offset + limit]
     ]
 
@@ -305,7 +305,7 @@ async def update_volunteer_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CheckInGuestOut:
     """Update entrance-facing registration fields from volunteer check-in."""
 
     row = (
@@ -370,7 +370,7 @@ async def update_volunteer_registration(
             await notify_live_event(db, live_mapping.check_in_changed(**scope))
         await db.commit()
 
-    return registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+    return registration_to_checkin_out(registration, registration.person, registration.event, table_name=table_name)
 
 
 @router.post("/registrations/{registration_id}/check-in", response_model=CheckInOut)
@@ -421,7 +421,7 @@ async def volunteer_check_in_registration(
         strap_newly_issued = True
         changed = True
 
-    registration_dict = registration_to_checkin_dict(
+    registration_dict = registration_to_checkin_out(
         registration, registration.person, registration.event, table_name=table_name
     )
 

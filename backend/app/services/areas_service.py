@@ -13,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Area, Layout, Organization
-from app.schemas import AreaCreate, AreaUpdate
+from app.schemas import AreaCreate, AreaOut, AreaUpdate
 from app.services.errors import NotFoundError, ValidationFailedError
-from app.utils import area_to_dict, make_id
+from app.utils import area_to_out, make_id
 
 
 async def _check_organization_assignable(db: AsyncSession, organization_id: int) -> None:
@@ -27,7 +27,7 @@ async def _check_organization_assignable(db: AsyncSession, organization_id: int)
         raise ValidationFailedError(f"Organization '{organization_id}' is inactive.")
 
 
-async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request_id: str | None = None) -> dict:
+async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request_id: str | None = None) -> AreaOut:
     lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
     if lay.scalar_one_or_none() is None:
         raise NotFoundError(f"Layout '{body.layout_id}' not found.")
@@ -59,22 +59,22 @@ async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request
     )
     await db.commit()
     await db.refresh(a)
-    return area_to_dict(a)
+    return area_to_out(a)
 
 
-async def list_areas(db: AsyncSession, layout_id: str | None = None) -> list[dict]:
+async def list_areas(db: AsyncSession, layout_id: str | None = None) -> list[AreaOut]:
     stmt = select(Area).order_by(Area.created_at, Area.id)
     if layout_id is not None:
         stmt = stmt.where(Area.layout_id == layout_id)
     result = await db.execute(stmt)
-    return [area_to_dict(a) for a in result.scalars().all()]
+    return [area_to_out(a) for a in result.scalars().all()]
 
 
-async def get_area(db: AsyncSession, area_id: str) -> dict:
+async def get_area(db: AsyncSession, area_id: str) -> AreaOut:
     a = await db.get(Area, area_id)
     if a is None:
         raise NotFoundError(f"Area '{area_id}' not found.")
-    return area_to_dict(a)
+    return area_to_out(a)
 
 
 async def update_area(
@@ -84,7 +84,7 @@ async def update_area(
     area_id: str,
     body: AreaUpdate,
     request_id: str | None = None,
-) -> dict:
+) -> AreaOut:
     a = await db.get(Area, area_id)
     if a is None:
         raise NotFoundError(f"Area '{area_id}' not found.")
@@ -128,7 +128,7 @@ async def update_area(
     )
     await db.commit()
     await db.refresh(a)
-    return area_to_dict(a)
+    return area_to_out(a)
 
 
 async def delete_area(db: AsyncSession, *, actor: str, area_id: str, request_id: str | None = None) -> dict:

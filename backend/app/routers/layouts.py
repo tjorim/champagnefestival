@@ -39,7 +39,7 @@ async def create_layout(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> LayoutOut:
     try:
         return await layouts_service.create_layout(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -55,7 +55,7 @@ async def copy_layout(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> LayoutOut:
     try:
         return await layouts_service.copy_layout(
             db,
@@ -95,7 +95,7 @@ async def list_layouts(
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
     event_id: str | None = Query(default=None),
     room_id: str | None = Query(default=None, description="Filter by room ID"),
-) -> list[dict]:
+) -> list[LayoutOut]:
     return await layouts_service.list_layouts(
         db, limit=limit, offset=offset, edition_id=edition_id, room_id=room_id, event_id=event_id
     )
@@ -106,7 +106,7 @@ async def get_layout(
     layout_id: str,
     include_tables: bool = Query(default=False, description="Also return the layout's tables and areas"),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> LayoutOut:
     try:
         return await layouts_service.get_layout(db, layout_id, include_tables=include_tables)
     except ServiceError as exc:
@@ -196,7 +196,7 @@ async def restore_layout_revision(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> LayoutOut:
     try:
         return await layouts_service.restore_layout_revision(
             db,
