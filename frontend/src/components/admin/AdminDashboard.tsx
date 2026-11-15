@@ -14,7 +14,7 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
-import type { ItemDraft } from "./itemTypes";
+import type { OrganizationOut } from "@/api-types";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import StaffTasks from "@/components/StaffTasks";
 import AdminSidebar, { adminSidebarGroupOf } from "./AdminSidebar";
@@ -336,7 +336,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // A saved or deleted organization is written into the collection from the
   // server's response, unless the session ended while the request was in flight.
   const handleOrganizationSaved = useCallback(
-    (item: ItemDraft, isCurrent: () => boolean) => {
+    (item: OrganizationOut, isCurrent: () => boolean) => {
       void applyAdminOrganizationSaved(organizationsCollection, item, isCurrent);
     },
     [organizationsCollection],

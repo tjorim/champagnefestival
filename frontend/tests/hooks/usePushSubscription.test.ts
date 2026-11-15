@@ -52,7 +52,7 @@ describe("usePushSubscription", () => {
 
   it("reports disabled when the server has no VAPID key configured", async () => {
     mockPushManager();
-    vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({ publicKey: "", enabled: false });
+    vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({ public_key: "", enabled: false });
 
     const { result } = renderHook(() => usePushSubscription());
     await waitFor(() => expect(result.current.state).toBe("disabled"));
@@ -67,7 +67,7 @@ describe("usePushSubscription", () => {
       configurable: true,
     });
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
 
@@ -82,7 +82,7 @@ describe("usePushSubscription", () => {
   it("reports ready and not subscribed when supported with no existing subscription", async () => {
     mockPushManager();
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
 
@@ -94,13 +94,13 @@ describe("usePushSubscription", () => {
   it("detects an existing browser subscription on mount and reconciles it with the backend", async () => {
     mockPushManager({ existingSubscription: { endpoint: "https://push.example.com/existing" } });
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-existing",
       categories: [],
-      eventIds: [],
+      event_ids: [],
     });
 
     const { result } = renderHook(() => usePushSubscription());
@@ -114,7 +114,7 @@ describe("usePushSubscription", () => {
   it("still becomes ready if the mount-time reconciliation call fails", async () => {
     mockPushManager({ existingSubscription: { endpoint: "https://push.example.com/existing" } });
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.subscribeToPush).mockRejectedValue(new Error("network error"));
@@ -127,13 +127,13 @@ describe("usePushSubscription", () => {
   it("subscribes and registers the subscription with the backend", async () => {
     const { pushManager } = mockPushManager();
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-1",
       categories: ["system_test"],
-      eventIds: [],
+      event_ids: [],
     });
 
     const { result } = renderHook(() => usePushSubscription());
@@ -158,7 +158,7 @@ describe("usePushSubscription", () => {
   it("surfaces an error and leaves isSubscribed false when the backend rejects the subscribe", async () => {
     mockPushManager();
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.subscribeToPush).mockRejectedValue(
@@ -181,7 +181,7 @@ describe("usePushSubscription", () => {
       existingSubscription: { endpoint: "https://push.example.com/subscription/abc123" },
     });
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.unsubscribeFromPush).mockResolvedValue(undefined);
@@ -203,13 +203,13 @@ describe("usePushSubscription", () => {
       existingSubscription: { endpoint: "https://push.example.com/subscription/abc123" },
     });
     vi.mocked(pushApi.getVapidPublicKey).mockResolvedValue({
-      publicKey: VAPID_PUBLIC_KEY,
+      public_key: VAPID_PUBLIC_KEY,
       enabled: true,
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-1",
       categories: [],
-      eventIds: [],
+      event_ids: [],
     });
     vi.mocked(pushApi.unsubscribeFromPush).mockRejectedValueOnce(
       new ApiError("Backend said no.", { status: 503 }),

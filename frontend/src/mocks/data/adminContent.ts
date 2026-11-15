@@ -1,7 +1,7 @@
 /** Deterministic seed data for the read-only admin queue and content screens. */
 import type { AuditEntryOut, FaqItemOut } from "@/api-types";
 
-export const seedWaitlistEntries = [
+export const seedWaitlistEntries: import("@/api-types").WaitlistEntryAdminOut[] = [
   {
     id: "waitlist-1",
     product_id: "product-1",
@@ -18,7 +18,7 @@ export const seedWaitlistEntries = [
   },
 ];
 
-export const seedContactMessages = [
+export const seedContactMessages: import("@/api-types").ContactMessageOut[] = [
   {
     id: "contact-1",
     name: "Eva Janssens",
@@ -45,8 +45,10 @@ export const seedFaqItems: FaqItemOut[] = [
   },
 ];
 
-export const seedEmailCategories = [
+export const seedEmailCategories: import("@/api-types").EmailCategoryOut[] = [
   {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     key: "newsletter",
     name: "Newsletter",
     description: "News about upcoming editions",
@@ -62,7 +64,7 @@ export const seedEmailCategories = [
   },
 ];
 
-export const seedPrivacyPolicy = {
+export const seedPrivacyPolicy: import("@/api-types").PolicyOut = {
   key: "privacy",
   title_nl: "Privacybeleid",
   title_en: "Privacy policy",

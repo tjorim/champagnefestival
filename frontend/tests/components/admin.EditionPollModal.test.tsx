@@ -1,4 +1,4 @@
-import { venueOut } from "@/mocks/data/builders";
+import { eventOut, venueOut } from "@/mocks/data/builders";
 import { editionOut } from "@/mocks/data/builders";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -43,9 +43,11 @@ function option(
   label: string,
   totalQuantity = 0,
   volunteerCount = 0,
-  extra: Record<string, unknown> = {},
-) {
+  extra: Partial<import("@/api-types").PollOptionOut> = {},
+): import("@/api-types").PollOptionOut {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id,
     question_id: "q-meals",
     edition_id: "2026-october",
@@ -66,9 +68,12 @@ function question(
   id: string,
   kind: "yes_no" | "meals" | "single_choice" | "free_text" | "rating",
   title: string,
-  extra: Record<string, unknown> = {},
-) {
+  extra: Partial<import("@/api-types").PollQuestionOut> = {},
+): import("@/api-types").PollQuestionOut {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: null,
     id,
     edition_id: "2026-october",
     kind,
@@ -93,16 +98,16 @@ function question(
 }
 
 const dinner = () => question("q-dinner", "yes_no", "Eten op zondag?");
-const meals = (options: Record<string, unknown>[] = []) =>
+const meals = (options: import("@/api-types").PollOptionOut[] = []) =>
   question("q-meals", "meals", "Maaltijden", { options });
 
 interface Backdrop {
-  events?: Record<string, unknown>[];
-  orders?: Record<string, unknown>;
-  editions?: Record<string, unknown>[];
+  events?: import("@/api-types").EventOut[];
+  orders?: import("@/api-types").PollOrdersOut;
+  editions?: import("@/api-types").EditionOut[];
 }
 
-function renderModal(questions: Record<string, unknown>[], backdrop: Backdrop = {}) {
+function renderModal(questions: import("@/api-types").PollQuestionOut[], backdrop: Backdrop = {}) {
   server.use(
     http.get("/api/poll-questions", ({ request }) => {
       const editionId = new URL(request.url).searchParams.get("edition_id");
@@ -389,8 +394,8 @@ describe("EditionPollModal questions", () => {
     const user = userEvent.setup();
     renderModal([], {
       editions: [
-        { id: "2026-october", year: 2026, month: "october", venue_id: "v", active: true },
-        { id: "2025-october", year: 2025, month: "october", venue_id: "v", active: false },
+        editionOut({ id: "2026-october", year: 2026, month: "october", active: true }),
+        editionOut({ id: "2025-october", year: 2025, month: "october", active: false }),
       ],
     });
 
@@ -561,7 +566,7 @@ describe("EditionPollModal meal options", () => {
 });
 
 describe("EditionPollModal answers", () => {
-  const orders = {
+  const orders: import("@/api-types").PollOrdersOut = {
     edition_id: "2026-october",
     questions: [
       {
@@ -589,6 +594,9 @@ describe("EditionPollModal answers", () => {
     ],
     volunteers: [
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "a",
         name: "Rik Cooleman",
         note: null,
@@ -597,6 +605,9 @@ describe("EditionPollModal answers", () => {
         attendance: [{ question_id: "q-dinner", attending: false, people: 0 }],
       },
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "b",
         name: "Sofie De Smet",
         note: "Geen noten",
@@ -605,6 +616,9 @@ describe("EditionPollModal answers", () => {
         attendance: [{ question_id: "q-dinner", attending: true, people: 3 }],
       },
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "c",
         name: "Nele Peeters",
         note: null,
@@ -773,7 +787,8 @@ describe("additional poll kinds", () => {
       question("text", "free_text", "Suggestie"),
       question("rating", "rating", "Score"),
     ];
-    const orders = {
+    const orders: import("@/api-types").PollOrdersOut = {
+      edition_id: edition.id,
       questions: qs,
       volunteers: [
         {
@@ -830,14 +845,14 @@ describe("additional poll kinds", () => {
 
 it("links attendance to a volunteer event and locks the event selector after answers", async () => {
   const user = userEvent.setup();
-  const event = {
+  const event = eventOut({
     id: "volunteer-dinner",
     edition_id: edition.id,
     title_nl: "Vrijwilligersdiner",
     date: "2026-10-25",
     volunteers_only: true,
     products: [],
-  };
+  });
   let submitted: Record<string, unknown> | null = null;
   server.use(
     http.post("/api/poll-questions", async ({ request }) => {

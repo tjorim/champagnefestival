@@ -103,7 +103,7 @@ export function usePeopleMutations({
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
         `/api/people/${canonicalId}/merge/${duplicateId}`,
         { method: "POST", headers: authHeaders() },
         m.admin_people_merge_error(),
@@ -114,7 +114,7 @@ export function usePeopleMutations({
 
   const createMemberMutation = useMutation({
     mutationFn: (data: MemberFormData) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
         "/api/members",
         {
           method: "POST",
@@ -140,7 +140,7 @@ export function usePeopleMutations({
   const updateMemberMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: MemberFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
           `/api/members/${id}`,
           {
             method: "PUT",
@@ -207,7 +207,7 @@ export function usePeopleMutations({
 
   const createPersonMutation = useMutation({
     mutationFn: (data: PersonFormData) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
         "/api/people",
         {
           method: "POST",
@@ -231,7 +231,7 @@ export function usePeopleMutations({
   const updatePersonMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: PersonFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
           `/api/people/${id}`,
           {
             method: "PUT",
@@ -274,7 +274,7 @@ export function usePeopleMutations({
 
   const createVolunteerMutation = useMutation({
     mutationFn: (data: VolunteerFormData) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
         "/api/volunteers",
         {
           method: "POST",
@@ -300,7 +300,7 @@ export function usePeopleMutations({
   const updateVolunteerMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: VolunteerFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
           `/api/volunteers/${id}`,
           {
             method: "PUT",

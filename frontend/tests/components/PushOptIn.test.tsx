@@ -106,7 +106,7 @@ describe("PushOptIn", () => {
       },
       configurable: true,
     });
-    vi.mocked(subscribeToPush).mockResolvedValue({ id: "sub-1", categories: [], eventIds: [] });
+    vi.mocked(subscribeToPush).mockResolvedValue({ id: "sub-1", categories: [], event_ids: [] });
     vi.mocked(sendTestPush).mockResolvedValue(undefined);
 
     const authHeaders = vi.fn().mockReturnValue({ Authorization: "Bearer admin-token" });

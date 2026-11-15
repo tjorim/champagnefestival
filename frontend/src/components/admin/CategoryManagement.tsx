@@ -136,7 +136,7 @@ export default function CategoryManagement({
 
   const saveMutation = useMutation({
     mutationFn: ({ editing, data }: { editing: string | null; data: CategoryForm }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").CategoryOut>(
         editing ? `${config.path}/${encodeURIComponent(editing)}` : config.path,
         {
           method: editing ? "PUT" : "POST",

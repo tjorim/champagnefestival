@@ -47,7 +47,7 @@ interface YesNoDraft {
 
 const yesNo: AnswerKind<YesNoDraft> = {
   initial: (question, volunteer) => {
-    const answer = volunteer.attendance[question.id];
+    const answer = volunteer.attendance.find((answer) => answer.question_id === question.id);
     return {
       choice: answer ? (answer.attending ? "yes" : "no") : "none",
       people: String(answer?.people || 1),
@@ -104,7 +104,12 @@ interface MealsDraft {
 const meals: AnswerKind<MealsDraft> = {
   initial: (question, volunteer) => ({
     quantities: Object.fromEntries(
-      question.options.map((option) => [option.id, String(volunteer.quantities[option.id] ?? 0)]),
+      question.options.map((option) => [
+        option.id,
+        String(
+          volunteer.selections.find((answer) => answer.option_id === option.id)?.quantity ?? 0,
+        ),
+      ]),
     ),
   }),
   Fields: ({ question, draft, onChange }) =>
@@ -133,7 +138,8 @@ const meals: AnswerKind<MealsDraft> = {
 };
 
 const singleChoice: AnswerKind<string> = {
-  initial: (question, volunteer) => volunteer.choices[question.id] ?? "",
+  initial: (question, volunteer) =>
+    volunteer.choices.find((answer) => answer.question_id === question.id)?.option_id ?? "",
   Fields: ({ question, draft, onChange }) => (
     <AdminField controlId={`poll-choice-${question.id}`}>
       <AdminLabel>{m.admin_poll_order_answer_label()}</AdminLabel>
@@ -153,7 +159,8 @@ const singleChoice: AnswerKind<string> = {
 };
 
 const freeText: AnswerKind<string> = {
-  initial: (question, volunteer) => volunteer.texts[question.id] ?? "",
+  initial: (question, volunteer) =>
+    volunteer.texts.find((answer) => answer.question_id === question.id)?.text ?? "",
   Fields: ({ question, draft, onChange }) => (
     <AdminField controlId={`poll-text-${question.id}`}>
       <AdminLabel>{m.admin_poll_order_answer_label()}</AdminLabel>
@@ -171,7 +178,8 @@ const freeText: AnswerKind<string> = {
 };
 
 const rating: AnswerKind<string> = {
-  initial: (question, volunteer) => String(volunteer.ratings[question.id] ?? ""),
+  initial: (question, volunteer) =>
+    String(volunteer.ratings.find((answer) => answer.question_id === question.id)?.rating ?? ""),
   Fields: ({ question, draft, onChange }) => (
     <AdminField controlId={`poll-rating-${question.id}`}>
       <AdminLabel>{m.poll_rating_label()}</AdminLabel>

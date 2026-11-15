@@ -1,43 +1,16 @@
+import type { EmailCategoryOut, EmailConsentOut } from "@/api-types";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 
 /** An admin-managed email category (#1408), as the admin API returns it. */
-export interface EmailCategory {
-  key: string;
-  name: string;
-  description: string | null;
-  name_nl: string;
-  name_fr: string | null;
-  name_en: string | null;
-  description_nl: string | null;
-  description_fr: string | null;
-  description_en: string | null;
-  allowed_roles: string[];
-  automatic: boolean;
-  sort_order: number;
-}
+export type EmailCategory = EmailCategoryOut;
 
-export interface EmailCategoryWrite {
-  name_nl: string;
-  name_fr: string | null;
-  name_en: string | null;
-  description_nl: string | null;
-  description_fr: string | null;
-  description_en: string | null;
-  allowed_roles: string[];
-  sort_order: number;
-}
+export type EmailCategoryWrite = Required<
+  Omit<import("@/api-types").EmailCategoryCreate, "key" | "name_nl">
+> & { name_nl: string };
 
 /** One grant of consent for a person and category, and how it ended. */
-export interface EmailConsentRecord {
-  id: string;
-  category_key: string;
-  category_name: string;
-  source: string;
-  granted_at: string;
-  revoked_at: string | null;
-  revoked_source: string | null;
-}
+export type EmailConsentRecord = EmailConsentOut;
 
 export const emailConsentKeys = {
   categories: ["admin", "email-categories"] as const,

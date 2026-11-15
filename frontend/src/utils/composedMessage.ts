@@ -1,3 +1,4 @@
+import type { ComposedMessageOut } from "@/api-types";
 import { m } from "@/paraglide/messages";
 
 export type ComposedMessageChannel = "announcement" | "push" | "email";
@@ -6,39 +7,9 @@ export type ComposedMessageLocale = "nl" | "en" | "fr";
 
 export const COMPOSED_MESSAGE_LOCALES: readonly ComposedMessageLocale[] = ["nl", "en", "fr"];
 
-export interface ComposedMessage {
-  id: string;
-  title_nl: string | null;
-  title_en: string | null;
-  title_fr: string | null;
-  body_nl: string | null;
-  body_en: string | null;
-  body_fr: string | null;
-  level: "info" | "warning" | "urgent";
-  channels: ComposedMessageChannel[];
-  link_url: string | null;
-  email_category_key: string | null;
-  state: ComposedMessageState;
-  scheduled_at: string | null;
-  announcement_id: string | null;
-  push_audience_snapshot: string[] | null;
-  email_audience_snapshot: string[] | null;
-  sent_at: string | null;
-  created_at: string;
-  updated_at: string;
-  estimated_push_audience: number;
-  push_delivered_count: number;
-  push_failed_count: number;
-  push_pending_count: number;
-  estimated_email_audience: number;
-  email_accepted_count: number;
-  email_failed_count: number;
-  email_skipped_count: number;
-  email_pending_count: number;
-  member_mail_available: boolean;
-}
+export type ComposedMessage = ComposedMessageOut;
 
-export function composedChannelLabel(channel: ComposedMessageChannel): string {
+export function composedChannelLabel(channel: ComposedMessage["channels"][number]): string {
   switch (channel) {
     case "announcement":
       return m.admin_composer_channel_announcement();
@@ -46,6 +17,8 @@ export function composedChannelLabel(channel: ComposedMessageChannel): string {
       return m.admin_composer_channel_push();
     case "email":
       return m.admin_composer_channel_email();
+    default:
+      return channel;
   }
 }
 

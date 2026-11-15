@@ -71,7 +71,7 @@ export default function ItemModal({
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(() => {
-    const cp = record?.contactPerson;
+    const cp = record?.contact_person;
     return {
       name: record?.name ?? "",
       image: record?.image ?? "",
@@ -108,8 +108,8 @@ export default function ItemModal({
         description_en: value.description_en.trim() || null,
         active: record?.active ?? true,
         type: value.type,
-        contactPersonId: value.contactOption?.id ?? null,
-        contactPerson: value.contactOption,
+        contact_person_id: value.contactOption?.id ?? null,
+        contact_person: value.contactOption,
       });
     },
   });
@@ -216,7 +216,10 @@ export default function ItemModal({
                   <AdminSelect
                     className={ADMIN_CONTROL_CLASS}
                     value={field.value}
-                    onValueChange={(e) => field.handleChange(e)}
+                    onValueChange={(e) => {
+                      if (e === "vendor" || e === "producer" || e === "sponsor")
+                        field.handleChange(e);
+                    }}
                     onBlur={field.handleBlur}
                   >
                     <AdminOption value="vendor">{m.admin_item_vendor()}</AdminOption>
@@ -285,7 +288,7 @@ export default function ItemModal({
                 url={`/api/organizations/${initial.id}/logo`}
                 headers={authHeaders}
                 onSaved={(result) => {
-                  if (result.image) form.setFieldValue("image", result.image);
+                  if ("image" in result && result.image) form.setFieldValue("image", result.image);
                   const isCurrent = captureAdminOrganizationsFence();
                   if (isCurrent())
                     void queryClient.invalidateQueries({

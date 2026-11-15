@@ -1213,3 +1213,13 @@ metadata preserves MCP's existing JSON-valued cached response (which omits the
 fresh response's extra `edition_id`); it is never serialized or exposed in OpenAPI. The existing
 bulk and registration idempotency tests cover duplicate prevention, matching
 replays and conflicts; MCP/REST parity tests cover the response boundaries.
+
+## Remaining generated frontend responses (#1657)
+
+Content/organisation and poll writes, volunteer identity and answers, email preferences and unsubscribe,
+push subscription responses, settings, policies and signage now use generated response records. Their
+HTTP methods, URLs, payload shapes and existing retry decisions remain unchanged. No automatic write
+retry is introduced. Create/copy/upload operations still require reconciliation after an ambiguous
+failure; absolute answer/preference/status updates retain their existing endpoint-specific policy.
+The new regression test pins the organisation payload while checking that its response is preserved.
+MSW fixture corrections add required response fields only; they do not change production retry semantics.

@@ -100,27 +100,13 @@ async function applyWrite(isCurrent: () => boolean, write: () => Promise<void>):
   }
 }
 
-/**
- * A saved organization (created, edited, archived or restored). Only the fields
- * the dashboard reads are kept from the content section's item.
- */
+/** Apply the complete saved API record without maintaining a second projection. */
 export function applyAdminOrganizationSaved(
   collection: AdminOrganizationsCollection,
-  organization: Pick<Organization, "id" | "name"> & Partial<Organization>,
+  organization: Organization,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, () =>
-    collection.utils.writeUpsert({
-      id: organization.id,
-      name: organization.name,
-      description_nl: organization.description_nl ?? null,
-      description_fr: organization.description_fr ?? null,
-      description_en: organization.description_en ?? null,
-
-      active: organization.active ?? true,
-      contactPersonId: organization.contactPersonId ?? null,
-    }),
-  );
+  return applyWrite(isCurrent, () => collection.utils.writeUpsert(organization));
 }
 
 /** A deleted organization. */
@@ -144,8 +130,8 @@ export function applyAdminOrganizationContactsMerged(
 ): Promise<void> {
   return applyWrite(isCurrent, async () => {
     const repointed = Array.from(collection.values())
-      .filter((organization) => organization.contactPersonId === duplicateId)
-      .map((organization) => ({ ...organization, contactPersonId: canonicalId }));
+      .filter((organization) => organization.contact_person_id === duplicateId)
+      .map((organization) => ({ ...organization, contact_person_id: canonicalId }));
     if (repointed.length > 0) await collection.utils.writeUpsert(repointed);
   });
 }

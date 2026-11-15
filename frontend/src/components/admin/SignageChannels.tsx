@@ -856,7 +856,9 @@ export default function SignageChannels({
                           data.append("file", file);
                           const headers = { ...authHeaders() };
                           delete headers["Content-Type"];
-                          const result = await fetchJsonOrThrowWithUnauthorized<{ url: string }>(
+                          const result = await fetchJsonOrThrowWithUnauthorized<
+                            import("@/api-types").SignageAssetOut
+                          >(
                             "/api/signage/assets",
                             { method: "POST", headers, body: data },
                             m.signage_channels_error(),

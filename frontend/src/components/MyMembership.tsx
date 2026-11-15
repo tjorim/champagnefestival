@@ -1,8 +1,7 @@
+import type { MembershipSummary } from "@/api-types";
 import { useQuery } from "@tanstack/react-query";
 import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import { m } from "@/paraglide/messages";
-
-type Membership = { state: "active" | "inactive" | "unavailable" };
 
 export default function MyMembership({
   getAccessToken,
@@ -15,7 +14,7 @@ export default function MyMembership({
     queryKey: ["my-membership", accountId],
     gcTime: 0,
     retry: false,
-    queryFn: async ({ signal }): Promise<Membership> => {
+    queryFn: async ({ signal }): Promise<MembershipSummary> => {
       const token = getAccessToken();
       const response = await fetch("/api/me/membership", {
         signal,

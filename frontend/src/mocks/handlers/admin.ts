@@ -1,7 +1,7 @@
+import { jsonResponse } from "../response";
 import { venueOut } from "../data/builders";
 import type {
   AreaOut,
-  EventOut,
   EditionAttendanceStats,
   EventCheckInStats,
   LayoutOut,
@@ -51,7 +51,7 @@ import {
 
 /** Mutable in-memory stores — reset on page reload. */
 let people: MockPerson[] = structuredClone(seedPeople);
-let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
+let organizations: import("@/api-types").OrganizationOut[] = structuredClone(seedOrganizations);
 const eventCategories = { items: structuredClone(seedEventCategories) };
 const productCategories = { items: structuredClone(seedProductCategories) };
 let venues: VenueOut[] = structuredClone(seedVenues);
@@ -145,7 +145,7 @@ function applyMockScenario(scenario: MockScenario): void {
   }
 }
 
-function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
+function tablesWithRegistrationAssignments(): import("@/api-types").TableOut[] {
   const byTableId = new Map<string, string[]>();
 
   for (const registration of sharedStore.registrations) {
@@ -164,7 +164,7 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
       typeof tableId === "string" && tableId.length > 0 ? (byTableId.get(tableId) ?? []) : [];
     return {
       ...table,
-      event_id: layouts.find((l) => l.id === table.layout_id)?.event_id,
+      event_id: layouts.find((l) => l.id === table.layout_id)?.event_id ?? "",
       registration_ids: registrationIds,
     };
   });
@@ -216,7 +216,7 @@ function categoryHandlers(
   const sort = () =>
     store.items.sort((a, b) => a.sort_order - b.sort_order || a.key.localeCompare(b.key));
   return [
-    http.get(path, () => HttpResponse.json(store.items)),
+    http.get(path, () => jsonResponse<SeedCategory[]>(store.items)),
     http.post(path, async ({ request }) => {
       const authError = requireAuth(request);
       if (authError) return authError;
@@ -240,7 +240,7 @@ function categoryHandlers(
       const category = { ...created, label: created.label_nl ?? key };
       store.items.push(category);
       sort();
-      return HttpResponse.json(category, { status: 201 });
+      return jsonResponse<SeedCategory>(category, { status: 201 });
     }),
     http.put(`${path}/:key`, async ({ request, params }) => {
       const authError = requireAuth(request);
@@ -253,7 +253,7 @@ function categoryHandlers(
         ...merged,
         label: merged.label_nl ?? merged.key,
       };
-      return HttpResponse.json(store.items[index]);
+      return jsonResponse<SeedCategory>(store.items[index]!);
     }),
     http.delete(`${path}/:key`, ({ request, params }) => {
       const authError = requireAuth(request);
@@ -280,9 +280,8 @@ function now(): string {
 }
 
 function registrationToCheckInResponse(
-  raw: Record<string, unknown>,
+  registration: import("@/api-types").RegistrationOutWithToken,
 ): import("@/api-types").CheckInGuestOut {
-  const registration = raw as import("@/api-types").RegistrationOutWithToken;
   const person = registration.person;
   const event = registration.event;
   const table = tables.find((item) => item.id === registration.table_id);
@@ -383,26 +382,29 @@ function peopleEnvelope(
 export const adminHandlers = [
   http.get(
     "/api/stamp-cards/types",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(stampTypes),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").StampCardTypeOut[]>(stampTypes),
   ),
   http.post("/api/stamp-cards/types", async ({ request }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
     const type = { ...((await request.json()) as StampCardType), id: crypto.randomUUID() };
     stampTypes.push(type);
-    return HttpResponse.json(type, { status: 201 });
+    return jsonResponse<import("@/api-types").StampCardTypeOut>(type, { status: 201 });
   }),
   http.put("/api/stamp-cards/types/:id", async ({ request, params }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
     const type = { ...((await request.json()) as StampCardType), id: String(params.id) };
     stampTypes = stampTypes.map((current) => (current.id === params.id ? type : current));
-    return HttpResponse.json(type);
+    return jsonResponse<import("@/api-types").StampCardTypeOut>(type);
   }),
   http.get("/api/stamp-cards/people/:id", ({ request, params }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
-    return HttpResponse.json(stampCards.filter((card) => card.person_id === params.id));
+    return jsonResponse<import("@/api-types").StampCardOut[]>(
+      stampCards.filter((card) => card.person_id === params.id),
+    );
   }),
   http.put("/api/stamp-cards/rewards/:id", async ({ request, params }) => {
     const denied = requireAuth(request);
@@ -411,7 +413,7 @@ export const adminHandlers = [
     const reward = stampCards.find((card) => card.reward?.id === params.id)?.reward;
     if (!reward) return HttpResponse.json({}, { status: 404 });
     reward.handed_out_at = body.handed_out ? new Date().toISOString() : null;
-    return HttpResponse.json(reward);
+    return jsonResponse<import("@/api-types").StampRewardOut>(reward);
   }),
   // Browser tests seed card history explicitly; normal mock lists remain unchanged.
   http.post("/api/mock/stamp-cards", async ({ request }) => {
@@ -423,7 +425,7 @@ export const adminHandlers = [
   // The announcements panel mounts before the signage editor tab is selected.
   http.get("/api/announcements", ({ request }) => {
     const authError = requireAuth(request);
-    return authError ?? HttpResponse.json([]);
+    return authError ?? jsonResponse<import("@/api-types").AnnouncementOut[]>([]);
   }),
 
   http.get("/api/mock/scenario", () => {
@@ -477,7 +479,12 @@ export const adminHandlers = [
     const page = Number(url.searchParams.get("page") ?? 1) || 1;
     const start = (page - 1) * limit;
     const items = filtered.slice(start, start + limit);
-    return HttpResponse.json({ items, total: filtered.length, limit, page });
+    return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+      items,
+      total: filtered.length,
+      limit,
+      page,
+    });
   }),
 
   http.get("/api/volunteer/registrations", ({ request }) => {
@@ -497,7 +504,9 @@ export const adminHandlers = [
         .some((value) => value.toLowerCase().includes(query));
     });
 
-    return HttpResponse.json(matches.slice(0, limit).map(registrationToCheckInResponse));
+    return jsonResponse<import("@/api-types").CheckInGuestOut[]>(
+      matches.slice(0, limit).map(registrationToCheckInResponse),
+    );
   }),
 
   http.post("/api/volunteer/registrations/:id/check-in", async ({ request, params }) => {
@@ -524,8 +533,9 @@ export const adminHandlers = [
       updated_at: now(),
     };
 
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").CheckInOut>({
       already_checked_in: alreadyCheckedIn,
+      stamp_progress: null,
       registration: registrationToCheckInResponse(sharedStore.registrations[idx]!),
     });
   }),
@@ -537,9 +547,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     const current = sharedStore.registrations[idx]!;
-    const currentOrderItems = Array.isArray(current.order_items)
-      ? (current.order_items as Array<Record<string, unknown>>)
-      : [];
+    const currentOrderItems = current.order_items;
     let deliveryUpdates: Map<unknown, number> | null = null;
     if (Array.isArray(body.order_items)) {
       deliveryUpdates = new Map();
@@ -589,7 +597,9 @@ export const adminHandlers = [
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };
-    return HttpResponse.json(registrationToCheckInResponse(sharedStore.registrations[idx]!));
+    return jsonResponse<import("@/api-types").CheckInGuestOut>(
+      registrationToCheckInResponse(sharedStore.registrations[idx]!),
+    );
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -600,7 +610,7 @@ export const adminHandlers = [
     if (authError) return authError;
     const reg = sharedStore.registrations.find((r) => r.id === params.id);
     if (!reg) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(reg);
+    return jsonResponse<import("@/api-types").RegistrationOutWithToken>(reg);
   }),
 
   http.put("/api/registrations/:id", async ({ request, params }) => {
@@ -618,7 +628,7 @@ export const adminHandlers = [
     if (registration.status === "cancelled") registration.allocations = [];
     const allocations = (registration.allocations ?? []) as { table_id: string }[];
     registration.table_id = allocations[0]?.table_id ?? null;
-    return HttpResponse.json(registration);
+    return jsonResponse<import("@/api-types").RegistrationOut>(registration);
   }),
 
   http.delete("/api/registrations/:id", ({ request, params }) => {
@@ -692,7 +702,7 @@ export const adminHandlers = [
         preferred_language: null,
       },
       event_id: String(event.id),
-      event: event as unknown as EventOut,
+      event,
       guest_count: Number(body.guest_count ?? 1),
       order_items: orderItems.map((item) => orderItemOut(item)),
       amount_due: orderItems.length ? total.toFixed(2) : null,
@@ -702,7 +712,7 @@ export const adminHandlers = [
       updated_at: now(),
     });
     sharedStore.registrations.push(newReg);
-    return HttpResponse.json(newReg, { status: 201 });
+    return jsonResponse<import("@/api-types").RegistrationOut>(newReg, { status: 201 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -753,7 +763,7 @@ export const adminHandlers = [
         total_checked_in: 0,
       },
     ];
-    return HttpResponse.json(stats);
+    return jsonResponse<import("@/api-types").EditionAttendanceStats[]>(stats);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -769,7 +779,7 @@ export const adminHandlers = [
     const active = rows.filter((row) =>
       isActiveIn(row, new URL(request.url).searchParams.get("role")),
     ).length;
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").PeopleCountsOut>({
       total: rows.length,
       active,
       inactive: rows.length - active,
@@ -787,7 +797,7 @@ export const adminHandlers = [
     );
     const limit = Number(url.searchParams.get("limit") ?? 100);
     const page = Number(url.searchParams.get("page") ?? 1);
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").PersonListEnvelope>({
       items: matching.slice((page - 1) * limit, page * limit).map((row) => ({
         ...row,
         reward_due: hasRewardDue(row.id),
@@ -812,7 +822,9 @@ export const adminHandlers = [
   http.get("/api/people", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(peopleEnvelope(new URL(request.url)));
+    return jsonResponse<import("@/api-types").PersonListEnvelope>(
+      peopleEnvelope(new URL(request.url)),
+    );
   }),
 
   http.post("/api/people", async ({ request }) => {
@@ -842,7 +854,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     people.push(newPerson);
-    return HttpResponse.json(newPerson, { status: 201 });
+    return jsonResponse<import("@/api-types").PersonOut>(newPerson, { status: 201 });
   }),
 
   http.put("/api/people/:id", async ({ request, params }) => {
@@ -852,7 +864,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").PersonOut>(people[idx]);
   }),
 
   http.delete("/api/people/:id", ({ request, params }) => {
@@ -873,24 +885,14 @@ export const adminHandlers = [
       r.person_id === params.duplicateId ? { ...r, person_id: String(canonical.id) } : r,
     );
     people = people.filter((p) => p.id !== params.duplicateId);
-    return HttpResponse.json(canonical);
+    return jsonResponse<import("@/api-types").PersonOut>(canonical);
   }),
 
   http.get("/api/people/:id/registrations", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const personRegs = sharedStore.registrations
-      .filter((r) => r.person_id === params.id)
-      .map((r) => ({
-        id: r.id,
-        event_title: (r.event as Record<string, unknown> | null)?.title ?? "",
-        guest_count: r.guest_count,
-        status: r.status,
-        payment_status: r.payment_status,
-        checked_in: r.checked_in,
-        created_at: r.created_at,
-      }));
-    return HttpResponse.json(personRegs);
+    const personRegs = sharedStore.registrations.filter((r) => r.person_id === params.id);
+    return jsonResponse<import("@/api-types").RegistrationOut[]>(personRegs);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -932,7 +934,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     people.push(newMember);
-    return HttpResponse.json(newMember, { status: 201 });
+    return jsonResponse<import("@/api-types").PersonOut>(newMember, { status: 201 });
   }),
 
   http.put("/api/members/:id", async ({ request, params }) => {
@@ -964,7 +966,7 @@ export const adminHandlers = [
       id: String(params.id),
       updated_at: now(),
     };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").PersonOut>(people[idx]);
   }),
 
   // Ending a membership retires the member role; the role and the person stay.
@@ -1006,7 +1008,9 @@ export const adminHandlers = [
   http.get("/api/volunteers", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(peopleEnvelope(new URL(request.url), "volunteer"));
+    return jsonResponse<import("@/api-types").VolunteerListEnvelope>(
+      peopleEnvelope(new URL(request.url), "volunteer"),
+    );
   }),
 
   http.post("/api/volunteers", async ({ request }) => {
@@ -1047,7 +1051,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     people.push(newVol);
-    return HttpResponse.json(newVol, { status: 201 });
+    return jsonResponse<import("@/api-types").VolunteerOut>(newVol, { status: 201 });
   }),
 
   http.put("/api/volunteers/:id", async ({ request, params }) => {
@@ -1057,7 +1061,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").VolunteerOut>(people[idx]);
   }),
 
   // Ending volunteering retires the role and keeps every period; open periods are closed (today).
@@ -1098,9 +1102,11 @@ export const adminHandlers = [
   http.get("/api/me/organizations", ({ request }) => {
     // Same verified contact as the changes handler below; other sessions manage nothing.
     if (forcedAuthScenario !== "default" || parseBearerToken(request) !== "mock-manager-token") {
-      return HttpResponse.json([]);
+      return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([]);
     }
-    return HttpResponse.json(organizations.filter((row) => row.contact_person_id === "person-01"));
+    return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>(
+      organizations.filter((row) => row.contact_person_id === "person-01"),
+    );
   }),
 
   http.get("/api/me/organizations/:id/changes", ({ request, params }) => {
@@ -1116,24 +1122,26 @@ export const adminHandlers = [
     ) {
       return authError(404, "Organization not found.");
     }
-    return HttpResponse.json([]);
+    return jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]);
   }),
 
   http.get("/api/organizations/translation", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json({ languages: [] });
+    return error ?? jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] });
   }),
-  http.get("/api/me/organizations/:id/translation", () => HttpResponse.json({ languages: [] })),
+  http.get("/api/me/organizations/:id/translation", () =>
+    jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] }),
+  ),
 
   http.get("/api/organizations/changes", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json([]);
+    return error ?? jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]);
   }),
 
   http.get("/api/organizations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(organizations);
+    return jsonResponse<import("@/api-types").OrganizationOut[]>(organizations);
   }),
 
   http.get("/api/organizations/:id", ({ request, params }) => {
@@ -1142,7 +1150,7 @@ export const adminHandlers = [
     const id = Number(params.id);
     const organization = organizations.find((e) => e.id === id);
     if (!organization) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(organization);
+    return jsonResponse<import("@/api-types").OrganizationOut>(organization);
   }),
 
   http.post("/api/organizations", async ({ request }) => {
@@ -1150,7 +1158,10 @@ export const adminHandlers = [
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
     const maxId = organizations.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
-    const newOrganization = {
+    const newOrganization: import("@/api-types").OrganizationOut = {
+      description_nl: typeof body.description_nl === "string" ? body.description_nl : null,
+      description_fr: typeof body.description_fr === "string" ? body.description_fr : null,
+      description_en: typeof body.description_en === "string" ? body.description_en : null,
       id: maxId + 1,
       name: String(body.name ?? ""),
       image: String(body.image ?? ""),
@@ -1163,7 +1174,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     organizations.push(newOrganization);
-    return HttpResponse.json(newOrganization, { status: 201 });
+    return jsonResponse<import("@/api-types").OrganizationOut>(newOrganization, { status: 201 });
   }),
 
   http.put("/api/organizations/:id", async ({ request, params }) => {
@@ -1174,7 +1185,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     organizations[idx] = { ...organizations[idx]!, ...body, id, updated_at: now() };
-    return HttpResponse.json(organizations[idx]);
+    return jsonResponse<import("@/api-types").OrganizationOut>(organizations[idx]);
   }),
 
   http.delete("/api/organizations/:id", ({ request, params }) => {
@@ -1195,7 +1206,7 @@ export const adminHandlers = [
     if (authError) return authError;
     const edition = editions.find((e) => e.id === params.id);
     if (!edition) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(edition);
+    return jsonResponse<import("@/api-types").EditionOut>(edition);
   }),
 
   http.post("/api/editions", async ({ request }) => {
@@ -1226,7 +1237,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     editions.push(newEdition);
-    return HttpResponse.json(newEdition, { status: 201 });
+    return jsonResponse<import("@/api-types").EditionOut>(newEdition, { status: 201 });
   }),
 
   http.put("/api/editions/:id", async ({ request, params }) => {
@@ -1236,7 +1247,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     editions[idx] = { ...editions[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(editions[idx]);
+    return jsonResponse<import("@/api-types").EditionOut>(editions[idx]);
   }),
 
   http.delete("/api/editions/:id", ({ request, params }) => {
@@ -1279,7 +1290,7 @@ export const adminHandlers = [
       event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
       ...entry,
     }));
-    return HttpResponse.json(stats);
+    return jsonResponse<import("@/api-types").EventCheckInStats[]>(stats);
   }),
 
   ...categoryHandlers("event", "/api/event-categories", eventCategories, (key) =>
@@ -1291,14 +1302,14 @@ export const adminHandlers = [
 
   http.get("/api/events/translation", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json({ languages: [] });
+    return error ?? jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] });
   }),
   http.get("/api/events/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const event = events.find((e) => e.id === params.id);
     if (!event) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(event);
+    return jsonResponse<import("@/api-types").EventOut>(event);
   }),
 
   http.post("/api/events", async ({ request }) => {
@@ -1337,7 +1348,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     events.push(newEvent);
-    return HttpResponse.json(newEvent, { status: 201 });
+    return jsonResponse<import("@/api-types").EventOut>(newEvent, { status: 201 });
   }),
 
   http.put("/api/events/:id", async ({ request, params }) => {
@@ -1348,7 +1359,7 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const merged = { ...events[idx]!, ...body, id: String(params.id), updated_at: now() };
     events[idx] = { ...merged, ...eventTextFromBody(merged) };
-    return HttpResponse.json(events[idx]);
+    return jsonResponse<import("@/api-types").EventOut>(events[idx]);
   }),
 
   http.delete("/api/events/:id", ({ request, params }) => {
@@ -1369,7 +1380,9 @@ export const adminHandlers = [
     const url = new URL(request.url);
     const eventId = url.searchParams.get("event_id");
     const all = events.flatMap((e) => e.products);
-    return HttpResponse.json(eventId ? all.filter((p) => p.event_id === eventId) : all);
+    return jsonResponse<import("@/api-types").ProductOut[]>(
+      eventId ? all.filter((p) => p.event_id === eventId) : all,
+    );
   }),
 
   http.post("/api/products", async ({ request }) => {
@@ -1403,7 +1416,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     event.products.push(newProduct);
-    return HttpResponse.json(newProduct, { status: 201 });
+    return jsonResponse<import("@/api-types").ProductOut>(newProduct, { status: 201 });
   }),
 
   http.put("/api/products/:id", async ({ request, params }) => {
@@ -1423,7 +1436,7 @@ export const adminHandlers = [
             body.price !== undefined ? Number(body.price).toFixed(2) : event.products[idx]!.price,
           updated_at: now(),
         };
-        return HttpResponse.json(event.products[idx]);
+        return jsonResponse<import("@/api-types").ProductOut>(event.products[idx]);
       }
     }
     return HttpResponse.json({ detail: "Product not found." }, { status: 404 });
@@ -1448,7 +1461,7 @@ export const adminHandlers = [
   http.get("/api/venues", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(venues);
+    return jsonResponse<import("@/api-types").VenueOut[]>(venues);
   }),
 
   http.post("/api/venues", async ({ request }) => {
@@ -1469,7 +1482,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     venues.push(newVenue);
-    return HttpResponse.json(newVenue, { status: 201 });
+    return jsonResponse<import("@/api-types").VenueOut>(newVenue, { status: 201 });
   }),
 
   http.put("/api/venues/:id", async ({ request, params }) => {
@@ -1479,7 +1492,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     venues[idx] = { ...venues[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(venues[idx]);
+    return jsonResponse<import("@/api-types").VenueOut>(venues[idx]);
   }),
 
   http.delete("/api/venues/:id", ({ request, params }) => {
@@ -1497,7 +1510,7 @@ export const adminHandlers = [
   http.get("/api/rooms", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(rooms);
+    return jsonResponse<import("@/api-types").RoomOut[]>(rooms);
   }),
 
   http.post("/api/rooms", async ({ request }) => {
@@ -1517,7 +1530,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     rooms.push(newRoom);
-    return HttpResponse.json(newRoom, { status: 201 });
+    return jsonResponse<import("@/api-types").RoomOut>(newRoom, { status: 201 });
   }),
 
   http.put("/api/rooms/:id", async ({ request, params }) => {
@@ -1527,7 +1540,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     rooms[idx] = { ...rooms[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(rooms[idx]);
+    return jsonResponse<import("@/api-types").RoomOut>(rooms[idx]);
   }),
 
   http.delete("/api/rooms/:id", ({ request, params }) => {
@@ -1545,7 +1558,7 @@ export const adminHandlers = [
   http.get("/api/table-types", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(tableTypes);
+    return jsonResponse<import("@/api-types").TableTypeOut[]>(tableTypes);
   }),
 
   http.post("/api/table-types", async ({ request }) => {
@@ -1569,7 +1582,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     tableTypes.push(newTT);
-    return HttpResponse.json(newTT, { status: 201 });
+    return jsonResponse<import("@/api-types").TableTypeOut>(newTT, { status: 201 });
   }),
 
   http.put("/api/table-types/:id", async ({ request, params }) => {
@@ -1579,7 +1592,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tableTypes[idx] = { ...tableTypes[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tableTypes[idx]);
+    return jsonResponse<import("@/api-types").TableTypeOut>(tableTypes[idx]);
   }),
 
   http.delete("/api/table-types/:id", ({ request, params }) => {
@@ -1597,7 +1610,7 @@ export const adminHandlers = [
   http.get("/api/tables", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(tablesWithRegistrationAssignments());
+    return jsonResponse<import("@/api-types").TableOut[]>(tablesWithRegistrationAssignments());
   }),
 
   http.get("/api/tables/:id", ({ request, params }) => {
@@ -1605,7 +1618,7 @@ export const adminHandlers = [
     if (authError) return authError;
     const table = tablesWithRegistrationAssignments().find((t) => t.id === params.id);
     if (!table) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(table);
+    return jsonResponse<import("@/api-types").TableOut>(table);
   }),
 
   http.post("/api/tables", async ({ request }) => {
@@ -1630,7 +1643,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     tables.push(newTable);
-    return HttpResponse.json(newTable, { status: 201 });
+    return jsonResponse<import("@/api-types").TableOut>(newTable, { status: 201 });
   }),
 
   http.put("/api/tables/:id", async ({ request, params }) => {
@@ -1640,7 +1653,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tables[idx] = { ...tables[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tables[idx]);
+    return jsonResponse<import("@/api-types").TableOut>(tables[idx]);
   }),
 
   http.patch("/api/tables/:id", async ({ request, params }) => {
@@ -1650,7 +1663,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tables[idx] = { ...tables[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tables[idx]);
+    return jsonResponse<import("@/api-types").TableOut>(tables[idx]!);
   }),
 
   http.delete("/api/tables/:id", ({ request, params }) => {
@@ -1675,8 +1688,9 @@ export const adminHandlers = [
     const edition = editions.find((candidate) => candidate.id === params.editionId);
     if (!edition?.active)
       return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
-    const stands = new Map<number, Record<string, unknown>[]>();
+    const stands = new Map<number, import("@/api-types").StandOut[]>();
     for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
+      if (!layout.date) continue;
       const room = rooms.find((candidate) => candidate.id === layout.room_id);
       for (const area of areas.filter((candidate) => candidate.layout_id === layout.id)) {
         const organizationId = Number(area.organization_id);
@@ -1693,7 +1707,7 @@ export const adminHandlers = [
         ]);
       }
     }
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").EditionStandsOut>({
       edition_id: edition.id,
       organizations: [...stands.entries()].map(([organizationId, organizationStands]) => ({
         organization_id: organizationId,
@@ -1712,12 +1726,12 @@ export const adminHandlers = [
     const edition = editions.find((candidate) => candidate.id === params.editionId);
     if (!edition?.active)
       return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
-    type PlanDay = { event_id: string; date: unknown; rooms: unknown[] };
+    type PlanDay = import("@/api-types").PlanDayOut;
     const days = new Map<string, PlanDay>();
     for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
       const room = rooms.find((candidate) => candidate.id === layout.room_id);
       const layoutAreas = areas.filter((candidate) => candidate.layout_id === layout.id);
-      if (!room || layoutAreas.length === 0) continue;
+      if (!room || !layout.date || layoutAreas.length === 0) continue;
       const eventId = String(layout.event_id);
       const day: PlanDay = days.get(eventId) ?? {
         event_id: eventId,
@@ -1744,7 +1758,10 @@ export const adminHandlers = [
       });
       days.set(eventId, day);
     }
-    return HttpResponse.json({ edition_id: edition.id, days: [...days.values()] });
+    return jsonResponse<import("@/api-types").EditionPlanOut>({
+      edition_id: edition.id,
+      days: [...days.values()],
+    });
   }),
 
   /** GET /api/venue-plan/:editionId — read-only plan assembled from the layout stores. */
@@ -1752,8 +1769,8 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const editionLayouts = layouts.filter((layout) => layout.edition_id === params.editionId);
-    return HttpResponse.json({
-      edition_id: params.editionId,
+    return jsonResponse<import("@/api-types").VenuePlanOut>({
+      edition_id: String(params.editionId),
       layouts: editionLayouts.map((layout) => {
         const room = rooms.find((candidate) => candidate.id === layout.room_id);
         const event = events.find((candidate) => candidate.id === layout.event_id);
@@ -1777,6 +1794,8 @@ export const adminHandlers = [
             .map((table) => ({
               id: table.id,
               name: table.name,
+              exclusive: false,
+              table_type_id: table.table_type_id,
               capacity: table.capacity,
               x: table.x,
               y: table.y,
@@ -1790,6 +1809,9 @@ export const adminHandlers = [
               id: area.id,
               label: area.label,
               icon: area.icon,
+              width_m: area.width_m,
+              length_m: area.length_m,
+              organization_id: area.organization_id,
               x: area.x,
               y: area.y,
               rotation: area.rotation,
@@ -1802,7 +1824,7 @@ export const adminHandlers = [
   http.get("/api/layouts", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(layouts);
+    return jsonResponse<import("@/api-types").LayoutOut[]>(layouts);
   }),
 
   http.post("/api/layouts", async ({ request }) => {
@@ -1821,7 +1843,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     layouts.push(newLayout);
-    return HttpResponse.json(newLayout, { status: 201 });
+    return jsonResponse<import("@/api-types").LayoutOut>(newLayout, { status: 201 });
   }),
 
   http.put("/api/layouts/:id", async ({ request, params }) => {
@@ -1831,7 +1853,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     layouts[idx] = { ...layouts[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(layouts[idx]);
+    return jsonResponse<import("@/api-types").LayoutOut>(layouts[idx]!);
   }),
 
   http.delete("/api/layouts/:id", ({ request, params }) => {
@@ -1852,7 +1874,7 @@ export const adminHandlers = [
   http.get("/api/areas", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(areas);
+    return jsonResponse<import("@/api-types").AreaOut[]>(areas);
   }),
 
   http.post("/api/areas", async ({ request }) => {
@@ -1874,7 +1896,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     areas.push(newArea);
-    return HttpResponse.json(newArea, { status: 201 });
+    return jsonResponse<import("@/api-types").AreaOut>(newArea, { status: 201 });
   }),
 
   http.put("/api/areas/:id", async ({ request, params }) => {
@@ -1884,7 +1906,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     areas[idx] = { ...areas[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(areas[idx]);
+    return jsonResponse<import("@/api-types").AreaOut>(areas[idx]);
   }),
 
   http.patch("/api/areas/:id", async ({ request, params }) => {
@@ -1894,7 +1916,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     areas[idx] = { ...areas[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(areas[idx]);
+    return jsonResponse<import("@/api-types").AreaOut>(areas[idx]!);
   }),
 
   http.delete("/api/areas/:id", ({ request, params }) => {
@@ -1912,13 +1934,18 @@ export const adminHandlers = [
     "/api/waitlist",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({ items: seedWaitlistEntries, total: seedWaitlistEntries.length }),
+      jsonResponse<import("@/api-types").WaitlistEntryListEnvelope>({
+        items: seedWaitlistEntries,
+        total: seedWaitlistEntries.length,
+        limit: 50,
+        page: 1,
+      }),
   ),
   http.get(
     "/api/waitlist/scopes",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({
+      jsonResponse<import("@/api-types").WaitlistScopes>({
         events: [{ id: "event-1", title: "Champagne dinner", outstanding: 1, total: 1 }],
         products: [
           {
@@ -1936,34 +1963,52 @@ export const adminHandlers = [
     "/api/contact",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({ items: seedContactMessages, total: seedContactMessages.length }),
+      jsonResponse<import("@/api-types").ContactMessageListEnvelope>({
+        items: seedContactMessages,
+        total: seedContactMessages.length,
+        limit: 50,
+        page: 1,
+      }),
   ),
   http.get(
     "/api/editions/:id/scratchpad",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json({ content: "" }),
+    ({ request }) =>
+      requireAuth(request) ??
+      jsonResponse<import("@/api-types").EditionScratchpadOut>({
+        content: "",
+        updated_at: "2026-01-01T00:00:00Z",
+      }),
   ),
-  http.get("/api/faq", ({ request }) => requireAuth(request) ?? HttpResponse.json(seedFaqItems)),
+  http.get(
+    "/api/faq",
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").FaqItemOut[]>(seedFaqItems),
+  ),
   http.get(
     "/api/email-categories",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedEmailCategories),
+    ({ request }) =>
+      requireAuth(request) ??
+      jsonResponse<import("@/api-types").EmailCategoryOut[]>(seedEmailCategories),
   ),
   http.get(
     "/api/policies/:key",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedPrivacyPolicy),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").PolicyOut>(seedPrivacyPolicy),
   ),
   http.get(
     "/api/audit/resource-types",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(["event", "registration"]),
+    ({ request }) => requireAuth(request) ?? jsonResponse<string[]>(["event", "registration"]),
   ),
   http.get(
     "/api/audit",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedAuditEntries),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").AuditEntryOut[]>(seedAuditEntries),
   ),
   http.post("/api/push/test", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as { subscription_id: string };
-    return HttpResponse.json(
+    return jsonResponse<import("@/api-types").PushTestQueuedOut>(
       { queued: true, job_id: `mock-job-${body.subscription_id}` },
       { status: 202 },
     );

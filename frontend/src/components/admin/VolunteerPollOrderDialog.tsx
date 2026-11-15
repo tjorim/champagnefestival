@@ -75,7 +75,7 @@ export default function VolunteerPollOrderDialog({
     mutationFn: () =>
       setVolunteerPollOrder(
         editionId,
-        volunteer.volunteerId,
+        volunteer.volunteer_id,
         {
           ...answerPayload(),
           note,

@@ -6,14 +6,7 @@ import { getLocale } from "@/paraglide/runtime";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
 import { queryKeys } from "@/utils/queryKeys";
 
-interface PublicPolicy {
-  key: string;
-  title: string;
-  locale: string;
-  html: string;
-  version_number: number;
-  published_at: string;
-}
+type PublicPolicy = import("@/api-types").PolicyPublicOut;
 
 async function fetchCurrentPolicy(policyKey: string, locale: string): Promise<PublicPolicy> {
   const response = await fetch(

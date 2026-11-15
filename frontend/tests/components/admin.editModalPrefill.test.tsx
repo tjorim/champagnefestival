@@ -102,8 +102,8 @@ const existingItem = {
   website: "https://example.com",
   type: "producer",
   active: true,
-  contactPersonId: "person-01",
-  contactPerson: {
+  contact_person_id: "person-01",
+  contact_person: {
     id: "person-01",
     name: "Alice Dupont",
     email: "alice@example.com",

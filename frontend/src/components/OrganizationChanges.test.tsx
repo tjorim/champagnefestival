@@ -8,6 +8,7 @@ import MyOrganizationsSection from "./MyOrganizationsSection";
 import OrganizationChangeReview from "./admin/OrganizationChangeReview";
 
 const texts = {
+  image: "",
   website: "https://old.example",
   description_nl: "Live Dutch",
   description_fr: null,

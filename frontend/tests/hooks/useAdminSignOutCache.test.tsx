@@ -1,3 +1,4 @@
+import { seedOrganizations } from "@/mocks/data/organizations";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
@@ -138,7 +139,7 @@ describe("venue group and organizations collections and sign-out", () => {
     await act(async () => {
       await applyAdminOrganizationSaved(
         organizationsCollection,
-        { id: 99, name: "Late" },
+        { ...seedOrganizations[2]!, id: 99, name: "Late" },
         isCurrent,
       );
       await applyAdminOrganizationDeleted(organizationsCollection, 1, isCurrent);

@@ -46,7 +46,7 @@ export default function PebblePairPage() {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!response.ok) throw await apiErrorFromResponse(response, m.pebble_pair_error());
-        const result = (await response.json()) as { token?: string };
+        const result = (await response.json()) as import("@/api-types").PebbleAccessTokenOut;
         if (!result.token) throw new Error("Pairing response did not include a token");
         const payload = encodeURIComponent(JSON.stringify({ accessToken: result.token }));
         window.location.href = `pebblejs://close#${payload}`;

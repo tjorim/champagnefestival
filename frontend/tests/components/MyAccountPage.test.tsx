@@ -557,7 +557,13 @@ describe("MyAccountPage", () => {
       );
     }
 
-    const dinner = (extra: Record<string, unknown> = {}) => ({
+    const dinner = (
+      extra: Partial<import("@/api-types").VolunteerPollQuestionOut> = {},
+    ): import("@/api-types").VolunteerPollQuestionOut => ({
+      event_id: null,
+      option_id: null,
+      text: null,
+      rating: null,
       id: "q-dinner",
       kind: "yes_no",
       title: "Dinner on Sunday?",
@@ -570,7 +576,13 @@ describe("MyAccountPage", () => {
       people: 0,
       ...extra,
     });
-    const meals = (extra: Record<string, unknown> = {}) => ({
+    const meals = (
+      extra: Partial<import("@/api-types").VolunteerPollQuestionOut> = {},
+    ): import("@/api-types").VolunteerPollQuestionOut => ({
+      event_id: null,
+      option_id: null,
+      text: null,
+      rating: null,
       id: "q-meals",
       kind: "meals",
       title: "Meals",
@@ -586,7 +598,10 @@ describe("MyAccountPage", () => {
       people: 0,
       ...extra,
     });
-    const poll = (questions: Record<string, unknown>[], note: string | null = null) => ({
+    const poll = (
+      questions: import("@/api-types").VolunteerPollQuestionOut[],
+      note: string | null = null,
+    ): import("@/api-types").VolunteerPollOut => ({
       edition_id: "2026-october",
       questions,
       note,
@@ -695,7 +710,10 @@ describe("MyAccountPage", () => {
         }),
         http.put("/api/me/volunteer/poll/questions/q-meals", async ({ request }) => {
           requestedLocales.push(new URL(request.url).searchParams.get("locale"));
-          const body = (await request.json()) as { selections: unknown[] };
+          const body = (await request.json()) as Pick<
+            import("@/api-types").VolunteerPollQuestionOut,
+            "selections"
+          >;
           saved.push(body);
           current = meals({ selections: body.selections });
           return HttpResponse.json(poll([current]));

@@ -137,6 +137,9 @@ it("fills the manager form but submits only after review and editing", async () 
     <MyOrganizationsSection
       organizations={[
         {
+          image: "",
+          description_fr: null,
+          description_en: null,
           id: 42,
           name: "House",
           type: "producer",

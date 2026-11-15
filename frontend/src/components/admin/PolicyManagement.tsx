@@ -30,29 +30,9 @@ import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 type Locale = "nl" | "en" | "fr";
 const LOCALES: Locale[] = ["nl", "en", "fr"];
 
-interface PolicyVersion {
-  id: string;
-  policy_key: string;
-  version_number: number;
-  status: "draft" | "published" | "superseded";
-  content_nl: string | null;
-  content_en: string | null;
-  content_fr: string | null;
-  change_summary: string | null;
-  created_at: string;
-  created_by: string;
-  updated_at: string;
-  published_at: string | null;
-  published_by: string | null;
-}
+type PolicyVersion = import("@/api-types").PolicyVersionOut;
 
-interface Policy {
-  key: string;
-  title_nl: string | null;
-  title_en: string | null;
-  title_fr: string | null;
-  versions: PolicyVersion[];
-}
+type Policy = import("@/api-types").PolicyOut;
 
 const POLICY_KEY = "privacy";
 
@@ -186,7 +166,7 @@ export default function PolicyManagement({
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      fetchJsonOrThrowWithUnauthorized<{ html: string }>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PolicyRenderOut>(
         "/api/policies/render",
         { method: "POST", headers: authHeaders(), body: JSON.stringify({ markdown }) },
         m.admin_error_render_preview(),

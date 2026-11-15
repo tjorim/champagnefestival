@@ -151,7 +151,7 @@ export const seedRegistrations: RegistrationOutWithToken[] = [
 
 /** Shared mutable store — used by both public and admin handlers. */
 export const sharedStore = {
-  registrations: structuredClone(seedRegistrations) as Record<string, unknown>[],
+  registrations: structuredClone(seedRegistrations),
 };
 
 export function resetSharedStore(): void {
@@ -161,7 +161,7 @@ export function resetSharedStore(): void {
 export const registrationScenarios = {
   default: seedRegistrations,
   "event-day": [
-    ...seedRegistrations.map((registration) => {
+    ...seedRegistrations.map((registration): RegistrationOutWithToken => {
       if (registration.id === "reg-01") {
         return {
           ...registration,
@@ -184,13 +184,10 @@ export const registrationScenarios = {
       return registration;
     }),
   ],
-} as const;
+} satisfies Record<string, RegistrationOutWithToken[]>;
 
 export type RegistrationScenario = keyof typeof registrationScenarios;
 
 export function setRegistrationScenario(scenario: RegistrationScenario): void {
-  sharedStore.registrations = structuredClone(registrationScenarios[scenario]) as Record<
-    string,
-    unknown
-  >[];
+  sharedStore.registrations = structuredClone(registrationScenarios[scenario]);
 }

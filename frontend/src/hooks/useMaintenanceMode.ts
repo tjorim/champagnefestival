@@ -1,3 +1,4 @@
+import type { AppSettingsOut } from "@/api-types";
 /**
  * useMaintenanceMode — whether the public site should show the maintenance
  * placeholder instead of the full marketing page.
@@ -19,14 +20,13 @@ import { useQuery } from "@tanstack/react-query";
 import { contactConfig } from "@/config/contact";
 import { queryKeys } from "@/utils/queryKeys";
 
-export interface ApiAppSettings {
-  maintenance_mode: boolean;
-  public_email: string;
-  public_phone: string;
-  facebook_url: string;
-}
+export type ApiAppSettings = AppSettingsOut;
 
 export const FALLBACK_APP_SETTINGS: ApiAppSettings = {
+  member_limit: null,
+  member_inactivity_months: null,
+  stamp_card_type_id: null,
+  updated_at: "",
   maintenance_mode: false,
   public_email: contactConfig.emails.info,
   public_phone: contactConfig.phones.main,

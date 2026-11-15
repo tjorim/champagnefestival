@@ -19,7 +19,7 @@ function harness() {
   } as unknown as AdminRegistrationsCollection;
   const organizationsCollection = {
     utils: { refetch: refetchOrganizations, writeUpsert },
-    values: () => [{ id: 1, name: "House", active: true, contactPersonId: "duplicate" }],
+    values: () => [{ id: 1, name: "House", active: true, contact_person_id: "duplicate" }],
   } as unknown as AdminOrganizationsCollection;
   const view = renderHook(
     () =>
@@ -54,7 +54,7 @@ it.each([200, 409])(
     expect(h.refetchOrganizations).toHaveBeenCalled();
     if (status === 200)
       expect(h.writeUpsert).toHaveBeenCalledWith([
-        { id: 1, name: "House", active: true, contactPersonId: "canonical" },
+        { id: 1, name: "House", active: true, contact_person_id: "canonical" },
       ]);
     // No merge response is inserted into a people cache with invented help periods.
     expect(h.queryClient.getQueryData(["admin", "people"])).toBeUndefined();

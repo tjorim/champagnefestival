@@ -1,3 +1,4 @@
+import { seedOrganizations } from "@/mocks/data/organizations";
 import { describe, expect, it, vi } from "vitest";
 import {
   applyAdminOrganizationContactsMerged,
@@ -21,9 +22,9 @@ async function setup() {
   });
   const unregister = registerAdminOrganizationsCollection(collection);
   await collection.utils.writeUpsert([
-    { id: 1, name: "One", active: true, contactPersonId: "dup" },
-    { id: 2, name: "Two", active: true, contactPersonId: "other" },
-    { id: 3, name: "Three", active: false, contactPersonId: "dup" },
+    { id: 1, name: "One", active: true, contact_person_id: "dup" },
+    { id: 2, name: "Two", active: true, contact_person_id: "other" },
+    { id: 3, name: "Three", active: false, contact_person_id: "dup" },
   ]);
   return { collection, unregister };
 }
@@ -37,17 +38,23 @@ describe("admin organizations collection", () => {
     unregister();
   });
 
-  it("inserts a created organization and replaces an edited one with defaults for missing fields", async () => {
+  it("inserts and replaces complete API records without dropping their metadata", async () => {
     const { collection, unregister } = await setup();
 
     await applyAdminOrganizationSaved(
       collection,
-      { id: 4, name: "Four" },
+      { ...seedOrganizations[2]!, id: 4, name: "Four" },
       captureAdminOrganizationsFence(),
     );
     await applyAdminOrganizationSaved(
       collection,
-      { id: 1, name: "One edited", active: false, contactPersonId: null },
+      {
+        ...seedOrganizations[2]!,
+        id: 1,
+        name: "One edited",
+        active: false,
+        contact_person_id: null,
+      },
       captureAdminOrganizationsFence(),
     );
 
@@ -55,13 +62,13 @@ describe("admin organizations collection", () => {
       id: 4,
       name: "Four",
       active: true,
-      contactPersonId: null,
+      contact_person_id: null,
     });
     expect(collection.get(1)).toMatchObject({
       id: 1,
       name: "One edited",
       active: false,
-      contactPersonId: null,
+      contact_person_id: null,
     });
     unregister();
   });
@@ -87,9 +94,9 @@ describe("admin organizations collection", () => {
       captureAdminOrganizationsFence(),
     );
 
-    expect(collection.get(1)?.contactPersonId).toBe("canonical");
-    expect(collection.get(2)?.contactPersonId).toBe("other");
-    expect(collection.get(3)?.contactPersonId).toBe("canonical");
+    expect(collection.get(1)?.contact_person_id).toBe("canonical");
+    expect(collection.get(2)?.contact_person_id).toBe("other");
+    expect(collection.get(3)?.contact_person_id).toBe("canonical");
     expect(collection.get(3)?.active).toBe(false);
     unregister();
   });
@@ -101,7 +108,11 @@ describe("admin organizations collection", () => {
     await resetAdminOrganizationsCollection(collection);
     expect(collection.size).toBe(0);
 
-    await applyAdminOrganizationSaved(collection, { id: 9, name: "Late" }, isCurrent);
+    await applyAdminOrganizationSaved(
+      collection,
+      { ...seedOrganizations[2]!, id: 9, name: "Late" },
+      isCurrent,
+    );
     await applyAdminOrganizationContactsMerged(collection, "dup", "canonical", isCurrent);
     await applyAdminOrganizationDeleted(collection, 1, isCurrent);
 

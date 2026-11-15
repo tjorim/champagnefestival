@@ -122,7 +122,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const saveMutation = useMutation({
     mutationFn: ({ id, data }: { id: string | null; data: Record<string, unknown> }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
         id ? `/api/faq/${id}` : "/api/faq",
         {
           method: id ? "PUT" : "POST",
@@ -137,7 +137,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
         "/api/faq/reorder",
         {
           method: "POST",

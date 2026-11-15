@@ -12,23 +12,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { AdminDataTable, type AdminTableFilter } from "./AdminDataTable";
 import { QueueRowAction } from "./QueueRowAction";
 
-interface ContactMessage {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  createdAt: string;
-  handledAt: string | null;
-}
-
-const mapMessage = (item: Record<string, unknown>): ContactMessage => ({
-  id: String(item.id),
-  name: String(item.name),
-  email: String(item.email),
-  message: String(item.message),
-  createdAt: String(item.created_at),
-  handledAt: item.handled_at == null ? null : String(item.handled_at),
-});
+type ContactMessage = import("@/api-types").ContactMessageOut;
 
 const columnHelper = createAppColumnHelper<ContactMessage>();
 
@@ -63,13 +47,12 @@ export default function ContactMessagesManagement({
       const page = useQuery({
         queryKey: queryKeys.admin.contactMessagesPage(query),
         queryFn: ({ signal }) =>
-          fetchQueuePage(
+          fetchQueuePage<ContactMessage>(
             "/api/contact",
             query,
             authHeaders,
             signal,
             m.admin_error_load_contact_messages(),
-            mapMessage,
           ),
         placeholderData: keepPreviousData,
       });
@@ -98,7 +81,7 @@ export default function ContactMessagesManagement({
         id: "received",
         header: m.admin_contact_message_col_received(),
         enableSorting: false,
-        cell: (info) => new Date(info.row.original.createdAt).toLocaleString(),
+        cell: (info) => new Date(info.row.original.created_at).toLocaleString(),
       }),
       columnHelper.display({
         id: "status",
@@ -112,7 +95,7 @@ export default function ContactMessagesManagement({
         enableSorting: false,
         cell: (info) => {
           const message = info.row.original;
-          return message.handledAt ? null : (
+          return message.handled_at ? null : (
             <QueueRowAction
               label={m.admin_contact_message_mark_handled()}
               failure={m.admin_contact_message_mark_failed({ name: message.name })}
@@ -150,12 +133,12 @@ export default function ContactMessagesManagement({
           columnVisibilityKey="admin-col-vis-contact-messages"
           getRowId={(message) => message.id}
           getRowLabel={(message) => message.name}
-          getRowClassName={(message) => (message.handledAt ? "text-subtle" : undefined)}
+          getRowClassName={(message) => (message.handled_at ? "text-subtle" : undefined)}
           renderCard={(message) => (
             <>
               <Sender message={message} />
               <div className="text-sm text-subtle">
-                {new Date(message.createdAt).toLocaleString()}
+                {new Date(message.created_at).toLocaleString()}
               </div>
               <p className="mb-0 whitespace-pre-wrap">{message.message}</p>
               <Status message={message} />
@@ -192,7 +175,7 @@ export default function ContactMessagesManagement({
 function Sender({ message }: { message: ContactMessage }) {
   return (
     <>
-      {!message.handledAt && <Icon icon={MailDotIcon} className="me-2 text-primary" />}
+      {!message.handled_at && <Icon icon={MailDotIcon} className="me-2 text-primary" />}
       <strong>{message.name}</strong>
       <div>
         <a href={`mailto:${message.email}`}>{message.email}</a>
@@ -203,7 +186,7 @@ function Sender({ message }: { message: ContactMessage }) {
 
 /** Icon plus text, so a handled message is told apart without relying on colour. */
 function Status({ message }: { message: ContactMessage }) {
-  return message.handledAt ? (
+  return message.handled_at ? (
     <span className="inline-flex items-center gap-1 text-success-text">
       <CheckIcon className="size-4" aria-hidden="true" />
       {m.admin_contact_message_handled()}

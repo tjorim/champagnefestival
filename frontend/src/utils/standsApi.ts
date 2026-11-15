@@ -1,25 +1,13 @@
+import type { StandOut, OrganizationStandsOut, EditionStandsOut } from "@/api-types";
 import { queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/utils/queryKeys";
 
 /** One stand of one organization on one festival day (public subset of a floor-plan area). */
-export interface Stand {
-  event_id: string;
-  /** `YYYY-MM-DD`. */
-  date: string;
-  room_name: string;
-  label: string;
-}
+export type Stand = StandOut;
 
-export interface OrganizationStands {
-  organization_id: number;
-  name: string;
-  stands: Stand[];
-}
+export type OrganizationStands = OrganizationStandsOut;
 
-export interface EditionStands {
-  edition_id: string;
-  organizations: OrganizationStands[];
-}
+export type EditionStands = EditionStandsOut;
 
 /**
  * Public `GET /api/editions/{id}/stands`. The stand list is a convenience on top

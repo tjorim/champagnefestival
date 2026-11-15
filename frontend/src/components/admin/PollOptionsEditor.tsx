@@ -41,10 +41,10 @@ const LABEL_FIELDS = [
 
 function toWrite(option: PollOption): PollOptionWrite {
   return {
-    labelNl: option.labelNl,
-    labelFr: option.labelFr ?? "",
-    labelEn: option.labelEn ?? "",
-    dietaryTags: option.dietaryTags,
+    labelNl: option.label_nl,
+    labelFr: option.label_fr ?? "",
+    labelEn: option.label_en ?? "",
+    dietaryTags: option.dietary_tags,
   };
 }
 
@@ -151,7 +151,7 @@ export default function PollOptionsEditor({
   });
   const deleteMutation = useMutation({
     mutationFn: ({ option, notify }: { option: PollOption; notify: boolean }) =>
-      deletePollOption(option.id, authHeaders, option.volunteerCount > 0, notify),
+      deletePollOption(option.id, authHeaders, option.volunteer_count > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
@@ -189,15 +189,15 @@ export default function PollOptionsEditor({
       body: (
         <>
           <p>
-            {option.volunteerCount > 0
+            {option.volunteer_count > 0
               ? m.admin_poll_delete_body_in_use({
                   label: option.label,
-                  volunteers: option.volunteerCount,
-                  quantity: option.totalQuantity,
+                  volunteers: option.volunteer_count,
+                  quantity: option.total_quantity,
                 })
               : m.admin_poll_delete_body({ label: option.label })}
           </p>
-          {option.volunteerCount > 0 && (
+          {option.volunteer_count > 0 && (
             <label className="mt-3 flex items-center gap-2">
               <Checkbox
                 defaultChecked
@@ -205,7 +205,7 @@ export default function PollOptionsEditor({
                   notify = checked;
                 }}
               />
-              {m.admin_poll_notify_removed({ count: option.volunteerCount })}
+              {m.admin_poll_notify_removed({ count: option.volunteer_count })}
             </label>
           )}
         </>
@@ -229,7 +229,7 @@ export default function PollOptionsEditor({
     void run(() => reorderMutation.mutateAsync(ids));
   }
 
-  const totalQuantity = options.reduce((sum, option) => sum + option.totalQuantity, 0);
+  const totalQuantity = options.reduce((sum, option) => sum + option.total_quantity, 0);
 
   return (
     <div>
@@ -289,21 +289,21 @@ export default function PollOptionsEditor({
                     </div>
                     <div className="grow">
                       <span>{option.label}</span>
-                      {option.dietaryTags.map((tag) => (
+                      {option.dietary_tags.map((tag) => (
                         <Badge key={tag} variant="secondary" className="ms-2">
                           {dietaryTagLabel(tag)}
                         </Badge>
                       ))}
-                      {(option.labelFr || option.labelEn) && (
+                      {(option.label_fr || option.label_en) && (
                         <div className="text-sm text-subtle">
-                          {[option.labelFr, option.labelEn].filter(Boolean).join(" · ")}
+                          {[option.label_fr, option.label_en].filter(Boolean).join(" · ")}
                         </div>
                       )}
                     </div>
                     <Badge variant="secondary">
                       {m.admin_poll_ordered({
-                        quantity: option.totalQuantity,
-                        volunteers: option.volunteerCount,
+                        quantity: option.total_quantity,
+                        volunteers: option.volunteer_count,
                       })}
                     </Badge>
                     <Button

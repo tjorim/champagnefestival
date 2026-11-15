@@ -14,13 +14,7 @@ import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import "./announcementBanner.css";
 
-export interface PublicAnnouncement {
-  id: string;
-  text: string;
-  level: "info" | "warning" | "urgent";
-  link_url: string | null;
-  link_label: string | null;
-}
+export type PublicAnnouncement = import("@/api-types").AnnouncementPublicOut;
 
 export async function fetchActiveAnnouncements(locale: string): Promise<PublicAnnouncement[]> {
   const response = await fetch(`/api/announcements/active?locale=${encodeURIComponent(locale)}`);

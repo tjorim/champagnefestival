@@ -61,7 +61,7 @@ export default function MembersManagement({
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<{ member_limit: number | null }>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").AppSettingsOut>(
         "/api/settings",
         { headers: authHeaders() },
         m.admin_error_load_settings(),

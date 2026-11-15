@@ -1,34 +1,13 @@
+import type { VenuePlanTableOut, VenuePlanLayoutOut, VenuePlanOut } from "@/api-types";
 import { queryOptions } from "@tanstack/react-query";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 
-export interface VenuePlanTable {
-  exclusive?: boolean;
-  id: string;
-  name: string;
-  capacity: number;
-  x: number;
-  y: number;
-  rotation: number;
-  registration_ids: string[];
-  occupied_seats: number;
-}
+export type VenuePlanTable = VenuePlanTableOut;
 
-export interface VenuePlanLayout {
-  event_id: string;
-  event_title: string;
-  id: string;
-  date: string | null;
-  label: string;
-  room: { id: string; name: string; width_m: number; length_m: number; color: string } | null;
-  tables: VenuePlanTable[];
-  areas: Array<{ id: string; label: string; icon: string; x: number; y: number; rotation: number }>;
-}
+export type VenuePlanLayout = VenuePlanLayoutOut;
 
-export interface VenuePlan {
-  edition_id: string;
-  layouts: VenuePlanLayout[];
-}
+export type VenuePlan = VenuePlanOut;
 
 export function fetchVenuePlan(
   editionId: string,

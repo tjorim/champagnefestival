@@ -34,12 +34,10 @@ import {
 import { m } from "@/paraglide/messages";
 import { toTableRecord } from "@/state/tableOccupancy";
 
-export interface RegistrationsPage {
+/** Table query projection: only the envelope's collection key is renamed for the UI. */
+export type RegistrationsPage = Omit<RegistrationListEnvelope, "items"> & {
   registrations: Registration[];
-  total: number;
-  limit: number;
-  page: number;
-}
+};
 
 // Partial on purpose: the check below rejects the pre-#931 bare array instead of trusting the type.
 type RegistrationListPayload = Partial<RegistrationListEnvelope>;
@@ -413,26 +411,11 @@ export async function restoreLayoutRevision(
 export async function fetchOrganizations(
   authHeaders: () => Record<string, string>,
 ): Promise<Organization[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchJsonOrThrowWithUnauthorized<Organization[]>(
     "/api/organizations",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload)
-    ? payload.map((organization: Record<string, unknown>) => ({
-        id: Number(organization.id),
-        name: String(organization.name ?? ""),
-        description_nl: (organization.description_nl as Organization["description_nl"]) ?? null,
-        description_fr: (organization.description_fr as Organization["description_fr"]) ?? null,
-        description_en: (organization.description_en as Organization["description_en"]) ?? null,
-
-        active: organization.active !== false,
-        contactPersonId:
-          typeof organization.contact_person_id === "string"
-            ? organization.contact_person_id
-            : null,
-      }))
-    : [];
 }
 
 export async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
@@ -573,12 +556,9 @@ export interface PaymentTransactionsLedgerFilters {
   page?: number;
 }
 
-export interface PaymentTransactionsLedgerPage {
+export type PaymentTransactionsLedgerPage = Omit<LedgerEnvelope, "items"> & {
   transactions: LedgerTransaction[];
-  total: number;
-  limit: number;
-  page: number;
-}
+};
 
 // Partial on purpose: the check below rejects the pre-#1032 bare array instead of trusting the type.
 type LedgerEnvelope = Partial<PaymentTransactionLedgerEnvelope>;

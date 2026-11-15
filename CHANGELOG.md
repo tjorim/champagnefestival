@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Read content, organisations, polls, email, push, policy, signage and public plan records from generated API schemas (#1657). Remove their response mappers and check shared MSW success payloads against the same schemas, including required metadata and pagination fields.
+
 - Build shared event, product, edition, registration, people, volunteer, organisation, floor-plan, settings and public FAQ responses from existing Pydantic output models (#1657), preserving public/admin projections, computed values and explicit MCP/HTML/replay serialization boundaries.
 - Read events, products, editions and categories from generated API types, including the nested event in admin registrations (#1657). Public consumers keep the distinct public schemas, product prices remain decimal strings, and event/product/edition mock stores are checked against the same contract.
 

@@ -105,11 +105,10 @@ const SORT_KEY_BY_COLUMN: Record<string, RegistrationSortKey> = {
   checked_in: "checked_in",
 };
 
-interface AllocationRef {
-  id: number;
-  name: string;
-  contactPersonId: string | null;
-}
+type AllocationRef = Pick<
+  import("@/api-types").OrganizationOut,
+  "id" | "name" | "contact_person_id"
+>;
 
 type EditionFilter = "all" | "festival" | "standalone";
 
@@ -284,7 +283,7 @@ export default function RegistrationList({
   const allContactPersonIds = useMemo(
     () =>
       new Set(
-        organizations.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
+        organizations.map((e) => e.contact_person_id).filter((id): id is string => id !== null),
       ),
     [organizations],
   );
@@ -292,11 +291,11 @@ export default function RegistrationList({
   const allocationOptions: { key: string; label: string; personId: string }[] = useMemo(
     () =>
       organizations
-        .filter((e) => e.contactPersonId)
+        .filter((e) => e.contact_person_id)
         .map((e) => ({
           key: `e:${e.id}`,
           label: `${m.admin_allocation_organization_label()}: ${e.name}`,
-          personId: e.contactPersonId!,
+          personId: e.contact_person_id!,
         })),
     [organizations],
   );

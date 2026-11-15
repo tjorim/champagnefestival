@@ -54,21 +54,28 @@ describe("getMyVolunteerIdentity", () => {
     expect(identity).toEqual({
       linked: true,
       name: "Sofie De Smet",
-      nationalRegisterNumber: "91010112345",
-      eidDocumentNumber: "BEX123456",
+      national_register_number: "91010112345",
+      eid_document_number: "BEX123456",
     });
   });
 
   it("parses an unlinked identity as all-null", async () => {
-    serve("get", VOLUNTEER, () => HttpResponse.json({ linked: false }));
+    serve("get", VOLUNTEER, () =>
+      HttpResponse.json({
+        linked: false,
+        name: null,
+        national_register_number: null,
+        eid_document_number: null,
+      }),
+    );
 
     const identity = await getMyVolunteerIdentity("token-1");
 
     expect(identity).toEqual({
       linked: false,
       name: null,
-      nationalRegisterNumber: null,
-      eidDocumentNumber: null,
+      national_register_number: null,
+      eid_document_number: null,
     });
   });
 
@@ -154,7 +161,7 @@ describe("updateMyEidDocumentNumber", () => {
     expect(received[0]!.request.headers.get("authorization")).toBe("Bearer token-1");
     expect(received[0]!.request.headers.get("content-type")).toBe("application/json");
     expect(received[0]!.body).toEqual({ eid_document_number: "123456789103" });
-    expect(identity.eidDocumentNumber).toBe("123456789103");
+    expect(identity.eid_document_number).toBe("123456789103");
   });
 
   it("throws when the volunteer isn't linked yet", async () => {

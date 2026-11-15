@@ -69,8 +69,6 @@ export async function fetchArrayOrThrow<T>(
   url: string,
   options: RequestInit,
   fallbackMessage: string,
-  // Without a mapper the payload is trusted to be `T`: pass the generated type from `@/api-types`.
-  mapper: (item: Record<string, unknown>) => T = (item) => item as T,
 ): Promise<T[]> {
   const response = await requestApi(url, options);
   throwAuthError(response);
@@ -78,10 +76,8 @@ export async function fetchArrayOrThrow<T>(
     throw await extractError(response, fallbackMessage);
   }
 
-  const payload = await response.json();
-  return Array.isArray(payload)
-    ? payload.map((item) => mapper(item as Record<string, unknown>))
-    : [];
+  const payload: T[] = await response.json();
+  return Array.isArray(payload) ? payload : [];
 }
 
 export async function fetchJsonOrThrowWithUnauthorized<T>(

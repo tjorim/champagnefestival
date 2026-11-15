@@ -307,7 +307,7 @@ export class RegistrationSubmitError extends Error {
 export async function submitRegistration(
   payload: RegistrationFormData,
   accessToken?: string | null,
-): Promise<{ id: string }> {
+): Promise<import("@/api-types").RegistrationPublicOut> {
   if (!navigator.onLine) throw new RegistrationSubmitError(m.public_offline_write());
   const response = await fetch("/api/registrations", {
     method: "POST",
@@ -344,9 +344,9 @@ export async function submitRegistration(
       ),
     );
   }
-  const data = (await response.json()) as { id?: unknown };
+  const data = (await response.json()) as import("@/api-types").RegistrationPublicOut;
   if (typeof data.id !== "string") throw new RegistrationSubmitError(m.registration_error());
-  return { id: data.id };
+  return data;
 }
 
 export interface WaitlistJoinPayload {

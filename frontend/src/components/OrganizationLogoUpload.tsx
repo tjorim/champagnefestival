@@ -1,3 +1,4 @@
+import type { OrganizationOut, OrganizationChangeOut } from "@/api-types";
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
@@ -14,7 +15,7 @@ export default function OrganizationLogoUpload({
 }: {
   url: string;
   headers: () => Record<string, string>;
-  onSaved: (result: { image?: string }) => void;
+  onSaved: (result: OrganizationOut | OrganizationChangeOut) => void;
   admin?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -28,7 +29,10 @@ export default function OrganizationLogoUpload({
       body.append("file", file);
       const response = await fetch(url, { method: "POST", headers: headers(), body });
       if (!response.ok) throw new Error(m.logo_upload_error());
-      return { result: (await response.json()) as { image?: string }, isCurrent };
+      return {
+        result: (await response.json()) as OrganizationOut | OrganizationChangeOut,
+        isCurrent,
+      };
     },
     onSuccess: ({ result, isCurrent }) => {
       if (!isCurrent()) return;
