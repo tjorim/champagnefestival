@@ -585,23 +585,6 @@ def app_settings_to_dict(s: AppSettings) -> dict:
     }
 
 
-def faq_item_to_dict(f: FaqItem) -> dict:
-    """Admin shape: every language's content, for the FAQ editor."""
-    return {
-        "id": f.id,
-        "question_nl": f.question_nl,
-        "question_fr": f.question_fr,
-        "question_en": f.question_en,
-        "answer_nl": f.answer_nl,
-        "answer_fr": f.answer_fr,
-        "answer_en": f.answer_en,
-        "sort_order": f.sort_order,
-        "active": f.active,
-        "created_at": f.created_at,
-        "updated_at": f.updated_at,
-    }
-
-
 def faq_item_to_public_dict(f: FaqItem, locale: str) -> dict:
     """Public shape: the question/answer for *locale*, or Dutch
     when that locale is not fully translated."""

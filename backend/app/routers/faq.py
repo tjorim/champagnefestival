@@ -38,7 +38,7 @@ async def list_active_faq_items(
 
 
 @router.get("", response_model=list[FaqItemOut], dependencies=[Depends(require_admin)])
-async def list_faq_items(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_faq_items(db: AsyncSession = Depends(get_db)) -> list[FaqItemOut]:
     """Admin: every FAQ item and every locale, active or not, in display order."""
     return await faq_service.list_faq_items(db)
 
@@ -49,7 +49,7 @@ async def create_faq_item(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> FaqItemOut:
     try:
         return await faq_service.create_faq_item(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -65,7 +65,7 @@ async def update_faq_item(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> FaqItemOut:
     try:
         return await faq_service.update_faq_item(
             db,
@@ -84,7 +84,7 @@ async def reorder_faq_items(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[FaqItemOut]:
     """Reassign every FAQ item's display position to match ``body.ordered_ids``.
 
     The dedicated, all-at-once operation (rather than one PUT per item) is

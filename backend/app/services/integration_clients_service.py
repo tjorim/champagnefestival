@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import IntegrationClient
+from app.schemas import IntegrationClientOut
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.utils import make_id
 
@@ -46,22 +47,6 @@ def _generate_raw_key() -> str:
     return f"{TOKEN_PREFIX}{secrets.token_urlsafe(32)}"
 
 
-def integration_client_to_dict(client: IntegrationClient) -> dict:
-    """Serialise a client — deliberately never includes key_hash or the raw key."""
-    return {
-        "id": client.id,
-        "name": client.name,
-        "key_preview": client.key_preview,
-        "allowed_role": client.allowed_role,
-        "created_by_actor": client.created_by_actor,
-        "rate_limit_per_minute": client.rate_limit_per_minute,
-        "is_active": client.is_active,
-        "created_at": client.created_at,
-        "last_used_at": client.last_used_at,
-        "revoked_at": client.revoked_at,
-    }
-
-
 async def create_integration_client(
     db: AsyncSession,
     *,
@@ -71,10 +56,10 @@ async def create_integration_client(
     allowed_role: str,
     rate_limit_per_minute: int = DEFAULT_RATE_LIMIT_PER_MINUTE,
     request_id: str | None = None,
-) -> tuple[dict, str]:
+) -> tuple[IntegrationClientOut, str]:
     """Create a new integration client.
 
-    Returns ``(dict, raw_key)`` — the raw key is shown exactly once here and is
+    Returns ``(IntegrationClientOut, raw_key)`` — the raw key is shown exactly once here and is
     never recoverable afterward; only its hash is persisted.
     """
     if allowed_role not in ALLOWED_ROLES:
@@ -117,12 +102,12 @@ async def create_integration_client(
     )
     await db.commit()
     await db.refresh(client)
-    return integration_client_to_dict(client), raw_key
+    return IntegrationClientOut.model_validate(client), raw_key
 
 
-async def list_integration_clients(db: AsyncSession) -> list[dict]:
+async def list_integration_clients(db: AsyncSession) -> list[IntegrationClientOut]:
     result = await db.execute(select(IntegrationClient).order_by(IntegrationClient.created_at))
-    return [integration_client_to_dict(c) for c in result.scalars().all()]
+    return [IntegrationClientOut.model_validate(c) for c in result.scalars().all()]
 
 
 async def get_integration_client(db: AsyncSession, client_id: str) -> IntegrationClient:
@@ -134,7 +119,7 @@ async def get_integration_client(db: AsyncSession, client_id: str) -> Integratio
 
 async def revoke_integration_client(
     db: AsyncSession, *, actor: str, client_id: str, request_id: str | None = None
-) -> dict:
+) -> IntegrationClientOut:
     client = await get_integration_client(db, client_id)
     if not client.is_active:
         raise ConflictError(f"Integration client '{client_id}' is already revoked.")
@@ -151,15 +136,15 @@ async def revoke_integration_client(
     )
     await db.commit()
     await db.refresh(client)
-    return integration_client_to_dict(client)
+    return IntegrationClientOut.model_validate(client)
 
 
 async def rotate_integration_client(
     db: AsyncSession, *, actor: str, client_id: str, request_id: str | None = None
-) -> tuple[dict, str]:
+) -> tuple[IntegrationClientOut, str]:
     """Replace a client's credential with a freshly generated one.
 
-    Returns ``(dict, raw_key)`` — same one-time-reveal contract as creation.
+    Returns ``(IntegrationClientOut, raw_key)`` — same one-time-reveal contract as creation.
     """
     client = await get_integration_client(db, client_id)
     if not client.is_active:
@@ -179,7 +164,7 @@ async def rotate_integration_client(
     )
     await db.commit()
     await db.refresh(client)
-    return integration_client_to_dict(client), raw_key
+    return IntegrationClientOut.model_validate(client), raw_key
 
 
 async def get_client_by_token_hash(db: AsyncSession, token_hash: str) -> IntegrationClient | None:

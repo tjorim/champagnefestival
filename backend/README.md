@@ -797,6 +797,35 @@ The document is committed as `frontend/openapi.json` (release version replaced b
 `snapshot`). After changing a route or schema run `uv run python -m app.openapi_export`
 from `backend/`; `tests/test_openapi_export.py` fails while it is stale.
 
+### Service response construction
+
+Admin FAQ and integration-client services return the existing `FaqItemOut` and
+`IntegrationClientOut` models (#1657). REST returns those models directly;
+create/rotate credential routes construct `IntegrationClientCreatedOut` with the
+one-time key. MCP adapters use `model_dump()` in Python mode so their dictionaries
+retain datetime objects until the existing transport serializes them. Do not use
+JSON mode here: that would change the adapter's timestamp representation.
+
+This is a partial migration. Remaining response-builder families are:
+
+- `utils.py`: events/products/editions (including localized/public variants),
+  registrations (admin, check-in, list, guest and token), people/organizations,
+  floor plans (area, venue, table type, layout, table, room), application settings
+  and public FAQ.
+- Services: layout revisions, payment transactions/ledger rows, categories,
+  policies/versions, announcements, waitlist, composed messages, email
+  categories/consents, poll questions and stamp cards. Volunteer responses also
+  still use the dict-returning `to_volunteer_out`.
+
+These are follow-up slices, not builders that inherently require dictionaries.
+They need their REST, MCP and internal callers migrated together. In particular,
+public FAQ feeds the dictionary-based server HTML renderer, while registration
+and event builders nest one another and expose several intentionally different
+shapes. Internal text fragments, keyed lookup maps, audit details, replay storage
+and delete acknowledgements are not entity output builders and should not be
+mechanically converted to an unrelated `Out` model. FAQ deletion retains its
+MCP-only `{deleted, id}` acknowledgement; its REST route returns 204.
+
 ## Request schema conventions
 
 Create and update models declare their own defaults, required fields, and

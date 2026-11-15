@@ -38,7 +38,7 @@ async def create_faq_item(
     )
     async with session_factory() as db:
         try:
-            return await faq_service.create_faq_item(db, actor=actor, body=body)
+            return (await faq_service.create_faq_item(db, actor=actor, body=body)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -46,7 +46,7 @@ async def create_faq_item(
 async def list_faq_items(session_factory: Any) -> dict:
     """Every FAQ item and every locale, active or not, in display order (admin shape)."""
     async with session_factory() as db:
-        return {"faq_items": await faq_service.list_faq_items(db)}
+        return {"faq_items": [item.model_dump() for item in await faq_service.list_faq_items(db)]}
 
 
 async def update_faq_item(
@@ -83,7 +83,7 @@ async def update_faq_item(
     body = validate_with_schema(FaqItemUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await faq_service.update_faq_item(db, actor=actor, faq_item_id=faq_item_id, body=body)
+            return (await faq_service.update_faq_item(db, actor=actor, faq_item_id=faq_item_id, body=body)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -105,6 +105,11 @@ async def reorder_faq_items(session_factory: Any, actor: str, *, ordered_ids: li
     body = validate_with_schema(FaqItemReorder, ordered_ids=ordered_ids)
     async with session_factory() as db:
         try:
-            return {"faq_items": await faq_service.reorder_faq_items(db, actor=actor, ordered_ids=body.ordered_ids)}
+            return {
+                "faq_items": [
+                    item.model_dump()
+                    for item in await faq_service.reorder_faq_items(db, actor=actor, ordered_ids=body.ordered_ids)
+                ]
+            }
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

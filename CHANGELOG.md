@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Build admin FAQ and integration-client responses from the existing Pydantic output models instead of parallel dictionary builders (#1657). REST and MCP keep their existing fields, timestamps, nullable translations and one-time credential disclosure.
+
 - The audit log, the per-event check-in counts, the edition attendance statistics and the FAQ editor read the API's generated types (`@/api-types`) instead of hand-written camelCase copies and their mappers (#1657). Edition money totals are decimal strings in the API, so the analytics table formats them itself. The MSW handlers and seed data for these endpoints are typed against the same types, so an API change fails `pnpm typecheck`.
 - Generate the frontend's API types from `openapi.json` with Orval (schemas only, pinned in `devDependencies`; #1657): `pnpm api:generate` writes `src/api-schema/`, `pnpm api:check` (run by `pnpm typecheck`) fails when it is stale, and `src/api-types.ts` is the import point for screens. TypeScript 7 rules out `openapi-typescript` and `@hey-api/openapi-ts`. Orval's `esbuild` dependency is declared in `allowBuilds` as not run (its install script only verifies a shipped binary).
 - Commit the API's OpenAPI document as `frontend/openapi.json` (#1657). `uv run python -m app.openapi_export` rewrites it from `backend/` (`--check` only compares), and `tests/test_openapi_export.py` fails when it is stale. Backend CI also runs when only the snapshot changes. The release version is left out of it, so a release bump never makes it stale.

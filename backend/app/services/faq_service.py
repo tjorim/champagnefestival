@@ -22,10 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.dialect_functions import assign_positions
 from app.models import FaqItem
-from app.schemas import FaqItemCreate, FaqItemUpdate, FaqTextFields
+from app.schemas import FaqItemCreate, FaqItemOut, FaqItemUpdate, FaqTextFields
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import faq_item_to_dict, make_id
+from app.utils import make_id
 
 TEXT_FIELDS = (
     "question_nl",
@@ -42,13 +42,15 @@ TEXT_FIELDS = (
 _MAX_APPEND_ATTEMPTS = 5
 
 
-async def list_faq_items(db: AsyncSession) -> list[dict]:
+async def list_faq_items(db: AsyncSession) -> list[FaqItemOut]:
     """Every FAQ item and every locale, active or not, in display order (admin shape)."""
     result = await db.execute(select(FaqItem).order_by(FaqItem.sort_order))
-    return [faq_item_to_dict(f) for f in result.scalars().all()]
+    return [FaqItemOut.model_validate(f) for f in result.scalars().all()]
 
 
-async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, request_id: str | None = None) -> dict:
+async def create_faq_item(
+    db: AsyncSession, *, actor: str, body: FaqItemCreate, request_id: str | None = None
+) -> FaqItemOut:
     for _attempt in range(_MAX_APPEND_ATTEMPTS):
         current_max = (await db.execute(select(func.max(FaqItem.sort_order)))).scalar_one()
         f = FaqItem(
@@ -74,13 +76,13 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
             await db.rollback()
             continue
         await db.refresh(f)
-        return faq_item_to_dict(f)
+        return FaqItemOut.model_validate(f)
     raise ConflictError("Could not assign a unique display position for the new FAQ item; please retry.")
 
 
 async def update_faq_item(
     db: AsyncSession, *, actor: str, faq_item_id: str, body: FaqItemUpdate, request_id: str | None = None
-) -> dict:
+) -> FaqItemOut:
     f = await db.get(FaqItem, faq_item_id)
     if f is None:
         raise NotFoundError(f"FAQ item '{faq_item_id}' not found.")
@@ -108,7 +110,7 @@ async def update_faq_item(
     await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(f)
-    return faq_item_to_dict(f)
+    return FaqItemOut.model_validate(f)
 
 
 async def delete_faq_item(db: AsyncSession, *, actor: str, faq_item_id: str, request_id: str | None = None) -> dict:
@@ -132,7 +134,7 @@ async def delete_faq_item(db: AsyncSession, *, actor: str, faq_item_id: str, req
 
 async def reorder_faq_items(
     db: AsyncSession, *, actor: str, ordered_ids: list[str], request_id: str | None = None
-) -> list[dict]:
+) -> list[FaqItemOut]:
     """Atomically reassign ``sort_order`` (0..N-1) to match ``ordered_ids``.
 
     ``ordered_ids`` must name every existing FAQ item exactly once. A partial

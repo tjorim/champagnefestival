@@ -30,9 +30,9 @@ async def create_integration_client(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> IntegrationClientCreatedOut:
     try:
-        client_dict, raw_key = await ics.create_integration_client(
+        client, raw_key = await ics.create_integration_client(
             db,
             actor=actor,
             creator_role="admin",  # require_admin already gated this request
@@ -43,11 +43,11 @@ async def create_integration_client(
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
-    return {**client_dict, "key": raw_key}
+    return IntegrationClientCreatedOut(**client.model_dump(), key=raw_key)
 
 
 @router.get("", response_model=list[IntegrationClientOut])
-async def list_integration_clients(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_integration_clients(db: AsyncSession = Depends(get_db)) -> list[IntegrationClientOut]:
     return await ics.list_integration_clients(db)
 
 
@@ -57,7 +57,7 @@ async def revoke_integration_client(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> IntegrationClientOut:
     try:
         return await ics.revoke_integration_client(
             db, actor=actor, client_id=client_id, request_id=getattr(request.state, "request_id", None)
@@ -72,11 +72,11 @@ async def rotate_integration_client(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> IntegrationClientCreatedOut:
     try:
-        client_dict, raw_key = await ics.rotate_integration_client(
+        client, raw_key = await ics.rotate_integration_client(
             db, actor=actor, client_id=client_id, request_id=getattr(request.state, "request_id", None)
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
-    return {**client_dict, "key": raw_key}
+    return IntegrationClientCreatedOut(**client.model_dump(), key=raw_key)

@@ -16,6 +16,15 @@ same value; no automatic retries are performed. Temporary defaults for empty
 columns are derived only for rendering and are not included when saving another
 column choice.
 
+## Response-model migration (#1657)
+
+The admin FAQ and integration-client services now return existing output models;
+MCP adapters dump them in Python mode to preserve their previous dictionaries and
+datetime values. This changes response construction only. FAQ create/update/reorder
+and credential create/rotate remain **not retry safe**; FAQ deletion and credential
+revocation retain the convergent-state-only contract below. No replay storage or
+automatic retry is introduced.
+
 ## Supported strategies
 
 - **Natural-key upsert:** repeated application of the desired state converges on
