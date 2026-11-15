@@ -1266,3 +1266,9 @@ Scratchpad writes, stamp/check-in transitions, policy render previews, email con
 and member opt-out retain their existing transaction, locking, payload and retry decisions.
 Only response construction changes; no write is retried automatically. Stamp progress stays
 a model between services and is serialized only by the existing REST/MCP boundary.
+
+## Generated fixture contracts (#1657)
+
+The final frontend fixture pass changes test data and static checks only. The venue-plan
+edition reader now names its generated response type without changing its request or
+response handling. No production write payload, retry decision or automatic retry changes.

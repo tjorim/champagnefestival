@@ -313,7 +313,7 @@ test("captures a frozen playlist, finds the job after navigation, downloads and 
         canvas.height = 1080;
         const ctx = canvas.getContext("2d")!;
         const pixels: number[][] = [];
-        for (const time of [0.5, 1, 2.9]) {
+        for (const time of [0.5, 1, 2.9] as const) {
           const seeked = new Promise<void>((resolve) => {
             video.onseeked = () => resolve();
           });

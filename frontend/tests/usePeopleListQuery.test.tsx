@@ -1,5 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
@@ -9,7 +11,17 @@ import { createTestQueryClientHarness } from "./utils/queryClient";
 
 const headers = () => ({ Authorization: "Bearer session" });
 const page = (name: string, params: PeopleListParams) => ({
-  items: [{ id: name, name, registration_count: 42 }],
+  items: [
+    {
+      ...seedPeople[0]!,
+      id: name,
+      name,
+      registration_count: 42,
+      reward_due: false,
+      last_attended: null,
+      inactivity_highlight: false,
+    },
+  ],
   total: 200,
   page: params.page,
   limit: params.limit,
@@ -29,7 +41,7 @@ describe("people server pages", () => {
     server.use(
       http.get("/api/people/counts", ({ request }) => {
         requested.push(target(request));
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").PeopleCountsOut>({
           total: 200,
           active: 180,
           inactive: 20,
@@ -56,7 +68,10 @@ describe("people server pages", () => {
       http.get("/api/people", ({ request }) => {
         requested.push(target(request));
         // The first page answers at once; the second stays pending until the test releases it.
-        if (requested.length === 1) return HttpResponse.json(page("first", { page: 1, limit: 5 }));
+        if (requested.length === 1)
+          return jsonResponse<import("@/api-types").PersonListEnvelope>(
+            page("first", { page: 1, limit: 5 }),
+          );
         return new Promise<Response>((resolve) => {
           finish = resolve;
         });
@@ -85,7 +100,9 @@ describe("people server pages", () => {
     );
     expect(result.current.isPlaceholderData).toBe(true);
     expect(result.current.data?.items[0]?.name).toBe("first");
-    await act(async () => finish(HttpResponse.json(page("third", params))));
+    await act(async () =>
+      finish(jsonResponse<import("@/api-types").PersonListEnvelope>(page("third", params))),
+    );
     await waitFor(() => expect(result.current.data?.page).toBe(3));
   });
 
@@ -130,9 +147,26 @@ describe("people server pages", () => {
     server.use(
       http.get("/api/volunteers", ({ request }) => {
         requested.push(target(request));
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").VolunteerListEnvelope>({
           ...page("volunteer", { page: 2, limit: 10 }),
-          items: [{ id: "v", name: "V", help_periods: [{ id: 1, first_help_day: "2026-10-06" }] }],
+          items: [
+            {
+              address: "",
+              national_register_number: null,
+              eid_document_number: null,
+              anonymised: false,
+              retired_roles: {},
+              role_history: {},
+              oidc_subject: null,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              id: "v",
+              name: "V",
+              help_periods: [
+                { last_help_day: null, notes: "", id: 1, first_help_day: "2026-10-06" },
+              ],
+            },
+          ],
         });
       }),
     );

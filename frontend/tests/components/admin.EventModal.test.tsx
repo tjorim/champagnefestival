@@ -1,9 +1,10 @@
+import { jsonResponse } from "@/mocks/response";
 import { eventOut } from "@/mocks/data/builders";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import EventModal from "@/components/admin/EventModal";
 import type { Edition } from "@/api-types";
 
@@ -67,7 +68,11 @@ const save = () => fireEvent.click(screen.getByRole("button", { name: "Save" }))
 
 beforeEach(() => {
   setLocale("en", { reload: false });
-  server.use(http.get("/api/events/translation", () => HttpResponse.json({ languages: [] })));
+  server.use(
+    http.get("/api/events/translation", () =>
+      jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] }),
+    ),
+  );
 });
 
 afterEach(() => {
@@ -166,7 +171,11 @@ describe("EventModal translations", () => {
   });
 
   it("keeps an existing event's category and does not save without one", async () => {
-    server.use(http.get("/api/event-categories", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/event-categories", () =>
+        jsonResponse<import("@/api-types").CategoryOut[]>([]),
+      ),
+    );
     const onSave = mount({ ...existingEvent, category: "" });
 
     save();
@@ -177,11 +186,17 @@ describe("EventModal translations", () => {
 
   it("offers a draft translation that fills only the empty target and stays editable", async () => {
     server.use(
-      http.get("/api/events/translation", () => HttpResponse.json({ languages: ["nl", "en"] })),
+      http.get("/api/events/translation", () =>
+        jsonResponse<import("@/api-types").TranslationCapabilities>({
+          languages: ["nl", "en"],
+        }),
+      ),
       http.post("/api/events/translation", async ({ request }) => {
         const body = (await request.json()) as { text: string; source: string; target: string };
         expect(body).toEqual({ text: "Openingsavond", source: "nl", target: "en" });
-        return HttpResponse.json({ text: "Opening evening" });
+        return jsonResponse<import("@/api-types").TranslationDraft>({
+          text: "Opening evening",
+        });
       }),
     );
     mount(existingEvent);
@@ -200,7 +215,37 @@ describe("EventModal translations", () => {
   });
 
   it("does not submit the event form when Enter is pressed in an order question field", async () => {
-    server.use(http.get("/api/events/event-01", () => HttpResponse.json({ order_questions: [] })));
+    server.use(
+      http.get("/api/events/event-01", () =>
+        jsonResponse<import("@/api-types").EventOut>({
+          title: "",
+          description: "",
+          title_nl: null,
+          title_fr: null,
+          title_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          id: "",
+          edition_id: "",
+          date: "2026-01-01",
+          start_time: "",
+          end_time: null,
+          category: "",
+          volunteers_only: false,
+          members_only: false,
+          registration_required: false,
+          registrations_open_from: null,
+          registrations_close_at: null,
+          active: false,
+          edition: null,
+          products: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          order_questions: [],
+        }),
+      ),
+    );
     const onSave = mount(existingEvent);
 
     fireEvent.click(screen.getByRole("button", { name: "Order questions" }));

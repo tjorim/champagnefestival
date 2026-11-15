@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 for (const kind of ["announcements", "composer"] as const) {
-  for (const width of [1366, 390]) {
+  for (const width of [1366, 390] as const) {
     test(`${kind} uses guarded create/edit dialogs at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
       // Isolate record writes from the shared demo data, including the public announcement feed.

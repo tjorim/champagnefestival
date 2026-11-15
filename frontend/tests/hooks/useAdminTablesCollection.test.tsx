@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it } from "vitest";
@@ -166,7 +167,12 @@ describe("admin tables collection in the admin hooks", () => {
     const { result } = await renderLoaded();
     server.use(
       http.delete("/api/tables/:id", () =>
-        HttpResponse.json({ detail: "allocated" }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "allocated",
+          },
+          { status: 409 },
+        ),
       ),
     );
 
@@ -177,7 +183,11 @@ describe("admin tables collection in the admin hooks", () => {
 
   it("refreshes the tables through loadData", async () => {
     const { result } = await renderLoaded();
-    server.use(http.get("/api/tables", () => HttpResponse.json(seedTables.slice(0, 1))));
+    server.use(
+      http.get("/api/tables", () =>
+        jsonResponse<import("@/api-types").TableOut[]>(seedTables.slice(0, 1)),
+      ),
+    );
 
     await act(() => result.current.queries.loadData());
 

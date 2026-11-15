@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
 import { delay } from "msw/utils/delay";
@@ -48,7 +49,9 @@ let entries: ReturnType<typeof entry>[];
 
 function serve() {
   server.use(
-    http.get("/api/waitlist/scopes", () => HttpResponse.json(scopes)),
+    http.get("/api/waitlist/scopes", () =>
+      jsonResponse<import("@/api-types").WaitlistScopes>(scopes),
+    ),
     http.get("/api/waitlist", ({ request }) => {
       const url = new URL(request.url);
       requests.push(url);
@@ -58,7 +61,12 @@ function serve() {
           status === "all" ||
           (status === "handled" ? item.handled_at !== null : item.handled_at === null),
       );
-      return HttpResponse.json({ items, total: items.length, limit: 20, page: 1 });
+      return jsonResponse<import("@/api-types").WaitlistEntryListEnvelope>({
+        items,
+        total: items.length,
+        limit: 20,
+        page: 1,
+      });
     }),
   );
 }
@@ -136,7 +144,7 @@ describe("WaitlistManagement", () => {
         await delay(50);
         const target = entries.find((item) => item.id === params.id)!;
         target.handled_at = "2026-09-03T10:00:00Z";
-        return HttpResponse.json(target);
+        return jsonResponse<import("@/api-types").WaitlistEntryAdminOut>(target);
       }),
     );
     renderQueue();
@@ -201,7 +209,12 @@ describe("WaitlistManagement", () => {
   it("treats a delete of an already-removed entry as done", async () => {
     server.use(
       http.delete("/api/waitlist/:id", () =>
-        HttpResponse.json({ detail: "Waitlist entry not found" }, { status: 404 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Waitlist entry not found",
+          },
+          { status: 404 },
+        ),
       ),
     );
     renderQueue();

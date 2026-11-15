@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { eventOut, productOut } from "@/mocks/data/builders";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, it, expect, vi } from "vitest";
@@ -171,7 +172,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", async ({ request }) => {
         requestBody = (await request.json()) as { new_editions_opt_in?: boolean };
-        return HttpResponse.json({ id: "reg-opt-in" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-opt-in",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -201,7 +253,58 @@ describe("RegistrationModal component", () => {
       server.use(
         http.post("/api/registrations", async ({ request }) => {
           requestBody = (await request.json()) as { form_start_time?: string };
-          return HttpResponse.json({ id: "reg-start-time" }, { status: 201 });
+          return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+            {
+              order_answers: [],
+              booked_table_quantity: 0,
+              allocations: [],
+              person_id: "",
+              person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+              event_id: "",
+              event: {
+                title: "",
+                description: "",
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                id: "",
+                edition_id: "",
+                date: "2026-01-01",
+                start_time: "",
+                end_time: null,
+                category: "",
+                volunteers_only: false,
+                members_only: false,
+                registration_required: false,
+                registrations_open_from: null,
+                registrations_close_at: null,
+                active: false,
+                order_questions: [],
+                products: [],
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+              },
+              guest_count: 0,
+              order_items: [],
+              notes: "",
+              table_id: null,
+              status: "pending",
+              payment_status: "unpaid",
+              amount_due: null,
+              amount_paid: "0",
+              refund_due: "0",
+              checked_in: false,
+              checked_in_at: null,
+              strap_issued: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              id: "reg-start-time",
+            },
+            { status: 201 },
+          );
         }),
       );
       const view = renderModal({ show: false });
@@ -229,7 +332,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", async ({ request }) => {
         requestBody = (await request.json()) as { preferred_language?: string };
-        return HttpResponse.json({ id: "reg-language" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-language",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -264,7 +418,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", ({ request }) => {
         authorization = request.headers.get("Authorization") ?? "";
-        return HttpResponse.json({ id: "reg-owned" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-owned",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -347,7 +552,7 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/waitlist", async ({ request }) => {
         submittedBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ok: true });
+        return jsonResponse<import("@/api-types").OkOut>({ ok: true });
       }),
     );
 
@@ -384,7 +589,12 @@ describe("RegistrationModal component", () => {
   it("shows error message on submission failure (server error)", async () => {
     server.use(
       http.post("/api/registrations", () =>
-        HttpResponse.json({ error: "Internal server error" }, { status: 500 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            error: "Internal server error",
+          },
+          { status: 500 },
+        ),
       ),
     );
 
@@ -597,7 +807,58 @@ it("submits optional event answers with the order using translated labels", asyn
   server.use(
     http.post("/api/registrations", async ({ request }) => {
       body = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({ id: "with-answers" }, { status: 201 });
+      return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+        {
+          order_answers: [],
+          booked_table_quantity: 0,
+          allocations: [],
+          person_id: "",
+          person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+          event_id: "",
+          event: {
+            title: "",
+            description: "",
+            title_nl: null,
+            title_fr: null,
+            title_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            id: "",
+            edition_id: "",
+            date: "2026-01-01",
+            start_time: "",
+            end_time: null,
+            category: "",
+            volunteers_only: false,
+            members_only: false,
+            registration_required: false,
+            registrations_open_from: null,
+            registrations_close_at: null,
+            active: false,
+            order_questions: [],
+            products: [],
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          guest_count: 0,
+          order_items: [],
+          notes: "",
+          table_id: null,
+          status: "pending",
+          payment_status: "unpaid",
+          amount_due: null,
+          amount_paid: "0",
+          refund_due: "0",
+          checked_in: false,
+          checked_in_at: null,
+          strap_issued: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "with-answers",
+        },
+        { status: 201 },
+      );
     }),
   );
   const base = {

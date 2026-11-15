@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
@@ -8,8 +9,10 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-function category(key: string, nl: string, order: number) {
+function category(key: string, nl: string, order: number): import("@/api-types").CategoryOut {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     key,
     label: nl,
     label_nl: nl,
@@ -44,7 +47,10 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     kind = current;
     server.use(
       http.get(path(), () =>
-        HttpResponse.json([category("tasting", "Degustatie", 10), category("gala", "Gala", 20)]),
+        jsonResponse<import("@/api-types").CategoryOut[]>([
+          category("tasting", "Degustatie", 10),
+          category("gala", "Gala", 20),
+        ]),
       ),
     );
   });
@@ -62,7 +68,10 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     server.use(
       http.post(path(), async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json(category("workshop", "Workshop", 30), { status: 201 });
+        return jsonResponse<import("@/api-types").CategoryOut>(
+          category("workshop", "Workshop", 30),
+          { status: 201 },
+        );
       }),
     );
     mount();
@@ -89,7 +98,10 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     server.use(
       http.post(path(), () => {
         post();
-        return HttpResponse.json({}, { status: 201 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 201 },
+        );
       }),
     );
     mount();
@@ -111,7 +123,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     server.use(
       http.put(`${path()}/:key`, async ({ request, params }) => {
         sent = { url: String(params.key), body: await request.json() };
-        return HttpResponse.json(category("gala", "Gala", 20));
+        return jsonResponse<import("@/api-types").CategoryOut>(category("gala", "Gala", 20));
       }),
     );
     mount();
@@ -132,7 +144,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     server.use(
       http.delete(`${path()}/:key`, () =>
         HttpResponse.json(
-          {
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
             detail: "Cannot delete category 'gala': 2 item(s) still use it.",
             code: "category_in_use",
           },

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { eventOut, venueOut } from "@/mocks/data/builders";
 import { editionOut } from "@/mocks/data/builders";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -111,10 +112,12 @@ function renderModal(questions: import("@/api-types").PollQuestionOut[], backdro
   server.use(
     http.get("/api/poll-questions", ({ request }) => {
       const editionId = new URL(request.url).searchParams.get("edition_id");
-      return HttpResponse.json(questions.filter((q) => q.edition_id === editionId));
+      return jsonResponse<import("@/api-types").PollQuestionOut[]>(
+        questions.filter((q) => q.edition_id === editionId),
+      );
     }),
     http.get("/api/poll-questions/orders", () =>
-      HttpResponse.json(
+      jsonResponse<import("@/api-types").PollOrdersOut>(
         backdrop.orders ?? {
           edition_id: "2026-october",
           questions: [],
@@ -123,8 +126,12 @@ function renderModal(questions: import("@/api-types").PollQuestionOut[], backdro
         },
       ),
     ),
-    http.get("/api/events", () => HttpResponse.json(backdrop.events ?? [])),
-    http.get("/api/editions", () => HttpResponse.json(backdrop.editions ?? [])),
+    http.get("/api/events", () =>
+      jsonResponse<import("@/api-types").EventOut[]>(backdrop.events ?? []),
+    ),
+    http.get("/api/editions", () =>
+      jsonResponse<import("@/api-types").EditionOut[]>(backdrop.editions ?? []),
+    ),
   );
   const queryClient = createTestQueryClient();
   return render(
@@ -168,7 +175,7 @@ describe("EditionPollModal questions", () => {
       http.post("/api/poll-questions", async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         created.push(body);
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
           question(
             `q-new-${created.length}`,
             body.kind as "yes_no" | "meals",
@@ -211,7 +218,33 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions", () => {
         post();
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
+          {
+            event_id: null,
+            id: "",
+            edition_id: "",
+            kind: "yes_no",
+            title: "",
+            title_nl: "",
+            title_fr: null,
+            title_en: null,
+            description: "",
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            sort_order: 0,
+            closes_at: null,
+            closed: false,
+            options: [],
+            answered_count: 0,
+            yes_count: 0,
+            no_count: 0,
+            people_total: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -230,7 +263,9 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.put("/api/poll-questions/q-dinner", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(question("q-dinner", "yes_no", String(body.title_nl)));
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
+          question("q-dinner", "yes_no", String(body.title_nl)),
+        );
       }),
     );
     const user = userEvent.setup();
@@ -253,7 +288,7 @@ describe("EditionPollModal questions", () => {
       http.put("/api/poll-questions/:id", async ({ request, params }) => {
         const body = (await request.json()) as { closes_at: string | null };
         sent.push({ url: String(params.id), body });
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
           question(String(params.id), "yes_no", "Eten op zondag?", {
             closes_at: body.closes_at,
             closed: body.closes_at !== null && new Date(body.closes_at) <= new Date(),
@@ -341,7 +376,13 @@ describe("EditionPollModal questions", () => {
   it("explains a refused deletion from the error code", async () => {
     server.use(
       http.delete("/api/poll-questions/q-dinner", () =>
-        HttpResponse.json({ detail: "closed", code: "poll_question_closed" }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "closed",
+            code: "poll_question_closed",
+          },
+          { status: 409 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -359,7 +400,7 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions/reorder", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([meals(), dinner()]);
+        return jsonResponse<import("@/api-types").PollQuestionOut[]>([meals(), dinner()]);
       }),
     );
     const user = userEvent.setup();
@@ -386,9 +427,12 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions/copy", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([question("q-copied", "yes_no", "Gekopieerde vraag")], {
-          status: 201,
-        });
+        return jsonResponse<import("@/api-types").PollQuestionOut[]>(
+          [question("q-copied", "yes_no", "Gekopieerde vraag")],
+          {
+            status: 201,
+          },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -433,7 +477,10 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options", async ({ request }) => {
         created = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(option("opt-new", String(created.label_nl)), { status: 201 });
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          option("opt-new", String(created.label_nl)),
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -467,7 +514,24 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options", () => {
         post();
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          {
+            id: "",
+            question_id: "",
+            edition_id: "",
+            label: "",
+            label_nl: "",
+            label_fr: null,
+            label_en: null,
+            dietary_tags: [],
+            sort_order: 0,
+            total_quantity: 0,
+            volunteer_count: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -490,7 +554,9 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.put("/api/poll-options/opt-1", async ({ request }) => {
         updated = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(option("opt-1", String(updated.label_nl), 5, 3));
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          option("opt-1", String(updated.label_nl), 5, 3),
+        );
       }),
     );
     const user = userEvent.setup();
@@ -549,7 +615,10 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options/reorder", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([option("opt-2", "Tomatensoep"), option("opt-1", "Vol-au-vent")]);
+        return jsonResponse<import("@/api-types").PollOptionOut[]>([
+          option("opt-2", "Tomatensoep"),
+          option("opt-1", "Vol-au-vent"),
+        ]);
       }),
     );
     const user = userEvent.setup();
@@ -672,7 +741,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         sent = { url: request.url, body: (await request.json()) as Record<string, unknown> };
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -720,7 +799,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const closedOrders = {
@@ -763,7 +852,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", () => {
         put();
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -809,7 +908,17 @@ describe("additional poll kinds", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -857,7 +966,7 @@ it("links attendance to a volunteer event and locks the event selector after ans
   server.use(
     http.post("/api/poll-questions", async ({ request }) => {
       submitted = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json(
+      return jsonResponse<import("@/api-types").PollQuestionOut>(
         question("q-linked", "yes_no", "Eet je mee?", {
           event_id: "volunteer-dinner",
           answered_count: 1,

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { afterEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
@@ -72,10 +73,10 @@ describe("admin tables collection", () => {
       http.put("/api/tables/:id", async ({ request, params }) => {
         bodies.push((await request.json()) as Record<string, unknown>);
         const current = seedTables.find((t) => t.id === params.id)!;
-        return HttpResponse.json({ ...current, ...bodies.at(-1) });
+        return jsonResponse<import("@/api-types").TableOut>({ ...current, ...bodies.at(-1) });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(
+        jsonResponse<import("@/api-types").TableOut[]>(
           seedTables.map((t) => (t.id === "table-01" ? { ...t, x: 61, y: 72 } : t)),
         ),
       ),
@@ -99,7 +100,7 @@ describe("admin tables collection", () => {
     server.use(
       http.put("/api/tables/:id", async ({ request }) => {
         bodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json(seedTables[0]);
+        return jsonResponse<import("@/api-types").TableOut>(seedTables[0]!);
       }),
     );
 
@@ -125,7 +126,14 @@ describe("admin tables collection", () => {
   it("rolls the optimistic update back when the server rejects it", async () => {
     const { collection } = await createLoadedCollection();
     server.use(
-      http.put("/api/tables/:id", () => HttpResponse.json({ detail: "nope" }, { status: 500 })),
+      http.put("/api/tables/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "nope",
+          },
+          { status: 500 },
+        ),
+      ),
     );
 
     const tx = collection.update("table-01", (draft) => {
@@ -160,7 +168,9 @@ describe("admin tables collection", () => {
         return new HttpResponse(null, { status: 204 });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+        jsonResponse<import("@/api-types").TableOut[]>(
+          seedTables.filter((t) => t.id !== "table-02"),
+        ),
       ),
     );
 
@@ -178,7 +188,12 @@ describe("admin tables collection", () => {
     const { collection } = await createLoadedCollection();
     server.use(
       http.delete("/api/tables/:id", () =>
-        HttpResponse.json({ detail: "allocated" }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "allocated",
+          },
+          { status: 409 },
+        ),
       ),
     );
 
@@ -219,7 +234,11 @@ describe("admin tables collection", () => {
 
   it("refetches the server state on demand", async () => {
     const { collection } = await createLoadedCollection();
-    server.use(http.get("/api/tables", () => HttpResponse.json(seedTables.slice(0, 1))));
+    server.use(
+      http.get("/api/tables", () =>
+        jsonResponse<import("@/api-types").TableOut[]>(seedTables.slice(0, 1)),
+      ),
+    );
 
     await refetchAdminTables(collection);
 
@@ -262,8 +281,22 @@ describe("admin tables writes after an API call", () => {
     server.use(
       http.post("/api/tables", async () => {
         await gate;
-        return HttpResponse.json(
-          { ...seedTables[0], id: "late-table", name: "Late" },
+        return jsonResponse<import("@/api-types").TableOut>(
+          {
+            event_id: "",
+            capacity: 0,
+            x: 0,
+            y: 0,
+            table_type_id: "",
+            rotation: 0,
+            layout_id: "",
+            registration_ids: [],
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            ...seedTables[0],
+            id: "late-table",
+            name: "Late",
+          },
           { status: 201 },
         );
       }),
@@ -290,7 +323,9 @@ describe("admin tables writes after an API call", () => {
         return new HttpResponse(null, { status: 204 });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+        jsonResponse<import("@/api-types").TableOut[]>(
+          seedTables.filter((t) => t.id !== "table-02"),
+        ),
       ),
     );
 
@@ -378,7 +413,21 @@ describe("admin tables live events", () => {
     cleanups.push(registerAdminTablesCollection(collection));
     server.use(
       http.get("/api/tables/:id", () =>
-        HttpResponse.json({ ...seedTables[0], name: "Renamed elsewhere" }),
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Renamed elsewhere",
+        }),
       ),
     );
 
@@ -405,7 +454,10 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", () => {
         fetched = true;
-        return HttpResponse.json(null, { status: 404 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        );
       }),
     );
 
@@ -419,14 +471,46 @@ describe("admin tables live events", () => {
     const { collection } = await createLoadedCollection();
     cleanups.push(registerAdminTablesCollection(collection));
     server.use(
-      http.get("/api/tables/:id", () => HttpResponse.json({ ...seedTables[0], name: "Newest" })),
+      http.get("/api/tables/:id", () =>
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Newest",
+        }),
+      ),
     );
     const newest = seatingEnvelope();
     const stale = seatingEnvelope({ ts: new Date(Date.parse(newest.ts) - 5000).toISOString() });
 
     await patchAdminTableLiveEvent(newest, authHeaders);
     server.use(
-      http.get("/api/tables/:id", () => HttpResponse.json({ ...seedTables[0], name: "Stale" })),
+      http.get("/api/tables/:id", () =>
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Stale",
+        }),
+      ),
     );
     await patchAdminTableLiveEvent(stale, authHeaders);
 
@@ -443,7 +527,21 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", async () => {
         await gate;
-        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+        return jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Late response",
+        });
       }),
     );
 
@@ -467,7 +565,21 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", async () => {
         await gate;
-        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+        return jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Late response",
+        });
       }),
     );
 

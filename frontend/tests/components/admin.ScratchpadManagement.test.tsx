@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
 import { describe, expect, it } from "vitest";
@@ -7,14 +8,17 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 describe("ScratchpadManagement", () => {
   it("loads existing content, saves an edit, and shows a confirmation", async () => {
-    let submitted: Record<string, unknown> | null = null;
+    let submitted: import("@/api-types").EditionScratchpadUpdate | null = null;
     server.use(
       http.get("/api/editions/edition-1/scratchpad", () =>
-        HttpResponse.json({ content: "Fri: bar", updated_at: "2026-09-01T00:00:00Z" }),
+        jsonResponse<import("@/api-types").EditionScratchpadOut>({
+          content: "Fri: bar",
+          updated_at: "2026-09-01T00:00:00Z",
+        }),
       ),
       http.put("/api/editions/edition-1/scratchpad", async ({ request }) => {
-        submitted = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({
+        submitted = (await request.json()) as import("@/api-types").EditionScratchpadUpdate;
+        return jsonResponse<import("@/api-types").EditionScratchpadOut>({
           content: submitted.content,
           updated_at: "2026-09-02T00:00:00Z",
         });
@@ -42,7 +46,10 @@ describe("ScratchpadManagement", () => {
   it("disables Save until the content changes", async () => {
     server.use(
       http.get("/api/editions/edition-1/scratchpad", () =>
-        HttpResponse.json({ content: "existing note", updated_at: "2026-09-01T00:00:00Z" }),
+        jsonResponse<import("@/api-types").EditionScratchpadOut>({
+          content: "existing note",
+          updated_at: "2026-09-01T00:00:00Z",
+        }),
       ),
     );
 
@@ -65,10 +72,18 @@ describe("ScratchpadManagement", () => {
   it("shows an error alert when saving fails", async () => {
     server.use(
       http.get("/api/editions/edition-1/scratchpad", () =>
-        HttpResponse.json({ content: "", updated_at: "2026-09-01T00:00:00Z" }),
+        jsonResponse<import("@/api-types").EditionScratchpadOut>({
+          content: "",
+          updated_at: "2026-09-01T00:00:00Z",
+        }),
       ),
       http.put("/api/editions/edition-1/scratchpad", () =>
-        HttpResponse.json({ detail: "boom" }, { status: 500 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "boom",
+          },
+          { status: 500 },
+        ),
       ),
     );
 

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +16,8 @@ const texts = {
   description_en: null,
 };
 const row = { id: 42, name: "House", type: "producer", active: true, ...texts };
-const change = {
+const change: import("@/api-types").OrganizationChangeOut = {
+  created_at: "2026-01-01T00:00:00Z",
   id: "proposal",
   organization_id: 42,
   organization_name: "House",
@@ -42,7 +44,11 @@ afterEach(() => {
 
 describe("organization proposals", () => {
   it("shows saved content before editing and keeps the pending proposal separate", async () => {
-    server.use(http.get("/api/me/organizations/42/changes", () => HttpResponse.json([change])));
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
     mount(
       <MyOrganizationsSection
         organizations={[{ ...row, image: "/saved.svg" }]}
@@ -58,10 +64,12 @@ describe("organization proposals", () => {
   });
   it.each([409, 500])("explains manager submission errors for HTTP %s", async (status) => {
     server.use(
-      http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
       http.post("/api/me/organizations/42/changes", () =>
         HttpResponse.json(
-          {
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
             detail: "Submission failed",
             ...(status === 409 ? { code: "organization_change_conflict" } : {}),
           },
@@ -87,10 +95,15 @@ describe("organization proposals", () => {
 
   it("falls back to the generic message for a conflict whose code is unknown", async () => {
     server.use(
-      http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
       http.post("/api/me/organizations/42/changes", () =>
         HttpResponse.json(
-          { detail: "A brand new English rule.", code: "not_yet_translated" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "A brand new English rule.",
+            code: "not_yet_translated",
+          },
           { status: 409 },
         ),
       ),
@@ -111,12 +124,19 @@ describe("organization proposals", () => {
   });
 
   it("sends a reason only for rejection even if text was entered before acceptance", async () => {
-    server.use(http.get("/api/organizations/changes", () => HttpResponse.json([change])));
+    server.use(
+      http.get("/api/organizations/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
     const bodies: unknown[] = [];
     server.use(
       http.post("/api/organizations/changes/proposal/decision", async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ ...change, status: "accepted" });
+        return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+          ...change,
+          status: "accepted",
+        });
       }),
     );
     mount(<OrganizationChangeReview authHeaders={() => ({})} onDecided={() => {}} />);
@@ -128,7 +148,11 @@ describe("organization proposals", () => {
   });
 
   it("only submits changed allowed fields and reuses the ID after an ambiguous failure", async () => {
-    server.use(http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
+    );
     const bodies: Record<string, unknown>[] = [];
     server.use(
       http.post("/api/me/organizations/42/changes", async ({ request }) => {
@@ -157,7 +181,7 @@ describe("organization proposals", () => {
   it("shows rejected state and reason, and identifies superseded fields", async () => {
     server.use(
       http.get("/api/me/organizations/42/changes", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([
           {
             ...change,
             status: "rejected",
@@ -174,12 +198,19 @@ describe("organization proposals", () => {
   });
 
   it("reviews current and proposed text in every language and sends rejection reason", async () => {
-    server.use(http.get("/api/organizations/changes", () => HttpResponse.json([change])));
+    server.use(
+      http.get("/api/organizations/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
     const bodies: unknown[] = [];
     server.use(
       http.post("/api/organizations/changes/proposal/decision", async ({ request }) => {
         bodies.push(await request.json());
-        return HttpResponse.json({ ...change, status: "rejected" });
+        return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+          ...change,
+          status: "rejected",
+        });
       }),
     );
     const onDecided = vi.fn();
@@ -208,13 +239,20 @@ describe("organization proposals", () => {
 });
 
 it("explains a stale review decision and requires refreshing instead of applying again", async () => {
-  server.use(http.get("/api/organizations/changes", () => HttpResponse.json([change])));
+  server.use(
+    http.get("/api/organizations/changes", () =>
+      jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+    ),
+  );
   const decision = vi.fn();
   server.use(
     http.post("/api/organizations/changes/proposal/decision", () => {
       decision();
       return HttpResponse.json(
-        { detail: "Already replaced", code: "organization_change_conflict" },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "Already replaced",
+          code: "organization_change_conflict",
+        },
         { status: 409 },
       );
     }),

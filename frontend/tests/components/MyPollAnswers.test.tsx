@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import type { VolunteerPollQuestionOut, VolunteerPollOut } from "@/api-types";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -43,7 +44,7 @@ function setup(closed = false) {
   const writes: unknown[] = [];
   server.use(
     http.get("/api/me/volunteer/poll", () =>
-      HttpResponse.json<VolunteerPollOut>({ edition_id: "edition", questions, note: null }),
+      jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null }),
     ),
     http.put("/api/me/volunteer/poll/questions/:id", async ({ request, params }) => {
       const body = await request.json();
@@ -52,7 +53,7 @@ function setup(closed = false) {
         questions.find((q) => q.id === params.id)!,
         body,
       );
-      return HttpResponse.json<VolunteerPollOut>({ edition_id: "edition", questions, note: null });
+      return jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null });
     }),
   );
   render(
@@ -114,7 +115,12 @@ it("preserves a failed draft while serializing delayed saves", async () => {
       await new Promise<void>((resolve) => {
         finish = resolve;
       });
-      return HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 500 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "PRIVATE DIAGNOSTIC",
+        },
+        { status: 500 },
+      );
     }),
   );
   const user = userEvent.setup();

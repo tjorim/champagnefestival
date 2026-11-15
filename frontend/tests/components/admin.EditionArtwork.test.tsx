@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { venueOut } from "@/mocks/data/builders";
 import { editionOut } from "@/mocks/data/builders";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -57,7 +58,9 @@ describe("EditionArtwork", () => {
           file: body.get("file") as File,
           authorization: request.headers.get("authorization"),
         };
-        return HttpResponse.json(apiEdition({ flyer_image: flyerPath }));
+        return jsonResponse<import("@/api-types").EditionOut>(
+          apiEdition({ flyer_image: flyerPath }),
+        );
       }),
     );
     const onUpdated = mount(editionOut(apiEdition()));
@@ -85,7 +88,9 @@ describe("EditionArtwork", () => {
       http.post("/api/editions/2026-october/artwork/share", () => {
         calls++;
         return HttpResponse.json(
-          { detail: "The share image must be an image of 1.91:1." },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "The share image must be an image of 1.91:1.",
+          },
           { status: 422 },
         );
       }),
@@ -107,7 +112,7 @@ describe("EditionArtwork", () => {
   it("clears an uploaded slot", async () => {
     server.use(
       http.delete("/api/editions/2026-october/artwork/flyer", () =>
-        HttpResponse.json(apiEdition({ flyer_image: null })),
+        jsonResponse<import("@/api-types").EditionOut>(apiEdition({ flyer_image: null })),
       ),
     );
     const onUpdated = mount(editionOut(apiEdition({ flyer_image: flyerPath })));

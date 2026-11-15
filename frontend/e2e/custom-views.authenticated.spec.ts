@@ -11,7 +11,7 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
+] as const) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} admin venue plan at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
@@ -30,7 +30,7 @@ for (const theme of [
       );
       // Room metres and scaled canvas pixels express the same proportions.
       const ratio = await canvas.evaluate((el) => {
-        const [width, height] = getComputedStyle(el).aspectRatio.split("/").map(Number);
+        const [width = 0, height = 0] = getComputedStyle(el).aspectRatio.split("/").map(Number);
         return width / height;
       });
       expect(ratio).toBeCloseTo(50 / 80, 6);

@@ -13,7 +13,7 @@ test("one online visit makes public information available after an offline reloa
         : path === "/api/editions/active"
           ? {
               ...activeEdition,
-              events: seedEvents.filter((event) => event.edition_id === activeEdition.id),
+              events: seedEvents.filter((event) => event.edition_id === activeEdition!.id),
             }
           : path === "/api/faq/active"
             ? [

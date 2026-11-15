@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { axe } from "jest-axe";
@@ -77,7 +78,10 @@ describe("ContentManagement", () => {
     server.use(
       http.put("/api/organizations/:id", async ({ request, params }) => {
         capturedBody = await request.json();
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
           id: Number(params.id),
           name: "Maison Moët & Chandon",
           image: "/images/moet.png",
@@ -86,6 +90,7 @@ describe("ContentManagement", () => {
           type: "producer",
           contact_person_id: "person-01",
           contact_person: {
+            preferred_language: null,
             id: "person-01",
             name: "Alice Dupont",
             email: "alice@moet.com",
@@ -125,7 +130,10 @@ describe("ContentManagement", () => {
     const deleted: string[] = [];
     server.use(
       http.put("/api/organizations/:id", ({ params }) =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
           id: Number(params.id),
           name: "Maison Moët & Chandon",
           image: "/images/moet.png",
@@ -140,7 +148,7 @@ describe("ContentManagement", () => {
       ),
       http.delete("/api/organizations/:id", ({ params }) => {
         deleted.push(String(params.id));
-        return HttpResponse.json({ deleted: true, id: Number(params.id) });
+        return new HttpResponse(null, { status: 204 });
       }),
     );
     renderContentManagement();
@@ -177,7 +185,12 @@ describe("ContentManagement", () => {
     server.use(
       http.put("/api/organizations/:id", async ({ params }) => {
         events.push("request");
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          website: "",
+          contact_person: null,
           id: Number(params.id),
           name: "Maison Moët & Chandon",
           image: "/images/moet.png",
@@ -207,7 +220,12 @@ describe("ContentManagement", () => {
   it("shows an error alert when loading organizations fails", async () => {
     server.use(
       http.get("/api/organizations", () =>
-        HttpResponse.json({ detail: "Server error" }, { status: 500 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Server error",
+          },
+          { status: 500 },
+        ),
       ),
     );
 

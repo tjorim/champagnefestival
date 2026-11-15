@@ -1,3 +1,4 @@
+import type { EditionPublicOut } from "@/api-types";
 import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
 import { fetchEditions } from "@/utils/adminContentApi";
 import { ApiError } from "@/utils/apiErrors";
@@ -12,12 +13,9 @@ export interface VenuePlanEditionChoice {
   label: string;
 }
 
-function editionChoice(edition: {
-  id: string;
-  month: string;
-  year: number;
-  venue: { name: string };
-}): VenuePlanEditionChoice {
+function editionChoice(
+  edition: Pick<EditionPublicOut, "id" | "month" | "year" | "venue">,
+): VenuePlanEditionChoice {
   return { id: edition.id, label: `${editionDisplayName(edition)} · ${edition.venue.name}` };
 }
 
@@ -34,7 +32,7 @@ export async function fetchVenuePlanEditionChoices(
   }
   const response = await fetch("/api/editions/upcoming");
   if (!response.ok) throw new ApiError(m.venue_plan_editions_error(), { status: response.status });
-  const editions = (await response.json()) as Parameters<typeof editionChoice>[0][];
+  const editions: EditionPublicOut[] = await response.json();
   return Array.isArray(editions) ? editions.map(editionChoice) : [];
 }
 

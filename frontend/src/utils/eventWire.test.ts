@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { server } from "@/mocks/server";
 import { editionOut, eventOut, productOut } from "@/mocks/data/builders";
 import { fetchEditionEvents, fetchEditions, fetchEventProducts } from "./adminContentApi";
@@ -17,10 +18,12 @@ describe("generated event, product and edition wire shapes", () => {
     const edition = editionOut({ events: [event] });
     const registration = registrationOut({ event });
     server.use(
-      http.get("/api/editions", () => HttpResponse.json([edition])),
-      http.get("/api/events", () => HttpResponse.json([event])),
-      http.get("/api/products", () => HttpResponse.json([product])),
-      http.get("/api/registrations/reg-1", () => HttpResponse.json(registration)),
+      http.get("/api/editions", () => jsonResponse<import("@/api-types").EditionOut[]>([edition])),
+      http.get("/api/events", () => jsonResponse<import("@/api-types").EventOut[]>([event])),
+      http.get("/api/products", () => jsonResponse<import("@/api-types").ProductOut[]>([product])),
+      http.get("/api/registrations/reg-1", () =>
+        jsonResponse<import("@/api-types").RegistrationOutWithToken>(registration),
+      ),
     );
     expect(await fetchEditions(headers)).toEqual([edition]);
     expect(await fetchEditionEvents(edition.id, headers)).toEqual([event]);
@@ -54,7 +57,11 @@ describe("generated event, product and edition wire shapes", () => {
     const event: EventPublicOut = { ...base, products: [product] };
     const { organizations: _organizations, ...baseEdition } = editionOut();
     const edition: EditionPublicOut = { ...baseEdition, dates: ["2026-03-06"], events: [event] };
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(edition)));
+    server.use(
+      http.get("/api/editions/active", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut>(edition),
+      ),
+    );
     const result = await fetchActiveEdition();
     expect(result.events).toEqual([event]);
     expect(result.venue).toEqual(edition.venue);

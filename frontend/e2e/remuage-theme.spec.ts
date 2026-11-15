@@ -88,7 +88,7 @@ test.describe("Remuage visual theme", () => {
       "sponsors",
       "contact",
       "registrations",
-    ]) {
+    ] as const) {
       await expect(page.locator(`#${id}`)).toBeAttached();
     }
     // The mock data has no upcoming bourses or capsule exchanges, so that section is left out.

@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw/http";
+import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import SettingsManagement from "@/components/admin/SettingsManagement";
 import { queryKeys } from "@/utils/queryKeys";
@@ -7,6 +8,10 @@ import { server } from "@/mocks/server";
 import { createTestQueryClientHarness, createTestQueryClientWrapper } from "../utils/queryClient";
 
 const initialSettings = {
+  member_limit: null,
+  member_inactivity_months: null,
+  stamp_card_type_id: null,
+  updated_at: "2026-01-01T00:00:00Z",
   maintenance_mode: false,
   public_email: "old@example.com",
   public_phone: "+32 59 11 22 33",
@@ -15,7 +20,11 @@ const initialSettings = {
 
 describe("SettingsManagement", () => {
   it("renders the maintenance switch and the contact details as separate sections", async () => {
-    server.use(http.get("/api/settings", () => HttpResponse.json(initialSettings)));
+    server.use(
+      http.get("/api/settings", () =>
+        jsonResponse<import("@/api-types").AppSettingsOut>(initialSettings),
+      ),
+    );
 
     const maintenance = render(
       <SettingsManagement authHeaders={() => ({})} section="maintenance" />,
@@ -38,12 +47,12 @@ describe("SettingsManagement", () => {
     const saved: Record<string, unknown>[] = [];
     let current = initialSettings;
     server.use(
-      http.get("/api/settings", () => HttpResponse.json(current)),
+      http.get("/api/settings", () => jsonResponse<import("@/api-types").AppSettingsOut>(current)),
       http.put("/api/settings", async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         saved.push(body);
         current = { ...current, ...body } as typeof current;
-        return HttpResponse.json(current);
+        return jsonResponse<import("@/api-types").AppSettingsOut>(current);
       }),
     );
     render(<SettingsManagement authHeaders={() => ({})} section="maintenance" />, {
@@ -77,10 +86,15 @@ describe("SettingsManagement", () => {
   it("loads and saves all public contact settings without retrying", async () => {
     let submitted: Record<string, unknown> | null = null;
     server.use(
-      http.get("/api/settings", () => HttpResponse.json(initialSettings)),
+      http.get("/api/settings", () =>
+        jsonResponse<import("@/api-types").AppSettingsOut>(initialSettings),
+      ),
       http.put("/api/settings", async ({ request }) => {
         submitted = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...initialSettings, ...submitted });
+        return jsonResponse<import("@/api-types").AppSettingsOut>({
+          ...initialSettings,
+          ...submitted,
+        });
       }),
     );
 
@@ -130,10 +144,10 @@ describe("SettingsManagement", () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     let stored = { ...initialSettings };
     server.use(
-      http.get("/api/settings", () => HttpResponse.json(stored)),
+      http.get("/api/settings", () => jsonResponse<import("@/api-types").AppSettingsOut>(stored)),
       http.put("/api/settings", async ({ request }) => {
         stored = { ...stored, ...((await request.json()) as typeof initialSettings) };
-        return HttpResponse.json(stored);
+        return jsonResponse<import("@/api-types").AppSettingsOut>(stored);
       }),
     );
     render(<SettingsManagement authHeaders={() => ({})} />, { wrapper: Wrapper });
@@ -166,7 +180,7 @@ describe("SettingsManagement", () => {
     let submitted = false;
     let stored = { ...initialSettings };
     server.use(
-      http.get("/api/settings", () => HttpResponse.json(stored)),
+      http.get("/api/settings", () => jsonResponse<import("@/api-types").AppSettingsOut>(stored)),
       http.put("/api/settings", async ({ request }) => {
         const payload = (await request.json()) as Partial<typeof initialSettings>;
         submitted = true;
@@ -174,7 +188,7 @@ describe("SettingsManagement", () => {
           finish = resolve;
         });
         stored = { ...stored, ...payload };
-        return HttpResponse.json(stored);
+        return jsonResponse<import("@/api-types").AppSettingsOut>(stored);
       }),
     );
     render(<SettingsManagement authHeaders={() => ({})} />, { wrapper: Wrapper });

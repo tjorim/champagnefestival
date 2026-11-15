@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 /**
  * Contract test for #992 decision 3: EventStructuredData (frontend) and
  * backend/app/services/jsonld_service.build_event_json_ld must produce the
@@ -15,7 +16,7 @@
  */
 import { render } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 
 import EventStructuredData from "@/components/JsonLd";
 import { getLocale } from "@/paraglide/runtime";
@@ -38,12 +39,25 @@ beforeAll(() => {
   vi.stubEnv("TZ", "Europe/Brussels");
 });
 
-const apiEdition = {
+const apiEdition: import("@/api-types").EditionPublicOut = {
+  edition_type: "festival",
+  vendors: [],
+  co_organizer: null,
+  flyer_image: null,
+  hero_image: null,
+  share_image: null,
+  active: false,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "fixture-edition",
   year: editionFixture.year,
   month: "march",
   dates: editionFixture.dates,
   venue: {
+    id: "",
+    active: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     name: editionFixture.venue.name,
     address: editionFixture.venue.address,
     city: editionFixture.venue.city,
@@ -54,6 +68,23 @@ const apiEdition = {
   },
   events: editionFixture.events.map((event) => ({
     ...event,
+    products: event.products.map((product) => ({
+      description: "",
+      description_nl: null,
+      description_fr: null,
+      description_en: null,
+      unit: "item",
+      available_quantity: null,
+      inclusions: null,
+      included_product_id: null,
+      included_per_guests: null,
+      ...product,
+    })),
+    volunteers_only: false,
+    members_only: false,
+    registrations_open_from: null,
+    registrations_close_at: null,
+    order_questions: [],
     edition_id: "fixture-edition",
     title: event.title_nl,
     description: event.description_nl ?? "",
@@ -74,7 +105,11 @@ function getStructuredData(container: HTMLElement) {
 
 describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
   it("matches backend/tests/test_jsonld_service.py's expected structure exactly", async () => {
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+    server.use(
+      http.get("/api/editions/active", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),
+      ),
+    );
 
     const wrapper = createTestQueryClientWrapper();
     const { container } = render(<EventStructuredData />, { wrapper });
@@ -149,7 +184,11 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
   it("names sub-events in the visitor's language and falls back to the original", async () => {
     vi.mocked(getLocale).mockReturnValue("en");
     try {
-      server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+      server.use(
+        http.get("/api/editions/active", () =>
+          jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),
+        ),
+      );
       const { container } = render(<EventStructuredData />, {
         wrapper: createTestQueryClientWrapper(),
       });
@@ -177,7 +216,11 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
         { ...apiEdition.events[1]!, title_nl: "</script><b>x</b>", title: "</script><b>x</b>" },
       ],
     };
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(hostile)));
+    server.use(
+      http.get("/api/editions/active", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut>(hostile),
+      ),
+    );
     const { container } = render(<EventStructuredData />, {
       wrapper: createTestQueryClientWrapper(),
     });
@@ -198,7 +241,11 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
     document.head.appendChild(ssrScript);
 
     try {
-      server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+      server.use(
+        http.get("/api/editions/active", () =>
+          jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),
+        ),
+      );
       const wrapper = createTestQueryClientWrapper();
       const { container } = render(<EventStructuredData />, { wrapper });
 

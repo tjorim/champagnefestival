@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { registrationOut } from "@/mocks/data/builders";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
@@ -47,7 +48,10 @@ describe("useAdminRegistrationActions errors", () => {
     server.use(
       http.put("/api/registrations/reg-1", () =>
         HttpResponse.json(
-          { detail: "Registration not found.", code: "registration_not_found" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Registration not found.",
+            code: "registration_not_found",
+          },
           { status: 404 },
         ),
       ),
@@ -68,7 +72,10 @@ describe("useAdminRegistrationActions errors", () => {
     server.use(
       http.put("/api/registrations/reg-1", () =>
         HttpResponse.json(
-          { detail: "A brand new English rule.", code: "not_yet_translated" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "A brand new English rule.",
+            code: "not_yet_translated",
+          },
           { status: 400 },
         ),
       ),
@@ -93,14 +100,16 @@ describe("useAdminRegistrationActions errors", () => {
         calls.push(body);
         if (!body.confirm_over_capacity) {
           return HttpResponse.json(
-            {
+            /* Fixture exception: error response; intentionally outside the success schema. */ {
               detail: "Table 'A1' does not have enough remaining seats.",
               code: "table_over_capacity",
             },
             { status: 409 },
           );
         }
-        return HttpResponse.json(registrationOut({ id: "reg-1", guest_count: 4 }));
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          registrationOut({ id: "reg-1", guest_count: 4 }),
+        );
       }),
     );
     const confirmOverCapacity = vi.fn().mockResolvedValue(true);
@@ -124,7 +133,12 @@ describe("useAdminRegistrationActions errors", () => {
   it("does not treat English capacity wording without the code as a capacity error", async () => {
     server.use(
       http.put("/api/registrations/reg-1", () =>
-        HttpResponse.json({ detail: "Not enough remaining seats." }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Not enough remaining seats.",
+          },
+          { status: 409 },
+        ),
       ),
     );
     const confirmOverCapacity = vi.fn().mockResolvedValue(true);
@@ -154,7 +168,7 @@ describe("admin attendance correction", () => {
       http.put("/api/registrations/reg-1", async ({ request }) => {
         const body = await request.json();
         bodies.push(body);
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").RegistrationOut>(
           registrationOut({ id: "reg-1", checked_in: false, strap_issued: true }),
         );
       }),
@@ -174,7 +188,10 @@ describe("admin attendance correction", () => {
   it("does not retry a refused undo or expose diagnostic details", async () => {
     const request = vi.fn(() =>
       HttpResponse.json(
-        { code: "stamp_reward_handed_out", detail: "Private diagnostic" },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          code: "stamp_reward_handed_out",
+          detail: "Private diagnostic",
+        },
         { status: 409 },
       ),
     );

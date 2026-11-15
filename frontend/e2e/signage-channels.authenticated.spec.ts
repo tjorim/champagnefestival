@@ -70,7 +70,7 @@ test("edits channels and playlists, previews drafts and supports accessible reor
   await page.getByRole("button", { name: "Save channel", exact: true }).click();
   await update;
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  for (const group of ["Producer", "Vendor", "Sponsor"]) {
+  for (const group of ["Producer", "Vendor", "Sponsor"] as const) {
     await page.getByRole("button", { name: "Add slide", exact: true }).click();
     await select("Organisation group", group);
     await select("Template", "Playlist template");

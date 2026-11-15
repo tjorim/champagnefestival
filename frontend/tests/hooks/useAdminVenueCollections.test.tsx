@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { delay } from "msw/utils/delay";
@@ -137,7 +138,14 @@ describe("venue group collections in the admin hooks", () => {
     await waitFor(() => expect(area()).toMatchObject({ x: 33, y: 44 }));
 
     server.use(
-      http.put("/api/areas/:id", () => HttpResponse.json({ detail: "no" }, { status: 500 })),
+      http.put("/api/areas/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "no",
+          },
+          { status: 500 },
+        ),
+      ),
     );
     act(() => view.result.current.actions.handleRotateArea("area-01", 450));
     await waitFor(() => expect(area()?.rotation).toBe(0));
@@ -212,7 +220,7 @@ describe("venue group collections in the admin hooks", () => {
     server.use(
       http.get("/api/venues", () => {
         seen.push("venues");
-        return HttpResponse.json([]);
+        return jsonResponse<import("@/api-types").VenueOut[]>([]);
       }),
     );
 
@@ -249,7 +257,20 @@ describe("venue group collections in the admin hooks", () => {
     server.use(
       http.put("/api/areas/:id", async () => {
         await delay(50);
-        return HttpResponse.json({ id: "area-01" });
+        return jsonResponse<import("@/api-types").AreaOut>({
+          layout_id: "",
+          icon: "",
+          organization_id: null,
+          label: "",
+          x: 0,
+          y: 0,
+          rotation: 0,
+          width_m: 0,
+          length_m: 0,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "area-01",
+        });
       }),
     );
 

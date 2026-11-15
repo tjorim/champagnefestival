@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
 /**
  * The admin's per-event capacity panel reads GET /api/events/checkin-stats —
@@ -116,7 +117,7 @@ describe("RegistrationList — per-event capacity panel", () => {
   it("reports the server's guest counts, not the ones derivable from the loaded registrations", async () => {
     server.use(
       http.get("/api/events/checkin-stats", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").EventCheckInStats[]>([
           {
             event_id: "historical-event",
             event_title: "Historical event title",
@@ -143,7 +144,12 @@ describe("RegistrationList — per-event capacity panel", () => {
 
   it("falls back to the locally derived counts when the stats request fails", async () => {
     server.use(
-      http.get("/api/events/checkin-stats", () => HttpResponse.json(null, { status: 500 })),
+      http.get("/api/events/checkin-stats", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 500 },
+        ),
+      ),
     );
 
     renderRegistrationList([
@@ -157,9 +163,9 @@ describe("RegistrationList — per-event capacity panel", () => {
   it("scopes each event's counts separately", async () => {
     server.use(
       http.get("/api/events/checkin-stats", () =>
-        HttpResponse.json([
-          { event_id: "event-1", total: 30, checked_in: 12 },
-          { event_id: "event-2", total: 8, checked_in: 8 },
+        jsonResponse<import("@/api-types").EventCheckInStats[]>([
+          { event_title: "Collectors Bourse", event_id: "event-1", total: 30, checked_in: 12 },
+          { event_title: "Capsule Exchange", event_id: "event-2", total: 8, checked_in: 8 },
         ]),
       ),
     );

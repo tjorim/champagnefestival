@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
@@ -13,7 +14,12 @@ it("counts historical facets on the server with bounded reads", async () => {
       requests.push(params);
       expect(params.get("limit")).toBe("1");
       const total = params.has("edition_id") ? 12 : params.has("status") ? 25 : 100;
-      return HttpResponse.json({ items: [], total, limit: 1, page: 1 });
+      return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+        items: [],
+        total,
+        limit: 1,
+        page: 1,
+      });
     }),
   );
   const { Wrapper } = createTestQueryClientHarness();

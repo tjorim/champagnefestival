@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw/http";
@@ -11,12 +12,25 @@ const toNormalizedLocalDate = (date: Date) => {
   return adjusted.toISOString().slice(0, 10);
 };
 
-const apiEdition = {
+const apiEdition: import("@/api-types").EditionPublicOut = {
+  edition_type: "festival",
+  vendors: [],
+  co_organizer: null,
+  flyer_image: null,
+  hero_image: null,
+  share_image: null,
+  active: false,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "2026-march",
   year: 2026,
   month: "march",
   dates: ["2026-03-13", "2026-03-14", "2026-03-15"],
   venue: {
+    id: "",
+    active: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     name: "Staf Versluys",
     address: "Kapelstraat 76",
     city: "Bredene",
@@ -27,6 +41,21 @@ const apiEdition = {
   },
   events: [
     {
+      title_nl: null,
+      title_fr: null,
+      title_en: null,
+      description_nl: null,
+      description_fr: null,
+      description_en: null,
+      edition_id: "",
+      volunteers_only: false,
+      members_only: false,
+      registrations_close_at: null,
+      active: false,
+      order_questions: [],
+      products: [],
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
       id: "evt-friday",
       title: "VIP-arrangement",
       description: "Friday VIP event",
@@ -38,6 +67,21 @@ const apiEdition = {
       registrations_open_from: "2026-02-01T10:00:00+00:00",
     },
     {
+      title_nl: null,
+      title_fr: null,
+      title_en: null,
+      description_nl: null,
+      description_fr: null,
+      description_en: null,
+      edition_id: "",
+      volunteers_only: false,
+      members_only: false,
+      registrations_close_at: null,
+      active: false,
+      order_questions: [],
+      products: [],
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
       id: "evt-saturday",
       title: "Champagneparty",
       description: "Saturday party",
@@ -56,6 +100,9 @@ const apiEdition = {
 describe("useActiveEdition", () => {
   it("preserves descriptions for all organization types in the public payload", async () => {
     const item = {
+      website: "",
+      type: "",
+      sponsor_tier: null,
       id: 1,
       name: "Maison",
       image: "/logo.svg",
@@ -65,7 +112,12 @@ describe("useActiveEdition", () => {
     };
     server.use(
       http.get("/api/editions/active", () =>
-        HttpResponse.json({ ...apiEdition, producers: [item], sponsors: [item], vendors: [item] }),
+        jsonResponse<import("@/api-types").EditionPublicOut>({
+          ...apiEdition,
+          producers: [item],
+          sponsors: [item],
+          vendors: [item],
+        }),
       ),
     );
     const { result } = renderHook(() => useActiveEdition(), {
@@ -82,7 +134,11 @@ describe("useActiveEdition", () => {
   });
 
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+    server.use(
+      http.get("/api/editions/active", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),
+      ),
+    );
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });
@@ -117,25 +173,42 @@ describe("useActiveEdition", () => {
   it("deduplicates dates when the API omits dates and multiple events share one day", async () => {
     server.use(
       http.get("/api/editions/active", () =>
-        HttpResponse.json({
-          ...apiEdition,
-          dates: null,
-          events: [
-            apiEdition.events[0],
-            {
-              id: "evt-friday-late",
-              title: "Late Friday",
-              description: "Second Friday event",
-              date: "2026-03-13",
-              start_time: "21:30",
-              end_time: null,
-              category: "party",
-              registration_required: false,
-              registrations_open_from: null,
-            },
-            apiEdition.events[1],
-          ],
-        }),
+        HttpResponse.json(
+          /* Deliberately malformed dates: exercises defensive date handling. */ {
+            ...apiEdition,
+            dates: null,
+            events: [
+              apiEdition.events[0]!,
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                edition_id: "",
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                active: false,
+                order_questions: [],
+                products: [],
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                id: "evt-friday-late",
+                title: "Late Friday",
+                description: "Second Friday event",
+                date: "2026-03-13",
+                start_time: "21:30",
+                end_time: null,
+                category: "party",
+                registration_required: false,
+                registrations_open_from: null,
+              },
+              apiEdition.events[1]!,
+            ],
+          },
+        ),
       ),
     );
 
@@ -152,7 +225,14 @@ describe("useActiveEdition", () => {
   });
 
   it("keeps the fallback edition without flagging a load error when there's simply no active edition (404)", async () => {
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(null, { status: 404 })));
+    server.use(
+      http.get("/api/editions/active", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        ),
+      ),
+    );
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });
@@ -167,7 +247,14 @@ describe("useActiveEdition", () => {
   });
 
   it("flags a load error when the active-edition fetch genuinely fails (e.g. 500 or network error)", async () => {
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(null, { status: 500 })));
+    server.use(
+      http.get("/api/editions/active", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 500 },
+        ),
+      ),
+    );
 
     const wrapper = createTestQueryClientWrapper();
     const { result } = renderHook(() => useActiveEdition(), { wrapper });

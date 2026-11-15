@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 for (const viewport of [
   { width: 1280, height: 800 },
   { width: 390, height: 700 },
-]) {
+] as const) {
   test(`restores People location and keyboard navigation at ${viewport.width}`, async ({
     page,
   }) => {

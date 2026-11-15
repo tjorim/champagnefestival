@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { editionOut, venueOut } from "@/mocks/data/builders";
 import type { ComponentProps } from "react";
 import type { RegistrationsPage } from "@/utils/adminFetch";
@@ -90,7 +91,12 @@ function installPaginatedHandler(seen: URL[] = []) {
       const page = Number(url.searchParams.get("page") ?? 1);
       const start = (page - 1) * limit;
       const items = rawRegistrations.slice(start, start + limit);
-      return HttpResponse.json({ items, total: rawRegistrations.length, limit, page });
+      return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+        items,
+        total: rawRegistrations.length,
+        limit,
+        page,
+      });
     }),
   );
 }
@@ -133,7 +139,12 @@ describe("RegistrationList — server-side pagination", () => {
     older.person = { ...older.person, name: "Historical guest" };
     server.use(
       http.get("/api/registrations", () =>
-        HttpResponse.json({ items: [older], total: 1, limit: 50, page: 1 }),
+        jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+          items: [older],
+          total: 1,
+          limit: 50,
+          page: 1,
+        }),
       ),
     );
     renderRegistrationList([]);
@@ -240,13 +251,23 @@ it("keeps an open QR dialog in sync with token rotation and cancellation", async
   const detailRequests = vi.fn();
   server.use(
     http.get("/api/registrations", () =>
-      HttpResponse.json({ items: [raw], total: 1, limit: 50, page: 1 }),
+      jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+        items: [raw],
+        total: 1,
+        limit: 50,
+        page: 1,
+      }),
     ),
   );
   server.use(
     http.get("/api/registrations/reg-page-01", () => {
       detailRequests();
-      return HttpResponse.json({ ...raw, check_in_token: token });
+      return jsonResponse<import("@/api-types").RegistrationOutWithToken>({
+        poll_question_id: null,
+        stamp_progress: null,
+        ...raw,
+        check_in_token: token,
+      });
     }),
   );
   const queryClient = renderRegistrationList([]);
@@ -307,16 +328,28 @@ it.each(["failed", "cancelled", "missing-token"])(
     const raw = buildRawRegistration(1);
     server.use(
       http.get("/api/registrations", () =>
-        HttpResponse.json({ items: [raw], total: 1, limit: 50, page: 1 }),
+        jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+          items: [raw],
+          total: 1,
+          limit: 50,
+          page: 1,
+        }),
       ),
       http.get("/api/registrations/reg-page-01", () =>
         scenario === "failed"
-          ? HttpResponse.json({ detail: "Internal diagnostic" }, { status: 500 })
-          : HttpResponse.json({
-              ...raw,
-              status: scenario === "cancelled" ? "cancelled" : "confirmed",
-              check_in_token: scenario === "missing-token" ? null : "token",
-            }),
+          ? HttpResponse.json(
+              /* Fixture exception: error response; intentionally outside the success schema. */ {
+                detail: "Internal diagnostic",
+              },
+              { status: 500 },
+            )
+          : HttpResponse.json(
+              /* Deliberately malformed token in the missing-token recovery scenario. */ {
+                ...raw,
+                status: scenario === "cancelled" ? "cancelled" : "confirmed",
+                check_in_token: scenario === "missing-token" ? null : "token",
+              },
+            ),
       ),
     );
     renderRegistrationList([]);

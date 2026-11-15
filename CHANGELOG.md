@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Type successful test-local and browser MSW fixtures against generated API schemas, include browser specs in TypeScript checks, require explicit response types in the mock helper, and remove the last venue-plan edition response declaration (#1657). Deliberately incomplete/error fixtures remain explicitly labelled.
+
 - Finish inline JSON response-model construction, scratchpad responses and stamp-progress service boundaries; remove the unused poll-option dictionary builder and reuse the audit output schema while preserving MCP timestamp formatting (#1657).
 - Build independent backend content, policy, payment, waitlist, poll, stamp-card, layout-revision, organisation-change and signage-video responses from Pydantic output models (#1657), preserving REST and MCP payloads and existing payment replay behaviour.
 

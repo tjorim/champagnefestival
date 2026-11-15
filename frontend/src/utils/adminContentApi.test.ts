@@ -1,3 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
+import type { EditionOut, EventOut } from "@/api-types";
+import { editionOut, eventOut } from "@/mocks/data/builders";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
@@ -6,12 +9,12 @@ import { saveEdition, saveEditionEvent } from "./adminContentApi";
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
 /** Answers every API write with `body` and returns the JSON bodies it received, in order. */
-function serveJson(body: Record<string, unknown>): Record<string, unknown>[] {
+function serveJson(body: EditionOut | EventOut): Record<string, unknown>[] {
   const sent: Record<string, unknown>[] = [];
   server.use(
     http.all("/api/*", async ({ request }) => {
       sent.push((await request.json()) as Record<string, unknown>);
-      return HttpResponse.json(body);
+      return jsonResponse<EditionOut | EventOut>(body);
     }),
   );
   return sent;
@@ -31,7 +34,7 @@ describe("saveEdition", () => {
   };
 
   it("sends the selected organization ids for a festival edition", async () => {
-    const fetchMock = serveJson({ id: "2026-march" });
+    const fetchMock = serveJson(editionOut({ id: "2026-march" }));
 
     await saveEdition(
       { ...basePayload, edition_type: "festival", organizations: [1, 2] },
@@ -44,7 +47,7 @@ describe("saveEdition", () => {
   });
 
   it("sends the lineup order and sponsor levels, and none for off-festival editions", async () => {
-    const festivalFetch = serveJson({ id: "2026-march" });
+    const festivalFetch = serveJson(editionOut({ id: "2026-march" }));
     await saveEdition(
       {
         ...basePayload,
@@ -58,7 +61,7 @@ describe("saveEdition", () => {
     expect(festivalFetch[0]!.organizations).toEqual([3, 1, 2]);
     expect(festivalFetch[0]!.sponsor_tiers).toEqual({ 3: "main", 2: "supporter" });
 
-    const bourseFetch = serveJson({ id: "2026-march" });
+    const bourseFetch = serveJson(editionOut({ id: "2026-march" }));
     await saveEdition(
       { ...basePayload, edition_type: "bourse", organizations: [3], sponsorTiers: { 3: "main" } },
       authHeaders,
@@ -70,7 +73,7 @@ describe("saveEdition", () => {
   it.each(["bourse", "capsule_exchange"] as const)(
     "explicitly sends an empty organizations list when converting to %s",
     async (edition_type) => {
-      const fetchMock = serveJson({ id: "2026-march" });
+      const fetchMock = serveJson(editionOut({ id: "2026-march" }));
 
       await saveEdition(
         { ...basePayload, edition_type, organizations: [1, 2] },
@@ -87,7 +90,7 @@ describe("saveEdition", () => {
 
 describe("saveEditionEvent", () => {
   it("converts datetime-local registration bounds to ISO datetimes", async () => {
-    const fetchMock = serveJson({ id: "event-1", products: [] });
+    const fetchMock = serveJson(eventOut({ id: "event-1", products: [] }));
 
     await saveEditionEvent(
       {
@@ -120,7 +123,7 @@ describe("saveEditionEvent", () => {
   });
 
   it("sends the per-language text, with blank translations cleared", async () => {
-    const fetchMock = serveJson({ id: "event-1", products: [] });
+    const fetchMock = serveJson(eventOut({ id: "event-1", products: [] }));
     const formData = {
       edition_id: "2026-march",
       title_nl: "Degustatie",
@@ -157,7 +160,7 @@ describe("saveEditionEvent", () => {
     expect(fetchMock[0]!).not.toHaveProperty("title");
     expect(fetchMock[0]!).not.toHaveProperty("title_language");
 
-    const withDescription = serveJson({ id: "event-1", products: [] });
+    const withDescription = serveJson(eventOut({ id: "event-1", products: [] }));
     await saveEditionEvent(
       {
         editionId: "2026-march",

@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { server } from "@/mocks/server";
@@ -65,8 +66,12 @@ describe("useAdminQueries loadData", () => {
       expect(result.current.organizationsQuery.data?.length).toBeGreaterThan(0);
     });
     server.use(
-      http.get("/api/registrations", () => HttpResponse.json(emptyPage)),
-      http.get("/api/organizations", () => HttpResponse.json([])),
+      http.get("/api/registrations", () =>
+        jsonResponse<import("@/api-types").RegistrationListEnvelope>(emptyPage),
+      ),
+      http.get("/api/organizations", () =>
+        jsonResponse<import("@/api-types").OrganizationOut[]>([]),
+      ),
     );
 
     await act(() => result.current.loadData());
@@ -82,7 +87,7 @@ describe("useAdminQueries loadData", () => {
     server.use(
       http.get("/api/registrations", () => {
         requests += 1;
-        return HttpResponse.json(emptyPage);
+        return jsonResponse<import("@/api-types").RegistrationListEnvelope>(emptyPage);
       }),
     );
     const { result } = renderQueries({ visible: false });

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -22,8 +23,11 @@ const cases = [
     formId: "announcement-form",
     error: "Announcement could not be saved.",
     saved: {
+      published_at: null,
+      published_by: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
       id: "record-1",
-      text_language: "nl",
       text_nl: "Saved text",
       text_en: null,
       text_fr: null,
@@ -36,7 +40,7 @@ const cases = [
       link_label_nl: null,
       link_label_en: null,
       link_label_fr: null,
-    },
+    } satisfies import("@/api-types").AnnouncementOut,
   },
   {
     name: "composer drafts",
@@ -51,8 +55,25 @@ const cases = [
     formId: "composer-form",
     error: "The message could not be saved.",
     saved: {
+      email_category_key: null,
+      scheduled_at: null,
+      announcement_id: null,
+      push_audience_snapshot: null,
+      email_audience_snapshot: null,
+      sent_at: null,
+      sent_by: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      push_delivered_count: 0,
+      push_failed_count: 0,
+      push_pending_count: 0,
+      estimated_email_audience: 0,
+      email_accepted_count: 0,
+      email_failed_count: 0,
+      email_skipped_count: 0,
+      email_pending_count: 0,
+      member_mail_available: false,
       id: "record-1",
-      text_language: "nl",
       title_nl: "Saved text",
       title_en: null,
       title_fr: null,
@@ -64,14 +85,20 @@ const cases = [
       link_url: null,
       state: "draft",
       estimated_push_audience: 0,
-    },
+    } satisfies import("@/api-types").ComposedMessageOut,
   },
 ];
 beforeEach(() => setLocale("en", { reload: false }));
 for (const config of cases) {
   describe(`${config.name} editor dialog`, () => {
     function setup() {
-      server.use(http.get(config.path, () => HttpResponse.json([config.saved])));
+      server.use(
+        http.get(config.path, () =>
+          jsonResponse<
+            (import("@/api-types").AnnouncementOut | import("@/api-types").ComposedMessageOut)[]
+          >([config.saved]),
+        ),
+      );
       const { queryClient, Wrapper } = createTestQueryClientHarness();
       render(<config.Component authHeaders={() => ({ Authorization: "Bearer test" })} />, {
         wrapper: Wrapper,
@@ -99,9 +126,15 @@ for (const config of cases) {
       server.use(
         http.put(`${config.path}/record-1`, async ({ request }) => {
           submitted = (await request.json()) as Record<string, unknown>;
-          return HttpResponse.json({ ...config.saved, ...submitted });
+          return jsonResponse<
+            import("@/api-types").AnnouncementOut | import("@/api-types").ComposedMessageOut
+          >({ ...config.saved, ...submitted });
         }),
-        http.get(config.path, () => HttpResponse.json([{ ...config.saved, ...(submitted ?? {}) }])),
+        http.get(config.path, () =>
+          jsonResponse<
+            (import("@/api-types").AnnouncementOut | import("@/api-types").ComposedMessageOut)[]
+          >([{ ...config.saved, ...(submitted ?? {}) }]),
+        ),
       );
       await screen.findByText("Saved text");
       fireEvent.click(screen.getByRole("button", { name: "Edit Saved text" }));
@@ -117,7 +150,12 @@ for (const config of cases) {
       server.use(
         http.post(config.path, () => {
           requests += 1;
-          return HttpResponse.json({ detail: "Internal diagnostic: do not show" }, { status: 500 });
+          return HttpResponse.json(
+            /* Fixture exception: error response; intentionally outside the success schema. */ {
+              detail: "Internal diagnostic: do not show",
+            },
+            { status: 500 },
+          );
         }),
       );
       await screen.findByText("Saved text");
@@ -143,7 +181,9 @@ for (const config of cases) {
         http.post(config.path, async () => {
           requests += 1;
           await pending;
-          return HttpResponse.json(config.saved, { status: 201 });
+          return jsonResponse<
+            import("@/api-types").AnnouncementOut | import("@/api-types").ComposedMessageOut
+          >(config.saved, { status: 201 });
         }),
       );
       await screen.findByText("Saved text");

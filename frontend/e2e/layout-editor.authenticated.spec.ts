@@ -9,7 +9,7 @@ for (const [width, height, zoom] of [
   [1440, 900, 1],
   [853, 512, 1],
   [390, 844, 1],
-]) {
+] as const) {
   test(`floor-plan inspector ${width}x${height} at native zoom ${zoom}`, async ({ baseURL }) => {
     const { chromium } = await import("@playwright/test");
     const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");

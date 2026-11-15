@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { HttpResponse, http } from "msw/http";
@@ -7,7 +8,8 @@ import { server } from "@/mocks/server";
 import { readAdminOptions, selectAdminOption } from "../helpers/adminSelect";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
-const draftMessage = {
+const draftMessage: import("@/api-types").ComposedMessageOut = {
+  sent_by: null,
   id: "cmp_1",
   title_nl: "Festivalupdate",
   title_en: "Festival update",
@@ -39,7 +41,7 @@ const draftMessage = {
   email_pending_count: 0,
 };
 
-const sentMessage = {
+const sentMessage: import("@/api-types").ComposedMessageOut = {
   ...draftMessage,
   id: "cmp_2",
   title_nl: "Reeds verstuurd",
@@ -59,11 +61,19 @@ function renderComposer() {
 
 describe("ComposerManagement", () => {
   beforeEach(() => {
-    server.use(http.get("/api/email-categories", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/email-categories", () =>
+        jsonResponse<import("@/api-types").EmailCategoryOut[]>([]),
+      ),
+    );
   });
 
   it("lists composed messages with their state and results", async () => {
-    server.use(http.get("/api/composer", () => HttpResponse.json([draftMessage, sentMessage])));
+    server.use(
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([draftMessage, sentMessage]),
+      ),
+    );
 
     renderComposer();
 
@@ -77,10 +87,13 @@ describe("ComposerManagement", () => {
   it("creates a new draft", async () => {
     let submitted: Record<string, unknown> | null = null;
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([])),
+      http.get("/api/composer", () => jsonResponse<import("@/api-types").ComposedMessageOut[]>([])),
       http.post("/api/composer", async ({ request }) => {
         submitted = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...draftMessage, ...submitted }, { status: 201 });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>(
+          { ...draftMessage, ...submitted },
+          { status: 201 },
+        );
       }),
     );
 
@@ -106,10 +119,15 @@ describe("ComposerManagement", () => {
   it("requires confirmation before sending, and shows the estimated audience", async () => {
     let scheduled = false;
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([draftMessage])),
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([draftMessage]),
+      ),
       http.post("/api/composer/cmp_1/schedule", () => {
         scheduled = true;
-        return HttpResponse.json({ ...draftMessage, state: "scheduled" });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>({
+          ...draftMessage,
+          state: "scheduled",
+        });
       }),
     );
 
@@ -133,16 +151,49 @@ describe("ComposerManagement", () => {
   it("composes an email draft for a consent category, hiding automatic ones", async () => {
     let submitted: Record<string, unknown> | null = null;
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([])),
+      http.get("/api/composer", () => jsonResponse<import("@/api-types").ComposedMessageOut[]>([])),
       http.get("/api/email-categories", () =>
-        HttpResponse.json([
-          { key: "club_news", name: "Club news", automatic: false },
-          { key: "reward_ready", name: "Reward ready", automatic: true },
+        jsonResponse<import("@/api-types").EmailCategoryOut[]>([
+          {
+            description: null,
+            name_nl: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            allowed_roles: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            key: "club_news",
+            name: "Club news",
+            automatic: false,
+          },
+          {
+            description: null,
+            name_nl: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            allowed_roles: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            key: "reward_ready",
+            name: "Reward ready",
+            automatic: true,
+          },
         ]),
       ),
       http.post("/api/composer", async ({ request }) => {
         submitted = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...draftMessage, ...submitted }, { status: 201 });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>(
+          { ...draftMessage, ...submitted },
+          { status: 201 },
+        );
       }),
     );
 
@@ -185,13 +236,35 @@ describe("ComposerManagement", () => {
     };
     let scheduleBody: unknown;
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([emailDraft])),
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([emailDraft]),
+      ),
       http.get("/api/email-categories", () =>
-        HttpResponse.json([{ key: "club_news", name: "Club news", automatic: false }]),
+        jsonResponse<import("@/api-types").EmailCategoryOut[]>([
+          {
+            description: null,
+            name_nl: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            allowed_roles: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            key: "club_news",
+            name: "Club news",
+            automatic: false,
+          },
+        ]),
       ),
       http.post("/api/composer/cmp_1/schedule", async ({ request }) => {
         scheduleBody = await request.json();
-        return HttpResponse.json({ ...emailDraft, state: "scheduled" });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>({
+          ...emailDraft,
+          state: "scheduled",
+        });
       }),
     );
 
@@ -216,13 +289,16 @@ describe("ComposerManagement", () => {
   it("explains that member mail is not set up instead of showing the English detail", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
           { ...draftMessage, channels: ["email"], email_category_key: "club_news" },
         ]),
       ),
       http.post("/api/composer/cmp_1/schedule", () =>
         HttpResponse.json(
-          { detail: "Member mail is not configured.", code: "member_mail_unavailable" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Member mail is not configured.",
+            code: "member_mail_unavailable",
+          },
           { status: 409 },
         ),
       ),
@@ -244,10 +320,15 @@ describe("ComposerManagement", () => {
       link_url: "https://example.com/info",
     };
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([inApp])),
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([inApp]),
+      ),
       http.post("/api/composer/cmp_1/schedule", async ({ request }) => {
         scheduleBody = await request.json();
-        return HttpResponse.json({ ...inApp, state: "scheduled" });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>({
+          ...inApp,
+          state: "scheduled",
+        });
       }),
     );
     renderComposer();
@@ -274,7 +355,9 @@ describe("ComposerManagement", () => {
   it("shows which language falls back to Dutch", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([{ ...draftMessage, title_fr: null, body_fr: null }]),
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
+          { ...draftMessage, title_fr: null, body_fr: null },
+        ]),
       ),
     );
     renderComposer();
@@ -288,7 +371,9 @@ describe("ComposerManagement", () => {
   it("says an empty push audience will not reach anyone", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([{ ...draftMessage, channels: ["push"], estimated_push_audience: 0 }]),
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
+          { ...draftMessage, channels: ["push"], estimated_push_audience: 0 },
+        ]),
       ),
     );
     renderComposer();
@@ -302,7 +387,7 @@ describe("ComposerManagement", () => {
   it("combines the announcement, push and email details of a mixed message", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
           {
             ...draftMessage,
             channels: ["announcement", "push", "email"],
@@ -313,7 +398,24 @@ describe("ComposerManagement", () => {
         ]),
       ),
       http.get("/api/email-categories", () =>
-        HttpResponse.json([{ key: "club_news", name: "Club news", automatic: false }]),
+        jsonResponse<import("@/api-types").EmailCategoryOut[]>([
+          {
+            description: null,
+            name_nl: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            allowed_roles: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            key: "club_news",
+            name: "Club news",
+            automatic: false,
+          },
+        ]),
       ),
     );
     renderComposer();
@@ -330,7 +432,7 @@ describe("ComposerManagement", () => {
   it("blocks an email message before the final action while member mail is not set up", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
           {
             ...draftMessage,
             channels: ["email"],
@@ -350,10 +452,12 @@ describe("ComposerManagement", () => {
 
   it("explains a message saved after it was reviewed", async () => {
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([draftMessage])),
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([draftMessage]),
+      ),
       http.post("/api/composer/cmp_1/schedule", () =>
         HttpResponse.json(
-          {
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
             detail: "Composed message was saved after it was reviewed.",
             code: "composed_message_changed",
           },
@@ -373,7 +477,7 @@ describe("ComposerManagement", () => {
   it("shows the email results of a sent message", async () => {
     server.use(
       http.get("/api/composer", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([
           {
             ...sentMessage,
             channels: ["email"],
@@ -398,11 +502,13 @@ describe("ComposerManagement", () => {
       finish = resolve;
     });
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([])),
+      http.get("/api/composer", () => jsonResponse<import("@/api-types").ComposedMessageOut[]>([])),
       http.post("/api/composer", async () => {
         requests += 1;
         await pending;
-        return HttpResponse.json(draftMessage, { status: 201 });
+        return jsonResponse<import("@/api-types").ComposedMessageOut>(draftMessage, {
+          status: 201,
+        });
       }),
     );
     renderComposer();
@@ -421,10 +527,17 @@ describe("ComposerManagement", () => {
   it("displays scheduling failures without automatically retrying", async () => {
     let requests = 0;
     server.use(
-      http.get("/api/composer", () => HttpResponse.json([draftMessage])),
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([draftMessage]),
+      ),
       http.post("/api/composer/cmp_1/schedule", () => {
         requests += 1;
-        return HttpResponse.json({ detail: "Scheduling failed" }, { status: 500 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Scheduling failed",
+          },
+          { status: 500 },
+        );
       }),
     );
     renderComposer();
@@ -436,7 +549,11 @@ describe("ComposerManagement", () => {
   });
 
   it("has no axe violations", async () => {
-    server.use(http.get("/api/composer", () => HttpResponse.json([draftMessage])));
+    server.use(
+      http.get("/api/composer", () =>
+        jsonResponse<import("@/api-types").ComposedMessageOut[]>([draftMessage]),
+      ),
+    );
     const { container } = renderComposer();
     await screen.findByText("Festivalupdate");
     expect(await axe(container)).toHaveNoViolations();

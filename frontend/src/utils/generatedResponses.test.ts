@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import type { PollOrdersOut, PollQuestionOut } from "@/api-types";
 import { seedOrganizations } from "@/mocks/data/organizations";
 import { server } from "@/mocks/server";
@@ -40,7 +41,11 @@ const question: PollQuestionOut = {
 describe("generated content responses", () => {
   it("preserves the complete organization and contact projection in both lists", async () => {
     const organizations = seedOrganizations;
-    server.use(http.get("/api/organizations", () => HttpResponse.json(organizations)));
+    server.use(
+      http.get("/api/organizations", () =>
+        jsonResponse<import("@/api-types").OrganizationOut[]>(organizations),
+      ),
+    );
     expect(await fetchContentSectionItems("organizations", headers)).toEqual(organizations);
     expect(await fetchEditionModalOrganizations(headers)).toEqual(organizations);
   });
@@ -51,7 +56,7 @@ describe("generated content responses", () => {
     server.use(
       http.put(`/api/organizations/${organization.id}`, async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json(organization);
+        return jsonResponse<import("@/api-types").OrganizationOut>(organization);
       }),
     );
     expect(await saveContentSectionItem("organizations", organization, headers)).toEqual(
@@ -89,8 +94,12 @@ describe("generated content responses", () => {
       ],
     };
     server.use(
-      http.get("/api/poll-questions", () => HttpResponse.json([question])),
-      http.get("/api/poll-questions/orders", () => HttpResponse.json(orders)),
+      http.get("/api/poll-questions", () =>
+        jsonResponse<import("@/api-types").PollQuestionOut[]>([question]),
+      ),
+      http.get("/api/poll-questions/orders", () =>
+        jsonResponse<import("@/api-types").PollOrdersOut>(orders),
+      ),
     );
     expect(await fetchPollQuestions("edition", headers)).toEqual([question]);
     expect(await fetchPollOrders("edition", "nl", headers)).toEqual(orders);

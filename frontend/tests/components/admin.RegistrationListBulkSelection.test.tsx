@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { editionOut, venueOut } from "@/mocks/data/builders";
 /**
  * Bulk actions and CSV export used to operate only on whatever page happened
@@ -11,7 +12,7 @@ import { editionOut, venueOut } from "@/mocks/data/builders";
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
@@ -95,7 +96,12 @@ function installPaginatedHandler() {
       const page = Number(url.searchParams.get("page") ?? 1);
       const start = (page - 1) * limit;
       const items = rawRegistrations.slice(start, start + limit);
-      return HttpResponse.json({ items, total: rawRegistrations.length, limit, page });
+      return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+        items,
+        total: rawRegistrations.length,
+        limit,
+        page,
+      });
     }),
   );
 }

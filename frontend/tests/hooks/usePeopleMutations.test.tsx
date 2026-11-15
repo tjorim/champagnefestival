@@ -1,3 +1,5 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
 import { makePerson } from "../utils/personFixture";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useIsMutating } from "@tanstack/react-query";
@@ -25,6 +27,11 @@ const data = {
   anonymised: false,
 };
 const person = (id: string) => ({
+  ...seedPeople[0]!,
+  registration_count: 0,
+  reward_due: false,
+  last_attended: null,
+  inactivity_highlight: false,
   id,
   updated_at: "2026-01-01",
   ...data,
@@ -63,7 +70,12 @@ function harness() {
     http.get("/api/people", ({ request }) => {
       const role = new URL(request.url).searchParams.get("role");
       const matching = rows.filter((row) => !role || row.roles.includes(role));
-      return HttpResponse.json({ items: matching, total: matching.length, page: 1, limit: 20 });
+      return jsonResponse<import("@/api-types").PersonListEnvelope>({
+        items: matching,
+        total: matching.length,
+        page: 1,
+        limit: 20,
+      });
     }),
   );
   const view = renderHook(
@@ -98,7 +110,27 @@ describe("optimistic people mutations", () => {
       http.put("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0] = { ...h.rows()[0]!, ...data, updated_at: "2026-10-06" };
-        return HttpResponse.json({ ...h.rows()[0], updated_at: "2026-10-06" });
+        return jsonResponse<import("@/api-types").PersonOut>({
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          preferred_language: null,
+          address: "",
+          roles: [],
+          retired_roles: {},
+          role_history: {},
+          national_register_number: null,
+          eid_document_number: null,
+          inactivity_exempt: false,
+          inactivity_exempt_note: "",
+          visits_per_month: null,
+          notes: "",
+          anonymised: false,
+          created_at: "2026-01-01T00:00:00Z",
+          ...h.rows()[0],
+          updated_at: "2026-10-06",
+        });
       }),
     );
     let promise!: Promise<unknown>;
@@ -125,7 +157,7 @@ describe("optimistic people mutations", () => {
       http.put("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0]!.roles = [];
-        return HttpResponse.json(h.rows()[0]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
       }),
     );
     let promise!: Promise<unknown>;
@@ -152,7 +184,12 @@ describe("optimistic people mutations", () => {
       http.delete("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0]!.name = "Changed elsewhere";
-        return HttpResponse.json({ detail: "Refused" }, { status: 409 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Refused",
+          },
+          { status: 409 },
+        );
       }),
     );
     let promise!: Promise<unknown>;
@@ -174,8 +211,18 @@ describe("optimistic people mutations", () => {
   it("restores the snapshot if both the write and reconciliation fail", async () => {
     const h = harness();
     server.use(
-      http.put("/api/members/:id", () => HttpResponse.json({}, { status: 500 })),
-      http.get("/api/people", () => HttpResponse.json({}, { status: 500 })),
+      http.put("/api/members/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      ),
+      http.get("/api/people", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      ),
     );
     await act(async () => {
       await h.result.current.updateMemberMutation
@@ -192,9 +239,13 @@ describe("optimistic people mutations", () => {
     server.use(
       http.put("/api/people/:id", async ({ params }) => {
         await (params.id === "a" ? a.promise : b.promise);
-        if (params.id === "a") return HttpResponse.json({}, { status: 409 });
+        if (params.id === "a")
+          return HttpResponse.json(
+            /* Fixture exception: error response; intentionally outside the success schema. */ {},
+            { status: 409 },
+          );
         h.rows()[1]!.name = "Second edit";
-        return HttpResponse.json(h.rows()[1]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[1]!);
       }),
     );
     let first!: Promise<unknown>;
@@ -231,7 +282,7 @@ describe("optimistic people mutations", () => {
         seen.push(body.name);
         if (seen.length === 1) await gate.promise;
         h.rows()[0]!.name = body.name;
-        return HttpResponse.json(h.rows()[0]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
       }),
     );
     let first!: Promise<unknown>;
@@ -263,7 +314,9 @@ describe("optimistic people mutations", () => {
         http.put("/api/people/:id", async () => {
           requests++;
           await gate.promise;
-          return HttpResponse.json(h.rows()[0], { status: success ? 200 : 409 });
+          return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!, {
+            status: success ? 200 : 409,
+          });
         }),
       );
       let promise!: Promise<unknown>;
@@ -390,7 +443,7 @@ it("keeps creates non-optimistic until the server assigns an id", async () => {
       await gate.promise;
       const created = person("c");
       h.setRows([...h.rows(), created]);
-      return HttpResponse.json(created, { status: 201 });
+      return jsonResponse<import("@/api-types").PersonOut>(created, { status: 201 });
     }),
   );
   let promise!: Promise<unknown>;
@@ -418,7 +471,7 @@ it("does not send a queued same-person request after sign-out", async () => {
     http.put("/api/people/:id", async () => {
       requests++;
       await gate.promise;
-      return HttpResponse.json(h.rows()[0]);
+      return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
     }),
   );
   let first!: Promise<unknown>;
@@ -445,7 +498,10 @@ it("accepts the server state when an ambiguous failure actually committed", asyn
   server.use(
     http.put("/api/people/:id", () => {
       h.rows()[0]!.name = "Committed elsewhere";
-      return HttpResponse.json({}, { status: 500 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 500 },
+      );
     }),
   );
   await act(async () => {
@@ -463,7 +519,7 @@ it("applies a pending edit to a page loaded during the request", async () => {
     http.put("/api/people/:id", async () => {
       await gate.promise;
       h.rows()[0]!.name = "Updated";
-      return HttpResponse.json(h.rows()[0]);
+      return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
     }),
   );
   let promise!: Promise<unknown>;
@@ -499,7 +555,10 @@ it("does not lower totals for a different cached search", async () => {
   server.use(
     http.delete("/api/people/:id", async () => {
       await gate.promise;
-      return HttpResponse.json({}, { status: 409 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 409 },
+      );
     }),
   );
   let promise!: Promise<unknown>;

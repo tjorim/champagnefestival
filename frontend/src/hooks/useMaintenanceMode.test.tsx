@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
@@ -50,7 +51,17 @@ describe("useMaintenanceMode", () => {
 
   it("keeps the last good value when a refetch fails", async () => {
     const api = serveMaintenance(
-      () => HttpResponse.json({ maintenance_mode: false }),
+      () =>
+        jsonResponse<import("@/api-types").AppSettingsOut>({
+          maintenance_mode: false,
+          member_limit: null,
+          member_inactivity_months: 12,
+          stamp_card_type_id: null,
+          public_email: "",
+          public_phone: "",
+          facebook_url: "",
+          updated_at: "2026-01-01T00:00:00Z",
+        }),
       () => new HttpResponse(null, { status: 500 }),
     );
     const { client, result } = setup();

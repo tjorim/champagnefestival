@@ -39,7 +39,7 @@ test("creates a layered template, validates bindings and preserves edits through
     ),
   ).toBeVisible();
   await select("Preview slide type", "Producers and sponsors");
-  for (const binding of ["Logo", "Name", "Sponsor"]) {
+  for (const binding of ["Logo", "Name", "Sponsor"] as const) {
     await select("Add layer", `${binding} placeholder`);
   }
   await expect(save).toBeEnabled();
@@ -126,7 +126,7 @@ test("creates a layered template, validates bindings and preserves edits through
 for (const viewport of [
   { width: 1440, height: 1000 },
   { width: 390, height: 844 },
-]) {
+] as const) {
   test(`manages layer order, visibility and contextual properties at ${viewport.width}px`, async ({
     page,
   }) => {

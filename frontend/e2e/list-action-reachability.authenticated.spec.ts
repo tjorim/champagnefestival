@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-for (const width of [390, 1024, 1366]) {
+for (const width of [390, 1024, 1366] as const) {
   test(`People, Members and Volunteers keep routine actions visible at ${width}px`, async ({
     page,
   }) => {
@@ -12,7 +12,7 @@ for (const width of [390, 1024, 1366]) {
       await page.getByRole("button", { name: "Toggle navigation", exact: true }).click();
     await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
     await page.keyboard.press("Escape");
-    for (const name of ["All people", "Members", "Volunteers"]) {
+    for (const name of ["All people", "Members", "Volunteers"] as const) {
       await page.getByRole("tab", { name: new RegExp(`^${name}\\s`) }).click();
       if (width >= 1024) {
         if (name === "Members") {

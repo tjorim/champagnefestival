@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it } from "vitest";
@@ -8,7 +9,11 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 for (const state of ["active", "inactive", "unavailable"] as const) {
   it(`explains ${state} membership without staff links`, async () => {
-    server.use(http.get("/api/me/membership", () => HttpResponse.json({ state })));
+    server.use(
+      http.get("/api/me/membership", () =>
+        jsonResponse<import("@/api-types").MembershipSummary>({ state }),
+      ),
+    );
     render(<MyMembership accountId="self" getAccessToken={() => "token"} />, {
       wrapper: createTestQueryClientWrapper(),
     });
@@ -27,7 +32,12 @@ describe("unavailable server", () => {
   it("shows a retryable load error rather than an inactive membership", async () => {
     server.use(
       http.get("/api/me/membership", () =>
-        HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 503 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "PRIVATE DIAGNOSTIC",
+          },
+          { status: 503 },
+        ),
       ),
     );
     render(<MyMembership accountId="self" getAccessToken={() => "token"} />, {

@@ -18,7 +18,7 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
+] as const) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} admin forms at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });

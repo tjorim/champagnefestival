@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
@@ -41,7 +42,10 @@ describe("EmailPreferences", () => {
       http.get("/api/me/email-preferences", ({ request }) => {
         expect(new URL(request.url).searchParams.get("locale")).toBe("en");
         expect(request.headers.get("authorization")).toBe("Bearer mock-access-token");
-        return HttpResponse.json({ email: "ann@example.com", categories });
+        return jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: "ann@example.com",
+          categories,
+        });
       }),
     );
     mount();
@@ -57,13 +61,27 @@ describe("EmailPreferences", () => {
     let sent: unknown;
     server.use(
       http.get("/api/me/email-preferences", () =>
-        HttpResponse.json({ email: "ann@example.com", categories }),
+        jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: "ann@example.com",
+          categories,
+        }),
       ),
       http.put("/api/me/email-preferences", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").EmailPreferencesOut>({
           email: "ann@example.com",
-          categories: [{ ...categories[0], consented: true }, categories[1]],
+          categories: [
+            {
+              key: "",
+              name: "",
+              description: null,
+              automatic: false,
+              granted_at: null,
+              ...categories[0],
+              consented: true,
+            },
+            categories[1]!,
+          ],
         });
       }),
     );
@@ -84,7 +102,10 @@ describe("EmailPreferences", () => {
     server.use(
       http.get("/api/me/email-preferences", ({ request }) => {
         authorization = request.headers.get("authorization");
-        return HttpResponse.json({ email: "ann@example.com", categories });
+        return jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: "ann@example.com",
+          categories,
+        });
       }),
     );
     mount(null);
@@ -96,11 +117,17 @@ describe("EmailPreferences", () => {
   it("explains an unavailable category from its error code", async () => {
     server.use(
       http.get("/api/me/email-preferences", () =>
-        HttpResponse.json({ email: "ann@example.com", categories }),
+        jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: "ann@example.com",
+          categories,
+        }),
       ),
       http.put("/api/me/email-preferences", () =>
         HttpResponse.json(
-          { detail: "not available", code: "email_category_unavailable" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "not available",
+            code: "email_category_unavailable",
+          },
           { status: 403 },
         ),
       ),
@@ -120,7 +147,10 @@ describe("EmailPreferences", () => {
   it("explains when there is nothing to choose yet or no verified address", async () => {
     server.use(
       http.get("/api/me/email-preferences", () =>
-        HttpResponse.json({ email: "ann@example.com", categories: [] }),
+        jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: "ann@example.com",
+          categories: [],
+        }),
       ),
     );
     mount();
@@ -131,7 +161,10 @@ describe("EmailPreferences", () => {
 
     server.use(
       http.get("/api/me/email-preferences", () =>
-        HttpResponse.json({ email: null, categories: [] }),
+        jsonResponse<import("@/api-types").EmailPreferencesOut>({
+          email: null,
+          categories: [],
+        }),
       ),
     );
     mount();
@@ -139,7 +172,14 @@ describe("EmailPreferences", () => {
   });
 
   it("shows a translated error when the preferences cannot be loaded", async () => {
-    server.use(http.get("/api/me/email-preferences", () => HttpResponse.json({}, { status: 500 })));
+    server.use(
+      http.get("/api/me/email-preferences", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      ),
+    );
     mount();
     expect(
       await screen.findByText("Your email preferences could not be loaded."),

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 /**
  * The audit log's whole purpose is answering "who did this?" and "what happened
  * that weekend?". The API supported actor/action/since/until all along, and
@@ -7,7 +8,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import AuditLogViewer from "@/components/admin/AuditLogViewer";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -28,9 +29,9 @@ function captureAuditQueries() {
   server.use(
     http.get("/api/audit", ({ request }) => {
       seen.push(new URL(request.url).searchParams);
-      return HttpResponse.json([]);
+      return jsonResponse<import("@/api-types").AuditEntryOut[]>([]);
     }),
-    http.get("/api/audit/resource-types", () => HttpResponse.json(["person", "edition"])),
+    http.get("/api/audit/resource-types", () => jsonResponse<string[]>(["person", "edition"])),
   );
   return seen;
 }

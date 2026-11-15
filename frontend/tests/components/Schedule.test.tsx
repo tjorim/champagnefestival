@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
@@ -101,6 +102,8 @@ const mockEvents = [
 
 function label(key: string, nl: string, fr: string, en: string) {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     key,
     label: nl,
     label_nl: nl,
@@ -113,7 +116,7 @@ function label(key: string, nl: string, fr: string, en: string) {
 beforeEach(() => {
   server.use(
     http.get("/api/event-categories", () =>
-      HttpResponse.json([
+      jsonResponse<import("@/api-types").CategoryOut[]>([
         label("tasting", "Tasting", "Dégustation", "Tasting"),
         label("vip", "VIP", "VIP", "VIP"),
         label("party", "Party", "Soirée", "Party"),

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
 import { describe, expect, it } from "vitest";
@@ -11,7 +12,14 @@ import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("public settings", () => {
   it("fills fields missing from an older API response with compiled defaults", async () => {
-    server.use(http.get("/api/settings", () => HttpResponse.json({ maintenance_mode: true })));
+    server.use(
+      http.get("/api/settings", () =>
+        HttpResponse.json(
+          /* Fixture exception: deliberately incomplete legacy API response tests compiled fallbacks. */
+          { maintenance_mode: true },
+        ),
+      ),
+    );
     await expect(fetchAppSettings()).resolves.toEqual({
       ...FALLBACK_APP_SETTINGS,
       maintenance_mode: true,
@@ -24,7 +32,11 @@ describe("public settings", () => {
       http.get("/api/settings", () =>
         fails
           ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json({
+          : jsonResponse<import("@/api-types").AppSettingsOut>({
+              member_limit: null,
+              member_inactivity_months: null,
+              stamp_card_type_id: null,
+              updated_at: "2026-01-01T00:00:00Z",
               maintenance_mode: false,
               public_email: "live@example.com",
               public_phone: "+32 59 10 20 30",
