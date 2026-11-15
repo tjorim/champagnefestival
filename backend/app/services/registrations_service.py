@@ -39,7 +39,6 @@ from app.schemas import (
     RegistrationDeliveryUpdate,
     RegistrationOut,
     RegistrationUpdate,
-    StampProgress,
     TableAllocation,
 )
 from app.services import allocations_service, payments_service, people_service
@@ -541,9 +540,7 @@ async def apply_registration_update(
     person_map = await fetch_person_map(db, [registration])
 
     result = registration_to_out(registration, person_map[registration.person_id], registration.event)
-    result = result.model_copy(
-        update={"stamp_progress": StampProgress.model_validate(stamp_progress) if stamp_progress is not None else None}
-    )
+    result = result.model_copy(update={"stamp_progress": stamp_progress})
     return result
 
 

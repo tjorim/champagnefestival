@@ -32,9 +32,9 @@ assets_router = APIRouter(tags=["signage"])
 
 
 @router.get("/time", response_model=ServerTimeOut)
-async def server_time(response: Response) -> dict[str, datetime]:
+async def server_time(response: Response) -> ServerTimeOut:
     response.headers["Cache-Control"] = "no-store"
-    return {"server_time": datetime.now(UTC)}
+    return ServerTimeOut(server_time=datetime.now(UTC))
 
 
 @router.get("/{channel}/playlist", response_model=Playlist)
@@ -84,7 +84,7 @@ async def upload_asset(
         request_id=getattr(request.state, "request_id", None),
     )
     await db.commit()
-    return {"url": url}
+    return SignageAssetOut(url=url)
 
 
 @assets_router.get("/uploads/signage/{name}", **binary_response("image/jpeg", "Signage image"))

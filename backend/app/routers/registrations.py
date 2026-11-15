@@ -19,7 +19,7 @@ import re
 import secrets
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
@@ -271,7 +271,7 @@ async def list_registrations(
     ),
     sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> dict:
+) -> RegistrationListEnvelope:
     q_stripped = q.strip() if q and q.strip() else None
 
     person_needed = bool(q_stripped) or sort == "name"
@@ -333,7 +333,7 @@ async def list_registrations(
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await registrations_service.fetch_person_map(db, list(rows))
     items = [registration_to_list_out(row, person_map[row.person_id], row.event) for row in rows]
-    return {"items": items, "total": total, "limit": limit, "page": page}
+    return RegistrationListEnvelope(items=items, total=total, limit=limit, page=page)
 
 
 @router.get("/export", dependencies=[Depends(require_admin)], **binary_response("text/csv", "Registrations as CSV"))
@@ -425,7 +425,7 @@ async def list_payment_transactions_filtered(
     ),
     sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> dict:
+) -> PaymentTransactionLedgerEnvelope:
     """List ledger entries with booking context, filtered by edition and/or
     person (#1019) — the in-app drill-down behind the edition/person payment
     summaries; ``/transactions/export`` covers the CSV download of the same
@@ -451,12 +451,9 @@ async def list_payment_transactions_filtered(
         payments_service.ledger_row_to_out(txn, registration, person, event)
         for txn, registration, person, event in rows
     ]
-    return {
-        "items": items,
-        "total": total,
-        "limit": effective_pagination.limit,
-        "page": effective_pagination.page,
-    }
+    return PaymentTransactionLedgerEnvelope(
+        items=items, total=total, limit=cast(int, effective_pagination.limit), page=effective_pagination.page
+    )
 
 
 _LEDGER_CSV_BATCH_SIZE = 500

@@ -43,7 +43,7 @@ async def progress(db: AsyncSession, card: StampCard) -> StampProgress:
     )
 
 
-async def sync_check_in(db: AsyncSession, registration: Registration, checked_in: bool) -> dict | None:
+async def sync_check_in(db: AsyncSession, registration: Registration, checked_in: bool) -> StampProgress | None:
     # The registration lock precedes this person lock on both write paths.
     await lock_person(db, registration.person_id)
     stamp = await db.scalar(select(Stamp).where(Stamp.registration_id == registration.id))
@@ -51,7 +51,7 @@ async def sync_check_in(db: AsyncSession, registration: Registration, checked_in
         card = await db.get(StampCard, stamp.card_id)
         assert card is not None
         if checked_in:
-            return (await progress(db, card)).model_dump()
+            return await progress(db, card)
         reward = await db.scalar(select(StampCardReward).where(StampCardReward.card_id == card.id))
         if reward and reward.handed_out_at:
             raise ApiHTTPException(
@@ -63,7 +63,7 @@ async def sync_check_in(db: AsyncSession, registration: Registration, checked_in
         await db.flush()
         card.completed_at = None
         await db.flush()
-        return (await progress(db, card)).model_dump()
+        return await progress(db, card)
     if not checked_in:
         return None
     edition_type = await db.scalar(
@@ -115,7 +115,7 @@ async def sync_check_in(db: AsyncSession, registration: Registration, checked_in
         await db.flush()
         await reward_mail.enqueue_reward_ready(db, reward, card)
         result.reward_earned = True
-    return result.model_dump()
+    return result
 
 
 async def list_types(db: AsyncSession) -> list[StampCardTypeOut]:

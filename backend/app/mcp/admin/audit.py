@@ -13,25 +13,16 @@ from sqlalchemy import select
 
 from app.mcp.utils import MCPToolError
 from app.models import AuditEntry
+from app.schemas import AuditEntryOut
 
 DEFAULT_AUDIT_LIMIT = 100
 MAX_AUDIT_LIMIT = 1000
 
 
 def _entry_to_dict(entry: AuditEntry) -> dict:
-    return {
-        "id": entry.id,
-        "timestamp": entry.timestamp.isoformat(),
-        "actor": entry.actor,
-        "auth_source": entry.auth_source,
-        "subject": entry.subject,
-        "integration_client_id": entry.integration_client_id,
-        "action": entry.action,
-        "resource_type": entry.resource_type,
-        "resource_id": entry.resource_id,
-        "request_id": entry.request_id,
-        "details": entry.details,
-    }
+    result = AuditEntryOut.model_validate(entry, from_attributes=True).model_dump()
+    result["timestamp"] = entry.timestamp.isoformat()
+    return result
 
 
 async def list_audit_entries(

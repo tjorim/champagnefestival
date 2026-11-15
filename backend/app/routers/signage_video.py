@@ -34,7 +34,9 @@ class CreateExport(BaseModel):
 
 @router.get("/capability", response_model=VideoExportCapabilityOut)
 async def capability():
-    return {"available": service.configured(), "max_slides": service.MAX_SLIDES, "max_seconds": service.MAX_SECONDS}
+    return VideoExportCapabilityOut(
+        available=service.configured(), max_slides=service.MAX_SLIDES, max_seconds=service.MAX_SECONDS
+    )
 
 
 @router.get("", response_model=list[VideoExportOut])

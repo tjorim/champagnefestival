@@ -140,7 +140,7 @@ async def people_counts(
     role: str | None = Query(None),
     active: bool | None = Query(None),
     reward_due_filter: bool | None = Query(None, alias="reward_due"),
-) -> dict:
+) -> PeopleCountsOut:
     """Counts within the full intersection of q, role and active filters."""
     matching = filtered_people_stmt(q=q, role=role, active=active, reward_due_filter=reward_due_filter).subquery()
     active_expr = (
@@ -160,7 +160,7 @@ async def people_counts(
     roles = (
         await db.execute(select(expanded.c.role, func.count(func.distinct(expanded.c.id))).group_by(expanded.c.role))
     ).all()
-    return {"total": total, "active": active_count, "inactive": total - active_count, "by_role": dict(roles)}
+    return PeopleCountsOut(total=total, active=active_count, inactive=total - active_count, by_role=dict(roles))
 
 
 @router.get("/by-email", response_model=PersonListEnvelope)

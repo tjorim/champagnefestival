@@ -312,7 +312,7 @@ async def clear_edition_artwork(
 
 
 @router.get("/{edition_id}/scratchpad", response_model=EditionScratchpadOut, dependencies=[Depends(require_admin)])
-async def get_edition_scratchpad(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_edition_scratchpad(edition_id: str, db: AsyncSession = Depends(get_db)) -> EditionScratchpadOut:
     """A free-text planning notepad scoped to one edition. Deliberately its own
     lightweight resource rather than a field on `EditionOut`/`EditionUpdate`,
     so editing it doesn't require fetching or resubmitting the much heavier
@@ -328,7 +328,7 @@ async def update_edition_scratchpad(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EditionScratchpadOut:
     edition = await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.update_edition_scratchpad(
         db, edition, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)

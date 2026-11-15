@@ -91,17 +91,17 @@ async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
 async def resolve_table_reference(
     reference: str = Query(min_length=1, description="Visible table number, name, or label"),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VolunteerTableResolveOut:
     """Resolve a human-facing table reference without fuzzy numeric matching."""
 
     tables = await _resolve_tables(db, reference)
-    return {
-        "tables": [
+    return VolunteerTableResolveOut(
+        tables=[
             {"table_id": table.id, "table_name": table.name, "capacity": table.capacity, "layout_id": table.layout_id}
             for table in tables
         ],
-        "count": len(tables),
-    }
+        count=len(tables),
+    )
 
 
 @router.get(
@@ -112,7 +112,7 @@ async def get_table_order_summary(
     table_id: str | None = Query(default=None),
     table_reference: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VolunteerTableOrdersOut | VolunteerTableOrdersUnresolvedOut:
     """Return PII-free registration and order details for a table."""
 
     if table_id is None and table_reference is None:
@@ -126,16 +126,14 @@ async def get_table_order_summary(
     elif table_reference is not None:
         candidates = await _resolve_tables(db, table_reference)
         if len(candidates) != 1:
-            return {
-                "table_reference": table_reference,
-                "registrations": [],
-                "candidates": [{"table_id": item.id, "table_name": item.name} for item in candidates],
-                "message": (
-                    "No table matched this reference."
-                    if not candidates
-                    else "Multiple tables matched this reference; choose a table_id."
-                ),
-            }
+            return VolunteerTableOrdersUnresolvedOut(
+                table_reference=table_reference,
+                registrations=[],
+                candidates=[{"table_id": item.id, "table_name": item.name} for item in candidates],
+                message="No table matched this reference."
+                if not candidates
+                else "Multiple tables matched this reference; choose a table_id.",
+            )
         table = candidates[0]
     if table is None:
         raise HTTPException(status_code=404, detail="Table not found.")
@@ -152,16 +150,16 @@ async def get_table_order_summary(
         .scalars()
         .all()
     )
-    return {
-        "table_id": table.id,
-        "table_name": table.name,
-        "registrations": [
+    return VolunteerTableOrdersOut(
+        table_id=table.id,
+        table_name=table.name,
+        registrations=[
             registration_to_checkin_out(registration, registration.person, registration.event, table_name=table.name)
             for registration in rows
             if registration.person is not None and registration.event is not None
         ],
-        "count": len(rows),
-    }
+        count=len(rows),
+    )
 
 
 @router.get("/registrations", response_model=list[CheckInGuestOut])
@@ -380,7 +378,7 @@ async def volunteer_check_in_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CheckInOut:
     """Mark a registration checked in from the authenticated volunteer flow.
 
     This is the QR-code fallback for entrance volunteers. It accepts the same
@@ -460,8 +458,4 @@ async def volunteer_check_in_registration(
         )
     await db.commit()
 
-    return {
-        "registration": registration_dict,
-        "already_checked_in": already,
-        "stamp_progress": stamp_progress,
-    }
+    return CheckInOut(registration=registration_dict, already_checked_in=already, stamp_progress=stamp_progress)

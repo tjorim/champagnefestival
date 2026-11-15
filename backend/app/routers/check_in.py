@@ -84,7 +84,7 @@ async def post_check_in(
     # See lookup_check_in above.
     reservation_id: str = Path(max_length=64),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> CheckInOut:
     """Mark the guest as checked-in (and optionally issue a strap).
 
     Returns ``already_checked_in: true`` if the guest scanned their QR twice.
@@ -165,11 +165,11 @@ async def post_check_in(
     await db.commit()
     if changed:
         await db.refresh(r)
-    return {
-        "registration": registration_to_checkin_out(r, person, event, table_name=table_name),
-        "already_checked_in": already,
-        "stamp_progress": stamp_progress,
-    }
+    return CheckInOut(
+        registration=registration_to_checkin_out(r, person, event, table_name=table_name),
+        already_checked_in=already,
+        stamp_progress=stamp_progress,
+    )
 
 
 # ---------------------------------------------------------------------------

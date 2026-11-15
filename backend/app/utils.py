@@ -19,7 +19,6 @@ from app.models import (
     AppSettings,
     Area,
     Edition,
-    EditionPollOption,
     Event,
     FaqItem,
     Layout,
@@ -234,26 +233,6 @@ def order_item_name(item: dict, locale: str | None) -> str:
     """An order line's product name in *locale*, falling back to the Dutch
     name stored with the order (older orders carry only that)."""
     return resolve_text({code: item.get(f"name_{code}") for code in ("nl", "fr", "en")}, locale) or item["name"]
-
-
-def poll_option_to_dict(
-    option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0, locale: str | None = None
-) -> dict:
-    return {
-        "id": option.id,
-        "question_id": option.question_id,
-        "edition_id": option.edition_id,
-        "label": option.localized_label(locale),
-        "label_nl": option.label_nl,
-        "label_fr": option.label_fr,
-        "label_en": option.label_en,
-        "dietary_tags": list(option.dietary_tags or []),
-        "sort_order": option.sort_order,
-        "total_quantity": total_quantity,
-        "volunteer_count": volunteer_count,
-        "created_at": option.created_at,
-        "updated_at": option.updated_at,
-    }
 
 
 def product_available_quantity(p: Product) -> int | None:

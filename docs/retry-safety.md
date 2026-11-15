@@ -1259,3 +1259,10 @@ shape and retry decision unchanged. It adds no automatic retries or new safety p
 The existing integration tests exercise these write paths and payment replay/races;
 response parity tests additionally pin nullable translations, native timestamps,
 localisation fallback, decimal strings and composer counts/snapshots.
+
+## Final response-model consolidation (#1657)
+
+Scratchpad writes, stamp/check-in transitions, policy render previews, email confirmations
+and member opt-out retain their existing transaction, locking, payload and retry decisions.
+Only response construction changes; no write is retried automatically. Stamp progress stays
+a model between services and is serialized only by the existing REST/MCP boundary.

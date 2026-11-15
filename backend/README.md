@@ -828,9 +828,16 @@ REST returns models directly. MCP dumps preserve native timestamps, decimal paym
 strings, sparse layout conflict fields and poll-order event links. Replay storage stays JSON.
 
 Internal lookup maps, persisted snapshots, audit data, worker protocols and delete
-acknowledgements retain their existing contracts. The minimal MCP registration projection,
-edition scratchpad and stamp-progress integration boundary remain inventoried for the
-final consolidation pass. Specialized projections are described below.
+acknowledgements retain their existing contracts. Edition scratchpads and inline route envelopes also construct their declared output models;
+stamp progress remains a model between services. The unused poll-option dictionary builder
+is removed. Audit MCP output uses `AuditEntryOut` while explicitly preserving its historical
+ISO timestamp formatting. Specialized projections are described below.
+
+Operational MCP discovery/seating/order/delivery summaries remain distinct transport
+projections, including the minimal role-filtered registration shape. They are not REST
+entity copies, and no full REST model is substituted where it would add private fields
+or defaults. SSE events, browser push messages, worker/storage contracts and internal maps
+remain separate from ordinary JSON route response models.
 
 ### Specialized response construction (#1657)
 

@@ -39,6 +39,7 @@ from app.schemas import (
     EditionItemOut,
     EditionOut,
     EditionPublicOut,
+    EditionScratchpadOut,
     EditionScratchpadUpdate,
     EditionType,
     EditionUpdate,
@@ -75,14 +76,14 @@ async def get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
     )
 
 
-async def get_edition_scratchpad(db: AsyncSession, edition_id: str) -> dict:
+async def get_edition_scratchpad(db: AsyncSession, edition_id: str) -> EditionScratchpadOut:
     edition = await get_edition_or_404(db, edition_id)
-    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
+    return EditionScratchpadOut(content=edition.scratchpad, updated_at=edition.updated_at)
 
 
 async def update_edition_scratchpad(
     db: AsyncSession, edition: Edition, *, body: EditionScratchpadUpdate, actor: str, request_id: str | None = None
-) -> dict:
+) -> EditionScratchpadOut:
     edition.scratchpad = body.content
     await write_audit_entry(
         db,
@@ -95,7 +96,7 @@ async def update_edition_scratchpad(
     )
     await db.commit()
     await db.refresh(edition)
-    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
+    return EditionScratchpadOut(content=edition.scratchpad, updated_at=edition.updated_at)
 
 
 async def deactivate_conflicting_editions(

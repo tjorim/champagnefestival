@@ -57,7 +57,7 @@ async def list_outbox_jobs(
     state: str | None = Query(default=None),
     pagination: Pagination = Depends(),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> OutboxJobListEnvelope:
     filtered = select(OutboxJob)
     if state:
         filtered = filtered.where(OutboxJob.state == state)
@@ -67,4 +67,4 @@ async def list_outbox_jobs(
     page = pagination.page
     stmt = filtered.order_by(OutboxJob.created_at.desc(), OutboxJob.id.desc()).offset((page - 1) * limit).limit(limit)
     items = list((await db.scalars(stmt)).all())
-    return {"items": items, "total": total, "limit": limit, "page": page}
+    return OutboxJobListEnvelope(items=items, total=total, limit=limit, page=page)

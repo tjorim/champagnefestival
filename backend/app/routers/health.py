@@ -63,9 +63,9 @@ def _require_metrics_access(request: Request) -> None:
 
 
 @router.get("/health/liveness", response_model=HealthStatusOut)
-def liveness_check() -> dict[str, str]:
+def liveness_check() -> HealthStatusOut:
     """Fast alive check — no DB hit. Suitable for load-balancer liveness probes."""
-    return {"status": "alive"}
+    return HealthStatusOut(status="alive")
 
 
 async def _check_jwks_reachable() -> bool:
@@ -101,7 +101,7 @@ async def _jwks_reachable() -> bool:
 async def readiness_check(
     response: Response,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, str]:
+) -> HealthStatusOut:
     """DB + OIDC connectivity check.
 
     Returns 200 when both the database and OIDC JWKS endpoint are reachable, 503 otherwise.
@@ -114,7 +114,7 @@ async def readiness_check(
     except Exception:
         logger.exception("Readiness check failed: database connectivity error")
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "not_ready"}
+        return HealthStatusOut(status="not_ready")
 
     if settings.oidc_issuer_url:
         try:
@@ -122,34 +122,34 @@ async def readiness_check(
         except OIDCTokenError:
             logger.exception("Readiness check failed: OIDC discovery failed")
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-            return {"status": "not_ready"}
+            return HealthStatusOut(status="not_ready")
         except Exception:
             logger.exception("Readiness check failed: OIDC JWKS endpoint unreachable")
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-            return {"status": "not_ready"}
+            return HealthStatusOut(status="not_ready")
         if not reachable:
             response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-            return {"status": "not_ready"}
+            return HealthStatusOut(status="not_ready")
 
-    return {"status": "ready"}
+    return HealthStatusOut(status="ready")
 
 
 @router.get("/health", response_model=HealthOut)
-def health_check() -> dict[str, str]:
+def health_check() -> HealthOut:
     """Summary health response with links to liveness and readiness probes."""
-    return {
-        "status": "ok",
-        "version": APP_VERSION,
-        "commit": APP_COMMIT,
-        "liveness_endpoint": "/api/health/liveness",
-        "readiness_endpoint": "/api/health/readiness",
-    }
+    return HealthOut(
+        status="ok",
+        version=APP_VERSION,
+        commit=APP_COMMIT,
+        liveness_endpoint="/api/health/liveness",
+        readiness_endpoint="/api/health/readiness",
+    )
 
 
 @router.get("/metrics", response_model=MetricsOut)
 def metrics_endpoint(
     _: None = Depends(_require_metrics_access),
-) -> dict[str, float | int | bool]:
+) -> MetricsOut:
     """HMAC-protected endpoint returning uptime, request rate, error rate and latency percentiles.
 
     Pass a fresh ``<unix-timestamp>:<hex-hmac-sha256>`` token in the
@@ -161,14 +161,14 @@ def metrics_endpoint(
     worker serves all requests; the response labels this with ``per_process``.
     """
     snapshot = metrics.snapshot()
-    return {
-        "uptime_seconds": round(snapshot.uptime_seconds, 2),
-        "request_total": snapshot.total_requests,
-        "error_total": snapshot.total_errors,
-        "request_rate_per_second": round(snapshot.request_rate_per_second, 4),
-        "error_rate": round(snapshot.error_rate, 4),
-        "latency_avg_ms": round(snapshot.latency_avg_ms, 2),
-        "latency_p50_ms": round(snapshot.latency_p50_ms, 2),
-        "latency_p99_ms": round(snapshot.latency_p99_ms, 2),
-        "per_process": True,
-    }
+    return MetricsOut(
+        uptime_seconds=round(snapshot.uptime_seconds, 2),
+        request_total=snapshot.total_requests,
+        error_total=snapshot.total_errors,
+        request_rate_per_second=round(snapshot.request_rate_per_second, 4),
+        error_rate=round(snapshot.error_rate, 4),
+        latency_avg_ms=round(snapshot.latency_avg_ms, 2),
+        latency_p50_ms=round(snapshot.latency_p50_ms, 2),
+        latency_p99_ms=round(snapshot.latency_p99_ms, 2),
+        per_process=True,
+    )
