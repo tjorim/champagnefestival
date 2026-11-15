@@ -1,3 +1,4 @@
+import { editionOut, venueOut } from "@/mocks/data/builders";
 import type { ComponentProps } from "react";
 import type { RegistrationsPage } from "@/utils/adminFetch";
 /**
@@ -17,7 +18,6 @@ import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { RegistrationListOut } from "@/api-types";
-import { apiToRegistration } from "@/types/registrationMapper";
 import { eventOut, registrationOut } from "../utils/registrationFixtures";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -31,19 +31,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 const activeEdition: ActiveEdition = {
+  ...editionOut(),
   id: "edition-1",
   year: 2026,
-  editionType: "festival",
+  edition_type: "festival",
   month: "march",
   dates: [],
-  venue: {
-    venueName: "Test Venue",
-    address: "123 Main St",
-    city: "Ghent",
-    postalCode: "9000",
-    country: "BE",
-    coordinates: { lat: 0, lng: 0 },
-  },
+  venue: venueOut(),
   events: [],
   producers: [],
   sponsors: [],
@@ -85,7 +79,7 @@ function buildRawRegistration(index: number): RegistrationListOut {
 const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
   buildRawRegistration(i + 1),
 );
-const registrations = rawRegistrations.map((row) => apiToRegistration(row));
+const registrations = rawRegistrations.map((row) => row);
 
 function installPaginatedHandler(seen: URL[] = []) {
   server.use(

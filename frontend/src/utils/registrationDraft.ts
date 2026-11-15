@@ -1,4 +1,4 @@
-import type { Product } from "@/types/event";
+import type { Product } from "@/api-types";
 
 /**
  * Product rules for a booking being drafted by an organiser. They mirror the
@@ -33,7 +33,10 @@ export function resolveQuantities(
 }
 
 export function draftTotal(products: Product[], quantities: ProductQuantities): number {
-  return products.reduce((sum, product) => sum + (quantities[product.id] ?? 0) * product.price, 0);
+  return products.reduce(
+    (sum, product) => sum + (quantities[product.id] ?? 0) * Number(product.price),
+    0,
+  );
 }
 
 export interface ProductDraftState {

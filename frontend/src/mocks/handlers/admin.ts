@@ -1,3 +1,4 @@
+import { venueOut } from "../data/builders";
 import type {
   AreaOut,
   EventOut,
@@ -32,7 +33,7 @@ import {
 } from "../data/adminContent";
 import { seedOrganizations } from "../data/organizations";
 import { localIsoDate } from "@/types/person";
-import { seedPeople } from "../data/people";
+import { seedPeople, type MockPerson } from "../data/people";
 import {
   type RegistrationScenario,
   sharedStore,
@@ -49,7 +50,7 @@ import {
 } from "../data/venue";
 
 /** Mutable in-memory stores — reset on page reload. */
-let people: Record<string, unknown>[] = structuredClone(seedPeople);
+let people: MockPerson[] = structuredClone(seedPeople);
 let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
 const eventCategories = { items: structuredClone(seedEventCategories) };
 const productCategories = { items: structuredClone(seedProductCategories) };
@@ -279,15 +280,17 @@ function now(): string {
 }
 
 function registrationToCheckInResponse(
-  registration: Record<string, unknown>,
-): Record<string, unknown> {
-  const person = registration.person as Record<string, unknown> | undefined;
-  const event = registration.event as Record<string, unknown> | null | undefined;
+  raw: Record<string, unknown>,
+): import("@/api-types").CheckInGuestOut {
+  const registration = raw as import("@/api-types").RegistrationOutWithToken;
+  const person = registration.person;
+  const event = registration.event;
   const table = tables.find((item) => item.id === registration.table_id);
   return {
     id: registration.id,
     name: person?.name ?? "",
     event_id: registration.event_id,
+    edition_id: registration.event?.edition_id ?? null,
     event_title: event?.title ?? "",
     table_id: registration.table_id ?? null,
     table_name: table?.name ?? null,
@@ -303,7 +306,7 @@ function registrationToCheckInResponse(
 
 /** Mirrors the paged people contract for authenticated UI tests. */
 // Active in a role: not archived as a whole and not retired from that role (as the backend does).
-function isActiveIn(person: Record<string, unknown>, role: string | null | undefined): boolean {
+function isActiveIn(person: MockPerson, role: string | null | undefined): boolean {
   const retired = (person.retired_roles ?? {}) as Record<string, string>;
   return !person.anonymised && !(role && Object.hasOwn(retired, role));
 }
@@ -327,29 +330,31 @@ function filteredPeople(url: URL, role?: string) {
           "eid_document_number",
           "notes",
         ].some((field) =>
-          String(person[field] ?? "")
+          String(person[field as keyof MockPerson] ?? "")
             .toLowerCase()
             .includes(q),
         ) ||
         (person.roles as string[]).some((value) => value.includes(q))),
   );
 }
-function retireMockRole(person: Record<string, unknown>, role: string): Record<string, unknown> {
+function retireMockRole(person: MockPerson, role: string): MockPerson {
   const retired = (person.retired_roles ?? {}) as Record<string, string>;
   return Object.hasOwn(retired, role)
     ? person
     : { ...person, retired_roles: { ...retired, [role]: localIsoDate() } };
 }
-function reactivateMockRole(
-  person: Record<string, unknown>,
-  role: string,
-): Record<string, unknown> {
+function reactivateMockRole(person: MockPerson, role: string): MockPerson {
   const { [role]: _removed, ...retired } = (person.retired_roles ?? {}) as Record<string, string>;
   return { ...person, retired_roles: retired };
 }
-function peopleEnvelope(url: URL, role?: string) {
-  const rows: Record<string, unknown>[] = filteredPeople(url, role).map((person) => ({
+function peopleEnvelope(
+  url: URL,
+  role?: string,
+): import("@/api-types").PersonListEnvelope & import("@/api-types").VolunteerListEnvelope {
+  const rows = filteredPeople(url, role).map((person) => ({
     ...person,
+    last_attended: null,
+    inactivity_highlight: false,
     reward_due: hasRewardDue(person.id),
     registration_count: sharedStore.registrations.filter(
       (registration) => registration.person_id === person.id,
@@ -462,7 +467,7 @@ export const adminHandlers = [
     const filtered = sharedStore.registrations.filter((registration) => {
       if (status && registration.status !== status) return false;
       if (!query) return true;
-      const person = registration.person as Record<string, unknown> | undefined;
+      const person = registration.person as import("@/api-types").PersonSummaryOut | undefined;
       const event = registration.event as Record<string, unknown> | undefined;
       return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
         .filter((value): value is string => typeof value === "string")
@@ -485,7 +490,7 @@ export const adminHandlers = [
 
     const matches = sharedStore.registrations.filter((registration) => {
       if (!query) return true;
-      const person = registration.person as Record<string, unknown> | undefined;
+      const person = registration.person as import("@/api-types").PersonSummaryOut | undefined;
       const event = registration.event as Record<string, unknown> | undefined;
       return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
         .filter((value): value is string => typeof value === "string")
@@ -644,7 +649,7 @@ export const adminHandlers = [
             {
               product_id: product.id,
               name: product.name,
-              price: product.price,
+              price: Number(product.price),
               category: product.category,
               quantity,
               included_quantity: 0,
@@ -785,12 +790,15 @@ export const adminHandlers = [
     return HttpResponse.json({
       items: matching.slice((page - 1) * limit, page * limit).map((row) => ({
         ...row,
+        reward_due: hasRewardDue(row.id),
+        last_attended: null,
+        inactivity_highlight: false,
         registration_count: sharedStore.registrations.filter((r) => r.person_id === row.id).length,
       })),
       total: matching.length,
       limit,
       page,
-    });
+    } satisfies import("@/api-types").PersonListEnvelope);
   }),
   http.get("/api/people/export", ({ request }) => {
     const authError = requireAuth(request);
@@ -811,7 +819,7 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newPerson = {
+    const newPerson: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
@@ -822,7 +830,14 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: null,
       notes: String(body.notes ?? ""),
+      role_history: {},
+      help_periods: [],
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       created_at: now(),
       updated_at: now(),
     };
@@ -887,7 +902,7 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newMember = {
+    const newMember: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
@@ -898,7 +913,13 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: typeof body.visits_per_month === "number" ? body.visits_per_month : null,
       notes: String(body.notes ?? ""),
+      help_periods: [],
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       role_history: {
         member: [
           {
@@ -924,7 +945,7 @@ export const adminHandlers = [
       unknown
     >;
     const current = people[idx]!;
-    const history = (current.role_history ?? {}) as Record<string, Record<string, unknown>[]>;
+    const history = (current.role_history ?? {}) as MockPerson["role_history"];
     const stretches = history.member ?? [{ started_on: null, ended_on: null }];
     people[idx] = {
       ...current,
@@ -933,7 +954,10 @@ export const adminHandlers = [
         ? {
             role_history: {
               ...history,
-              member: [...stretches.slice(0, -1), { ...stretches.at(-1), started_on: memberSince }],
+              member: [
+                ...stretches.slice(0, -1),
+                { ended_on: stretches.at(-1)?.ended_on ?? null, started_on: memberSince },
+              ],
             },
           }
         : {}),
@@ -989,21 +1013,36 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newVol = {
+    const newVol: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
       phone: String(body.phone ?? ""),
       address: String(body.address ?? ""),
       roles: ["volunteer"],
-      national_register_number: body.national_register_number ?? null,
-      eid_document_number: body.eid_document_number ?? null,
+      national_register_number:
+        typeof body.national_register_number === "string" ? body.national_register_number : null,
+      eid_document_number:
+        typeof body.eid_document_number === "string" ? body.eid_document_number : null,
       help_periods: Array.isArray(body.help_periods)
-        ? body.help_periods.map((period, index) => ({ ...period, id: index + 1 }))
+        ? (body.help_periods as import("@/api-types").VolunteerHelpPeriodIn[]).map(
+            (period, index) => ({
+              ...period,
+              last_help_day: period.last_help_day ?? null,
+              notes: period.notes ?? "",
+              id: index + 1,
+            }),
+          )
         : [],
       visits_per_month: null,
       notes: String(body.notes ?? ""),
+      role_history: {},
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       created_at: now(),
       updated_at: now(),
     };
@@ -1028,10 +1067,11 @@ export const adminHandlers = [
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const today = localIsoDate();
-    const helpPeriods = (people[idx]!.help_periods ?? []) as Record<string, unknown>[];
+    const help_periods = (people[idx]!.help_periods ??
+      []) as import("@/api-types").VolunteerPeriodOut[];
     people[idx] = {
       ...retireMockRole(people[idx]!, "volunteer"),
-      help_periods: helpPeriods.map((period) =>
+      help_periods: help_periods.map((period) =>
         period.last_help_day === null
           ? {
               ...period,
@@ -1162,13 +1202,21 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newEdition = {
+    const newEdition: SeedEdition = {
+      organizations: [],
+      co_organizer: null,
+      flyer_image: null,
+      hero_image: null,
+      share_image: null,
       id: uid(),
       year: Number(body.year ?? new Date().getFullYear()),
       month: String(body.month ?? "march"),
-      edition_type: String(body.edition_type ?? "festival"),
+      edition_type:
+        body.edition_type === "bourse" || body.edition_type === "capsule_exchange"
+          ? body.edition_type
+          : "festival",
       dates: Array.isArray(body.dates) ? (body.dates as string[]) : [],
-      venue: body.venue ?? null,
+      venue: venues.find((v) => v.id === body.venue_id) ?? venueOut(),
       events: [],
       producers: [],
       sponsors: [],
@@ -1177,7 +1225,7 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    editions.push(newEdition as SeedEdition);
+    editions.push(newEdition);
     return HttpResponse.json(newEdition, { status: 201 });
   }),
 
@@ -1258,7 +1306,12 @@ export const adminHandlers = [
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
     const edition = editions.find((e) => e.id === body.edition_id);
-    const newEvent = {
+    const newEvent: SeedEvent = {
+      volunteers_only: body.volunteers_only === true,
+      members_only: body.members_only === true,
+      registrations_close_at:
+        typeof body.registrations_close_at === "string" ? body.registrations_close_at : null,
+      order_questions: [],
       id: uid(),
       edition_id: String(body.edition_id ?? ""),
       ...eventTextFromBody(body),
@@ -1269,7 +1322,6 @@ export const adminHandlers = [
       registration_required: body.registration_required === true,
       registrations_open_from:
         typeof body.registrations_open_from === "string" ? body.registrations_open_from : null,
-      sort_order: typeof body.sort_order === "number" ? body.sort_order : 0,
       active: body.active !== false,
       edition: edition
         ? {
@@ -1284,7 +1336,7 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    events.push(newEvent as SeedEvent);
+    events.push(newEvent);
     return HttpResponse.json(newEvent, { status: 201 });
   }),
 
@@ -1327,10 +1379,16 @@ export const adminHandlers = [
     const event = events.find((e) => e.id === body.event_id);
     if (!event) return HttpResponse.json({ detail: "Event not found." }, { status: 404 });
     const newProduct: SeedProduct = {
+      unit: body.unit === "table" || body.unit === "person" ? body.unit : "item",
+      stock: typeof body.stock === "number" ? body.stock : null,
+      reserved_quantity: 0,
+      available_quantity: null,
+      shortage: 0,
+      sold_out: false,
       id: uid(),
       event_id: String(body.event_id ?? ""),
       ...productTextFromBody(body),
-      price: Number(body.price ?? 0),
+      price: Number(body.price ?? 0).toFixed(2),
       category: String(body.category ?? "other"),
       purchasable: body.purchasable !== false,
       required: body.required === true,
@@ -1361,6 +1419,8 @@ export const adminHandlers = [
           ...productTextFromBody({ ...event.products[idx]!, ...body }),
           id: String(params.id),
           event_id: event.id,
+          price:
+            body.price !== undefined ? Number(body.price).toFixed(2) : event.products[idx]!.price,
           updated_at: now(),
         };
         return HttpResponse.json(event.products[idx]);

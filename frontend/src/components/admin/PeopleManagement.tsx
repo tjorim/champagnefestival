@@ -1,3 +1,4 @@
+import { editionDisplayName } from "@/utils/editionName";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { RowActionButton, RowActions } from "./RowActions";
 import { PersonDuplicates } from "./PersonDuplicates";
@@ -117,8 +118,8 @@ export default function PeopleManagement({
 
   const openMerge = useCallback((a: Person, b: Person) => {
     // Default: keep the one with more registrations as canonical
-    const aCount = a.registrationCount ?? 0;
-    const bCount = b.registrationCount ?? 0;
+    const aCount = a.registration_count ?? 0;
+    const bCount = b.registration_count ?? 0;
     setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
     setMergeError("");
     setMergeSuccess(false);
@@ -223,19 +224,25 @@ export default function PeopleManagement({
     );
     const byEdition = new Map<string, { label: string; totalPaid: number }>();
     for (const r of nonCancelled) {
-      const key = r.editionId || r.editionLabel || "?";
+      const key =
+        r.event.edition_id || (r.event.edition ? editionDisplayName(r.event.edition) : "") || "?";
       const existing = byEdition.get(key);
       byEdition.set(key, {
-        label: r.editionLabel || key,
-        totalPaid: (existing?.totalPaid ?? 0) + r.amountPaid,
+        label: (r.event.edition ? editionDisplayName(r.event.edition) : "") || key,
+        totalPaid: (existing?.totalPaid ?? 0) + Number(r.amount_paid),
       });
     }
     return {
-      grandTotal: nonCancelled.reduce((sum, r) => sum + r.amountPaid, 0),
+      grandTotal: nonCancelled.reduce((sum, r) => sum + Number(r.amount_paid), 0),
       // Traceable to each booking's own amount_due/amount_paid (#1019), which
       // in turn derive from that booking's payment ledger.
       outstandingTotal: nonCancelled.reduce(
-        (sum, r) => sum + Math.max(0, (r.amountDue ?? 0) - r.amountPaid),
+        (sum, r) =>
+          sum +
+          Math.max(
+            0,
+            ((r.amount_due === null ? null : Number(r.amount_due)) ?? 0) - Number(r.amount_paid),
+          ),
         0,
       ),
       byEdition: [...byEdition.values()],
@@ -274,7 +281,7 @@ export default function PeopleManagement({
           enableSorting: false,
           cell: ({ row }) => (
             <div className="flex flex-wrap gap-1">
-              {row.original.roles.map((role) => (
+              {(row.original.roles ?? []).map((role) => (
                 <Badge key={role} variant="secondary" className="capitalize">
                   {role}
                 </Badge>
@@ -283,7 +290,7 @@ export default function PeopleManagement({
           ),
           meta: { tdClassName: "hidden lg:table-cell" },
         }),
-        columnHelper.accessor((row) => row.registrationCount ?? 0, {
+        columnHelper.accessor((row) => row.registration_count ?? 0, {
           id: "registrations",
           header: m.admin_registrations_tab(),
           cell: ({ row, getValue }) => {
@@ -336,8 +343,8 @@ export default function PeopleManagement({
                       setEmailDraft(
                         buildMemberEmailDraft(
                           person.name,
-                          person.email,
-                          person.preferredLanguage ?? "nl",
+                          person.email ?? "",
+                          person.preferred_language ?? "nl",
                         ),
                       )
                     }
@@ -482,7 +489,7 @@ export default function PeopleManagement({
 
               {(["canonical", "duplicate"] as const).map((role) => {
                 const person = mergeState[role];
-                const resCount = person.registrationCount ?? 0;
+                const resCount = person.registration_count ?? 0;
                 const label =
                   role === "canonical"
                     ? m.admin_people_merge_into()
@@ -520,7 +527,7 @@ export default function PeopleManagement({
                         <Badge variant={resCount > 0 ? "warning" : "secondary"}>
                           {resCount} {m.admin_people_registrations_count()}
                         </Badge>
-                        {person.roles.map((r) => (
+                        {(person.roles ?? []).map((r) => (
                           <Badge key={r} variant="secondary" className="ms-1 capitalize">
                             {r}
                           </Badge>
@@ -573,12 +580,12 @@ export default function PeopleManagement({
                 </Alert>
               )}
               <p>{m.admin_people_delete_confirm({ name: deletingPerson.name })}</p>
-              {(deletingPerson.registrationCount ?? 0) > 0 && (
+              {(deletingPerson.registration_count ?? 0) > 0 && (
                 <p className="font-semibold">
-                  {deletingPerson.registrationCount === 1
+                  {deletingPerson.registration_count === 1
                     ? m.admin_people_delete_registrations_one()
                     : m.admin_people_delete_registrations_other({
-                        count: deletingPerson.registrationCount ?? 0,
+                        count: deletingPerson.registration_count ?? 0,
                       })}
                 </p>
               )}
@@ -660,12 +667,12 @@ export default function PeopleManagement({
                       <>
                         <div>
                           {m.admin_people_total_received({
-                            amount: personPaymentSummary.received.toFixed(2),
+                            amount: Number(personPaymentSummary.received).toFixed(2),
                           })}
                         </div>
                         <div>
                           {m.admin_people_total_refunded({
-                            amount: personPaymentSummary.refunded.toFixed(2),
+                            amount: Number(personPaymentSummary.refunded).toFixed(2),
                           })}
                         </div>
                       </>
@@ -686,11 +693,11 @@ export default function PeopleManagement({
                       <PresentationListItem key={r.id} className="py-2">
                         <div className="flex justify-between items-start gap-2">
                           <div>
-                            <div className="font-semibold text-sm">{r.eventTitle}</div>
+                            <div className="font-semibold text-sm">{r.event.title}</div>
                             <div className="text-subtle text-sm">
                               <Icon icon={UsersIcon} className="me-1" />
-                              {r.guestCount}
-                              <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
+                              {r.guest_count}
+                              <span className="ms-2">€{Number(r.amount_paid).toFixed(2)}</span>
                             </div>
                           </div>
                           <div className="flex gap-1 flex-wrap justify-end">
@@ -711,20 +718,20 @@ export default function PeopleManagement({
                             </Badge>
                             <Badge
                               variant={
-                                r.paymentStatus === "paid"
+                                r.payment_status === "paid"
                                   ? "success"
-                                  : r.paymentStatus === "partial"
+                                  : r.payment_status === "partial"
                                     ? "warning"
                                     : "secondary"
                               }
                             >
-                              {r.paymentStatus === "paid"
+                              {r.payment_status === "paid"
                                 ? m.admin_payment_paid()
-                                : r.paymentStatus === "partial"
+                                : r.payment_status === "partial"
                                   ? m.admin_payment_partial()
                                   : m.admin_payment_unpaid()}
                             </Badge>
-                            {r.checkedIn && (
+                            {r.checked_in && (
                               <Badge variant="success">
                                 <Icon icon={CircleCheckIcon} className="me-1" />
                                 {m.admin_checked_in()}
@@ -733,7 +740,7 @@ export default function PeopleManagement({
                           </div>
                         </div>
                         <div className="text-subtle text-tiny">
-                          {new Date(r.createdAt).toLocaleDateString()}
+                          {new Date(r.created_at).toLocaleDateString()}
                         </div>
                       </PresentationListItem>
                     ))}

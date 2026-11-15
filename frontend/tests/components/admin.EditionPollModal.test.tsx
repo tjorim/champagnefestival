@@ -1,10 +1,13 @@
+import { venueOut } from "@/mocks/data/builders";
+import { editionOut } from "@/mocks/data/builders";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import EditionPollModal from "@/components/admin/EditionPollModal";
-import type { Edition } from "@/components/admin/editionTypes";
+import type { Edition } from "@/api-types";
+
 import { server } from "@/mocks/server";
 import { exportToCsv } from "@/utils/csvExport";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -21,18 +24,18 @@ vi.mock("@/utils/csvExport", () => ({ exportToCsv: vi.fn() }));
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const edition: Edition = {
+const edition: Edition = editionOut({
   id: "2026-october",
   year: 2026,
   month: "october",
-  editionType: "festival",
+  edition_type: "festival",
   dates: [],
-  venue: { id: "venue-1", name: "MEC Staf Versluys", city: "Bredene", active: true },
+  venue: venueOut({ name: "MEC Staf Versluys" }),
   events: [],
   active: true,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-};
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+});
 
 /** A stored option as the admin API returns it. */
 function option(

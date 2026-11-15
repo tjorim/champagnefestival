@@ -1,4 +1,9 @@
-import { apiToPerson, type Person } from "@/types/person";
+import type {
+  Person,
+  PersonListEnvelope,
+  VolunteerListEnvelope,
+  PeopleCountsOut,
+} from "@/api-types";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 
@@ -13,12 +18,7 @@ export interface PeopleListParams {
   reward_due?: boolean;
 }
 
-export interface PeoplePage {
-  items: (Person & { registrationCount?: number })[];
-  total: number;
-  page: number;
-  limit: number;
-}
+export type PeoplePage = Omit<PersonListEnvelope, "items"> & { items: Person[] };
 
 /** Only the list contract is accepted: unsupported predicates must not be ignored. */
 export function peopleListSearchParams(params: PeopleListParams): URLSearchParams {
@@ -47,12 +47,9 @@ export async function fetchPeoplePage(
       throw new Error(`Unsupported volunteer sort: ${params.sort}`);
     }
   }
-  const payload = await fetchJsonOrThrowWithUnauthorized<{
-    items: Record<string, unknown>[];
-    total: number;
-    page: number;
-    limit: number;
-  }>(`${path}?${search}`, { headers: authHeaders(), signal }, m.admin_error_load_data());
+  const payload = await fetchJsonOrThrowWithUnauthorized<
+    PersonListEnvelope | VolunteerListEnvelope
+  >(`${path}?${search}`, { headers: authHeaders(), signal }, m.admin_error_load_data());
   signal.throwIfAborted();
   if (
     !Array.isArray(payload.items) ||
@@ -62,23 +59,11 @@ export async function fetchPeoplePage(
   ) {
     throw new Error("Invalid people page: expected {items, total, page, limit}.");
   }
-  return {
-    ...payload,
-    items: payload.items.map((item) => ({
-      ...apiToPerson(item),
-      registrationCount:
-        typeof item.registration_count === "number" ? item.registration_count : undefined,
-    })),
-  };
+  return payload;
 }
 
 export type PeopleCountParams = Pick<PeopleListParams, "q" | "role" | "active" | "reward_due">;
-export interface PeopleCounts {
-  total: number;
-  active: number;
-  inactive: number;
-  by_role: Record<string, number>;
-}
+export type PeopleCounts = PeopleCountsOut;
 
 /** Full-result facets, independent of the currently visible page. */
 export function fetchPeopleCounts(
@@ -112,22 +97,11 @@ export async function fetchPeopleByEmail(
     limit: "100",
     page: "1",
   });
-  const page = await fetchJsonOrThrowWithUnauthorized<{
-    items: Record<string, unknown>[];
-    total: number;
-    page: number;
-    limit: number;
-  }>(
+  const page = await fetchJsonOrThrowWithUnauthorized<PersonListEnvelope>(
     `/api/people/by-email?${search}`,
     { headers: authHeaders(), signal },
     m.admin_error_load_data(),
   );
   signal.throwIfAborted();
-  return {
-    ...page,
-    items: page.items.map((item) => ({
-      ...apiToPerson(item),
-      registrationCount: Number(item.registration_count ?? 0),
-    })),
-  };
+  return page;
 }

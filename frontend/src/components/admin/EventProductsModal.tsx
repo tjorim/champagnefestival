@@ -48,7 +48,8 @@ import {
   type ProductChangePreview,
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
-import type { Event, Product, ProductInclusion } from "@/types/event";
+import type { Event, Product, ProductInclusionOut as ProductInclusion } from "@/api-types";
+
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 interface EventProductsModalProps {
@@ -67,8 +68,8 @@ interface ProductFormState {
   purchasable: boolean;
   required: boolean;
   /** Empty string means "no bundle". */
-  includedProductId: string;
-  includedPerGuests: string;
+  included_product_id: string;
+  included_per_guests: string;
   unit: "item" | "table" | "person";
   stock: string;
   inclusions: ProductInclusion[];
@@ -83,8 +84,8 @@ const EMPTY_FORM: ProductFormState = {
   category: "",
   purchasable: true,
   required: false,
-  includedProductId: "",
-  includedPerGuests: "",
+  included_product_id: "",
+  included_per_guests: "",
   unit: "item",
   stock: "",
   inclusions: [],
@@ -164,34 +165,34 @@ export default function EventProductsModal({
       editingProduct
         ? {
             name: {
-              nl: editingProduct.nameNl ?? "",
-              fr: editingProduct.nameFr ?? "",
-              en: editingProduct.nameEn ?? "",
+              nl: editingProduct.name_nl ?? "",
+              fr: editingProduct.name_fr ?? "",
+              en: editingProduct.name_en ?? "",
             },
             description: {
-              nl: editingProduct.descriptionNl ?? "",
-              fr: editingProduct.descriptionFr ?? "",
-              en: editingProduct.descriptionEn ?? "",
+              nl: editingProduct.description_nl ?? "",
+              fr: editingProduct.description_fr ?? "",
+              en: editingProduct.description_en ?? "",
             },
             price: String(editingProduct.price),
             category: editingProduct.category,
             purchasable: editingProduct.purchasable,
             required: editingProduct.required,
-            includedProductId: editingProduct.includedProductId ?? "",
-            includedPerGuests:
-              editingProduct.includedPerGuests != null
-                ? String(editingProduct.includedPerGuests)
+            included_product_id: editingProduct.included_product_id ?? "",
+            included_per_guests:
+              editingProduct.included_per_guests != null
+                ? String(editingProduct.included_per_guests)
                 : "",
             unit: editingProduct.unit ?? "item",
             stock: editingProduct.stock == null ? "" : String(editingProduct.stock),
             inclusions:
               editingProduct.inclusions ??
-              (editingProduct.includedProductId
+              (editingProduct.included_product_id
                 ? [
                     {
-                      product_id: editingProduct.includedProductId,
+                      product_id: editingProduct.included_product_id,
                       quantity: 1,
-                      per_quantity: editingProduct.includedPerGuests ?? 1,
+                      per_quantity: editingProduct.included_per_guests ?? 1,
                       rounding: "down",
                     },
                   ]
@@ -655,10 +656,10 @@ export default function EventProductsModal({
   }
 
   function renderRow(product: Product) {
-    const includedTarget = product.includedProductId
-      ? products.find((p) => p.id === product.includedProductId)
+    const includedTarget = product.included_product_id
+      ? products.find((p) => p.id === product.included_product_id)
       : undefined;
-    const soldOut = product.purchasable && product.soldOut;
+    const sold_out = product.purchasable && product.sold_out;
     const isBeingEdited = formOpen && editingId === product.id;
     return (
       <PresentationListItem
@@ -670,7 +671,7 @@ export default function EventProductsModal({
             <span className="text-content">
               {product.name}
               <span className="block text-sm text-subtle">
-                {m.admin_inventory_reserved()} {product.reservedQuantity ?? 0} /{" "}
+                {m.admin_inventory_reserved()} {product.reserved_quantity ?? 0} /{" "}
                 {product.stock ?? m.admin_inventory_unlimited()}
                 {(product.shortage ?? 0) > 0
                   ? ` — ${m.admin_inventory_shortage()}: ${product.shortage}`
@@ -680,7 +681,7 @@ export default function EventProductsModal({
             <Badge variant={product.purchasable ? "success" : "secondary"} className="text-micro">
               {product.purchasable ? m.admin_products_purchasable() : m.admin_products_hidden()}
             </Badge>
-            {soldOut && (
+            {sold_out && (
               <Badge variant="danger" className="text-micro">
                 {m.admin_products_sold_out()}
               </Badge>
@@ -693,7 +694,7 @@ export default function EventProductsModal({
                 {m.admin_products_required_badge()}
               </Badge>
             )}
-            <span className="text-subtle text-sm">€{product.price.toFixed(2)}</span>
+            <span className="text-subtle text-sm">€{Number(product.price).toFixed(2)}</span>
           </span>
           <RowActions
             className="shrink-0"
@@ -715,11 +716,11 @@ export default function EventProductsModal({
             />
           </RowActions>
         </div>
-        {includedTarget && product.includedPerGuests && (
+        {includedTarget && product.included_per_guests && (
           <div className="text-subtle text-xs">
             {m.admin_products_bundle_note({
               target: includedTarget.name,
-              ratio: product.includedPerGuests,
+              ratio: product.included_per_guests,
             })}
           </div>
         )}
@@ -757,7 +758,7 @@ export default function EventProductsModal({
                   {m.admin_inventory_existing_bookings()}
                 </h3>
                 <p>
-                  {preview.payload.name.nl}: €{preview.payload.price.toFixed(2)};{" "}
+                  {preview.payload.name.nl}: €{Number(preview.payload.price).toFixed(2)};{" "}
                   {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>

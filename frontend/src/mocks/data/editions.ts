@@ -1,3 +1,4 @@
+import type { EditionOut, EventOut } from "@/api-types";
 /** Seed data for editions and events. */
 
 const BASE_VENUE = {
@@ -69,7 +70,7 @@ function productName(
   };
 }
 
-export const seedEvents = [
+export const seedEvents: EventOut[] = [
   {
     id: "event-01",
     edition_id: "march-2027",
@@ -88,7 +89,10 @@ export const seedEvents = [
     category: "ceremony",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    sort_order: 1,
+    volunteers_only: false,
+    members_only: false,
+    registrations_close_at: null,
+    order_questions: [],
     active: true,
     edition: {
       id: "march-2027",
@@ -115,7 +119,10 @@ export const seedEvents = [
     category: "tasting",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    sort_order: 2,
+    volunteers_only: false,
+    members_only: false,
+    registrations_close_at: null,
+    order_questions: [],
     active: true,
     edition: {
       id: "march-2027",
@@ -129,7 +136,13 @@ export const seedEvents = [
         id: "product-01",
         event_id: "event-02",
         ...productName("en", "Champagne Bottle (Standard)", { nl: "Champagnefles (standaard)" }),
-        price: 65,
+        price: "65",
+        unit: "item",
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
         category: "champagne",
         purchasable: true,
         required: false,
@@ -143,10 +156,17 @@ export const seedEvents = [
         id: "product-02",
         event_id: "event-02",
         ...productName("en", "Cheese Platter", { nl: "Kaasplank", fr: "Plateau de fromages" }),
-        price: 25,
+        price: "25",
+        unit: "item",
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
         category: "food",
         purchasable: true,
         required: false,
+        inclusions: null,
         included_product_id: null,
         included_per_guests: null,
         created_at: "2024-01-01T00:00:00Z",
@@ -156,10 +176,17 @@ export const seedEvents = [
         id: "product-03",
         event_id: "event-02",
         ...productName("en", "Napkin"),
-        price: 0.5,
+        price: "0.5",
+        unit: "item",
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
         category: "other",
         purchasable: false,
         required: false,
+        inclusions: null,
         included_product_id: null,
         included_per_guests: null,
         created_at: "2024-01-01T00:00:00Z",
@@ -179,7 +206,10 @@ export const seedEvents = [
     category: "tasting",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    sort_order: 3,
+    volunteers_only: false,
+    members_only: false,
+    registrations_close_at: null,
+    order_questions: [],
     active: true,
     edition: {
       id: "march-2027",
@@ -193,11 +223,18 @@ export const seedEvents = [
         id: "product-04",
         event_id: "event-03",
         ...productName("en", "Entry ticket", { nl: "Toegangsticket", fr: "Billet d'entrée" }),
-        price: 15,
+        price: "15",
+        unit: "person",
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
         category: "other",
         purchasable: true,
         required: true,
-        unit: "person",
+
+        inclusions: null,
         included_product_id: null,
         included_per_guests: null,
         created_at: "2024-01-01T00:00:00Z",
@@ -221,7 +258,10 @@ export const seedEvents = [
     category: "general",
     registration_required: true,
     registrations_open_from: "2027-01-15T00:00:00Z",
-    sort_order: 4,
+    volunteers_only: false,
+    members_only: false,
+    registrations_close_at: null,
+    order_questions: [],
     active: true,
     edition: {
       id: "march-2027",
@@ -248,7 +288,10 @@ export const seedEvents = [
     category: "social",
     registration_required: false,
     registrations_open_from: null,
-    sort_order: 0,
+    volunteers_only: false,
+    members_only: false,
+    registrations_close_at: null,
+    order_questions: [],
     active: true,
     edition: {
       id: "march-2027",
@@ -263,7 +306,7 @@ export const seedEvents = [
   },
 ];
 
-export const seedEditions = [
+export const seedEditions: EditionOut[] = [
   {
     id: "march-2027",
     year: 2027,
@@ -271,6 +314,11 @@ export const seedEditions = [
     edition_type: "festival",
     dates: ["2027-03-06", "2027-03-07", "2027-03-08"],
     venue: BASE_VENUE,
+    organizations: [],
+    co_organizer: null,
+    flyer_image: null,
+    hero_image: null,
+    share_image: null,
     events: seedEvents,
     producers: [
       {
@@ -282,6 +330,7 @@ export const seedEditions = [
         description_fr: "Maison de champagne présentant ses cuvées au festival.",
         description_en: "Champagne house presenting its cuvées at the festival.",
         type: "producer",
+        sponsor_tier: null,
       },
       {
         id: 2,
@@ -289,6 +338,10 @@ export const seedEditions = [
         image: "/images/bollinger.png",
         website: "https://www.champagne-bollinger.com",
         type: "producer",
+        sponsor_tier: null,
+        description_fr: null,
+        description_en: null,
+        description_nl: null,
       },
       {
         id: 3,
@@ -296,6 +349,10 @@ export const seedEditions = [
         image: "/images/feuillatte.png",
         website: "https://www.feuillatte.com",
         type: "producer",
+        sponsor_tier: null,
+        description_fr: null,
+        description_en: null,
+        description_nl: null,
       },
     ],
     sponsors: [
@@ -305,6 +362,9 @@ export const seedEditions = [
         image: "/images/belga.png",
         website: "https://www.belga-spirits.be",
         type: "sponsor",
+        description_fr: null,
+        description_en: null,
+        description_nl: null,
         sponsor_tier: "main",
       },
     ],
@@ -320,6 +380,11 @@ export const seedEditions = [
     edition_type: "festival",
     dates: ["2025-03-07", "2025-03-08", "2025-03-09"],
     venue: BASE_VENUE,
+    organizations: [],
+    co_organizer: null,
+    flyer_image: null,
+    hero_image: null,
+    share_image: null,
     events: [],
     producers: [],
     sponsors: [],

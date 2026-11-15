@@ -9,7 +9,8 @@ import {
   AdminSelect,
   AdminOption,
 } from "@/components/admin/AdminFields";
-import type { Event } from "@/types/event";
+import type { Event } from "@/api-types";
+
 import { eventTitle } from "@/utils/eventText";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
@@ -270,7 +271,7 @@ export default function PollQuestionCard({
               {question.eventId && (
                 <p className="text-sm text-subtle">
                   {m.admin_poll_event_label()}:{" "}
-                  {events.find((event) => event.id === question.eventId)?.titleNl ??
+                  {events.find((event) => event.id === question.eventId)?.title_nl ??
                     question.eventId}
                 </p>
               )}

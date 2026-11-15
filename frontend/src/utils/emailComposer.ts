@@ -85,7 +85,7 @@ export function buildRegistrationEmailDraft(
     },
     event: {
       subject: `${eventName} — ${t.eventInfo}`,
-      body: `${greeting}\n\n${t.event}: ${eventName}${eventDate ? `\n${t.date}: ${eventDate}` : ""}${registration.event?.startTime ? `\n${t.start}: ${registration.event.startTime}` : ""}\n${reference}`,
+      body: `${greeting}\n\n${t.event}: ${eventName}${eventDate ? `\n${t.date}: ${eventDate}` : ""}${registration.event?.start_time ? `\n${t.start}: ${registration.event.start_time}` : ""}\n${reference}`,
     },
   };
   return {

@@ -3,7 +3,7 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
-import type { Event } from "@/types/event";
+import type { EventPublicOut as Event } from "@/api-types";
 import { DEFAULT_SHARE, editionShareImage } from "@/utils/editionArtwork";
 import { eventDescription, eventTitle, productName } from "@/utils/eventText";
 
@@ -26,8 +26,8 @@ function subEvents(events: Event[], locale: string) {
     return {
       "@type": "Event",
       name: eventTitle(event, locale),
-      startDate: localInstant(event.date, event.startTime),
-      ...(event.endTime ? { endDate: localInstant(event.date, event.endTime) } : {}),
+      startDate: localInstant(event.date, event.start_time),
+      ...(event.end_time ? { endDate: localInstant(event.date, event.end_time) } : {}),
       ...(description ? { description } : {}),
     };
   });
@@ -47,9 +47,9 @@ function offers(events: Event[], locale: string) {
     for (const product of event.products ?? []) {
       if (!product.required) continue;
       const name = productName(product, locale);
-      const price = product.price.toFixed(2);
+      const price = Number(product.price).toFixed(2);
       const key = JSON.stringify([name, price]);
-      const available = !product.soldOut;
+      const available = !product.sold_out;
       const existing = seen.get(key);
       if (existing) {
         if (available) existing.availability = IN_STOCK;
@@ -96,7 +96,8 @@ const EventStructuredData: React.FC = () => {
 
   const { start: festivalDate, end: festivalEndDate } = getFestivalDateRange(edition);
   const festivalName = m.festival_name();
-  const { venueName, address, city, postalCode, country, coordinates } = edition.venue;
+  const { name: venueName, address, city, country, postal_code: postalCode } = edition.venue;
+  const coordinates = { lat: edition.venue.lat, lng: edition.venue.lng };
 
   const ticketOffers = offers(edition.events, getLocale());
   const structuredData = {

@@ -16,22 +16,25 @@ import {
 
 function makePerson(overrides: Partial<Person> = {}): Person {
   return {
+    preferred_language: null,
+    inactivity_exempt: false,
+    inactivity_exempt_note: "",
     id: "p1",
     name: "Alice",
     email: "alice@example.com",
     phone: "0470000000",
     address: "Kursaal 1",
     roles: [],
-    nationalRegisterNumber: null,
-    eidDocumentNumber: null,
-    visitsPerMonth: null,
+    national_register_number: null,
+    eid_document_number: null,
+    visits_per_month: null,
     notes: "",
     anonymised: false,
-    retiredRoles: {},
-    roleHistory: {},
-    helpPeriods: [],
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
+    retired_roles: {},
+    role_history: {},
+    help_periods: [],
+    created_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -39,7 +42,9 @@ function makePerson(overrides: Partial<Person> = {}): Person {
 // ─── mergeVolunteerPerson ─────────────────────────────────────────────────────
 
 describe("mergeVolunteerPerson", () => {
-  const helpPeriods = [{ id: 1, firstHelpDay: "2025-06-01", lastHelpDay: "2025-06-02", notes: "" }];
+  const help_periods = [
+    { id: 1, first_help_day: "2025-06-01", last_help_day: "2025-06-02", notes: "" },
+  ];
 
   it("always includes 'volunteer' in roles", () => {
     const result = mergeVolunteerPerson(undefined, makePerson({ roles: ["member"] }));
@@ -54,10 +59,10 @@ describe("mergeVolunteerPerson", () => {
     expect(result.roles).toContain("volunteer");
   });
 
-  it("uses volunteer helpPeriods over existing helpPeriods", () => {
-    const existing = makePerson({ helpPeriods: [] });
-    const volunteer = makePerson({ helpPeriods });
-    expect(mergeVolunteerPerson(existing, volunteer).helpPeriods).toEqual(helpPeriods);
+  it("uses volunteer help_periods over existing help_periods", () => {
+    const existing = makePerson({ help_periods: [] });
+    const volunteer = makePerson({ help_periods });
+    expect(mergeVolunteerPerson(existing, volunteer).help_periods).toEqual(help_periods);
   });
 
   it("prefers existing email when volunteer email is empty", () => {
@@ -96,8 +101,20 @@ describe("mergePeopleWithVolunteers", () => {
   });
 
   it("merges a volunteer record into the matching person", () => {
-    const person = makePerson({ id: "p1", roles: [] });
-    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: [],
+    });
+    const volunteer = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     const result = mergePeopleWithVolunteers([person], [volunteer]);
     expect(result).toHaveLength(1);
     expect(result[0]?.roles).toContain("volunteer");
@@ -113,7 +130,13 @@ describe("mergePeopleWithVolunteers", () => {
 
   it("does not duplicate when the same person appears in both lists", () => {
     const person = makePerson({ id: "p1" });
-    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const volunteer = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     expect(mergePeopleWithVolunteers([person], [volunteer])).toHaveLength(1);
   });
 });
@@ -128,18 +151,18 @@ describe("mergePersonUpdate", () => {
 
   it("returns updated directly when updated has no volunteer role", () => {
     const existing = makePerson({
-      helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }],
+      help_periods: [{ id: 1, first_help_day: "2025-01-01", last_help_day: null, notes: "" }],
     });
     const updated = makePerson({ roles: ["member"] });
     expect(mergePersonUpdate(existing, updated)).toBe(updated);
   });
 
-  it("preserves existing helpPeriods when updated has volunteer role", () => {
-    const helpPeriods = [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }];
-    const existing = makePerson({ helpPeriods });
-    const updated = makePerson({ roles: ["volunteer"], helpPeriods: [] });
+  it("preserves existing help_periods when updated has volunteer role", () => {
+    const help_periods = [{ id: 1, first_help_day: "2025-01-01", last_help_day: null, notes: "" }];
+    const existing = makePerson({ help_periods });
+    const updated = makePerson({ roles: ["volunteer"], help_periods: [] });
     const result = mergePersonUpdate(existing, updated);
-    expect(result.helpPeriods).toEqual(helpPeriods);
+    expect(result.help_periods).toEqual(help_periods);
   });
 });
 
@@ -147,21 +170,42 @@ describe("mergePersonUpdate", () => {
 
 describe("attachVolunteerDetails", () => {
   it("adds help periods to a matching volunteer and leaves other rows untouched", () => {
-    const helpPeriods = [{ id: 1, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
-    const person = makePerson({ id: "p1", roles: ["volunteer"] });
+    const help_periods = [{ id: 1, first_help_day: "2026-10-10", last_help_day: null, notes: "" }];
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     const other = makePerson({ id: "p2", roles: ["member"] });
 
     const result = attachVolunteerDetails(
       [person, other],
-      [makePerson({ id: "p1", roles: ["volunteer"], helpPeriods })],
+      [
+        makePerson({
+          preferred_language: null,
+          inactivity_exempt: false,
+          inactivity_exempt_note: "",
+          id: "p1",
+          roles: ["volunteer"],
+          help_periods,
+        }),
+      ],
     );
 
-    expect(result[0]?.helpPeriods).toEqual(helpPeriods);
+    expect(result[0]?.help_periods).toEqual(help_periods);
     expect(result[1]).toBe(other);
   });
 
   it("never adds a volunteer that is not already in the list", () => {
-    const person = makePerson({ id: "p1", roles: ["member"] });
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["member"],
+    });
 
     const result = attachVolunteerDetails(
       [person],

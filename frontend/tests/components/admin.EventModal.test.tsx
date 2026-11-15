@@ -1,13 +1,16 @@
+import { eventOut } from "@/mocks/data/builders";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import EventModal from "@/components/admin/EventModal";
-import type { Edition } from "@/components/admin/editionTypes";
+import type { Edition } from "@/api-types";
+
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
-import type { Event } from "@/types/event";
+import type { Event } from "@/api-types";
+
 import { noEventTranslations } from "../utils/eventFixtures";
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
@@ -16,28 +19,28 @@ const edition = {
   id: "march-2027",
   year: 2027,
   month: "march",
-  editionType: "festival",
+  edition_type: "festival",
   active: true,
   dates: ["2027-03-06", "2027-03-07"],
 } as unknown as Edition;
 
-const existingEvent: Event = {
+const existingEvent: Event = eventOut({
   ...noEventTranslations,
   id: "event-01",
-  editionId: "march-2027",
+  edition_id: "march-2027",
   title: "Openingsavond",
-  titleNl: "Openingsavond",
+  title_nl: "Openingsavond",
   description: "Een glas om te starten",
-  descriptionNl: "Een glas om te starten",
+  description_nl: "Een glas om te starten",
   date: "2027-03-06",
-  startTime: "18:00",
+  start_time: "18:00",
   category: "ceremony",
-  registrationRequired: false,
+  registration_required: false,
   active: true,
-  createdAt: "",
-  updatedAt: "",
+  created_at: "",
+  updated_at: "",
   products: [],
-};
+});
 
 function mount(initial: Event | null, onSave = vi.fn(), selectedEdition = edition) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -74,7 +77,7 @@ afterEach(() => {
 
 describe("EventModal translations", () => {
   it("explains the editable date for the first standalone event", () => {
-    mount(null, vi.fn(), { ...edition, dates: [], editionType: "capsule_exchange" });
+    mount(null, vi.fn(), { ...edition, dates: [], edition_type: "capsule_exchange" });
     expect(screen.getByLabelText("Date")).not.toHaveAttribute("readonly");
     expect(screen.getByText("Choose the date for this edition’s first event.")).toBeInTheDocument();
     expect(
@@ -142,10 +145,10 @@ describe("EventModal translations", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      titleNl: "Openingsavond",
-      titleFr: "Soirée d'ouverture",
-      titleEn: "Opening night",
-      descriptionNl: "Een glas om te starten",
+      title_nl: "Openingsavond",
+      title_fr: "Soirée d'ouverture",
+      title_en: "Opening night",
+      description_nl: "Een glas om te starten",
       category: "ceremony",
     });
   });

@@ -1187,3 +1187,14 @@ and no-store semantics. Changing an ID or HTTP method does not create a fresh
 route-template allowance. This rejection causes no handler write; it does not
 prove that an earlier timed-out write failed. Existing idempotency keys or
 reconciliation rules still govern retries. Mounted MCP policies stay separate.
+
+## Generated people and check-in client types (#1657)
+
+The person forms, booking person picker and volunteer check-in/delivery controls now read generated response fields directly. Their existing write URLs, bodies, idempotency strategies and `retry: false` decisions are unchanged. No automatic retry is added: person creation still needs reconciliation before retry; check-in keeps its server-owned already-checked-in result, and delivery updates continue to send absolute delivered quantities.
+
+## Generated event, product and edition responses (#1657)
+
+The frontend reads event/product/edition and nested registration write responses directly as generated
+API records. Request methods, payloads and retry policy are unchanged: this migration adds no automatic
+retry. In particular, event/product/edition creation and artwork upload remain unsafe to blindly retry
+after an ambiguous response; reconcile with a read. Updates/deletes keep their existing endpoint strategy.

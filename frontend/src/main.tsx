@@ -344,7 +344,7 @@ function App() {
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError, isLoaded } = useActiveEdition();
   const { producers, sponsors, vendors = [] } = edition;
-  useEditionHeroImage(edition.heroImage);
+  useEditionHeroImage(edition.hero_image);
   // Stand labels are an enhancement: a failed or empty lookup just shows no stand lines.
   const { data: standsData } = useQuery({
     ...editionStandsQueryOptions(edition.id),
@@ -442,13 +442,14 @@ function App() {
         // Registration is offered for events that require it (capacity-limited),
         // and also for walk-in events that still have something to order (e.g.
         // a VIP package) — everyone else can just show up, no RSVP needed.
-        .filter((event) => event.registrationRequired || event.products.length > 0)
+        .filter((event) => event.registration_required || event.products.length > 0)
         .filter((event) => {
           const eventEnd = endOfDay(new Date(`${event.date}T00:00:00`));
           return eventEnd >= now;
         })
         .filter(
-          (event) => !event.registrationsOpenFrom || new Date(event.registrationsOpenFrom) <= now,
+          (event) =>
+            !event.registrations_open_from || new Date(event.registrations_open_from) <= now,
         )
     );
   }, [edition.events, nowTimestamp]);
@@ -459,16 +460,18 @@ function App() {
     if (registrableEvents.length > 0) return null;
     const now = new Date(nowTimestamp);
     const openings = edition.events
-      .filter((event) => event.registrationRequired || event.products.length > 0)
+      .filter((event) => event.registration_required || event.products.length > 0)
       .filter((event) => endOfDay(new Date(`${event.date}T00:00:00`)) >= now)
-      .map((event) => (event.registrationsOpenFrom ? new Date(event.registrationsOpenFrom) : null))
+      .map((event) =>
+        event.registrations_open_from ? new Date(event.registrations_open_from) : null,
+      )
       .filter((opening): opening is Date => opening !== null && opening > now)
       .sort((a, b) => a.getTime() - b.getTime());
     const first = openings[0];
     return first ? dayjs(first).locale(locale).format("D MMMM YYYY") : null;
   }, [edition.events, registrableEvents.length, locale, nowTimestamp]);
 
-  const { venueName, address, postalCode, city, country } = edition.venue;
+  const { name: venueName, address, postal_code: postalCode, city, country } = edition.venue;
   const venueLines = [address, [postalCode, city].filter(Boolean).join(" ")].filter(Boolean);
   const venueMapsUrl = generateGoogleMapsUrl(venueName, address, postalCode, city, country);
 
@@ -500,7 +503,7 @@ function App() {
   if (isMaintenanceMode) {
     return (
       <>
-        <MaintenancePage flyerImage={edition.flyerImage} />
+        <MaintenancePage flyerImage={edition.flyer_image} />
         {/* Preview-only switcher between the classic and refreshed visual designs */}
         <ThemeSwitcher variant={variant} onChange={setVariant} />
       </>
@@ -684,7 +687,7 @@ function App() {
         {variant === "affiche" || variant === "billet" ? null : hasEdition ? (
           <FestivalFacts
             dateRange={festivalDateRange}
-            venueName={edition.venue.venueName}
+            venueName={edition.venue.name}
             city={edition.venue.city}
             canRegister={registrableEvents.length > 0}
             registrationOpensOn={registrationOpensOn}
@@ -711,7 +714,7 @@ function App() {
                 <p>
                   {m.what_we_do_description({
                     dateRange: festivalDateRange,
-                    venueName: edition.venue.venueName,
+                    venueName: edition.venue.name,
                     city: edition.venue.city,
                   })}
                 </p>
@@ -911,12 +914,12 @@ function App() {
                     errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
                   >
                     <MapComponent
-                      location={edition.venue.venueName}
+                      location={edition.venue.name}
                       address={edition.venue.address}
                       city={edition.venue.city}
-                      postalCode={edition.venue.postalCode}
+                      postalCode={edition.venue.postal_code}
                       country={edition.venue.country}
-                      coordinates={edition.venue.coordinates}
+                      coordinates={{ lat: edition.venue.lat, lng: edition.venue.lng }}
                     />
                   </SuspenseWithBoundary>
                 </LoadWhenVisible>

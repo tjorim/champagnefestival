@@ -35,7 +35,7 @@ const registration = {
     notes: "SECRET NOTE",
     check_in_token: "SECRET TOKEN",
   }),
-  event: { title: "Fizz & Food", date: "2026-09-12", startTime: "18:30" },
+  event: { title: "Fizz & Food", date: "2026-09-12", start_time: "18:30" },
 } as Registration;
 
 describe("emailComposer", () => {

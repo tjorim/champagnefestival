@@ -1,3 +1,4 @@
+import { editionOut, venueOut } from "@/mocks/data/builders";
 /**
  * Bulk actions and CSV export used to operate only on whatever page happened
  * to be loaded client-side. Now that GET /api/registrations is genuinely
@@ -16,7 +17,6 @@ import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { RegistrationStatus } from "@/types/registration";
 import type { RegistrationListOut } from "@/api-types";
-import { apiToRegistration } from "@/types/registrationMapper";
 import { eventOut, registrationOut } from "../utils/registrationFixtures";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -35,19 +35,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 const activeEdition: ActiveEdition = {
+  ...editionOut(),
   id: "edition-1",
   year: 2026,
-  editionType: "festival",
+  edition_type: "festival",
   month: "march",
   dates: [],
-  venue: {
-    venueName: "Test Venue",
-    address: "123 Main St",
-    city: "Ghent",
-    postalCode: "9000",
-    country: "BE",
-    coordinates: { lat: 0, lng: 0 },
-  },
+  venue: venueOut(),
   events: [],
   producers: [],
   sponsors: [],
@@ -91,7 +85,7 @@ function buildRawRegistration(index: number): RegistrationListOut {
 const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
   buildRawRegistration(i + 1),
 );
-const registrations = rawRegistrations.map((row) => apiToRegistration(row));
+const registrations = rawRegistrations.map((row) => row);
 
 function installPaginatedHandler() {
   server.use(

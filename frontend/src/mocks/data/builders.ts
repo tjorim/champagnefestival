@@ -1,4 +1,11 @@
-import type { EventOut, OrderItemOut, RegistrationOutWithToken } from "@/api-types";
+import type {
+  ProductOut,
+  EditionOut,
+  VenueOut,
+  EventOut,
+  OrderItemOut,
+  RegistrationOutWithToken,
+} from "@/api-types";
 
 /** A complete event as the API sends it; override what a scenario cares about. */
 export function eventOut(overrides: Partial<EventOut> = {}): EventOut {
@@ -87,6 +94,76 @@ export function registrationOut(
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
     check_in_token: "token-1",
+    ...overrides,
+  };
+}
+
+export function productOut(overrides: Partial<ProductOut> = {}): ProductOut {
+  return {
+    id: "p",
+    event_id: "event-1",
+    name: "Product",
+    description: "",
+    name_nl: null,
+    name_fr: null,
+    name_en: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+    price: "10.00",
+    category: "",
+    purchasable: true,
+    required: false,
+    unit: "item",
+    stock: null,
+    reserved_quantity: 0,
+    available_quantity: null,
+    shortage: 0,
+    sold_out: false,
+    inclusions: null,
+    included_product_id: null,
+    included_per_guests: null,
+    created_at: "",
+    updated_at: "",
+    ...overrides,
+  };
+}
+export function venueOut(overrides: Partial<VenueOut> = {}): VenueOut {
+  return {
+    id: "venue-1",
+    name: "Hall",
+    city: "Bredene",
+    address: "",
+    postal_code: "",
+    country: "",
+    lat: 0,
+    lng: 0,
+    active: true,
+    created_at: "",
+    updated_at: "",
+    ...overrides,
+  };
+}
+export function editionOut(overrides: Partial<EditionOut> = {}): EditionOut {
+  return {
+    id: "edition-1",
+    year: 2026,
+    month: "march",
+    edition_type: "festival",
+    dates: [],
+    venue: venueOut(),
+    events: [],
+    organizations: [],
+    producers: [],
+    sponsors: [],
+    vendors: [],
+    co_organizer: null,
+    flyer_image: null,
+    hero_image: null,
+    share_image: null,
+    active: true,
+    created_at: "",
+    updated_at: "",
     ...overrides,
   };
 }

@@ -22,20 +22,20 @@ interface UsePeopleMutationsOptions {
 
 /** Mirrors the server: retiring a role records today's date and leaves the role in place. */
 function retireRole(person: Person, role: string): Person {
-  return Object.hasOwn(person.retiredRoles, role)
+  return Object.hasOwn(person.retired_roles, role)
     ? person
-    : { ...person, retiredRoles: { ...person.retiredRoles, [role]: localIsoDate() } };
+    : { ...person, retired_roles: { ...person.retired_roles, [role]: localIsoDate() } };
 }
 
 function reactivateRole(person: Person, role: string): Person {
-  const { [role]: _removed, ...retiredRoles } = person.retiredRoles;
-  return { ...person, retiredRoles };
+  const { [role]: _removed, ...retired_roles } = person.retired_roles;
+  return { ...person, retired_roles };
 }
 
 /** Mirrors the server: an open period ends today, but never before its first day. */
-function closedOn(firstHelpDay: string): string {
+function closedOn(first_help_day: string): string {
   const today = localIsoDate();
-  return today > firstHelpDay ? today : firstHelpDay;
+  return today > first_help_day ? today : first_help_day;
 }
 
 export function usePeopleMutations({
@@ -123,11 +123,11 @@ export function usePeopleMutations({
             name: data.name,
             email: data.email || null,
             phone: data.phone,
-            preferred_language: data.preferredLanguage,
+            preferred_language: data.preferred_language,
             address: data.address,
             member_since: data.memberSince || undefined,
-            inactivity_exempt: data.inactivityExempt ?? false,
-            inactivity_exempt_note: data.inactivityExemptNote ?? "",
+            inactivity_exempt: data.inactivity_exempt ?? false,
+            inactivity_exempt_note: data.inactivity_exempt_note ?? "",
             notes: data.notes,
           }),
         },
@@ -149,11 +149,11 @@ export function usePeopleMutations({
               name: data.name,
               email: data.email || null,
               phone: data.phone,
-              preferred_language: data.preferredLanguage,
+              preferred_language: data.preferred_language,
               address: data.address,
               member_since: data.memberSince || undefined,
-              inactivity_exempt: data.inactivityExempt ?? false,
-              inactivity_exempt_note: data.inactivityExemptNote ?? "",
+              inactivity_exempt: data.inactivity_exempt ?? false,
+              inactivity_exempt_note: data.inactivity_exempt_note ?? "",
               notes: data.notes,
             }),
           },
@@ -216,7 +216,7 @@ export function usePeopleMutations({
             name: data.name,
             email: data.email || null,
             phone: data.phone,
-            preferred_language: data.preferredLanguage,
+            preferred_language: data.preferred_language,
             address: data.address,
             roles: data.roles,
             notes: data.notes,
@@ -240,7 +240,7 @@ export function usePeopleMutations({
               name: data.name,
               email: data.email || null,
               phone: data.phone,
-              preferred_language: data.preferredLanguage,
+              preferred_language: data.preferred_language,
               address: data.address,
               roles: data.roles,
               notes: data.notes,
@@ -282,11 +282,11 @@ export function usePeopleMutations({
           body: JSON.stringify({
             name: data.name,
             address: data.address,
-            national_register_number: data.nationalRegisterNumber || null,
-            eid_document_number: data.eidDocumentNumber || null,
-            help_periods: data.helpPeriods.map((period) => ({
-              first_help_day: period.firstHelpDay,
-              last_help_day: period.lastHelpDay,
+            national_register_number: data.national_register_number || null,
+            eid_document_number: data.eid_document_number || null,
+            help_periods: data.help_periods.map((period) => ({
+              first_help_day: period.first_help_day,
+              last_help_day: period.last_help_day,
               notes: period.notes,
             })),
           }),
@@ -308,11 +308,11 @@ export function usePeopleMutations({
             body: JSON.stringify({
               name: data.name,
               address: data.address,
-              national_register_number: data.nationalRegisterNumber || null,
-              eid_document_number: data.eidDocumentNumber || null,
-              help_periods: data.helpPeriods.map((period) => ({
-                first_help_day: period.firstHelpDay,
-                last_help_day: period.lastHelpDay,
+              national_register_number: data.national_register_number || null,
+              eid_document_number: data.eid_document_number || null,
+              help_periods: data.help_periods.map((period) => ({
+                first_help_day: period.first_help_day,
+                last_help_day: period.last_help_day,
                 notes: period.notes,
               })),
             }),
@@ -326,9 +326,9 @@ export function usePeopleMutations({
         update: (person) => ({
           ...person,
           ...data,
-          helpPeriods: data.helpPeriods.map((period, index) => ({
+          help_periods: data.help_periods.map((period, index) => ({
             ...period,
-            id: person.helpPeriods[index]?.id ?? -(index + 1),
+            id: person.help_periods?.[index]?.id ?? -(index + 1),
           })),
         }),
       }),
@@ -352,9 +352,9 @@ export function usePeopleMutations({
         // The role and every help period stay on file; the server retires the role and only
         // closes open periods (today, or on their first day when not started yet).
         ...retireRole(person, "volunteer"),
-        helpPeriods: person.helpPeriods.map((period) =>
-          period.lastHelpDay === null
-            ? { ...period, lastHelpDay: closedOn(period.firstHelpDay) }
+        help_periods: (person.help_periods ?? []).map((period) =>
+          period.last_help_day === null
+            ? { ...period, last_help_day: closedOn(period.first_help_day) }
             : period,
         ),
       }),

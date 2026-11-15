@@ -32,3 +32,29 @@ export type LayoutRevision = LayoutRevisionOut;
 // Payments. `amount` is an exact decimal string; format it with `Number(...)` where it is shown.
 export type PaymentTransaction = PaymentTransactionOut;
 export type LedgerTransaction = PaymentTransactionLedgerRow;
+
+// A directory row may be enriched with the generated volunteer detail projection.
+export type Person = Pick<
+  import("./api-schema").VolunteerOut,
+  | "id"
+  | "name"
+  | "address"
+  | "anonymised"
+  | "retired_roles"
+  | "role_history"
+  | "created_at"
+  | "updated_at"
+> &
+  Partial<
+    import("./api-schema").PersonListItemOut &
+      import("./api-schema").PersonOut &
+      import("./api-schema").VolunteerOut
+  >;
+
+// Event management uses the admin schemas; public consumers explicitly use EventPublicOut/ProductPublicOut.
+export type {
+  EventOut as Event,
+  ProductOut as Product,
+  EditionOut as Edition,
+  CategoryOut as Category,
+} from "./api-schema";

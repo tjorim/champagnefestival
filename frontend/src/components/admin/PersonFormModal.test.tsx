@@ -14,7 +14,7 @@ const person = {
   email: "alice@example.com",
   phone: null,
   address: null,
-  preferredLanguage: null,
+  preferred_language: null,
   roles: ["member"],
   notes: null,
 } as unknown as Person;

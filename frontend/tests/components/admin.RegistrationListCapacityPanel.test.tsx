@@ -1,3 +1,4 @@
+import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
 /**
  * The admin's per-event capacity panel reads GET /api/events/checkin-stats —
  * the endpoint built for it, and the same one the Android entrance display uses
@@ -25,19 +26,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 const activeEdition: ActiveEdition = {
+  ...editionOut(),
   id: "edition-1",
   year: 2026,
-  editionType: "bourse",
+  edition_type: "bourse",
   month: "october",
   dates: [],
-  venue: {
-    venueName: "MEC Staf Versluys",
-    address: "Kapelstraat 76",
-    city: "Bredene",
-    postalCode: "8450",
-    country: "BE",
-    coordinates: { lat: 0, lng: 0 },
-  },
+  venue: venueOut(),
   events: [],
   producers: [],
   sponsors: [],
@@ -56,28 +51,28 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       preferred_language: null,
     },
     event_id: "event-1",
-    event: {
+    event: eventOut({
       id: "event-1",
-      editionId: "edition-1",
+      edition_id: "edition-1",
       ...noEventTranslations,
       title: "Collectors Bourse",
       description: "",
       date: "2026-11-21",
-      startTime: "10:00",
+      start_time: "10:00",
       category: "bourse",
       products: [],
-      registrationRequired: true,
+      registration_required: true,
       active: true,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
       edition: {
         id: "edition-1",
         year: 2026,
         month: "november",
-        editionType: "bourse",
+        edition_type: "bourse",
         active: true,
       },
-    },
+    }),
     guest_count: 2,
     order_items: [],
     notes: "",
@@ -174,11 +169,11 @@ describe("RegistrationList — per-event capacity panel", () => {
       buildRegistration({
         id: "reg-2",
         event_id: "event-2",
-        event: {
+        event: eventOut({
           ...buildRegistration().event!,
           id: "event-2",
           title: "Capsule Exchange",
-        },
+        }),
       }),
     ]);
 

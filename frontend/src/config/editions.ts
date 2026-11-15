@@ -19,46 +19,38 @@ export interface EditionVenue {
   };
 }
 
-export interface Event {
+/** UI-only static schedule fallback; live events use EventPublicOut. */
+export interface ScheduleEvent {
   id: string;
   title: string;
   description: string;
   date: string;
-  startTime: string;
-  endTime?: string;
+  start_time: string;
+  end_time?: string;
   category: string;
-  volunteersOnly?: boolean;
-  membersOnly?: boolean;
-  registrationRequired: boolean;
+  volunteers_only?: boolean;
+  members_only?: boolean;
+  registration_required: boolean;
   /** Earliest date/time from which registrations are accepted for this event. */
-  registrationsOpenFrom?: Date;
+  registrations_open_from?: Date;
 }
 
 /** Sponsor level within one edition, highest first; the order is the display order. */
 export const SPONSOR_TIERS = ["main", "partner", "supporter"] as const;
 export type SponsorTier = (typeof SPONSOR_TIERS)[number];
 
-export interface SliderItem {
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
+/** Display input for logo widgets; callers may supply just an image and name. */
+export type SliderItem = Pick<import("@/api-types").EditionItemOut, "id" | "name" | "image"> &
+  Partial<Omit<import("@/api-types").EditionItemOut, "id" | "name" | "image">>;
 
-  id: number;
-  name: string;
-  image: string;
-  website?: string;
-  active?: boolean;
-  /** Level of a sponsor in this edition (#1226); `null`/absent for untiered sponsors and other organisations. */
-  sponsor_tier?: SponsorTier | null;
-}
-
-export interface Edition {
+/** Static loading fallback only; API editions use EditionPublicOut/EditionOut. */
+export interface FallbackEdition {
   id: string;
   year: number;
   month: "march" | "october";
   dates: EditionDates;
   venue: EditionVenue;
-  schedule: Event[];
+  schedule: ScheduleEvent[];
   producers: SliderItem[];
   sponsors: SliderItem[];
 }
@@ -69,7 +61,7 @@ tomorrow.setDate(today.getDate() + 1);
 const dayAfterTomorrow = new Date(today);
 dayAfterTomorrow.setDate(today.getDate() + 2);
 
-export const EMPTY_EDITION: Edition = {
+export const EMPTY_EDITION: FallbackEdition = {
   id: "",
   year: today.getFullYear(),
   month: "march",

@@ -1,13 +1,13 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getLocale } from "@/paraglide/runtime";
-import { apiToCategory, type Category } from "@/types/category";
+import { type Category } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 
 async function fetchCategories(path: string): Promise<Category[]> {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Failed to load categories from ${path}: ${response.status}`);
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToCategory) : [];
+  const data = (await response.json()) as Category[];
+  return Array.isArray(data) ? data : [];
 }
 
 function categoriesQueryOptions(queryKey: readonly string[], path: string) {
@@ -42,10 +42,10 @@ export function categoryLabel(
 ): string | null {
   const category = categories?.find((candidate) => candidate.key === key);
   if (!category) return null;
-  const byLanguage = { nl: category.labelNl, fr: category.labelFr, en: category.labelEn };
+  const byLanguage = { nl: category.label_nl, fr: category.label_fr, en: category.label_en };
   const localized =
     locale === "nl" || locale === "fr" || locale === "en" ? byLanguage[locale] : null;
-  return localized?.trim() || category.labelNl?.trim() || category.label || null;
+  return localized?.trim() || category.label_nl?.trim() || category.label || null;
 }
 
 export function useEventCategories() {

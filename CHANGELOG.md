@@ -23,6 +23,10 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - A ninth preview design, "Billet": the festival as an admission ticket. A portrait ticket with the title, dates, venue, countdown and registration stays beside the page on wide screens while the sections scroll past, and the programme shows every day side by side.
 
 ### Internal
+- Read events, products, editions and categories from generated API types, including the nested event in admin registrations (#1657). Public consumers keep the distinct public schemas, product prices remain decimal strings, and event/product/edition mock stores are checked against the same contract.
+
+
+- Read people, volunteer details, guest bookings, check-in responses and person booking/payment rows from generated API types (#1657), preserving snake_case fields and decimal payment totals. Person pickers use generated person projections, and the people mock store and seed records are typed against the API.
 
 - Build admin FAQ and integration-client responses from the existing Pydantic output models instead of parallel dictionary builders (#1657). REST and MCP keep their existing fields, timestamps, nullable translations and one-time credential disclosure.
 

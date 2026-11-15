@@ -1,21 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-interface CreatedEdition {
-  id: string;
-  edition_type: string;
-  active: boolean;
-}
-
-interface CreatedEvent {
-  id: string;
-  edition_id: string;
-  date: string;
-}
-
-interface UpcomingEdition extends CreatedEdition {
-  dates: string[];
-  events: CreatedEvent[];
-}
+import type {
+  EditionOut as CreatedEdition,
+  EventOut as CreatedEvent,
+  EditionPublicOut as UpcomingEdition,
+} from "@/api-types";
 
 const ADMIN_HEADERS = {
   Authorization: "Bearer dev-token",
@@ -29,13 +18,13 @@ function dateFromToday(dayOffset: number): string {
 }
 
 async function createEdition(
-  editionType: "bourse" | "capsule_exchange",
+  edition_type: "bourse" | "capsule_exchange",
   active = true,
 ): Promise<CreatedEdition> {
   const response = await fetch("/api/editions", {
     method: "POST",
     headers: ADMIN_HEADERS,
-    body: JSON.stringify({ edition_type: editionType, active, dates: [] }),
+    body: JSON.stringify({ edition_type: edition_type, active, dates: [] }),
   });
 
   expect(response.status).toBe(201);
@@ -62,8 +51,8 @@ async function createEvent(editionId: string, date: string): Promise<CreatedEven
   return (await response.json()) as CreatedEvent;
 }
 
-async function fetchUpcoming(editionType: "bourse" | "capsule_exchange") {
-  const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
+async function fetchUpcoming(edition_type: "bourse" | "capsule_exchange") {
+  const response = await fetch(`/api/editions/upcoming?edition_type=${edition_type}`);
   expect(response.ok).toBe(true);
   return (await response.json()) as UpcomingEdition[];
 }
@@ -119,4 +108,18 @@ describe("public upcoming-edition handler", () => {
     expect(upcomingIds.has(emptyEdition.id)).toBe(false);
     expect(upcomingIds.has(otherTypeEdition.id)).toBe(false);
   });
+});
+
+it("serves public editions without admin inventory and hidden inclusion edges", async () => {
+  const response = await fetch("/api/editions/active?edition_type=festival");
+  const edition = (await response.json()) as UpcomingEdition;
+  expect(edition).not.toHaveProperty("organizations");
+  const tasting = edition.events.find((event) => event.id === "event-02");
+  expect(tasting).toBeDefined();
+  expect(tasting).not.toHaveProperty("edition");
+  expect(tasting?.products.map((product) => product.id)).not.toContain("product-03");
+  const bottle = tasting?.products.find((product) => product.id === "product-01");
+  expect(bottle).not.toHaveProperty("stock");
+  expect(bottle?.price).toBe("65");
+  expect(bottle?.inclusions).toEqual([]);
 });

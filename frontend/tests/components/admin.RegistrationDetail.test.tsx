@@ -1,3 +1,5 @@
+import { productOut } from "@/mocks/data/builders";
+import { eventOut } from "@/mocks/data/builders";
 import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -68,28 +70,28 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       preferred_language: null,
     },
     event_id: "event-1",
-    event: {
+    event: eventOut({
       id: "event-1",
-      editionId: "edition-1",
+      edition_id: "edition-1",
       ...noEventTranslations,
       title: "Grand Tasting",
       description: "",
       date: "2026-05-01",
-      startTime: "18:00",
+      start_time: "18:00",
       category: "tasting",
       products: [],
-      registrationRequired: true,
+      registration_required: true,
       active: true,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
       edition: {
         id: "edition-1",
         year: 2026,
         month: "may",
-        editionType: "festival",
+        edition_type: "festival",
         active: true,
       },
-    },
+    }),
     guest_count: 2,
     order_items: [
       {
@@ -417,18 +419,19 @@ describe("RegistrationDetail", () => {
   it("previews a table quantity reduction and saves the chosen release", async () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     const tableProduct = {
+      ...productOut(),
       id: "table-product",
-      eventId: "event-1",
+      event_id: "event-1",
       ...NO_PRODUCT_TRANSLATIONS,
       name: "Bourse table",
       description: "",
-      price: 50,
+      price: "50.00",
       category: "other" as const,
       unit: "table" as const,
       purchasable: true,
       required: false,
-      createdAt: "",
-      updatedAt: "",
+      created_at: "",
+      updated_at: "",
     };
     renderDetail({
       onSaveBooking,
@@ -455,7 +458,7 @@ describe("RegistrationDetail", () => {
           { table_id: "table-1", guest_count: 0, exclusive: true },
           { table_id: "table-2", guest_count: 0, exclusive: true },
         ],
-        event: { ...buildRegistration().event!, products: [tableProduct] },
+        event: eventOut({ ...buildRegistration().event!, products: [tableProduct] }),
       }),
     });
     fireEvent.change(
@@ -513,28 +516,28 @@ describe("RegistrationDetail", () => {
   it("hides table assignment for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
-        event: {
+        event: eventOut({
           id: "event-2",
-          editionId: "edition-2",
+          edition_id: "edition-2",
           ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",
-          startTime: "18:00",
+          start_time: "18:00",
           category: "bourse",
           products: [],
-          registrationRequired: true,
+          registration_required: true,
           active: true,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
           edition: {
             id: "edition-2",
             year: 2026,
             month: "may",
-            editionType: "bourse",
+            edition_type: "bourse",
             active: true,
           },
-        },
+        }),
       }),
     });
 
@@ -546,28 +549,28 @@ describe("RegistrationDetail", () => {
   it("hides order items and strap section for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
-        event: {
+        event: eventOut({
           id: "event-2",
-          editionId: "edition-2",
+          edition_id: "edition-2",
           ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",
-          startTime: "18:00",
+          start_time: "18:00",
           category: "bourse",
           products: [],
-          registrationRequired: true,
+          registration_required: true,
           active: true,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
           edition: {
             id: "edition-2",
             year: 2026,
             month: "may",
-            editionType: "bourse",
+            edition_type: "bourse",
             active: true,
           },
-        },
+        }),
       }),
     });
 
@@ -678,7 +681,7 @@ it("offers all registration email templates and previews the selected registrati
 it("prefills and saves order answers alongside the booking", async () => {
   const onSaveBooking = vi.fn().mockResolvedValue(undefined);
   const registration = buildRegistration();
-  registration.event!.orderQuestions = [
+  registration.event!.order_questions = [
     {
       id: "question",
       kind: "free_text",
@@ -698,7 +701,7 @@ it("prefills and saves order answers alongside the booking", async () => {
       option_id: null,
       text: "Old answer",
       rating: null,
-      question: registration.event!.orderQuestions![0]!,
+      question: registration.event!.order_questions![0]!,
     },
   ];
   renderDetail({ registration, onSaveBooking });

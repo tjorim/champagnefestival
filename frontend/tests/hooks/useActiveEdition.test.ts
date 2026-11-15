@@ -91,7 +91,7 @@ describe("useActiveEdition", () => {
 
     expect(result.current.hasEdition).toBe(true);
     expect(result.current.edition.id).toBe("2026-march");
-    expect(result.current.edition.venue.venueName).toBe("Staf Versluys");
+    expect(result.current.edition.venue.name).toBe("Staf Versluys");
     expect(result.current.edition.dates.map(toNormalizedLocalDate)).toEqual([
       "2026-03-13",
       "2026-03-14",
@@ -103,13 +103,13 @@ describe("useActiveEdition", () => {
         id: "evt-friday",
         title: "VIP-arrangement",
         date: "2026-03-13",
-        registrationRequired: true,
+        registration_required: true,
       }),
       expect.objectContaining({
         id: "evt-saturday",
         title: "Champagneparty",
         date: "2026-03-14",
-        registrationRequired: false,
+        registration_required: false,
       }),
     ]);
   });

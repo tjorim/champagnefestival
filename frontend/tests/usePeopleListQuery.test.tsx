@@ -68,7 +68,7 @@ describe("people server pages", () => {
       { wrapper: Wrapper, initialProps: { page: 1, limit: 5 } as PeopleListParams },
     );
     await waitFor(() => expect(result.current.data?.total).toBe(200));
-    expect(result.current.data?.items[0]?.registrationCount).toBe(42);
+    expect(result.current.data?.items[0]?.registration_count).toBe(42);
     const params: PeopleListParams = {
       page: 3,
       limit: 5,
@@ -141,7 +141,7 @@ describe("people server pages", () => {
       () => usePeopleListQuery({ page: 2, limit: 10, role: "volunteer", active: true }, headers),
       { wrapper: Wrapper },
     );
-    await waitFor(() => expect(result.current.data?.items[0]?.helpPeriods).toHaveLength(1));
+    await waitFor(() => expect(result.current.data?.items[0]?.help_periods).toHaveLength(1));
     expect(requested[0]).toBe("/api/volunteers?page=2&limit=10&active=true");
     expect(() =>
       peopleListSearchParams({ page: 1, limit: 5, unsupported: true } as PeopleListParams),

@@ -6,6 +6,8 @@ import OtherEvents from "@/components/OtherEvents";
 import { server } from "@/mocks/server";
 
 const BASE_EVENT = {
+  order_questions: [],
+  products: [],
   edition_id: "edition-bourse",
   description: "Meet collectors from across Belgium.",
   date: "2027-11-21",
@@ -34,8 +36,8 @@ describe("OtherEvents", () => {
   it("renders validated off-festival editions and ignores unexpected festival results", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
 
         return HttpResponse.json([
           {
@@ -71,8 +73,8 @@ describe("OtherEvents", () => {
   it("orders merged edition types chronologically", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        const isBourse = editionType === "bourse";
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        const isBourse = edition_type === "bourse";
         return HttpResponse.json([
           {
             id: isBourse ? "edition-bourse" : "edition-capsule",
@@ -101,8 +103,8 @@ describe("OtherEvents", () => {
   it("renders every active event for an edition, ordered by date and start time", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
 
         return HttpResponse.json([
           {
@@ -127,8 +129,8 @@ describe("OtherEvents", () => {
   it("omits inactive events from the public list", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
 
         return HttpResponse.json([
           {
@@ -277,8 +279,8 @@ describe("OtherEvents", () => {
     // Bookings run through the app; there is no partner inbox to fall back to.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",
@@ -307,8 +309,8 @@ describe("OtherEvents", () => {
   it("hides the reservation button for a walk-in event with nothing to order", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",
@@ -331,8 +333,8 @@ describe("OtherEvents", () => {
     // registration is optional there, offered rather than mandatory.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",
@@ -370,8 +372,8 @@ describe("OtherEvents", () => {
   it("credits the co-organizing producer, linking to them when a website is known", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",
@@ -397,8 +399,8 @@ describe("OtherEvents", () => {
   it("omits the credit when an edition has no co-organizer", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",
@@ -422,8 +424,8 @@ describe("OtherEvents", () => {
     // a link — and one bad record must not hide the edition.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse") return HttpResponse.json([]);
         return HttpResponse.json([
           {
             id: "edition-bourse",

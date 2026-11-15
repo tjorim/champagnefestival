@@ -1,3 +1,4 @@
+import { eventOut } from "@/mocks/data/builders";
 import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -6,7 +7,8 @@ import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import EventProductsModal from "@/components/admin/EventProductsModal";
 import { server } from "@/mocks/server";
-import type { Event } from "@/types/event";
+import type { Event } from "@/api-types";
+
 import { createTestQueryClient } from "../utils/queryClient";
 import { noEventTranslations } from "../utils/eventFixtures";
 
@@ -20,21 +22,21 @@ vi.mock("@/paraglide/messages", () => ({
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const event: Event = {
+const event: Event = eventOut({
   id: "event-01",
-  editionId: "edition-01",
+  edition_id: "edition-01",
   ...noEventTranslations,
   title: "VIP Evening",
   description: "",
   date: "2027-03-07",
-  startTime: "18:00",
+  start_time: "18:00",
   category: "vip",
-  registrationRequired: true,
+  registration_required: true,
   active: true,
-  createdAt: "",
-  updatedAt: "",
+  created_at: "",
+  updated_at: "",
   products: [],
-};
+});
 
 const nameIn = (language: string) =>
   `admin_products_name_in({"language":"admin_language_${language}"})`;

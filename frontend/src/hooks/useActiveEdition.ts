@@ -9,67 +9,13 @@
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
-import { apiToEvent, type Event } from "@/types/event";
-import type { EditionType } from "@/components/admin/editionTypes";
+import { EMPTY_EDITION, type EditionDates } from "@/config/editions";
+import type { EditionPublicOut } from "@/api-types";
 import { endOfDay } from "@/utils/dateUtils";
 import { queryKeys } from "@/utils/queryKeys";
 
-interface ActiveEditionVenue {
-  venueName: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  country: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
-}
-
-export interface ActiveEdition {
-  id: string;
-  year: number;
-  /** Needed by the admin views, which run non-festival editions too. */
-  editionType: EditionType;
-  month: "march" | "october";
-  dates: EditionDates;
-  venue: ActiveEditionVenue;
-  events: Event[];
-  producers: SliderItem[];
-  sponsors: SliderItem[];
-  vendors?: SliderItem[];
-  /** Admin-uploaded artwork paths (#1224); `null` falls back to the static images. */
-  flyerImage?: string | null;
-  heroImage?: string | null;
-  shareImage?: string | null;
-}
-
-interface ApiVenue {
-  name: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-  lat: number;
-  lng: number;
-}
-
-interface ApiEdition {
-  id: string;
-  year: number;
-  edition_type?: string;
-  month: string;
-  dates?: string[] | null;
-  venue: ApiVenue;
-  events: Record<string, unknown>[];
-  producers: SliderItem[];
-  sponsors: SliderItem[];
-  vendors?: SliderItem[];
-  flyer_image?: string | null;
-  hero_image?: string | null;
-  share_image?: string | null;
-}
+/** View model: only calendar dates are derived; every API record keeps its wire shape. */
+export type ActiveEdition = Omit<EditionPublicOut, "dates"> & { dates: EditionDates };
 
 export interface ActiveEditionState {
   edition: ActiveEdition;
@@ -153,54 +99,47 @@ function deriveEditionDates(
   return uniqueDates.map(parseLocalDate);
 }
 
-function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdition {
-  const events: Event[] = (api.events ?? []).map((event) => apiToEvent(event));
-
+function editionCalendar(api: EditionPublicOut, fallbackDates: EditionDates): ActiveEdition {
   return {
-    id: api.id,
-    year: api.year,
-    month: api.month as ActiveEdition["month"],
+    ...api,
     dates: deriveEditionDates(
       api.dates,
-      events.map((event) => event.date),
+      api.events.map((event) => event.date),
       fallbackDates,
     ),
-    editionType:
-      api.edition_type === "bourse" || api.edition_type === "capsule_exchange"
-        ? api.edition_type
-        : "festival",
-    venue: {
-      venueName: api.venue.name,
-      address: api.venue.address,
-      city: api.venue.city,
-      postalCode: api.venue.postal_code,
-      country: api.venue.country,
-      coordinates: { lat: api.venue.lat, lng: api.venue.lng },
-    },
-    events,
-    producers: api.producers ?? [],
-    sponsors: api.sponsors ?? [],
-    vendors: api.vendors ?? [],
-    flyerImage: api.flyer_image ?? null,
-    heroImage: api.hero_image ?? null,
-    shareImage: api.share_image ?? null,
   };
 }
-
 function createFallbackEdition(): ActiveEdition {
   return {
-    id: EMPTY_EDITION.id,
+    id: "",
     year: EMPTY_EDITION.year,
-    editionType: "festival",
     month: EMPTY_EDITION.month,
+    edition_type: "festival",
     dates: EMPTY_EDITION.dates,
-    venue: EMPTY_EDITION.venue,
+    venue: {
+      id: "",
+      name: "",
+      address: "",
+      city: "",
+      postal_code: "",
+      country: "",
+      lat: 0,
+      lng: 0,
+      active: true,
+      created_at: "",
+      updated_at: "",
+    },
     events: [],
     producers: [],
     sponsors: [],
-    flyerImage: null,
-    heroImage: null,
-    shareImage: null,
+    vendors: [],
+    co_organizer: null,
+    flyer_image: null,
+    hero_image: null,
+    share_image: null,
+    active: false,
+    created_at: "",
+    updated_at: "",
   };
 }
 
@@ -224,8 +163,8 @@ export async function fetchActiveEdition(
     throw new ActiveEditionFetchError(`Failed to load active edition: ${res.status}`, res.status);
   }
 
-  const api = (await res.json()) as ApiEdition;
-  return mapApiEdition(api, EMPTY_EDITION.dates);
+  const api = (await res.json()) as EditionPublicOut;
+  return editionCalendar(api, EMPTY_EDITION.dates);
 }
 
 export function activeEditionQueryOptions(scope: ActiveEditionScope = "festival") {

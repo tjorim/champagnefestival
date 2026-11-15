@@ -1,4 +1,6 @@
-import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
+import type { EventCreate, ProductCreate, ProductUpdate } from "@/api-types";
+import type { Edition } from "@/api-types";
+
 import type { ItemDraft } from "@/components/admin/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import type { SponsorTier } from "@/config/editions";
@@ -6,13 +8,8 @@ import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 import type { DietaryTag } from "@/utils/dietaryTags";
 import { parsePollKind, type PollQuestionKind } from "@/utils/pollKinds";
-import {
-  apiToEvent,
-  apiToProduct,
-  type Event,
-  type EventFormData,
-  type Product,
-} from "@/types/event";
+import type { Event, Product } from "@/api-types";
+import { type EventFormData } from "@/types/event";
 
 function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
@@ -44,12 +41,7 @@ async function safeFetch(
 }
 
 function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
-  const cp = (d.contact_person ?? null) as {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-  } | null;
+  const cp = (d.contact_person ?? null) as import("@/api-types").PersonSummaryOut | null;
   return {
     id: d.id as number,
     name: d.name as string,
@@ -159,8 +151,8 @@ export async function fetchEditions(authHeaders: () => Record<string, string>): 
     m.admin_api_load_editions(),
   );
 
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEdition) : [];
+  const data = (await response.json()) as Edition[];
+  return Array.isArray(data) ? data : [];
 }
 
 interface ApiOrganization {
@@ -196,11 +188,11 @@ export async function saveEdition(
     id: string;
     year: number;
     month: string;
-    editionType: Edition["editionType"];
+    edition_type: Edition["edition_type"];
     venueId: string;
     active: boolean;
     /** The lineup, in display order. */
-    organizationIds: number[];
+    organizations: number[];
     /** Level per lineup sponsor (organization id); sponsors without an entry are untiered. */
     sponsorTiers?: Record<number, SponsorTier>;
     /**
@@ -223,13 +215,13 @@ export async function saveEdition(
         year: payload.year,
         month: payload.month,
         venue_id: payload.venueId,
-        edition_type: payload.editionType,
+        edition_type: payload.edition_type,
         active: payload.active,
         // Always send `organizations` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
-        organizations: payload.editionType === "festival" ? payload.organizationIds : [],
-        sponsor_tiers: payload.editionType === "festival" ? (payload.sponsorTiers ?? {}) : {},
+        organizations: payload.edition_type === "festival" ? payload.organizations : [],
+        sponsor_tiers: payload.edition_type === "festival" ? (payload.sponsorTiers ?? {}) : {},
         // Independent of the lineup: any edition type may name a co-organizer.
         ...(payload.coOrganizerOrganizationId === undefined
           ? {}
@@ -239,7 +231,7 @@ export async function saveEdition(
     isEdit ? m.admin_api_update_edition() : m.admin_api_create_edition(),
   );
 
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 export async function fetchEditionEvents(
@@ -251,8 +243,8 @@ export async function fetchEditionEvents(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEvent) : [];
+  const data = (await response.json()) as Event[];
+  return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -271,12 +263,12 @@ function localizedBody<Field extends string>(field: Field, text: LocalizedText) 
 export function eventTextBody(formData: EventFormData) {
   const text = (value: string) => value.trim() || null;
   return {
-    title_nl: text(formData.titleNl),
-    title_fr: text(formData.titleFr),
-    title_en: text(formData.titleEn),
-    description_nl: text(formData.descriptionNl),
-    description_fr: text(formData.descriptionFr),
-    description_en: text(formData.descriptionEn),
+    title_nl: text(formData.title_nl),
+    title_fr: text(formData.title_fr),
+    title_en: text(formData.title_en),
+    description_nl: text(formData.description_nl),
+    description_fr: text(formData.description_fr),
+    description_en: text(formData.description_en),
   };
 }
 
@@ -297,27 +289,27 @@ export async function saveEditionEvent(
         edition_id: payload.editionId,
         ...eventTextBody(payload.formData),
         date: payload.formData.date,
-        start_time: payload.formData.startTime,
-        end_time: payload.formData.endTime || null,
+        start_time: payload.formData.start_time,
+        end_time: payload.formData.end_time || null,
         category: payload.formData.category,
-        volunteers_only: payload.formData.volunteersOnly ?? false,
-        members_only: payload.formData.membersOnly ?? false,
-        registration_required: payload.formData.registrationRequired,
+        volunteers_only: payload.formData.volunteers_only ?? false,
+        members_only: payload.formData.members_only ?? false,
+        registration_required: payload.formData.registration_required,
         registrations_open_from:
-          payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
-            ? datetimeLocalToIso(payload.formData.registrationsOpenFrom)
+          payload.formData.registration_required && payload.formData.registrations_open_from
+            ? datetimeLocalToIso(payload.formData.registrations_open_from)
             : null,
         registrations_close_at:
-          payload.formData.registrationRequired && payload.formData.registrationsCloseAt
-            ? datetimeLocalToIso(payload.formData.registrationsCloseAt)
+          payload.formData.registration_required && payload.formData.registrations_close_at
+            ? datetimeLocalToIso(payload.formData.registrations_close_at)
             : null,
         active: payload.formData.active,
-      }),
+      } satisfies EventCreate),
     },
     m.admin_content_error_save(),
   );
 
-  return apiToEvent((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Event;
 }
 
 export async function deleteEditionEvent(
@@ -340,46 +332,37 @@ export async function fetchEventProducts(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToProduct) : [];
+  const data = (await response.json()) as Product[];
+  return Array.isArray(data) ? data : [];
 }
 
-export interface ProductWrite {
+/** UI command: generated product fields plus grouped translation controls and propagation choices. */
+export type ProductWrite = Pick<
+  ProductCreate,
+  | "price"
+  | "category"
+  | "purchasable"
+  | "required"
+  | "included_product_id"
+  | "included_per_guests"
+  | "unit"
+  | "stock"
+  | "inclusions"
+> & {
   id?: string;
-  eventId: string;
-  /** Per-language product name; a blank translation is cleared. */
+  eventId: ProductCreate["event_id"];
   name: LocalizedText;
   description: LocalizedText;
-  price: number;
-  category: string;
-  purchasable: boolean;
-  required: boolean;
-  includedProductId?: string;
-  includedPerGuests?: number;
-  unit?: "item" | "table" | "person";
-  stock?: number | null;
-  inclusions?: import("@/types/event").ProductInclusion[] | null;
-  updateExistingContents?: boolean;
-  updateExistingPrices?: boolean;
-  confirmShortage?: boolean;
-  previewToken?: string;
-}
-export interface ProductChangePreview {
-  preview_token: string;
-  price_changed: boolean;
-  contents_changed: boolean;
-  bookings: {
-    id: string;
-    before_total: string;
-    after_total: string;
-    amount_paid: string;
-    refund_due: string;
-    before_items: { name: string; quantity: number }[];
-    after_items: { name: string; quantity: number }[];
-  }[];
-  shortages: { name: string; stock: number; reserved: number; shortage: number }[];
-}
-function productWriteBody(payload: ProductWrite) {
+  updateExistingContents?: ProductUpdate["update_existing_contents"];
+  updateExistingPrices?: ProductUpdate["update_existing_prices"];
+  confirmShortage?: ProductUpdate["confirm_shortage"];
+  previewToken?: ProductUpdate["preview_token"];
+};
+export type { ProductChangePreviewOut as ProductChangePreview } from "@/api-types";
+import type { ProductChangePreviewOut as ProductChangePreview } from "@/api-types";
+function productWriteBody(
+  payload: ProductWrite,
+): ProductUpdate & Partial<Pick<ProductCreate, "event_id">> {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
     ...localizedBody("name", payload.name),
@@ -388,8 +371,8 @@ function productWriteBody(payload: ProductWrite) {
     category: payload.category,
     purchasable: payload.purchasable,
     required: payload.required,
-    included_product_id: payload.includedProductId ?? null,
-    included_per_guests: payload.includedPerGuests ?? null,
+    included_product_id: payload.included_product_id ?? null,
+    included_per_guests: payload.included_per_guests ?? null,
     ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
     ...(payload.stock !== undefined ? { stock: payload.stock } : {}),
     ...(payload.inclusions !== undefined ? { inclusions: payload.inclusions } : {}),
@@ -431,7 +414,7 @@ export async function saveEventProduct(
     },
     m.admin_content_error_save(),
   );
-  return apiToProduct((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Product;
 }
 
 export async function deleteEventProduct(
@@ -477,7 +460,7 @@ export async function uploadEditionArtwork(
     { method: "POST", headers: authHeaders(), body },
     m.admin_edition_artwork_error(),
   );
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 /** Empty an artwork slot so the site falls back to its static image. Clearing an empty slot is harmless. */
@@ -491,7 +474,7 @@ export async function clearEditionArtwork(
     { method: "DELETE", headers: authHeaders() },
     m.admin_edition_artwork_error(),
   );
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 export const DIETARY_TAGS: readonly DietaryTag[] = [
@@ -966,6 +949,6 @@ export async function fetchVolunteerPollEvents(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const events = (await response.json()) as Record<string, unknown>[];
-  return events.map(apiToEvent).filter((event) => event.volunteersOnly);
+  const events = (await response.json()) as Event[];
+  return events.filter((event) => event.volunteers_only);
 }

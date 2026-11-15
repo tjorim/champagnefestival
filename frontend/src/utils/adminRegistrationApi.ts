@@ -1,30 +1,18 @@
 import { orderAnswersBody, type OrderAnswer } from "@/utils/orderQuestions";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
-import { apiToEvent, type Event } from "@/types/event";
-import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
-import type { RegistrationOut } from "@/api-types";
-import { apiToRegistration } from "@/types/registrationMapper";
-import { editionDisplayName } from "@/utils/editionName";
+import type { Event } from "@/api-types";
+import type { Registration } from "@/types/registration";
+import type {
+  RegistrationOut,
+  PersonListEnvelope,
+  PersonListItemOut,
+  PersonOut,
+  PersonSummaryOut,
+  PersonPaymentSummary,
+} from "@/api-types";
 
-export interface PersonOption {
-  value: string;
-  label: string;
-  sub: string;
-  name: string;
-  email: string;
-  phone: string;
-  /** Existing bookings, so two people with the same name can be told apart. */
-  registrationCount: number;
-}
-
-interface PersonSearchResult {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  registration_count?: number;
-}
+export type PersonOption = PersonListItemOut | PersonOut | PersonSummaryOut;
 
 export type EditionEvent = Event;
 
@@ -47,52 +35,21 @@ export interface CreatePersonPayload {
   preferredLanguage: "nl" | "fr" | "en" | null;
 }
 
-export interface PersonRegistration {
-  id: string;
-  eventTitle: string;
-  guestCount: number;
-  status: RegistrationStatus;
-  paymentStatus: PaymentStatus;
-  checkedIn: boolean;
-  createdAt: string;
-  amountPaid: number;
-  amountDue: number | null;
-  editionId: string;
-  editionLabel: string;
-}
+export type PersonRegistration = RegistrationOut;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isRegistrationStatus(value: unknown): value is RegistrationStatus {
-  return value === "pending" || value === "confirmed" || value === "cancelled";
-}
-
-function isPaymentStatus(value: unknown): value is PaymentStatus {
-  return value === "unpaid" || value === "partial" || value === "paid";
-}
-
-function isPersonRegistrationRecord(value: unknown): value is Record<string, unknown> & {
-  id: string;
-  event: { title: string; edition?: { id: string; year: number; month: string } };
-  guest_count: number;
-  status: RegistrationStatus;
-  payment_status: PaymentStatus;
-  checked_in: boolean;
-  created_at: string;
-  amount_paid?: number | string | null;
-  amount_due?: number | string | null;
-  edition_id?: string;
-} {
+function isPersonRegistrationRecord(value: unknown): value is RegistrationOut {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
     isRecord(value.event) &&
     typeof value.event.title === "string" &&
     typeof value.guest_count === "number" &&
-    isRegistrationStatus(value.status) &&
-    isPaymentStatus(value.payment_status) &&
+    ["pending", "confirmed", "cancelled"].includes(String(value.status)) &&
+    ["unpaid", "partial", "paid"].includes(String(value.payment_status)) &&
     typeof value.checked_in === "boolean" &&
     typeof value.created_at === "string"
   );
@@ -109,10 +66,10 @@ export async function fetchRegistrableEvents(
     throw new Error(`Failed to load registrable events (${response.status})`);
   }
 
-  const data = (await response.json()) as Record<string, unknown>[];
+  const data = (await response.json()) as Event[];
   // A malformed response is an error, not "no registrable events".
   if (!Array.isArray(data)) throw new Error("Invalid /api/events response: expected an array.");
-  return data.map(apiToEvent);
+  return data;
 }
 
 export async function fetchAdminPersonOptions(
@@ -128,23 +85,11 @@ export async function fetchAdminPersonOptions(
   // GET /api/people answers with a {items, total, limit, page} envelope (see
   // backend/app/routers/people.py). A bare array or any other shape is rejected
   // instead of being read as "no matches".
-  const payload = (await response.json()) as { items?: PersonSearchResult[] };
+  const payload = (await response.json()) as PersonListEnvelope;
   if (!Array.isArray(payload.items)) {
     throw new Error("Invalid /api/people response: expected {items, total, limit, page}.");
   }
-  return payload.items.map(personSearchResultToOption);
-}
-
-function personSearchResultToOption(person: PersonSearchResult): PersonOption {
-  return {
-    value: person.id,
-    label: person.name,
-    sub: [person.email, person.phone].filter(Boolean).join(" · "),
-    name: person.name,
-    email: person.email,
-    phone: person.phone,
-    registrationCount: person.registration_count ?? 0,
-  };
+  return payload.items;
 }
 
 /**
@@ -167,7 +112,7 @@ export async function createAdminPerson(
     }),
   });
   if (!res.ok) throw await apiErrorFromResponse(res, m.admin_people_error_create());
-  return personSearchResultToOption((await res.json()) as PersonSearchResult);
+  return (await res.json()) as PersonOut;
 }
 
 export async function fetchAdminPersonRegistrations(
@@ -185,32 +130,10 @@ export async function fetchAdminPersonRegistrations(
   if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord))
     throw new Error(`Invalid registrations payload for person ${personId}.`);
 
-  return raw.map((registration) => {
-    const edition = registration.event.edition;
-    return {
-      id: registration.id,
-      eventTitle: registration.event.title,
-      guestCount: registration.guest_count,
-      status: registration.status,
-      paymentStatus: registration.payment_status,
-      checkedIn: registration.checked_in,
-      createdAt: registration.created_at,
-      amountPaid: Number(registration.amount_paid ?? 0),
-      amountDue: registration.amount_due == null ? null : Number(registration.amount_due),
-      editionId: registration.edition_id ?? edition?.id ?? "",
-      editionLabel: edition ? editionDisplayName(edition) : "",
-    };
-  });
+  return raw;
 }
 
-export interface PersonPaymentSummary {
-  received: number;
-  refunded: number;
-  netPaid: number;
-  due: number;
-  outstanding: number;
-  refundLiability: number;
-}
+export type { PersonPaymentSummary } from "@/api-types";
 
 export async function fetchPersonPaymentSummary(
   personId: string,
@@ -223,15 +146,7 @@ export async function fetchPersonPaymentSummary(
   });
   if (!response.ok) throw new Error(`Failed to load payment summary: ${response.status}`);
 
-  const data = (await response.json()) as Record<string, unknown>;
-  return {
-    received: Number(data.received ?? 0),
-    refunded: Number(data.refunded ?? 0),
-    netPaid: Number(data.net_paid ?? 0),
-    due: Number(data.due ?? 0),
-    outstanding: Number(data.outstanding ?? 0),
-    refundLiability: Number(data.refund_liability ?? 0),
-  };
+  return (await response.json()) as PersonPaymentSummary;
 }
 
 export async function createAdminRegistration(
@@ -259,5 +174,5 @@ export async function createAdminRegistration(
   if (!res.ok) throw await apiErrorFromResponse(res, m.admin_error_create_registration());
 
   const data = await res.json();
-  return apiToRegistration(data as RegistrationOut);
+  return data as RegistrationOut;
 }

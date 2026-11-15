@@ -1,9 +1,5 @@
-export interface ContactPerson {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
+import type { PersonSummaryOut } from "@/api-types";
+export type ContactPerson = PersonSummaryOut;
 
 export interface ItemDraft {
   id: number;

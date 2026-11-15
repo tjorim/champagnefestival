@@ -40,7 +40,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import PollOrdersTable from "./PollOrdersTable";
 import PollQuestionCard, { QuestionTextFields, PollEventField } from "./PollQuestionCard";
 import VolunteerPollOrderDialog from "./VolunteerPollOrderDialog";
-import type { Edition } from "./editionTypes";
+import type { Edition } from "@/api-types";
 import { editionDisplayName } from "@/utils/editionName";
 
 interface EditionPollModalProps {

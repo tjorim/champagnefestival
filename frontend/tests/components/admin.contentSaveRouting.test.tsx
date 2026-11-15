@@ -17,7 +17,8 @@ import EditionModal from "@/components/admin/EditionModal";
 import ItemModal from "@/components/admin/ItemModal";
 import { saveContentSectionItem } from "@/utils/adminContentApi";
 import { server } from "@/mocks/server";
-import type { Edition } from "@/components/admin/editionTypes";
+import type { Edition } from "@/api-types";
+
 import type { Venue } from "@/api-types";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -103,7 +104,7 @@ describe("saving a festival edition submits only programmable organizations", ()
       id: "march-2027",
       year: 2027,
       month: "march",
-      editionType: "festival",
+      edition_type: "festival",
       active: true,
       dates: ["2027-03-06"],
       venue: { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },

@@ -68,7 +68,7 @@ describe("fetchActiveEdition", () => {
 
     const edition = await fetchActiveEdition("any");
 
-    expect(edition.editionType).toBe("bourse");
+    expect(edition.edition_type).toBe("bourse");
     expect(edition.id).toBe("bourse-2026");
   });
 });

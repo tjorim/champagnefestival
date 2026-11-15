@@ -1,31 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { categoryLabel } from "@/hooks/useCategories";
-import { apiToCategory } from "@/types/category";
+import type { CategoryOut } from "@/api-types";
 
-const categories = [
-  apiToCategory({
+const categories: CategoryOut[] = [
+  {
+    created_at: "",
+    updated_at: "",
     key: "tasting",
     label: "Degustatie",
     label_nl: "Degustatie",
     label_fr: "Dégustation",
     label_en: null,
     sort_order: 10,
-  }),
-  apiToCategory({
+  },
+  {
+    created_at: "",
+    updated_at: "",
     key: "gala",
+    label_fr: null,
     label: "Gala",
     label_nl: "Gala",
     label_en: "Gala",
     sort_order: 20,
-  }),
+  },
 ];
-
-describe("apiToCategory", () => {
-  it("maps the stored labels, defaulting the order", () => {
-    expect(categories[0]).toMatchObject({ key: "tasting", labelFr: "Dégustation", labelEn: null });
-    expect(apiToCategory({ key: "x" })).toMatchObject({ labelNl: null, sortOrder: 0 });
-  });
-});
 
 describe("categoryLabel", () => {
   it("shows the visitor's language when the label has text", () => {

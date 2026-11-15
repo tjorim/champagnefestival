@@ -1,10 +1,13 @@
+import { venueOut } from "@/mocks/data/builders";
+import { editionOut } from "@/mocks/data/builders";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import EditionArtwork from "@/components/admin/EditionArtwork";
-import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
+import type { Edition } from "@/api-types";
+
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -19,20 +22,20 @@ vi.mock("@/paraglide/messages", () => ({
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const flyerPath = `/uploads/editions/${"a".repeat(32)}-${"b".repeat(64)}.jpg`;
 
-function apiEdition(extra: Record<string, unknown> = {}) {
-  return {
+function apiEdition(extra: Partial<Edition> = {}) {
+  return editionOut({
     id: "2026-october",
     year: 2026,
     month: "october",
     edition_type: "festival",
     dates: [],
-    venue: { id: "venue-1", name: "Hall", city: "Bredene", active: true },
+    venue: venueOut(),
     events: [],
     active: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...extra,
-  };
+  });
 }
 
 function mount(edition: Edition, onUpdated = vi.fn()) {
@@ -57,7 +60,7 @@ describe("EditionArtwork", () => {
         return HttpResponse.json(apiEdition({ flyer_image: flyerPath }));
       }),
     );
-    const onUpdated = mount(apiToEdition(apiEdition()));
+    const onUpdated = mount(editionOut(apiEdition()));
     expect(screen.getAllByText(/admin_edition_artwork_default_in_use/)).toHaveLength(3);
     expect(screen.queryByRole("button", { name: /artwork_clear_slot/ })).not.toBeInTheDocument();
     const flyerUpload = screen.getByRole("button", {
@@ -72,7 +75,7 @@ describe("EditionArtwork", () => {
     await waitFor(() => expect(onUpdated).toHaveBeenCalled());
     expect(received!.file.name).toBe("flyer.png");
     expect(received!.authorization).toBe("Bearer mock-access-token");
-    expect(onUpdated.mock.calls[0]![0].flyerImage).toBe(flyerPath);
+    expect(onUpdated.mock.calls[0]![0].flyer_image).toBe(flyerPath);
     expect(await screen.findByRole("status")).toHaveTextContent("admin_edition_artwork_uploaded");
   });
 
@@ -87,7 +90,7 @@ describe("EditionArtwork", () => {
         );
       }),
     );
-    const onUpdated = mount(apiToEdition(apiEdition()));
+    const onUpdated = mount(editionOut(apiEdition()));
     const input = screen.getAllByLabelText("admin_edition_artwork_share")[0]!;
     await userEvent.upload(input, new File(["image"], "share.png", { type: "image/png" }));
     await userEvent.click(
@@ -107,7 +110,7 @@ describe("EditionArtwork", () => {
         HttpResponse.json(apiEdition({ flyer_image: null })),
       ),
     );
-    const onUpdated = mount(apiToEdition(apiEdition({ flyer_image: flyerPath })));
+    const onUpdated = mount(editionOut(apiEdition({ flyer_image: flyerPath })));
     expect(screen.getByAltText(/preview_alt.*flyer/)).toHaveAttribute("src", flyerPath);
     await userEvent.click(
       screen.getByRole("button", {
@@ -116,7 +119,7 @@ describe("EditionArtwork", () => {
     );
 
     await waitFor(() => expect(onUpdated).toHaveBeenCalled());
-    expect(onUpdated.mock.calls[0]![0].flyerImage).toBeNull();
+    expect(onUpdated.mock.calls[0]![0].flyer_image).toBeNull();
     expect(await screen.findByRole("status")).toHaveTextContent("admin_edition_artwork_cleared");
   });
 });

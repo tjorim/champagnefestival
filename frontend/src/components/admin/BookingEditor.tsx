@@ -20,7 +20,8 @@ import { PresentationList, PresentationListItem } from "@/components/ui/presenta
 import type { FloorTable } from "@/api-types";
 import { toAmount } from "@/utils/money";
 import type { OrderAnswer } from "@/utils/orderQuestions";
-import { NO_PRODUCT_TRANSLATIONS, type Product } from "@/types/event";
+import type { Product } from "@/api-types";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { PaymentTransactionCreate, TableAllocation } from "@/api-types";
 import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
@@ -80,16 +81,25 @@ export default function BookingEditor({
       .filter((item) => !current.some((product) => product.id === item.product_id))
       .map((item) => ({
         id: item.product_id,
-        eventId: registration.event_id,
+        event_id: registration.event_id,
         ...NO_PRODUCT_TRANSLATIONS,
         name: item.name,
         description: "",
-        price: item.price,
+        price: String(item.price),
         category: item.category,
         purchasable: false,
         required: false,
-        createdAt: "",
-        updatedAt: "",
+        created_at: "",
+        updated_at: "",
+        unit: "item" as const,
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
+        inclusions: null,
+        included_product_id: null,
+        included_per_guests: null,
       }));
     return [...current, ...missing];
   }, [registration]);
@@ -176,7 +186,7 @@ export default function BookingEditor({
   const amountDue = products.length
     ? products.reduce(
         (sum, product) =>
-          sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? product.price),
+          sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? Number(product.price)),
         0,
       )
     : toAmount(registration.amount_due);
@@ -299,7 +309,7 @@ export default function BookingEditor({
           {products.map((product) => (
             <AdminField className="site-sm:w-6/12" key={product.id}>
               <AdminLabel>
-                {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
+                {product.name} · €{(bookedPrices[product.id] ?? Number(product.price)).toFixed(2)}
               </AdminLabel>
               <AdminInput
                 aria-label={`${m.admin_booking_quantity()} ${product.name}`}
@@ -343,7 +353,7 @@ export default function BookingEditor({
 
         <OrderAnswerInputs
           admin
-          questions={registration.event?.orderQuestions ?? []}
+          questions={registration.event?.order_questions ?? []}
           answers={orderAnswers}
           onChange={(answers) => form.setFieldValue("orderAnswers", answers)}
           disabled={pending}

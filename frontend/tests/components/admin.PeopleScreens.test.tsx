@@ -1,3 +1,4 @@
+import { makePerson } from "../utils/personFixture";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -39,22 +40,23 @@ const authHeaders = () => ({
   "Content-Type": "application/json",
   Authorization: "Bearer mock-access-token",
 });
-const person = (index: number) => ({
-  id: `p${index}`,
-  name: `Person ${String(index).padStart(2, "0")}`,
-  email: `p${index}@example.com`,
-  phone: "0470000000",
-  address: "Street",
-  notes: "Notes",
-  anonymised: index % 2 !== 0,
-  roles: ["member", "volunteer"],
-  registration_count: 42,
-  national_register_number: "123456",
-  eid_document_number: "eid",
-  help_periods: [{ id: index, first_help_day: "2026-10-01", last_help_day: null, notes: "Help" }],
-  created_at: "2026-01-01",
-  updated_at: "2026-01-01",
-});
+const person = (index: number) =>
+  makePerson({
+    id: `p${index}`,
+    name: `Person ${String(index).padStart(2, "0")}`,
+    email: `p${index}@example.com`,
+    phone: "0470000000",
+    address: "Street",
+    notes: "Notes",
+    anonymised: index % 2 !== 0,
+    roles: ["member", "volunteer"],
+    registration_count: 42,
+    national_register_number: "123456",
+    eid_document_number: "eid",
+    help_periods: [{ id: index, first_help_day: "2026-10-01", last_help_day: null, notes: "Help" }],
+    created_at: "2026-01-01",
+    updated_at: "2026-01-01",
+  });
 function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "") {
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);

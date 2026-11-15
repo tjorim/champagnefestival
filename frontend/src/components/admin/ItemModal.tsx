@@ -80,16 +80,7 @@ export default function ItemModal({
       description_fr: record?.description_fr ?? "",
       description_en: record?.description_en ?? "",
       type: record?.type ?? "vendor",
-      contactOption: (cp
-        ? {
-            value: cp.id,
-            label: cp.name,
-            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
-            name: cp.name,
-            email: cp.email ?? "",
-            phone: cp.phone ?? "",
-          }
-        : null) as PersonOption | null,
+      contactOption: cp ?? null,
     };
   }, [record]);
 
@@ -117,15 +108,8 @@ export default function ItemModal({
         description_en: value.description_en.trim() || null,
         active: record?.active ?? true,
         type: value.type,
-        contactPersonId: value.contactOption?.value ?? null,
-        contactPerson: value.contactOption
-          ? {
-              id: value.contactOption.value,
-              name: value.contactOption.label,
-              email: value.contactOption.email,
-              phone: value.contactOption.phone,
-            }
-          : null,
+        contactPersonId: value.contactOption?.id ?? null,
+        contactPerson: value.contactOption,
       });
     },
   });
@@ -253,8 +237,8 @@ export default function ItemModal({
                     onValueChange={(option) => field.handleChange(option)}
                     onInputValueChange={setPersonQuery}
                     filter={null}
-                    itemToStringLabel={(option: PersonOption) => option.label}
-                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.value === b.value}
+                    itemToStringLabel={(option: PersonOption) => option.name}
+                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.id === b.id}
                   >
                     <ComboboxInput
                       id="item-contact-person"
@@ -277,11 +261,13 @@ export default function ItemModal({
                       )}
                       <ComboboxList>
                         {(opt: PersonOption) => (
-                          <ComboboxItem key={opt.value} value={opt}>
+                          <ComboboxItem key={opt.id} value={opt}>
                             <div>
-                              <div>{opt.label}</div>
-                              {opt.sub && (
-                                <small className="text-muted-foreground">{opt.sub}</small>
+                              <div>{opt.name}</div>
+                              {[opt.email, opt.phone].filter(Boolean).join(" · ") && (
+                                <small className="text-muted-foreground">
+                                  {[opt.email, opt.phone].filter(Boolean).join(" · ")}
+                                </small>
                               )}
                             </div>
                           </ComboboxItem>

@@ -586,7 +586,7 @@ export default function SignageChannels({
                     {editions.data?.map((item) => (
                       <AdminOption key={item.id} value={item.id}>
                         {editionDisplayNameWithType({
-                          editionType: item.edition_type,
+                          edition_type: item.edition_type,
                           year: item.year,
                           month: item.month,
                         })}

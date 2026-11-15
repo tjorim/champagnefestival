@@ -23,9 +23,8 @@ import type {
   Venue,
 } from "@/api-types";
 import type { Organization } from "@/types/admin";
-import { apiToRegistration } from "@/types/registrationMapper";
 import type { Registration } from "@/types/registration";
-import { type Person, apiToPerson } from "@/types/person";
+import type { VolunteerOut } from "@/api-types";
 import {
   downloadFileOrThrow,
   fetchArrayOrThrow,
@@ -113,7 +112,7 @@ export async function fetchRegistrationsPage(
     throw new Error("Invalid /api/registrations response: expected {items, total, limit, page}.");
   }
   return {
-    registrations: payload.items.map((item) => apiToRegistration(item)),
+    registrations: payload.items,
     total: payload.total,
     limit: payload.limit,
     page: payload.page,
@@ -176,7 +175,7 @@ export async function fetchRegistration(
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiToRegistration(payload);
+  return payload;
 }
 
 export async function fetchTables(
@@ -448,13 +447,13 @@ export async function fetchAreas(authHeaders: () => Record<string, string>): Pro
 export async function fetchVolunteer(
   id: string,
   authHeaders: () => Record<string, string>,
-): Promise<Person> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+): Promise<VolunteerOut> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<VolunteerOut>(
     `/api/volunteers/${encodeURIComponent(id)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiToPerson(payload);
+  return payload;
 }
 
 export interface AuditEntryFilters {

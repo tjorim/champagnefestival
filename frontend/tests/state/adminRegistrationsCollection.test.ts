@@ -11,7 +11,6 @@ import {
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
-import { apiToRegistration } from "@/types/registrationMapper";
 import { createTestQueryClient } from "../utils/queryClient";
 
 const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
@@ -126,7 +125,7 @@ describe("admin registrations pilot collection", () => {
       }),
     });
     expect(response.ok).toBe(true);
-    const updated = apiToRegistration((await response.json()) as RegistrationOut);
+    const updated = (await response.json()) as RegistrationOut;
     collection.utils.writeUpsert(updated);
 
     const registration = collection.get("reg-01");

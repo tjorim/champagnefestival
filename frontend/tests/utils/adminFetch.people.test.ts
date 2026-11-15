@@ -38,8 +38,8 @@ describe("bounded volunteer detail", () => {
     const volunteer = await fetchVolunteer("v1", authHeaders);
 
     expect(volunteer.id).toBe("v1");
-    expect(volunteer.helpPeriods).toEqual([
-      { id: 4, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
+    expect(volunteer.help_periods).toEqual([
+      { id: 4, first_help_day: "2026-10-10", last_help_day: null, notes: "" },
     ]);
   });
 });

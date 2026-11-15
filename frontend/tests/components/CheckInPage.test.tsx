@@ -29,6 +29,7 @@ vi.mock("@/paraglide/messages", () => ({
     stamp_progress: ({ count, total }: { count: number; total: number }) =>
       `Stamps: ${count}/${total}`,
     stamp_reward_earned: () => "Reward earned!",
+    venue_plan_show_table: () => "Show table",
     checkin_title: () => "Check-in",
     checkin_lookup_method: () => "Find a guest",
     checkin_scan_method: () => "Scan a QR code",

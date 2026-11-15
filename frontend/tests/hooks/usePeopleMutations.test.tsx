@@ -1,3 +1,4 @@
+import { makePerson } from "../utils/personFixture";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useIsMutating } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
@@ -5,7 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
 import { captureAdminPeopleFence, resetAdminPeopleSession } from "@/state/adminPeopleSession";
-import { apiToPerson, localIsoDate } from "@/types/person";
+import { localIsoDate } from "@/types/person";
 import { fetchPeoplePage, type PeoplePage } from "@/utils/adminPeopleQueries";
 import { queryKeys } from "@/utils/queryKeys";
 import { createTestQueryClientHarness } from "../utils/queryClient";
@@ -47,7 +48,7 @@ function harness() {
   const key = queryKeys.admin.peopleList(params);
   const membersKey = queryKeys.admin.peopleList({ ...params, role: "member" });
   const page = (): PeoplePage => ({
-    items: rows.map(apiToPerson),
+    items: rows.map((row) => makePerson(row)),
     total: rows.length,
     page: 1,
     limit: 20,
@@ -111,7 +112,7 @@ describe("optimistic people mutations", () => {
       await promise;
     });
     expect(h.cached().items[0]?.name).toBe("Updated");
-    expect(h.cached().items[0]?.updatedAt).toBe("2026-10-06");
+    expect(h.cached().items[0]?.updated_at).toBe("2026-10-06");
     await waitFor(() => expect(h.result.current.pending).toBe(0));
   });
 
@@ -277,7 +278,7 @@ describe("optimistic people mutations", () => {
       h.queryClient.removeQueries({ queryKey: queryKeys.admin.people });
       expect(fence()).toBe(false);
       const replacement = {
-        items: [apiToPerson({ ...person("a"), name: "Next session" })],
+        items: [makePerson({ ...person("a"), name: "Next session" })],
         total: 1,
         page: 1,
         limit: 20,
@@ -306,7 +307,7 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.deactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.retiredRoles).toEqual({ member: localIsoDate() }),
+      expect(h.cached().items[0]?.retired_roles).toEqual({ member: localIsoDate() }),
     );
     expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
@@ -325,7 +326,7 @@ describe("optimistic people mutations", () => {
       http.post("/api/volunteers/:id/deactivate", async () => {
         await gate.promise;
         Object.assign(h.rows()[0]!, { retired_roles: { volunteer: localIsoDate() } });
-        (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
+        (h.rows()[0]!.help_periods[0]! as { last_help_day: string | null }).last_help_day =
           localIsoDate();
         return new HttpResponse(null, { status: 204 });
       }),
@@ -335,12 +336,12 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.deactivateVolunteerMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
+      expect(h.cached().items[0]?.help_periods?.[0]?.last_help_day).toBe(localIsoDate()),
     );
-    expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: localIsoDate() });
+    expect(h.cached().items[0]?.retired_roles).toEqual({ volunteer: localIsoDate() });
     expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
-    expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
+    expect(h.cached().items[0]?.help_periods).toHaveLength(1);
     expect(h.cached().total).toBe(2);
     gate.resolve();
     await act(async () => {
@@ -355,7 +356,7 @@ describe("optimistic people mutations", () => {
     const seeded = h.cached();
     h.queryClient.setQueryData(h.key, {
       ...seeded,
-      items: [{ ...seeded.items[0]!, retiredRoles: retired }, ...seeded.items.slice(1)],
+      items: [{ ...seeded.items[0]!, retired_roles: retired }, ...seeded.items.slice(1)],
     });
     const gate = deferred();
     server.use(
@@ -370,7 +371,7 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.reactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: "2026-02-01" }),
+      expect(h.cached().items[0]?.retired_roles).toEqual({ volunteer: "2026-02-01" }),
     );
     gate.resolve();
     await act(async () => {
@@ -490,7 +491,7 @@ it("does not lower totals for a different cached search", async () => {
   const gate = deferred();
   const key = queryKeys.admin.peopleList({ page: 1, limit: 20, q: "Original b" });
   h.queryClient.setQueryData(key, {
-    items: [apiToPerson(person("b"))],
+    items: [makePerson(person("b"))],
     total: 1,
     page: 1,
     limit: 20,

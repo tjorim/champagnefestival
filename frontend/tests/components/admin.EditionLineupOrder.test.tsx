@@ -1,8 +1,8 @@
+import { editionOut } from "@/mocks/data/builders";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EditionLineupOrder } from "@/components/admin/EditionLineupOrder";
-import { apiToEdition } from "@/components/admin/editionTypes";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -75,19 +75,51 @@ describe("EditionLineupOrder", () => {
   });
 });
 
-describe("apiToEdition lineup", () => {
-  it("reads the lineup order and sponsor levels, ignoring unknown levels", () => {
-    const edition = apiToEdition({
+describe("edition lineup wire shape", () => {
+  it("reads the lineup order and sponsor levels, preserving generated sponsor levels", () => {
+    const edition = editionOut({
       id: "e",
       organizations: [5, 3],
-      producers: [{ id: 5, name: "Krug" }],
+      producers: [
+        {
+          id: 5,
+          name: "Krug",
+          image: "",
+          website: "",
+          type: "producer",
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          sponsor_tier: null,
+        },
+      ],
       sponsors: [
-        { id: 3, name: "Acme", sponsor_tier: "partner" },
-        { id: 4, name: "Other", sponsor_tier: "platinum" },
+        {
+          id: 3,
+          name: "Acme",
+          sponsor_tier: "partner",
+          image: "",
+          website: "",
+          type: "sponsor",
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+        },
+        {
+          id: 4,
+          name: "Other",
+          sponsor_tier: null,
+          image: "",
+          website: "",
+          type: "sponsor",
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+        },
       ],
     });
 
-    expect(edition.organizationIds).toEqual([5, 3]);
-    expect(edition.sponsors?.map((sponsor) => sponsor.sponsorTier)).toEqual(["partner", null]);
+    expect(edition.organizations).toEqual([5, 3]);
+    expect(edition.sponsors?.map((sponsor) => sponsor.sponsor_tier)).toEqual(["partner", null]);
   });
 });

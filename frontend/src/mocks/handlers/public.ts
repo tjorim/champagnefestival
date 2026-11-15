@@ -1,3 +1,4 @@
+import type { EditionPublicOut, EventOut, EventPublicOut, ProductPublicOut } from "@/api-types";
 import { http, HttpResponse } from "msw/http";
 import { editions, events, type SeedEdition } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
@@ -17,7 +18,37 @@ function seededState<T>(key: string, fallback: T): T {
   }
 }
 
-function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
+/** Public fixtures mirror the API projection: no stock or hidden inclusion targets. */
+function publicEvent(event: EventOut): EventPublicOut {
+  const { edition: _edition, products, ...fields } = event;
+  const visible = new Set(
+    products.filter((product) => product.purchasable).map((product) => product.id),
+  );
+  const publicProducts: ProductPublicOut[] = products
+    .filter((product) => product.purchasable)
+    .map((product) => {
+      const {
+        event_id: _eventId,
+        stock: _stock,
+        reserved_quantity: _reserved,
+        shortage: _shortage,
+        created_at: _created,
+        updated_at: _updated,
+        ...fields
+      } = product;
+      const included =
+        product.included_product_id !== null && visible.has(product.included_product_id);
+      return {
+        ...fields,
+        inclusions: product.inclusions?.filter((edge) => visible.has(edge.product_id)) ?? null,
+        included_product_id: included ? product.included_product_id : null,
+        included_per_guests: included ? product.included_per_guests : null,
+      };
+    });
+  return { ...fields, products: publicProducts, members_only: seededState("members-only", false) };
+}
+
+function hydrateEditionEvents(edition: SeedEdition): EditionPublicOut {
   const editionEvents = [...events.filter((event) => event.edition_id === edition.id)].sort(
     (left, right) =>
       left.date.localeCompare(right.date) ||
@@ -26,17 +57,15 @@ function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
   );
   const dates = [...new Set(editionEvents.map((event) => event.date))].sort();
 
+  const { organizations: _organizations, ...publicFields } = edition;
   return {
-    ...edition,
+    ...publicFields,
     dates,
-    events: editionEvents.map((event) => ({
-      ...event,
-      members_only: seededState("members-only", false),
-    })),
+    events: editionEvents.map(publicEvent),
   };
 }
 
-function isUpcomingEdition(edition: SeedEdition): boolean {
+function isUpcomingEdition(edition: EditionPublicOut): boolean {
   const today = new Date().toISOString().slice(0, 10);
   const endDate = edition.dates.at(-1);
   return Boolean(endDate && endDate >= today);
@@ -127,18 +156,20 @@ export const publicHandlers = [
 
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", ({ request }) => {
-    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const edition_type = new URL(request.url).searchParams.get("edition_type");
     const matching = editions.filter(
-      (e) => e.active && (!editionType || e.edition_type === editionType),
+      (e) => e.active && (!edition_type || e.edition_type === edition_type),
     );
     return HttpResponse.json(matching[0] ? hydrateEditionEvents(matching[0]) : null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
   http.get("/api/editions/upcoming", ({ request }) => {
-    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const edition_type = new URL(request.url).searchParams.get("edition_type");
     const result = editions
-      .filter((edition) => edition.active && (!editionType || edition.edition_type === editionType))
+      .filter(
+        (edition) => edition.active && (!edition_type || edition.edition_type === edition_type),
+      )
       .map(hydrateEditionEvents)
       .filter(isUpcomingEdition);
     return HttpResponse.json(result);
@@ -155,14 +186,14 @@ export const publicHandlers = [
   /** GET /api/events — supports ?registration_required and ?edition_id filters. */
   http.get("/api/events", ({ request }) => {
     const url = new URL(request.url);
-    const registrationRequired = url.searchParams.get("registration_required");
+    const registration_required = url.searchParams.get("registration_required");
     const editionId = url.searchParams.get("edition_id");
 
     let result = events.map((event) => ({
       ...event,
       members_only: seededState("members-only", false),
     }));
-    if (registrationRequired === "true") {
+    if (registration_required === "true") {
       result = result.filter((e) => e.registration_required);
     }
     if (editionId) {

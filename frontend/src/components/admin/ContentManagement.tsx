@@ -41,7 +41,8 @@ import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
 import type { ItemDraft } from "./itemTypes";
-import type { Edition, EditionType } from "./editionTypes";
+import type { EditionType } from "./editionTypes";
+import type { Edition } from "@/api-types";
 import type { Venue } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -660,16 +661,16 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
   const visibleEditions = useMemo(
     () =>
       (editionsQuery.data ?? []).filter(
-        (edition) => editionTypeFilter === "all" || edition.editionType === editionTypeFilter,
+        (edition) => editionTypeFilter === "all" || edition.edition_type === editionTypeFilter,
       ),
     [editionTypeFilter, editionsQuery.data],
   );
   const groupedEditions = useMemo(
     () => ({
-      festival: visibleEditions.filter((edition) => edition.editionType === "festival"),
-      bourse: visibleEditions.filter((edition) => edition.editionType === "bourse"),
+      festival: visibleEditions.filter((edition) => edition.edition_type === "festival"),
+      bourse: visibleEditions.filter((edition) => edition.edition_type === "bourse"),
       capsule_exchange: visibleEditions.filter(
-        (edition) => edition.editionType === "capsule_exchange",
+        (edition) => edition.edition_type === "capsule_exchange",
       ),
     }),
     [visibleEditions],

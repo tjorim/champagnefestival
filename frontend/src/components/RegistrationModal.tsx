@@ -40,7 +40,7 @@ import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { OrderItemRequest } from "@/api-types";
 import type { RegistrationFormData } from "@/types/registration";
-import type { Event } from "@/types/event";
+import type { EventPublicOut as Event } from "@/api-types";
 import { eventTitle, productDescription, productName } from "@/utils/eventText";
 import {
   RegistrationSubmitError,
@@ -118,7 +118,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           ...value,
           eventId: event.id,
           orderAnswers: orderAnswers.filter((a) =>
-            event.orderQuestions?.some((q) => q.id === a.question_id && q.active),
+            event.order_questions?.some((q) => q.id === a.question_id && q.active),
           ),
           orderItems: showOrderItems ? orderItems : [],
         });
@@ -231,11 +231,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       const nextPath = new Set([...path, id]);
       const edges =
         product.inclusions ??
-        (product.includedProductId && product.includedPerGuests
+        (product.included_product_id && product.included_per_guests
           ? [
               {
-                product_id: product.includedProductId,
-                quantity: Math.floor((guestCount || 0) / product.includedPerGuests),
+                product_id: product.included_product_id,
+                quantity: Math.floor((guestCount || 0) / product.included_per_guests),
                 per_quantity: quantity,
                 rounding: "down" as const,
               },
@@ -307,7 +307,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         </DialogHeader>
 
         <DialogBody>
-          {event?.membersOnly && (
+          {event?.members_only && (
             <Alert className="mb-3">
               {m.member_sign_in_prompt()}{" "}
               <AlertLink href="/me">{m.member_sign_in_link()}</AlertLink>
@@ -319,7 +319,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.registration_error()}
             </Alert>
-          ) : event.volunteersOnly ? (
+          ) : event.volunteers_only ? (
             <Alert>
               {m.volunteer_event_poll_required()}{" "}
               <AlertLink href="/me">{m.volunteer_event_portal_link()}</AlertLink>
@@ -543,7 +543,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                         <div className="flex items-center justify-between">
                           <span className="text-foreground text-sm">
                             {label}
-                            {product.soldOut && (
+                            {product.sold_out && (
                               <>
                                 <Badge variant="danger" className="ms-2">
                                   {m.registration_order_sold_out()}
@@ -588,9 +588,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               onClick={() => handleQuantityChange(product.id, qty + 1)}
                               disabled={
                                 isLockedOptional ||
-                                product.soldOut ||
-                                (product.availableQuantity != null &&
-                                  qty + (included?.quantity ?? 0) >= product.availableQuantity)
+                                product.sold_out ||
+                                (product.available_quantity != null &&
+                                  qty + (included?.quantity ?? 0) >= product.available_quantity)
                               }
                               aria-label={m.registration_increase_quantity({ name: label })}
                             >
@@ -598,9 +598,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             </Button>
                           </div>
                         </div>
-                        {product.availableQuantity != null && (
+                        {product.available_quantity != null && (
                           <div className="text-subtle text-sm">
-                            {m.registration_order_available()}: {product.availableQuantity}
+                            {m.registration_order_available()}: {product.available_quantity}
                           </div>
                         )}
                         {included && (
@@ -624,7 +624,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               )}
 
               <OrderAnswerInputs
-                questions={(event?.orderQuestions ?? []).filter((q) => q.active)}
+                questions={(event?.order_questions ?? []).filter((q) => q.active)}
                 answers={orderAnswers}
                 onChange={setOrderAnswers}
                 disabled={isSubmitting}

@@ -46,7 +46,7 @@ export interface PersonFormData {
   name: string;
   email: string;
   phone: string;
-  preferredLanguage?: "nl" | "fr" | "en" | null;
+  preferred_language?: "nl" | "fr" | "en" | null;
   address: string;
   roles: string[];
   notes: string;
@@ -131,16 +131,16 @@ export default function PersonFormModal({
             name: record.name,
             email: record.email ?? "",
             phone: record.phone ?? "",
-            preferredLanguage: record.preferredLanguage ?? null,
+            preferred_language: record.preferred_language ?? null,
             address: record.address ?? "",
-            rolesInput: record.roles.join(", "),
+            rolesInput: (record.roles ?? []).join(", "),
             notes: record.notes ?? "",
           }
         : {
             name: "",
             email: "",
             phone: "",
-            preferredLanguage: null,
+            preferred_language: null,
             address: "",
             rolesInput: "",
             notes: "",
@@ -158,7 +158,7 @@ export default function PersonFormModal({
           name: value.name.trim(),
           email: value.email.trim(),
           phone: value.phone.trim(),
-          preferredLanguage: value.preferredLanguage,
+          preferred_language: value.preferred_language,
           address: value.address.trim(),
           roles: parseRoles(value.rolesInput),
           notes: value.notes.trim(),
@@ -376,7 +376,7 @@ export default function PersonFormModal({
               </form.Field>
             </AdminField>
 
-            <form.Field name="preferredLanguage">
+            <form.Field name="preferred_language">
               {(field) => (
                 <AdminField className="mb-4" controlId="person-preferred-language">
                   <AdminLabel>{m.registration_preferred_language()}</AdminLabel>

@@ -2,10 +2,10 @@ import type {
   OrderItemOut,
   OrderItemRequest,
   RegistrationListOut,
+  RegistrationOutWithToken,
   TableAllocation,
 } from "@/api-types";
 import type { OrderAnswer } from "@/utils/orderQuestions";
-import type { Event } from "./event";
 
 export interface BookingUpdate {
   orderAnswers?: OrderAnswer[];
@@ -21,15 +21,9 @@ export type RegistrationStatus = RegistrationListOut["status"];
 
 export type PaymentStatus = RegistrationListOut["payment_status"];
 
-/**
- * A booking as the admin screens read it: the generated list row, as the API sends it, with the nested
- * `event` still in the camelCase `Event` shape until the event slice of #1657 replaces it (see
- * `registrationMapper.ts`). `check_in_token` exists only on the admin detail response.
- */
-export type Registration = Omit<RegistrationListOut, "event"> & {
-  event: Event | null;
-  check_in_token?: string;
-};
+/** Admin list/detail wire shapes; the token is present only in the detail response. */
+export type Registration = RegistrationListOut &
+  Partial<Pick<RegistrationOutWithToken, "check_in_token">>;
 
 /**
  * What is still to be delivered on an order line. The API guarantees `0 <= delivered_quantity <= quantity`

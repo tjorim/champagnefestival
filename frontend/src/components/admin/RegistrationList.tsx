@@ -183,7 +183,7 @@ function paymentLabel(payment: PaymentStatus): string {
 
 function isStandaloneRegistration(registration: Registration) {
   if (!registration.event || !registration.event.edition) return false;
-  return registration.event.edition.editionType !== "festival";
+  return registration.event.edition.edition_type !== "festival";
 }
 
 const columnHelper = createAppColumnHelper<Registration>();
@@ -645,7 +645,7 @@ export default function RegistrationList({
                   )}
                   <Badge variant={isStandalone ? "info" : "warning"}>
                     {(() => {
-                      const et = reg.event?.edition?.editionType;
+                      const et = reg.event?.edition?.edition_type;
                       if (et === "bourse") return m.admin_edition_type_bourse();
                       if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
                       return m.admin_edition_type_festival();

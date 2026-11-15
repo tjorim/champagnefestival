@@ -77,7 +77,7 @@ interface RegistrationDetailProps {
 
 function isSimpleRsvp(registration: Registration) {
   if (!registration.event || !registration.event.edition) return false;
-  return registration.event.edition.editionType !== "festival";
+  return registration.event.edition.edition_type !== "festival";
 }
 
 export default function RegistrationDetail({
@@ -144,7 +144,7 @@ export default function RegistrationDetail({
   const simpleRsvp = isSimpleRsvp(registration);
   const changedPrices = registration.order_items.flatMap((item) => {
     const current = registration.event?.products?.find((product) => product.id === item.product_id);
-    return current && current.price !== item.price && item.quantity > item.included_quantity
+    return current && Number(current.price) !== item.price && item.quantity > item.included_quantity
       ? [{ name: item.name, booked: item.price, current: current.price }]
       : [];
   });
@@ -227,7 +227,7 @@ export default function RegistrationDetail({
               {m.admin_inventory_price_difference()}
               {changedPrices.map((price) => (
                 <div key={price.name}>
-                  {price.name}: €{price.booked.toFixed(2)} → €{price.current.toFixed(2)}
+                  {price.name}: €{price.booked.toFixed(2)} → €{Number(price.current).toFixed(2)}
                 </div>
               ))}
             </Alert>
@@ -349,7 +349,7 @@ export default function RegistrationDetail({
               <span className="text-subtle">{m.registration_edition_type_label()}</span>
               <span>
                 {(() => {
-                  const et = registration.event?.edition?.editionType;
+                  const et = registration.event?.edition?.edition_type;
                   if (et === "bourse") return m.admin_edition_type_bourse();
                   if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
                   return m.admin_edition_type_festival();

@@ -8,10 +8,10 @@ export function mergeVolunteerPerson(existing: Person | undefined, volunteer: Pe
     ...volunteer,
     email: existing?.email ?? volunteer.email,
     phone: existing?.phone ?? volunteer.phone,
-    visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
+    visits_per_month: existing?.visits_per_month ?? volunteer.visits_per_month,
     notes: existing?.notes ?? volunteer.notes,
     roles: [...roles],
-    helpPeriods: volunteer.helpPeriods,
+    help_periods: volunteer.help_periods,
   };
 }
 
@@ -50,12 +50,12 @@ export function mergePersonUpdate(existing: Person | undefined, updated: Person)
     return updated;
   }
 
-  if (!updated.roles.includes("volunteer")) {
+  if (!(updated.roles ?? []).includes("volunteer")) {
     return updated;
   }
 
   return {
     ...updated,
-    helpPeriods: existing.helpPeriods,
+    help_periods: existing.help_periods,
   };
 }

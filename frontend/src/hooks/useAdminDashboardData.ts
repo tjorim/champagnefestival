@@ -42,11 +42,11 @@ export function useAdminDashboardData({
 
   const layoutDayOptions = useMemo(() => {
     return [...activeEdition.events]
-      .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+      .sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`))
       .map((event) => ({
         eventId: event.id,
         date: event.date,
-        label: `${event.title} — ${new Date(`${event.date}T00:00:00`).toLocaleDateString()} ${event.startTime}`,
+        label: `${event.title} — ${new Date(`${event.date}T00:00:00`).toLocaleDateString()} ${event.start_time}`,
       }));
   }, [activeEdition.events]);
 
