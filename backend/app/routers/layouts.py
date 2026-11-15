@@ -140,7 +140,7 @@ async def save_layout_revision(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> LayoutRevisionOut:
     try:
         return await layouts_service.save_layout_revision(
             db, actor=actor, layout_id=layout_id, body=body, request_id=getattr(request.state, "request_id", None)
@@ -150,7 +150,7 @@ async def save_layout_revision(
 
 
 @router.get("/{layout_id}/revisions", response_model=list[LayoutRevisionOut])
-async def list_layout_revisions(layout_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_layout_revisions(layout_id: str, db: AsyncSession = Depends(get_db)) -> list[LayoutRevisionOut]:
     try:
         return await layouts_service.list_layout_revisions(db, layout_id)
     except ServiceError as exc:
@@ -165,7 +165,7 @@ async def compare_layout_revisions(
     from_ref: str = Query(alias="from", description="A revision number or 'current'."),
     to_ref: str = Query(alias="to", description="A revision number or 'current'."),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> LayoutRevisionDiff:
     try:
         return await layouts_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
     except ServiceError as exc:
@@ -173,7 +173,9 @@ async def compare_layout_revisions(
 
 
 @router.get("/{layout_id}/revisions/{revision_number}", response_model=LayoutRevisionOut)
-async def get_layout_revision(layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_layout_revision(
+    layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)
+) -> LayoutRevisionOut:
     try:
         return await layouts_service.get_layout_revision(db, layout_id, revision_number)
     except ServiceError as exc:
@@ -181,7 +183,9 @@ async def get_layout_revision(layout_id: str, revision_number: int, db: AsyncSes
 
 
 @router.post("/{layout_id}/revisions/{revision_number}/restore/preview", response_model=LayoutRestorePreview)
-async def preview_layout_restore(layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)) -> dict:
+async def preview_layout_restore(
+    layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)
+) -> LayoutRestorePreview:
     try:
         return await layouts_service.preview_layout_restore(db, layout_id, revision_number)
     except ServiceError as exc:

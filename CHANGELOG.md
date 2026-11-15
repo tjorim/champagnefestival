@@ -23,6 +23,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - A ninth preview design, "Billet": the festival as an admission ticket. A portrait ticket with the title, dates, venue, countdown and registration stays beside the page on wide screens while the sections scroll past, and the programme shows every day side by side.
 
 ### Internal
+- Build independent backend content, policy, payment, waitlist, poll, stamp-card, layout-revision, organisation-change and signage-video responses from Pydantic output models (#1657), preserving REST and MCP payloads and existing payment replay behaviour.
 
 - Construct specialised backend proposal, published stand/plan, product-preview, order-question and signage-export responses from existing Pydantic output models, preserving REST/MCP payloads and retry behaviour (#1657).
 

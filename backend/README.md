@@ -820,38 +820,17 @@ that extra projection, exactly as before.
 Bulk floor-plan writes dump through their existing bulk output models before
 storing replay data; registration replays are validated back into `RegistrationOut`.
 
-Remaining dictionary response construction in this checkout (independent service
-families; this slice does not claim to complete #1657):
+The independent service families also construct existing output models: layout revisions,
+diffs and restore previews; payment transactions/ledger rows/totals; categories, policies,
+announcements and composed messages; waitlist pages/scopes; email preferences/consents;
+poll questions/options/orders and volunteer views; and stamp cards/rewards/progress.
+REST returns models directly. MCP dumps preserve native timestamps, decimal payment
+strings, sparse layout conflict fields and poll-order event links. Replay storage stays JSON.
 
-| Family | Remaining builders / response assembly |
-| --- | --- |
-| Layout revisions | `layouts_service._revision_to_dict`, `compare_layout_revisions`, `preview_layout_restore` (snapshot/restore-plan dictionaries are internal state) |
-| Payments | `payments_service.payment_transaction_to_dict`, `ledger_row_to_dict`, `person_payment_summary` |
-| Event/product categories | `categories.category_to_dict`; event/product category services delegate to it |
-| Policies | `policies_service._version_to_dict`, `_policy_to_dict` |
-| Announcements | `announcements_service.to_dict` |
-| Waitlist | `waitlist_service.to_admin_dict`, `list_scopes` and paginated envelopes |
-| Composed messages | `composer_service.to_dict` (including `_result_fields`) |
-| Email categories/consents | `email_categories_service.category_to_dict`; `email_consent_service.consent_to_dict`, `preferences` |
-| Polls | `utils.poll_option_to_dict`; `poll_questions_service._question_dict`, `_orders`, `volunteer_poll_view`, answer/note acknowledgements; option services delegate to the shared builder |
-| Stamp cards | `stamp_cards_service.as_dict`, `progress`, card/reward response assembly |
-
-Specialized projections (organization proposals, stands/public plans, product-change previews,
-video exports and nested order questions/answers) are model-backed too; see
-"Specialized response construction" below for their exact boundaries.
-The separate MCP `registration_base_dict` remains a minimal operational projection
-with no matching existing output schema.
-Bulk floor-plan response envelopes retain dictionary metadata and cached JSON
-values, with fresh entity items constructed as models.
-
-These are follow-up slices, not builders that inherently require dictionaries.
-They need their REST, MCP and internal callers migrated together. In particular,
-public FAQ dumps its model for the dictionary-based server HTML renderer, while registration
-and event builders nest one another and expose several intentionally different
-shapes. Internal text fragments, keyed lookup maps, audit details, replay storage
-and delete acknowledgements are not entity output builders and should not be
-mechanically converted to an unrelated `Out` model. FAQ deletion retains its
-MCP-only `{deleted, id}` acknowledgement; its REST route returns 204.
+Internal lookup maps, persisted snapshots, audit data, worker protocols and delete
+acknowledgements retain their existing contracts. The minimal MCP registration projection,
+edition scratchpad and stamp-progress integration boundary remain inventoried for the
+final consolidation pass. Specialized projections are described below.
 
 ### Specialized response construction (#1657)
 

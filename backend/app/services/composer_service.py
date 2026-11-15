@@ -10,6 +10,7 @@ This module only owns the ``draft`` half: create, update, read, and the
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -19,7 +20,14 @@ from app import member_mail
 from app.audit import write_audit_entry
 from app.member_mail import MemberMailSkipped
 from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
-from app.schemas import ComposedMessageCreate, ComposedMessageUpdate, ComposedMessageWrite
+from app.schemas import (
+    AnnouncementLevel,
+    ComposedMessageCreate,
+    ComposedMessageOut,
+    ComposedMessageState,
+    ComposedMessageUpdate,
+    ComposedMessageWrite,
+)
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.member_mail_audience import eligible_people
 from app.services.outbox_service import enqueue_job
@@ -111,38 +119,38 @@ async def _result_fields(db: AsyncSession, item: ComposedMessage) -> dict[str, i
     }
 
 
-async def to_dict(db: AsyncSession, item: ComposedMessage) -> dict:
-    return {
-        "id": item.id,
-        "title_nl": item.title_nl,
-        "title_fr": item.title_fr,
-        "title_en": item.title_en,
-        "body_nl": item.body_nl,
-        "body_fr": item.body_fr,
-        "body_en": item.body_en,
-        "level": item.level,
-        "channels": item.channels,
-        "link_url": item.link_url,
-        "email_category_key": item.email_category_key,
-        "state": item.state,
-        "scheduled_at": item.scheduled_at,
-        "announcement_id": item.announcement_id,
-        "push_audience_snapshot": item.push_audience_snapshot,
-        "email_audience_snapshot": item.email_audience_snapshot,
-        "sent_at": item.sent_at,
-        "sent_by": item.sent_by,
-        "created_at": item.created_at,
-        "updated_at": item.updated_at,
-        "estimated_push_audience": await _estimated_push_audience(db),
-        "estimated_email_audience": await _estimated_email_audience(db, item),
-        "member_mail_available": member_mail.member_mail_available(),
+async def to_out(db: AsyncSession, item: ComposedMessage) -> ComposedMessageOut:
+    return ComposedMessageOut(
+        id=item.id,
+        title_nl=item.title_nl,
+        title_fr=item.title_fr,
+        title_en=item.title_en,
+        body_nl=item.body_nl,
+        body_fr=item.body_fr,
+        body_en=item.body_en,
+        level=cast(AnnouncementLevel, item.level),
+        channels=item.channels,
+        link_url=item.link_url,
+        email_category_key=item.email_category_key,
+        state=cast(ComposedMessageState, item.state),
+        scheduled_at=item.scheduled_at,
+        announcement_id=item.announcement_id,
+        push_audience_snapshot=item.push_audience_snapshot,
+        email_audience_snapshot=item.email_audience_snapshot,
+        sent_at=item.sent_at,
+        sent_by=item.sent_by,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+        estimated_push_audience=await _estimated_push_audience(db),
+        estimated_email_audience=await _estimated_email_audience(db, item),
+        member_mail_available=member_mail.member_mail_available(),
         **await _result_fields(db, item),
-    }
+    )
 
 
-async def list_messages(db: AsyncSession) -> list[dict]:
+async def list_messages(db: AsyncSession) -> list[ComposedMessageOut]:
     result = await db.execute(select(ComposedMessage).order_by(ComposedMessage.created_at.desc()))
-    return [await to_dict(db, item) for item in result.scalars()]
+    return [await to_out(db, item) for item in result.scalars()]
 
 
 async def get_message(db: AsyncSession, message_id: str, *, for_update: bool = False) -> ComposedMessage:
@@ -152,7 +160,9 @@ async def get_message(db: AsyncSession, message_id: str, *, for_update: bool = F
     return item
 
 
-async def create_draft(db: AsyncSession, *, actor: str, body: ComposedMessageCreate, request_id: str | None) -> dict:
+async def create_draft(
+    db: AsyncSession, *, actor: str, body: ComposedMessageCreate, request_id: str | None
+) -> ComposedMessageOut:
     await _check_email_category(db, body.model_dump())
     item = ComposedMessage(id=make_id("cmp"), **body.model_dump())
     db.add(item)
@@ -167,12 +177,12 @@ async def create_draft(db: AsyncSession, *, actor: str, body: ComposedMessageCre
     )
     await db.commit()
     await db.refresh(item)
-    return await to_dict(db, item)
+    return await to_out(db, item)
 
 
 async def update_draft(
     db: AsyncSession, *, actor: str, message_id: str, body: ComposedMessageUpdate, request_id: str | None
-) -> dict:
+) -> ComposedMessageOut:
     # Same row lock as schedule_send, so an edit cannot commit over a message that was just scheduled.
     item = await get_message(db, message_id, for_update=True)
     if item.state != "draft":
@@ -198,7 +208,7 @@ async def update_draft(
     )
     await db.commit()
     await db.refresh(item)
-    return await to_dict(db, item)
+    return await to_out(db, item)
 
 
 async def schedule_send(
@@ -210,7 +220,7 @@ async def schedule_send(
     request_id: str | None,
     expected_email_audience: int | None = None,
     expected_updated_at: datetime | None = None,
-) -> dict:
+) -> ComposedMessageOut:
     """Transition ``draft`` -> ``scheduled`` and hand off to the outbox.
 
     Not retry-safe with a second, deliberate call once this succeeds — the
@@ -278,4 +288,4 @@ async def schedule_send(
     )
     await db.commit()
     await db.refresh(item)
-    return await to_dict(db, item)
+    return await to_out(db, item)

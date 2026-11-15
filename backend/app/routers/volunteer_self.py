@@ -119,7 +119,7 @@ async def get_my_poll(
     locale: FaqLocale = Query(default="nl"),
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VolunteerPollOut:
     """The active festival edition's poll questions in `locale` (Dutch when a language has no text), with
     this volunteer's own answers and dietary note and whether each question has closed. Answers come back
     empty if the caller isn't linked to a volunteer record yet, rather than 404ing — there's nothing wrong
@@ -147,7 +147,7 @@ async def answer_my_poll_question(
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerPollOut:
     """Answer one question: `selections` (a quantity per option) for a meals question, `attending` and
     `people` for a yes/no question. A closed question refuses it (409 `poll_question_closed`)."""
     person = await _linked_volunteer(db, subject)
@@ -169,7 +169,7 @@ async def save_my_poll_note(
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerPollOut:
     person = await _linked_volunteer(db, subject)
     return await poll_questions_service.save_poll_note(
         db, volunteer_id=person.id, note=body.note, locale=locale, actor=subject, request_id=request_id

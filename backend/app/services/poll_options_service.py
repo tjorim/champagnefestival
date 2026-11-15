@@ -8,18 +8,47 @@ Used by both ``app.routers.poll_options`` (REST) and ``app.mcp.admin.poll`` (MCP
 
 from __future__ import annotations
 
+from typing import cast
+
 from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EditionPollOption, VolunteerPollChoice, VolunteerPollSelection
-from app.schemas import PollOptionCreate, PollOptionLabels, PollOptionReorder, PollOptionUpdate
+from app.schemas import (
+    DietaryTag,
+    PollOptionCreate,
+    PollOptionLabels,
+    PollOptionOut,
+    PollOptionReorder,
+    PollOptionUpdate,
+)
 from app.services.errors import ApiHTTPException
 from app.services.poll_common import OPTION_ORDER, get_question_or_404, is_closed, lock_edition
 from app.services.poll_kinds import kind_of
 from app.services.poll_notifications import queue_removed_answers
-from app.utils import get_or_404, make_id, poll_option_to_dict
+from app.utils import get_or_404, make_id
+
+
+def poll_option_to_out(
+    option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0, locale: str | None = None
+) -> PollOptionOut:
+    return PollOptionOut(
+        id=option.id,
+        question_id=option.question_id,
+        edition_id=option.edition_id,
+        label=option.localized_label(locale),
+        label_nl=option.label_nl,
+        label_fr=option.label_fr,
+        label_en=option.label_en,
+        dietary_tags=cast(list[DietaryTag], list(option.dietary_tags or [])),
+        sort_order=option.sort_order,
+        total_quantity=total_quantity,
+        volunteer_count=volunteer_count,
+        created_at=option.created_at,
+        updated_at=option.updated_at,
+    )
 
 
 async def get_poll_option_or_404(db: AsyncSession, option_id: str) -> EditionPollOption:
@@ -32,7 +61,7 @@ async def list_poll_options(
     question_id: str | None = None,
     edition_id: str | None = None,
     locale: str | None = None,
-) -> list[dict]:
+) -> list[PollOptionOut]:
     """Options in display order with what volunteers asked for in total (what to order from the caterer)."""
     choice_count = (
         select(func.count())
@@ -57,7 +86,7 @@ async def list_poll_options(
     if edition_id is not None:
         stmt = stmt.where(EditionPollOption.edition_id == edition_id)
     return [
-        poll_option_to_dict(
+        poll_option_to_out(
             option,
             total_quantity=int(total) + int(choices),
             volunteer_count=int(count) + int(choices),
@@ -67,9 +96,9 @@ async def list_poll_options(
     ]
 
 
-async def _one(db: AsyncSession, option: EditionPollOption) -> dict:
+async def _one(db: AsyncSession, option: EditionPollOption) -> PollOptionOut:
     totals = await list_poll_options(db, question_id=option.question_id)
-    return next(entry for entry in totals if entry["id"] == option.id)
+    return next(entry for entry in totals if entry.id == option.id)
 
 
 async def _next_sort_order(db: AsyncSession, question_id: str) -> int:
@@ -83,7 +112,7 @@ async def _next_sort_order(db: AsyncSession, question_id: str) -> int:
 
 async def create_poll_option(
     db: AsyncSession, body: PollOptionCreate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PollOptionOut:
     question = await get_question_or_404(db, body.question_id)
     if not kind_of(question).has_options:
         raise ApiHTTPException(422, "poll_question_not_meals", "This question kind does not have options.")
@@ -110,12 +139,12 @@ async def create_poll_option(
     )
     await db.commit()
     await db.refresh(option)
-    return poll_option_to_dict(option)
+    return poll_option_to_out(option)
 
 
 async def update_poll_option(
     db: AsyncSession, option_id: str, body: PollOptionUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PollOptionOut:
     option = await get_poll_option_or_404(db, option_id)
     # Validate the merged labels before mutating: a partial update may change a single translation.
     fields_set = body.model_fields_set
@@ -211,7 +240,7 @@ async def delete_poll_option(
 
 async def reorder_poll_options(
     db: AsyncSession, body: PollOptionReorder, *, actor: str, request_id: str | None = None
-) -> list[dict]:
+) -> list[PollOptionOut]:
     """Assign every option of the question its position; ``ordered_ids`` names each exactly once."""
     question = await get_question_or_404(db, body.question_id)
     await lock_edition(db, question.edition_id)

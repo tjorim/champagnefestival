@@ -1233,3 +1233,29 @@ fingerprints/confirmation and export idempotency keys remain unchanged. Preview 
 back; no write gains automatic retry. Ambiguous writes retain their existing reconciliation
 and endpoint-specific retry requirements. Nested question/answer serialization does not
 change stored definitions, answer validation or checkout locking.
+
+## Independent service response models (#1657)
+
+This response-only migration leaves each write's transaction, lock, side effects, request
+shape and retry decision unchanged. It adds no automatic retries or new safety promise.
+
+- Payment append/reversal keeps its existing scoped idempotency key, request hash,
+  booking lock and atomic JSON replay storage. First-use and cached responses now
+  validate as `PaymentTransactionOut`; the stored amount remains a decimal string.
+- Announcement/category/email-category create, policy draft creation/publication,
+  composer draft creation/scheduling, stamp-card type creation and layout revision save/restore keep their existing
+  reconciliation requirements after ambiguous failures; model construction does not
+  make these operations safe to blindly repeat. Update/reorder/delete behaviour is
+  unchanged, including existing conflict checks and acknowledgements.
+- Waitlist handled timestamps remain convergent; consent preference updates/opt-out and stamp reward
+  hand-out retain their existing convergence rules. Stamp check-in still operates
+  inside its caller's transaction. Poll answer/note replacement, question/option
+  create/update/reorder/copy and linked registration changes keep their current
+  lock order, conflict rules and existing retry decisions.
+- Organisation proposal submission/decision keeps its existing submission identity
+  and decision convergence. Video export cancel retains its existing state transition
+  and creator scope. Video creation/upload/submission keeps its existing idempotency key, indexed slide upload and state checks; this response migration changes none of those retry decisions. No worker protocol or file lifecycle changes.
+
+The existing integration tests exercise these write paths and payment replay/races;
+response parity tests additionally pin nullable translations, native timestamps,
+localisation fallback, decimal strings and composer counts/snapshots.

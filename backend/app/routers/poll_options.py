@@ -30,7 +30,7 @@ async def create_poll_option(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PollOptionOut:
     return await poll_options_service.create_poll_option(db, body, actor=actor, request_id=_request_id(request))
 
 
@@ -40,7 +40,7 @@ async def list_poll_options(
     question_id: str | None = Query(default=None),
     edition_id: str | None = Query(default=None),
     locale: FaqLocale | None = Query(default=None),
-) -> list[dict]:
+) -> list[PollOptionOut]:
     return await poll_options_service.list_poll_options(
         db, question_id=question_id, edition_id=edition_id, locale=locale
     )
@@ -52,7 +52,7 @@ async def reorder_poll_options(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[PollOptionOut]:
     return await poll_options_service.reorder_poll_options(db, body, actor=actor, request_id=_request_id(request))
 
 
@@ -63,7 +63,7 @@ async def update_poll_option(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PollOptionOut:
     return await poll_options_service.update_poll_option(
         db, option_id, body, actor=actor, request_id=_request_id(request)
     )

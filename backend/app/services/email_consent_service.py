@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EmailCategory, EmailConsent, EmailConsentConfirmation, Person
+from app.schemas import EmailConsentOut, EmailPreferenceOut, EmailPreferencesOut
 from app.services.email_categories_service import NEW_EDITIONS, active_roles, person_allows
 from app.services.errors import NotFoundError, ServiceError
 from app.utils import make_id
@@ -88,7 +89,7 @@ def _holder(people: list[Person], category: EmailCategory) -> Person | None:
     return next((person for person in people if person_allows(person, category)), None)
 
 
-async def preferences(db: AsyncSession, email: str | None, *, locale: str | None = None) -> dict:
+async def preferences(db: AsyncSession, email: str | None, *, locale: str | None = None) -> EmailPreferencesOut:
     """The categories available to the people behind *email*, each with its current state."""
     people = await people_for_email(db, email or "")
     consents = {consent.category_key: consent for consent in await _open_consents(db, [p.id for p in people])}
@@ -98,16 +99,16 @@ async def preferences(db: AsyncSession, email: str | None, *, locale: str | None
             continue
         consent = consents.get(category.key)
         categories.append(
-            {
-                "key": category.key,
-                "name": category.localized_name(locale),
-                "description": category.localized_description(locale),
-                "automatic": category.automatic,
-                "consented": consent is not None,
-                "granted_at": consent.granted_at if consent else None,
-            }
+            EmailPreferenceOut(
+                key=category.key,
+                name=category.localized_name(locale),
+                description=category.localized_description(locale),
+                automatic=category.automatic,
+                consented=consent is not None,
+                granted_at=consent.granted_at if consent else None,
+            )
         )
-    return {"email": normalise_email(email) or None, "categories": categories}
+    return EmailPreferencesOut(email=normalise_email(email) or None, categories=categories)
 
 
 def _new_consent(person: Person, category: EmailCategory, source: str) -> EmailConsent:
@@ -324,19 +325,19 @@ async def confirm_consent(db: AsyncSession, token: str, *, request_id: str | Non
 # --- administrators: read the history, record an opt-out ------------------------------------------------
 
 
-def consent_to_dict(consent: EmailConsent, category: EmailCategory) -> dict:
-    return {
-        "id": consent.id,
-        "category_key": consent.category_key,
-        "category_name": category.name_nl,
-        "source": consent.source,
-        "granted_at": consent.granted_at,
-        "revoked_at": consent.revoked_at,
-        "revoked_source": consent.revoked_source,
-    }
+def consent_to_out(consent: EmailConsent, category: EmailCategory) -> EmailConsentOut:
+    return EmailConsentOut(
+        id=consent.id,
+        category_key=consent.category_key,
+        category_name=category.name_nl,
+        source=consent.source,
+        granted_at=consent.granted_at,
+        revoked_at=consent.revoked_at,
+        revoked_source=consent.revoked_source,
+    )
 
 
-async def list_person_consents(db: AsyncSession, person_id: str) -> list[dict]:
+async def list_person_consents(db: AsyncSession, person_id: str) -> list[EmailConsentOut]:
     rows = (
         await db.execute(
             select(EmailConsent, EmailCategory)
@@ -345,12 +346,12 @@ async def list_person_consents(db: AsyncSession, person_id: str) -> list[dict]:
             .order_by(EmailConsent.granted_at.desc(), EmailConsent.id.desc())
         )
     ).all()
-    return [consent_to_dict(consent, category) for consent, category in rows]
+    return [consent_to_out(consent, category) for consent, category in rows]
 
 
 async def record_admin_opt_out(
     db: AsyncSession, person: Person, category_key: str, *, actor: str, request_id: str | None = None
-) -> list[dict]:
+) -> list[EmailConsentOut]:
     """End the person's open consent for a category and cancel a pending confirmation.
 
     Convergent: with nothing open it changes and audits nothing.

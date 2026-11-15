@@ -64,7 +64,7 @@ async def render_preview(body: PolicyRenderRequest) -> dict:
 
 
 @router.get("", response_model=list[PolicyOut], dependencies=[Depends(require_admin)])
-async def list_policies(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_policies(db: AsyncSession = Depends(get_db)) -> list[PolicyOut]:
     return await service.list_policies(db)
 
 

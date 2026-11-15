@@ -448,7 +448,7 @@ async def list_payment_transactions_filtered(
     stmt = apply_pagination(stmt, effective_pagination)
     rows = (await db.execute(stmt)).all()
     items = [
-        payments_service.ledger_row_to_dict(txn, registration, person, event)
+        payments_service.ledger_row_to_out(txn, registration, person, event)
         for txn, registration, person, event in rows
     ]
     return {
@@ -602,7 +602,7 @@ async def create_payment_transaction(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PaymentTransactionOut:
     """Append one ledger entry (#1019). Never edits or deletes a prior entry —
     a refund is always a separate, new row."""
     registration = await registrations_service.get_registration_or_404(db, registration_id)
@@ -628,12 +628,12 @@ async def create_payment_transaction(
 async def list_payment_transactions(
     registration_id: str,
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[PaymentTransactionOut]:
     """The booking's chronological ledger — the accounting source of truth
     behind its `amount_paid`/`payment_status`/`refund_due` fields."""
     await registrations_service.get_registration_or_404(db, registration_id)
     rows = await payments_service.list_transactions(db, registration_id)
-    return [payments_service.payment_transaction_to_dict(t) for t in rows]
+    return [payments_service.payment_transaction_to_out(t) for t in rows]
 
 
 @router.put(

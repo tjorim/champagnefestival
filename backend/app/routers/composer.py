@@ -21,14 +21,14 @@ router = APIRouter(prefix="/api/composer", tags=["composer"], dependencies=[Depe
 
 
 @router.get("", response_model=list[ComposedMessageOut])
-async def list_messages(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_messages(db: AsyncSession = Depends(get_db)) -> list[ComposedMessageOut]:
     return await service.list_messages(db)
 
 
 @router.get("/{message_id}", response_model=ComposedMessageOut)
-async def get_message(message_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_message(message_id: str, db: AsyncSession = Depends(get_db)) -> ComposedMessageOut:
     try:
-        return await service.to_dict(db, await service.get_message(db, message_id))
+        return await service.to_out(db, await service.get_message(db, message_id))
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 
@@ -39,7 +39,7 @@ async def create_draft(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> ComposedMessageOut:
     try:
         return await service.create_draft(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -55,7 +55,7 @@ async def update_draft(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> ComposedMessageOut:
     try:
         return await service.update_draft(
             db,
@@ -75,7 +75,7 @@ async def schedule_send(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> ComposedMessageOut:
     """Transition ``draft`` -> ``scheduled`` and enqueue the actual send
     through the outbox. ``scheduled_at: null`` sends as soon as the worker
     next polls — "publish now" and "schedule for later" are the same call.

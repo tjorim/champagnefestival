@@ -279,7 +279,7 @@ async def list_person_registrations(
 
 
 @router.get("/{person_id}/payment-summary", response_model=PersonPaymentSummary)
-async def get_person_payment_summary(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_person_payment_summary(person_id: str, db: AsyncSession = Depends(get_db)) -> PersonPaymentSummary:
     """Received/refunded/net paid/due/outstanding/refund-liability across one
     person's non-cancelled bookings. See ``payments_service.person_payment_summary``."""
     await people_service.get_person_or_404(db, person_id)
@@ -332,7 +332,7 @@ async def anonymise_person(
 
 
 @router.get("/{person_id}/email-consents", response_model=list[EmailConsentOut])
-async def list_person_email_consents(person_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_person_email_consents(person_id: str, db: AsyncSession = Depends(get_db)) -> list[EmailConsentOut]:
     """Every grant and withdrawal of email consent for this person, newest first (read-only)."""
     person = await people_service.get_person_or_404(db, person_id)
     return await email_consent_service.list_person_consents(db, person.id)
@@ -345,7 +345,7 @@ async def record_email_opt_out(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> list[dict]:
+) -> list[EmailConsentOut]:
     """Record that this person no longer wants a category (for example after asking by phone).
 
     Administrators can only withdraw consent, never grant it; repeating the call changes nothing.

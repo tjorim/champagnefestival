@@ -155,7 +155,7 @@ async def get_email_preferences(
     locale: Language | None = Query(default=None),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EmailPreferencesOut:
     """The email categories available to the people behind the caller's *verified* address, with their state.
 
     Only the verified address counts: a booking linked to the account (``Registration.user_id``) does
@@ -176,7 +176,7 @@ async def update_email_preferences(
     locale: Language | None = Query(default=None),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EmailPreferencesOut:
     """Set consent for the listed categories; the others stay as they are.
 
     Consent is given only here, by the signed-in person for their own verified address, with no extra

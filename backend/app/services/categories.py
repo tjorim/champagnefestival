@@ -17,7 +17,7 @@ from sqlalchemy.orm import InstrumentedAttribute
 
 from app.audit import write_audit_entry
 from app.models import EventCategory, ProductCategory
-from app.schemas import CategoryCreate, CategoryLabels, CategoryUpdate
+from app.schemas import CategoryCreate, CategoryLabels, CategoryOut, CategoryUpdate
 from app.services.errors import ConflictError, NotFoundError, ServiceError, ValidationFailedError
 
 LABEL_FIELDS = ("label_nl", "label_fr", "label_en")
@@ -36,22 +36,22 @@ class CategoryKind:
     """Keys that cannot be deleted, with the reason (code depends on them)."""
 
 
-def category_to_dict(category: EventCategory | ProductCategory, locale: str | None = None) -> dict:
-    return {
-        "key": category.key,
-        "label": category.localized_label(locale),
-        "label_nl": category.label_nl,
-        "label_fr": category.label_fr,
-        "label_en": category.label_en,
-        "sort_order": category.sort_order,
-        "created_at": category.created_at,
-        "updated_at": category.updated_at,
-    }
+def category_to_out(category: EventCategory | ProductCategory, locale: str | None = None) -> CategoryOut:
+    return CategoryOut(
+        key=category.key,
+        label=category.localized_label(locale),
+        label_nl=category.label_nl,
+        label_fr=category.label_fr,
+        label_en=category.label_en,
+        sort_order=category.sort_order,
+        created_at=category.created_at,
+        updated_at=category.updated_at,
+    )
 
 
-async def list_categories(db: AsyncSession, kind: CategoryKind, *, locale: str | None = None) -> list[dict]:
+async def list_categories(db: AsyncSession, kind: CategoryKind, *, locale: str | None = None) -> list[CategoryOut]:
     result = await db.execute(select(kind.model).order_by(kind.model.sort_order, kind.model.key))
-    return [category_to_dict(category, locale) for category in result.scalars().all()]
+    return [category_to_out(category, locale) for category in result.scalars().all()]
 
 
 async def ensure_category_exists(db: AsyncSession, kind: CategoryKind, key: str) -> None:
@@ -73,7 +73,7 @@ async def _get_locked(db: AsyncSession, kind: CategoryKind, key: str):
 
 async def create_category(
     db: AsyncSession, kind: CategoryKind, *, actor: str, body: CategoryCreate, request_id: str | None = None
-) -> dict:
+) -> CategoryOut:
     if await db.get(kind.model, body.key) is not None:
         raise ConflictError(f"{kind.noun.capitalize()} category '{body.key}' already exists.")
     category = kind.model(
@@ -93,7 +93,7 @@ async def create_category(
     )
     await db.commit()
     await db.refresh(category)
-    return category_to_dict(category)
+    return category_to_out(category)
 
 
 async def update_category(
@@ -104,7 +104,7 @@ async def update_category(
     key: str,
     body: CategoryUpdate,
     request_id: str | None = None,
-) -> dict:
+) -> CategoryOut:
     category = await _get_locked(db, kind, key)
     # Validate the merged labels before mutating: a partial update may change a single translation.
     labels = {name: getattr(category, name) for name in LABEL_FIELDS}
@@ -128,7 +128,7 @@ async def update_category(
     )
     await db.commit()
     await db.refresh(category)
-    return category_to_dict(category)
+    return category_to_out(category)
 
 
 async def delete_category(
