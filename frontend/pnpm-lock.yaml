@@ -306,7 +306,7 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(vitest@5.1.0)
       fake-indexeddb:
-        specifier: ^6.2.7
+        specifier: ^6.2.8
         version: 6.2.8
       happy-dom:
         specifier: ^21.0.4
