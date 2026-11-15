@@ -267,7 +267,7 @@ importers:
         specifier: ^0.2.5
         version: 0.2.5
       '@tailwindcss/vite':
-        specifier: ^4.3.4
+        specifier: ^4.3.5
         version: 4.3.5(vite@8.3.6(@types/node@26.6.6)(jiti@2.7.0))
       '@tanstack/redact':
         specifier: 0.3.1
@@ -330,7 +330,7 @@ importers:
         specifier: 4.23.0
         version: 4.23.0(supports-color@7.2.0)
       tailwindcss:
-        specifier: ^4.3.4
+        specifier: ^4.3.5
         version: 4.3.5
       typescript:
         specifier: ^7.0.2
