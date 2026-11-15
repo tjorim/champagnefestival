@@ -50,7 +50,7 @@ async def create_export(
     actor: str = Depends(get_actor_id),
 ):
     job = await service.create(db, body.channel_id, body.locale, idempotency_key, actor)
-    return {**service.summary(job), "playlist": job.snapshot}
+    return VideoExportCreatedOut(**service.summary(job).model_dump(), playlist=job.snapshot)
 
 
 @router.get("/{job_id}", response_model=VideoExportOut)
@@ -100,7 +100,7 @@ async def cancel_export(job_id: str, db: AsyncSession = Depends(get_db), actor: 
 )
 async def download(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
     job = await service.owned(db, job_id, actor)
-    if service.summary(job)["state"] != "ready" or not job.artifact:
+    if service.summary(job).state != "ready" or not job.artifact:
         service.fail(410, "not_ready")
     try:
         source = (service.directory(job.id) / "video.mp4").open("rb")

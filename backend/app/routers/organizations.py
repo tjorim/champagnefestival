@@ -87,7 +87,7 @@ async def create_organization(
 
 
 @router.get("/changes", response_model=list[OrganizationChangeOut], dependencies=[Depends(require_admin)])
-async def pending_changes(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def pending_changes(db: AsyncSession = Depends(get_db)) -> list[OrganizationChangeOut]:
     """List private pending proposals with current values for side-by-side review."""
     return await organization_changes.list_pending(db)
 
@@ -100,7 +100,7 @@ async def decide_change(
     body: OrganizationChangeDecision,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationChangeOut:
     """Accept/reject once. Repeating the same decision returns the recorded outcome."""
     try:
         return await organization_changes.decide(db, change_id, body.decision, body.reason, actor=actor)

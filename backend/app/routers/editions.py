@@ -91,7 +91,7 @@ async def get_edition_stands(
     edition_id: str,
     response: Response,
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EditionStandsOut:
     """Public "where is producer X?" lookup for an active edition (#1223).
 
     Unauthenticated and safe to cache: per lineup organization, the label, room
@@ -113,7 +113,7 @@ async def get_edition_plan(
     edition_id: str,
     response: Response,
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EditionPlanOut:
     """Public floor plan of an active edition (#1253).
 
     Unauthenticated and safe to cache: per active event day and room, the room

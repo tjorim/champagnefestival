@@ -1223,3 +1223,13 @@ retry is introduced. Create/copy/upload operations still require reconciliation 
 failure; absolute answer/preference/status updates retain their existing endpoint-specific policy.
 The new regression test pins the organisation payload while checking that its response is preserved.
 MSW fixture corrections add required response fields only; they do not change production retry semantics.
+
+## Specialized backend response models (#1657)
+
+Organization proposal submit/decision, order-question configuration, product update/preview
+and signage export create/upload/submit/cancel only change response construction. Existing
+transaction boundaries, locks, proposal submission IDs, decision replay, product preview
+fingerprints/confirmation and export idempotency keys remain unchanged. Preview still rolls
+back; no write gains automatic retry. Ambiguous writes retain their existing reconciliation
+and endpoint-specific retry requirements. Nested question/answer serialization does not
+change stored definitions, answer validation or checkout locking.

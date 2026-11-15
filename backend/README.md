@@ -836,17 +836,11 @@ families; this slice does not claim to complete #1657):
 | Polls | `utils.poll_option_to_dict`; `poll_questions_service._question_dict`, `_orders`, `volunteer_poll_view`, answer/note acknowledgements; option services delegate to the shared builder |
 | Stamp cards | `stamp_cards_service.as_dict`, `progress`, card/reward response assembly |
 
-Adjacent specialised projections also remain dictionary-based: organisation
-change proposals (`organization_changes.payload`), published stands/public floor
-plans (`stands_service.load_edition_stands`, `load_edition_plan`), product-change
-previews (`product_changes.change_product`, exposed by
-`products_service.preview_product_update`), and signage export jobs
-(`signage_video.summary`; `manifest` is also a worker/storage contract). These do
-not call the migrated core entity builders. Order-question `as_dict()` and
-registration-answer `as_dict()` model methods still provide nested input to the
-output models; `order_questions_service.configure` returns those dictionaries.
-The separate MCP `registration_base_dict` is an intentional minimal operational
-projection, not the migrated full registration builder.
+Specialized projections (organization proposals, stands/public plans, product-change previews,
+video exports and nested order questions/answers) are model-backed too; see
+"Specialized response construction" below for their exact boundaries.
+The separate MCP `registration_base_dict` remains a minimal operational projection
+with no matching existing output schema.
 Bulk floor-plan response envelopes retain dictionary metadata and cached JSON
 values, with fresh entity items constructed as models.
 
@@ -858,6 +852,31 @@ shapes. Internal text fragments, keyed lookup maps, audit details, replay storag
 and delete acknowledgements are not entity output builders and should not be
 mechanically converted to an unrelated `Out` model. FAQ deletion retains its
 MCP-only `{deleted, id}` acknowledgement; its REST route returns 204.
+
+### Specialized response construction (#1657)
+
+Organization proposals now construct `OrganizationChangeOut`; published stands and public
+floor plans construct `EditionStandsOut`/`EditionPlanOut` and their nested models. Product
+change previews construct `ProductChangePreviewOut`, booking and shortage models. Video
+export summaries construct `VideoExportOut`, including their effective expiry/cancellation
+state, and creation uses `VideoExportCreatedOut`. REST returns models; MCP adapters dump
+in Python mode to preserve date/datetime values until transport serialization.
+
+Order-question configuration returns `OrderQuestionOut`. ORM question/registration-answer
+`to_out` methods validate against `OrderQuestionOut`/`OrderAnswerOut`; `as_dict` remains a
+thin Python-mode compatibility wrapper for the separately migrated core event/registration
+builders and the immutable-used-definition comparison. It contains no parallel field list.
+
+Precise exclusions in this slice: proposal `proposed`/`current` are schema-declared sparse
+field maps, not entities; stand organization/day maps are internal grouping indexes. Product
+fingerprints, inventory snapshots, booking storage and audit details retain their internal
+contracts. Video manifests, worker protocol/status/artifact metadata and persisted snapshots
+remain worker/storage contracts. Delete acknowledgements remain dictionaries. MCP
+`registration_base_dict` remains an intentional minimal role-filtered projection: no existing
+output schema matches its exact field set and role-dependent person shape; `RegistrationOut`
+would add private/full-booking fields and defaults. No new public schema is introduced solely
+to type that MCP projection. Core `utils.py` builders and independent service families are
+outside this slice.
 
 ## Request schema conventions
 

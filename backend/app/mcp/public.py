@@ -145,9 +145,5 @@ async def find_stand(session_factory: Any, query: str | None = None, edition_id:
         stands = await load_edition_stands(db, edition)
 
     needle = (query or "").strip().casefold()
-    organizations = [
-        {"organization_id": item["organization_id"], "name": item["name"], "stands": item["stands"]}
-        for item in stands["organizations"]
-        if not needle or needle in item["name"].casefold()
-    ]
+    organizations = [item.model_dump() for item in stands.organizations if not needle or needle in item.name.casefold()]
     return {"edition_id": edition.id, "organizations": organizations, "count": len(organizations)}

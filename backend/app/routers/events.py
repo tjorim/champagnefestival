@@ -176,7 +176,7 @@ async def set_order_questions(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[OrderQuestionOut]:
     from app.services import order_questions_service
 
     return await order_questions_service.configure(

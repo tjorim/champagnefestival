@@ -28,6 +28,7 @@ from app.config import settings
 from app.models import SignageVideoExport
 from app.services import signage_service
 from app.services.errors import ApiHTTPException
+from app.signage_schemas import VideoExportOut
 
 PROFILE = "signage-slideshow-v1"
 MAX_SLIDES = 60
@@ -131,7 +132,7 @@ def stale_preparations(now: datetime):
     return (SignageVideoExport.state == "preparing") & (SignageVideoExport.created_at <= now - PREPARE_TIMEOUT)
 
 
-def summary(job: SignageVideoExport) -> dict:
+def summary(job: SignageVideoExport) -> VideoExportOut:
     state = job.state
     now = datetime.now(UTC)
     if job.expires_at <= now:
@@ -140,19 +141,21 @@ def summary(job: SignageVideoExport) -> dict:
         state = "cancelled"
     elif state == "ready" and not (directory(job.id) / "video.mp4").is_file():
         state = "expired"
-    return {
-        "id": job.id,
-        "channel_id": job.channel_id,
-        "channel_name": job.channel_name,
-        "locale": job.locale,
-        "state": state,
-        "cancel_requested": job.cancel_requested,
-        "retrying": job.error_code == "worker_unavailable",
-        "created_at": job.created_at,
-        "expires_at": job.expires_at,
-        "slide_count": len(job.snapshot["slides"]),
-        "duration_seconds": sum(slide["duration"] for slide in job.snapshot["slides"]),
-    }
+    return VideoExportOut.model_validate(
+        {
+            "id": job.id,
+            "channel_id": job.channel_id,
+            "channel_name": job.channel_name,
+            "locale": job.locale,
+            "state": state,
+            "cancel_requested": job.cancel_requested,
+            "retrying": job.error_code == "worker_unavailable",
+            "created_at": job.created_at,
+            "expires_at": job.expires_at,
+            "slide_count": len(job.snapshot["slides"]),
+            "duration_seconds": sum(slide["duration"] for slide in job.snapshot["slides"]),
+        }
+    )
 
 
 async def owned(db: AsyncSession, job_id: str, actor: str, *, lock: bool = False) -> SignageVideoExport:
@@ -165,7 +168,7 @@ async def owned(db: AsyncSession, job_id: str, actor: str, *, lock: bool = False
     return job
 
 
-async def list_owned(db: AsyncSession, actor: str) -> list[dict]:
+async def list_owned(db: AsyncSession, actor: str) -> list[VideoExportOut]:
     """The caller's exports: live ones first, then newest first (at most 100)."""
     jobs = await db.scalars(
         select(SignageVideoExport)
@@ -181,7 +184,7 @@ async def list_owned(db: AsyncSession, actor: str) -> list[dict]:
     return [summary(job) for job in jobs]
 
 
-async def cancel(db: AsyncSession, job_id: str, actor: str) -> dict:
+async def cancel(db: AsyncSession, job_id: str, actor: str) -> VideoExportOut:
     job = await owned(db, job_id, actor, lock=True)
     job.cancel_requested = True
     job.next_attempt_at = datetime.now(UTC)
@@ -251,7 +254,7 @@ async def create(db: AsyncSession, channel_id: str, locale: str, key: str, actor
 
 
 async def upload(db: AsyncSession, job: SignageVideoExport, index: int, data: bytes):
-    if summary(job)["state"] != "preparing" or not 0 <= index < len(job.snapshot["slides"]):
+    if summary(job).state != "preparing" or not 0 <= index < len(job.snapshot["slides"]):
         fail(409, "conflict")
     if not data or len(data) > MAX_SLIDE_BYTES:
         fail(413, "input_limit")
@@ -272,7 +275,7 @@ async def upload(db: AsyncSession, job: SignageVideoExport, index: int, data: by
 async def submit(db: AsyncSession, job: SignageVideoExport):
     if job.payload_digest:
         return  # Durable replay, even after artifact expiry; never a second worker job.
-    if summary(job)["state"] != "preparing" or set(job.uploads) != {str(i) for i in range(len(job.snapshot["slides"]))}:
+    if summary(job).state != "preparing" or set(job.uploads) != {str(i) for i in range(len(job.snapshot["slides"]))}:
         fail(409, "incomplete")
     job.payload_digest = digest(job)
     job.state = "submitted"

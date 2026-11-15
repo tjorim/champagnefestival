@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Product
-from app.schemas import ProductCreate, ProductUpdate
+from app.schemas import ProductChangePreviewOut, ProductCreate, ProductUpdate
 from app.services import product_inventory as inventory
 from app.services.product_changes import TEXT_FIELDS, change_product, ensure_category_exists
 from app.utils import get_or_404, make_id
@@ -113,7 +113,7 @@ async def update_product(
     return await change_product(db, product_id, body, preview=False, actor=actor, request_id=request_id)
 
 
-async def preview_product_update(db: AsyncSession, product_id: str, body: ProductUpdate) -> dict:
+async def preview_product_update(db: AsyncSession, product_id: str, body: ProductUpdate) -> ProductChangePreviewOut:
     # Same calculation and fingerprint as saving, but no persisted mutation.
     try:
         with db.no_autoflush:

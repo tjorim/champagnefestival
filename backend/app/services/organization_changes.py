@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.config import settings
 from app.models import Organization, OrganizationChange
-from app.schemas import OrganizationChangeSubmit, OrganizationDescription
+from app.schemas import OrganizationChangeOut, OrganizationChangeSubmit, OrganizationDescription
 from app.services import organization_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.organizations_service import DESCRIPTION_FIELDS
@@ -16,18 +16,20 @@ FIELDS = ("image", "website", *DESCRIPTION_FIELDS)
 NOTIFICATION = "organization_change_notification"
 
 
-def payload(change: OrganizationChange, organization: Organization) -> dict:
-    return {
-        "id": change.id,
-        "organization_id": organization.id,
-        "organization_name": organization.name,
-        "status": change.status,
-        "proposed": change.proposed,
-        "current": {field: getattr(organization, field) for field in FIELDS},
-        "superseded_fields": change.superseded_fields,
-        "reason": change.reason,
-        "created_at": change.created_at,
-    }
+def payload(change: OrganizationChange, organization: Organization) -> OrganizationChangeOut:
+    return OrganizationChangeOut.model_validate(
+        {
+            "id": change.id,
+            "organization_id": organization.id,
+            "organization_name": organization.name,
+            "status": change.status,
+            "proposed": change.proposed,
+            "current": {field: getattr(organization, field) for field in FIELDS},
+            "superseded_fields": change.superseded_fields,
+            "reason": change.reason,
+            "created_at": change.created_at,
+        }
+    )
 
 
 async def lock_organization(db: AsyncSession, organization_id: int) -> Organization:
@@ -78,7 +80,7 @@ async def submit(
     actor: str,
     auth_source: str | None,
     logo: bytes | None = None,
-) -> dict:
+) -> OrganizationChangeOut:
     values = body.model_dump(exclude_unset=True, exclude={"submission_id"})
     if logo is not None:
         previous = await pending(db, organization.id)
@@ -160,7 +162,7 @@ async def supersede(db: AsyncSession, organization: Organization, fields: set[st
     await audit(db, change, "superseded", actor, fields=sorted(removed))
 
 
-async def list_pending(db: AsyncSession) -> list[dict]:
+async def list_pending(db: AsyncSession) -> list[OrganizationChangeOut]:
     rows = (
         await db.execute(
             select(OrganizationChange, Organization)
@@ -172,7 +174,9 @@ async def list_pending(db: AsyncSession) -> list[dict]:
     return [payload(change, organization) for change, organization in rows]
 
 
-async def decide(db: AsyncSession, change_id: str, decision: str, reason: str | None, *, actor: str) -> dict:
+async def decide(
+    db: AsyncSession, change_id: str, decision: str, reason: str | None, *, actor: str
+) -> OrganizationChangeOut:
     # Read only the parent key before locking; refresh proposal after acquiring
     # the same parent lock used by submit and every direct admin edit.
     organization_id = await db.scalar(

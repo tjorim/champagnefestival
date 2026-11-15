@@ -106,7 +106,7 @@ async def my_changes(
     response: Response,
     email: str | None = Depends(get_organization_contact_email),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[OrganizationChangeOut]:
     """Private proposal history, authorized against the current contact email."""
     response.headers["Cache-Control"] = "no-store"
     row = await owned(db, organization_id, email)
@@ -128,7 +128,7 @@ async def propose_change(
     email: str | None = Depends(get_organization_contact_email),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> OrganizationChangeOut:
     """Submit private website/description fields; reuse submission_id for retries."""
     response.headers["Cache-Control"] = "no-store"
     row = await owned(db, organization_id, email)
@@ -147,7 +147,7 @@ async def upload_logo(
     email: str | None = Depends(get_organization_contact_email),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> OrganizationChangeOut:
     """Upload a private proposal. Repeating an upload replaces the pending proposal."""
     response.headers["Cache-Control"] = "no-store"
     await owned(db, organization_id, email, lock=False)

@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Construct specialised backend proposal, published stand/plan, product-preview, order-question and signage-export responses from existing Pydantic output models, preserving REST/MCP payloads and retry behaviour (#1657).
+
 - Read content, organisations, polls, email, push, policy, signage and public plan records from generated API schemas (#1657). Remove their response mappers and check shared MSW success payloads against the same schemas, including required metadata and pagination fields.
 
 - Build shared event, product, edition, registration, people, volunteer, organisation, floor-plan, settings and public FAQ responses from existing Pydantic output models (#1657), preserving public/admin projections, computed values and explicit MCP/HTML/replay serialization boundaries.

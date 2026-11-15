@@ -67,7 +67,9 @@ async def update_product(
 
 
 @router.post("/{product_id}/preview", response_model=ProductChangePreviewOut)
-async def preview_product(product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def preview_product(
+    product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)
+) -> ProductChangePreviewOut:
     return await products_service.preview_product_update(db, product_id, body)
 
 
