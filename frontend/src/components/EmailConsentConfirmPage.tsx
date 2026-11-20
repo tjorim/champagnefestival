@@ -36,7 +36,7 @@ export default function EmailConsentConfirmPage() {
       </h1>
       {confirm.isSuccess ? (
         <Alert variant="success" role="status">
-          {m.email_consent_confirm_done({ category: confirm.data.categoryName })}
+          {m.email_consent_confirm_done({ category: confirm.data.category_name })}
         </Alert>
       ) : !token ? (
         <Alert variant="danger">{m.email_consent_confirm_missing()}</Alert>

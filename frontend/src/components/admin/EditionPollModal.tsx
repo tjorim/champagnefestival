@@ -40,7 +40,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import PollOrdersTable from "./PollOrdersTable";
 import PollQuestionCard, { QuestionTextFields, PollEventField } from "./PollQuestionCard";
 import VolunteerPollOrderDialog from "./VolunteerPollOrderDialog";
-import type { Edition } from "./editionTypes";
+import type { Edition } from "@/api-types";
 import { editionDisplayName } from "@/utils/editionName";
 
 interface EditionPollModalProps {
@@ -133,7 +133,7 @@ export default function EditionPollModal({
   });
   const deleteMutation = useMutation({
     mutationFn: ({ question, notify }: { question: PollQuestion; notify: boolean }) =>
-      deletePollQuestion(question.id, authHeaders, question.answeredCount > 0, notify),
+      deletePollQuestion(question.id, authHeaders, question.answered_count > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
@@ -173,14 +173,14 @@ export default function EditionPollModal({
       body: (
         <>
           <p>
-            {question.answeredCount > 0
+            {question.answered_count > 0
               ? m.admin_poll_question_delete_body_in_use({
                   title: question.title,
-                  answered: question.answeredCount,
+                  answered: question.answered_count,
                 })
               : m.admin_poll_question_delete_body({ title: question.title })}
           </p>
-          {question.answeredCount > 0 && (
+          {question.answered_count > 0 && (
             <label className="mt-3 flex items-center gap-2">
               <Checkbox
                 defaultChecked
@@ -188,7 +188,7 @@ export default function EditionPollModal({
                   notify = checked;
                 }}
               />
-              {m.admin_poll_notify_removed({ count: question.answeredCount })}
+              {m.admin_poll_notify_removed({ count: question.answered_count })}
             </label>
           )}
         </>
@@ -215,7 +215,9 @@ export default function EditionPollModal({
 
   const busy = createMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
   const editor =
-    orders && orderEditorId ? orders.volunteers.find((v) => v.volunteerId === orderEditorId) : null;
+    orders && orderEditorId
+      ? orders.volunteers.find((v) => v.volunteer_id === orderEditorId)
+      : null;
 
   return (
     <Dialog
@@ -368,7 +370,7 @@ export default function EditionPollModal({
         </DialogBody>
         {orders && editor && (
           <VolunteerPollOrderDialog
-            key={editor.volunteerId}
+            key={editor.volunteer_id}
             editionId={editionId}
             volunteer={editor}
             questions={orders.questions}

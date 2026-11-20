@@ -1,4 +1,4 @@
-import type { FloorTable, FloorTableRecord } from "@/types/admin";
+import type { FloorTable, FloorTableRecord, TableOut } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
 /**
@@ -16,12 +16,18 @@ export function deriveTableRegistrationIds(
   const byTable = new Map<string, string[]>();
   for (const registration of registrations) {
     for (const allocation of registration.allocations ?? []) {
-      const ids = byTable.get(allocation.tableId);
-      if (!ids) byTable.set(allocation.tableId, [registration.id]);
+      const ids = byTable.get(allocation.table_id);
+      if (!ids) byTable.set(allocation.table_id, [registration.id]);
       else if (!ids.includes(registration.id)) ids.push(registration.id);
     }
   }
   return byTable;
+}
+
+/** The stored row for a table the API returned: occupancy is derived, so the API's copy is dropped. */
+export function toTableRecord(table: TableOut): FloorTableRecord {
+  const { registration_ids: _occupancy, ...row } = table;
+  return row;
 }
 
 /** Joins the stored table rows with occupancy derived from the registrations. */
@@ -30,5 +36,5 @@ export function withTableOccupancy(
   registrations: readonly Registration[],
 ): FloorTable[] {
   const byTable = deriveTableRegistrationIds(registrations);
-  return tables.map((table) => ({ ...table, registrationIds: byTable.get(table.id) ?? [] }));
+  return tables.map((table) => ({ ...table, registration_ids: byTable.get(table.id) ?? [] }));
 }

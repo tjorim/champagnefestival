@@ -1,5 +1,5 @@
+import { productOut } from "@/mocks/data/builders";
 import { describe, expect, it } from "vitest";
-import type { Product } from "@/types/event";
 import {
   draftTotal,
   productDraftState,
@@ -7,29 +7,10 @@ import {
   suggestedQuantities,
 } from "@/utils/registrationDraft";
 
-const product = (overrides: Partial<Product>): Product => ({
-  id: "p",
-  eventId: "e",
-  name: "Product",
-  description: "",
-  nameNl: null,
-  nameFr: null,
-  nameEn: null,
-  descriptionNl: null,
-  descriptionFr: null,
-  descriptionEn: null,
-  price: 10,
-  category: "",
-  purchasable: true,
-  required: false,
-  unit: "item",
-  createdAt: "",
-  updatedAt: "",
-  ...overrides,
-});
+const product = productOut;
 
-const ticket = product({ id: "ticket", price: 15, required: true, unit: "person" });
-const bottle = product({ id: "bottle", price: 40 });
+const ticket = product({ id: "ticket", price: "15", required: true, unit: "person" });
+const bottle = product({ id: "bottle", price: "40" });
 
 describe("registrationDraft", () => {
   it("starts a single required per-person ticket at the party size", () => {

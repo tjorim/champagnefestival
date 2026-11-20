@@ -1,47 +1,10 @@
+import type { EmailPreferenceOut, EmailPreferencesOut } from "@/api-types";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 
-export interface EmailPreference {
-  key: string;
-  name: string;
-  description: string | null;
-  /** Sent by the application when something happens, not composed by an administrator. */
-  automatic: boolean;
-  consented: boolean;
-  grantedAt: string | null;
-}
+export type EmailPreference = EmailPreferenceOut;
 
-export interface EmailPreferences {
-  /** The verified address the preferences are for; `null` without one. */
-  email: string | null;
-  categories: EmailPreference[];
-}
-
-interface EmailPreferencesResponse {
-  email: string | null;
-  categories: {
-    key: string;
-    name: string;
-    description: string | null;
-    automatic: boolean;
-    consented: boolean;
-    granted_at: string | null;
-  }[];
-}
-
-function toPreferences(data: EmailPreferencesResponse): EmailPreferences {
-  return {
-    email: data.email,
-    categories: data.categories.map((category) => ({
-      key: category.key,
-      name: category.name,
-      description: category.description,
-      automatic: category.automatic,
-      consented: category.consented,
-      grantedAt: category.granted_at,
-    })),
-  };
-}
+export type EmailPreferences = EmailPreferencesOut;
 
 export async function getEmailPreferences(
   accessToken: string | null | undefined,
@@ -54,7 +17,7 @@ export async function getEmailPreferences(
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.email_preferences_load_error());
-  return toPreferences((await response.json()) as EmailPreferencesResponse);
+  return response.json();
 }
 
 /** Absolute state per listed category; the others are left as they are. Safe to repeat. */
@@ -72,20 +35,19 @@ export async function updateEmailPreferences(
     body: JSON.stringify({ consents }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.email_preferences_save_error());
-  return toPreferences((await response.json()) as EmailPreferencesResponse);
+  return response.json();
 }
 
 /** Activate the consent behind an emailed confirmation link. The link works once. */
 export async function confirmEmailConsent(
   token: string,
   locale: string,
-): Promise<{ categoryName: string }> {
+): Promise<import("@/api-types").EmailConsentConfirmedOut> {
   const response = await fetch("/api/email-consents/confirm", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, locale }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.email_consent_confirm_error());
-  const data = (await response.json()) as { category_name?: unknown };
-  return { categoryName: typeof data.category_name === "string" ? data.category_name : "" };
+  return response.json();
 }

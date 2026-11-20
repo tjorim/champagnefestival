@@ -26,7 +26,9 @@ pnpm lint
 pnpm format         # rewrites files in place
 pnpm format:check   # what CI runs — fails on unformatted files, doesn't rewrite
 pnpm format:repo    # same for ../.github, ../scripts and the root JSON files (format:repo:check in CI)
-pnpm typecheck
+pnpm typecheck      # includes api:check
+pnpm api:generate   # rewrites openapi.json (needs uv) and src/api-schema/
+pnpm api:check      # fails when src/api-schema/ is stale against openapi.json
 pnpm test
 pnpm build
 ```
@@ -74,6 +76,37 @@ uv run alembic upgrade head
 > standard `storageState` pattern (https://playwright.dev/docs/auth), with no
 > application-code bypass. See `frontend/e2e/README.md`.
 
+## API contract
+
+The backend's response models are the source of truth for the frontend's API types, and nothing in between is written by hand:
+
+```text
+backend response models -> uv run python -m app.openapi_export (pnpm api:generate)
+  -> frontend/openapi.json -> Orval (frontend/orval.config.mjs) -> frontend/src/api-schema/
+  -> frontend/src/api-types.ts (the one import point for API shapes)
+```
+
+- `frontend/openapi.json` is a committed snapshot of the backend's OpenAPI document with `info.version` pinned to
+  `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
+  schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
+- To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
+  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
+  `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
+  generated record for the screens in `frontend/src/api-types.ts`.
+- `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test
+  `test_openapi_snapshot` fails when `openapi.json` is stale. `backend/tests/test_response_models.py` fails on a JSON
+  route without a documented response schema, and on an optional response field without a per-field
+  wire-omission reason in `OPTIONAL_ON_THE_WIRE` (it rejects both new unexplained fields and stale exceptions).
+  Request optionality is a separate contract.
+- Success fixtures (MSW handlers, fetch doubles, Playwright route fulfils) must choose a generated response schema
+  explicitly: `HttpResponse.json<Api.Model>(...)`, `jsonResponse<Api.Model>(...)` from `@/mocks/response`, or
+  `satisfies Api.Model` at a browser response boundary. `jsonResponse` uses `NoInfer` and defaults to `never`, so a
+  payload never infers its own contract. The source guard `frontend/tests/types/fixtureContracts.test.ts` fails on a
+  fixture that is unchecked or erased (`as unknown`, `any`), and `frontend/tests/types/apiFixtures.ts` holds
+  compile-only negative checks.
+- A deliberately malformed, error, external-provider, control or persistence fixture is exempt only with a comment
+  at the call site that says why, starting `Fixture exception:` or `Deliberately malformed:`.
+
 ## Versioning
 
 The app uses CalVer: `YYYY.MM.MICRO` (e.g. `2026.7.1`), where `MICRO` is a counter
@@ -118,6 +151,7 @@ See `RELEASE-RUNBOOK.md` for release ownership, post-deploy verification, migrat
 - `frontend/src/config/navigation.ts` for site navigation
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
+- `backend/` for API shapes: `frontend/openapi.json` is the committed OpenAPI document (`uv run python -m app.openapi_export`), `frontend/src/api-schema/` is generated from it by Orval, and `frontend/src/api-types.ts` is the one place screens import API types from
 - `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
 - `docs/floor-plan-coordinates.md` for the `Table`/`Area` `x`/`y`/`rotation` coordinate contract
 - `docs/product-audit-2026-08.md` for the combined product audit, feature-request scope, dependencies, and preferred implementation order
@@ -144,6 +178,7 @@ Future workflow additions should follow these conventions:
 
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
 - Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores required Dutch text (`_nl`) plus optional `_fr`/`_en` translations and falls back to Dutch (there is no original-language field); follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
+- Client code uses the API's own shapes: the types generated from `frontend/openapi.json` (via `@/api-types`) are the client types, with their snake_case field names (`start_date`, `table_type_id`, `width_m`), and responses are read as they arrive. There is no per-field mapper and no camelCase copy of an API record. camelCase is for values that exist only in the interface (component props, form state, local variables); a form draft that is sent to the API is built from, or typed as, the generated request type. Do not declare a hand-written type for an API record
 - Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/utils/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
 - Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schema_types.py` constraints and keep defaults and nullability explicit.
 - Prefer targeted tests first, then broader checks before handoff

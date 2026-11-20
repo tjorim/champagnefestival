@@ -24,13 +24,13 @@ async def get_signage_video_capability() -> dict:
 
 async def list_signage_video_exports(session_factory: Any, actor: str) -> dict:
     async with session_factory() as db:
-        return {"exports": await service.list_owned(db, actor)}
+        return {"exports": [item.model_dump() for item in await service.list_owned(db, actor)]}
 
 
 async def get_signage_video_export(session_factory: Any, actor: str, job_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return service.summary(await service.owned(db, job_id, actor))
+            return service.summary(await service.owned(db, job_id, actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -38,6 +38,6 @@ async def get_signage_video_export(session_factory: Any, actor: str, job_id: str
 async def cancel_signage_video_export(session_factory: Any, actor: str, job_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await service.cancel(db, job_id, actor)
+            return (await service.cancel(db, job_id, actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc

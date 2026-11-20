@@ -9,39 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.dialect_functions import assign_positions
 from app.models import Announcement
-from app.schemas import AnnouncementCreate, AnnouncementUpdate, AnnouncementWrite
+from app.schemas import AnnouncementCreate, AnnouncementOut, AnnouncementUpdate, AnnouncementWrite
 from app.services.errors import NotFoundError, ValidationFailedError
 from app.utils import make_id
 
 
-def to_dict(item: Announcement) -> dict:
-    return {
-        name: getattr(item, name)
-        for name in (
-            "id",
-            "text_nl",
-            "text_fr",
-            "text_en",
-            "level",
-            "active",
-            "sort_order",
-            "starts_at",
-            "ends_at",
-            "link_url",
-            "link_label_nl",
-            "link_label_fr",
-            "link_label_en",
-            "published_at",
-            "published_by",
-            "created_at",
-            "updated_at",
-        )
-    }
+def to_out(item: Announcement) -> AnnouncementOut:
+    return AnnouncementOut.model_validate(item, from_attributes=True)
 
 
-async def list_all(db: AsyncSession) -> list[dict]:
+async def list_all(db: AsyncSession) -> list[AnnouncementOut]:
     result = await db.execute(select(Announcement).order_by(Announcement.sort_order))
-    return [to_dict(item) for item in result.scalars()]
+    return [to_out(item) for item in result.scalars()]
 
 
 async def _create_uncommitted(
@@ -87,16 +66,16 @@ async def _create_uncommitted(
     return item
 
 
-async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None) -> dict:
+async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None) -> AnnouncementOut:
     item = await _create_uncommitted(db, actor=actor, body=body, request_id=request_id)
     await db.commit()
     await db.refresh(item)
-    return to_dict(item)
+    return to_out(item)
 
 
 async def update(
     db: AsyncSession, *, actor: str, item_id: str, body: AnnouncementUpdate, request_id: str | None
-) -> dict:
+) -> AnnouncementOut:
     item = await db.get(Announcement, item_id)
     if item is None:
         raise NotFoundError(f"Announcement '{item_id}' not found.")
@@ -135,10 +114,12 @@ async def update(
         )
     await db.commit()
     await db.refresh(item)
-    return to_dict(item)
+    return to_out(item)
 
 
-async def reorder(db: AsyncSession, *, actor: str, ordered_ids: list[str], request_id: str | None) -> list[dict]:
+async def reorder(
+    db: AsyncSession, *, actor: str, ordered_ids: list[str], request_id: str | None
+) -> list[AnnouncementOut]:
     result = await db.execute(select(Announcement).with_for_update())
     items = list(result.scalars())
     if len(set(ordered_ids)) != len(ordered_ids) or set(ordered_ids) != {item.id for item in items}:
@@ -155,7 +136,7 @@ async def reorder(db: AsyncSession, *, actor: str, ordered_ids: list[str], reque
         details={"ordered_ids": ordered_ids},
     )
     await db.commit()
-    return [to_dict(by_id[item_id]) for item_id in ordered_ids]
+    return [to_out(by_id[item_id]) for item_id in ordered_ids]
 
 
 async def delete(db: AsyncSession, *, actor: str, item_id: str, request_id: str | None) -> None:

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 /**
  * Regression coverage for how admin content saves are routed and shaped.
  *
@@ -12,13 +13,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import EditionModal from "@/components/admin/EditionModal";
 import ItemModal from "@/components/admin/ItemModal";
 import { saveContentSectionItem } from "@/utils/adminContentApi";
 import { server } from "@/mocks/server";
-import type { Edition } from "@/components/admin/editionTypes";
-import type { Venue } from "@/types/admin";
+import type { Edition } from "@/api-types";
+
+import type { Venue } from "@/api-types";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -86,12 +88,34 @@ describe("saving a festival edition submits only programmable organizations", ()
     server.use(
       http.put("/api/editions/:id", async ({ request }) => {
         submitted = (await request.json()) as { organizations?: number[] };
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").EditionOut>({
+          organizations: [],
+          producers: [],
+          sponsors: [],
+          vendors: [],
+          co_organizer: null,
+          flyer_image: null,
+          hero_image: null,
+          share_image: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
           id: "march-2027",
           year: 2027,
           month: "march",
           edition_type: "festival",
-          venue: { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },
+          venue: {
+            address: "",
+            postal_code: "",
+            country: "",
+            lat: 0,
+            lng: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "venue-01",
+            name: "Brussels Expo",
+            city: "Brussels",
+            active: true,
+          },
           dates: [],
           events: [],
           active: true,
@@ -103,7 +127,7 @@ describe("saving a festival edition submits only programmable organizations", ()
       id: "march-2027",
       year: 2027,
       month: "march",
-      editionType: "festival",
+      edition_type: "festival",
       active: true,
       dates: ["2027-03-06"],
       venue: { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },

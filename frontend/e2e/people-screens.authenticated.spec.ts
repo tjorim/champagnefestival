@@ -38,7 +38,7 @@ for (const screen of ["Members", "Volunteers", "People"] as const) {
   });
 }
 
-for (const width of [1366, 390]) {
+for (const width of [1366, 390] as const) {
   test(`both volunteer creation paths accept missing identity and help periods at ${width}px`, async ({
     page,
   }) => {

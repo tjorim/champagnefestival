@@ -13,7 +13,7 @@ from app.database import get_db
 from app.dependencies import get_request_id
 from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonOut, PersonUpdate
 from app.services import members_service
-from app.utils import person_to_dict
+from app.utils import person_to_out
 
 router = APIRouter(
     prefix="/api/members",
@@ -35,14 +35,14 @@ async def create_member(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     return await members_service.create_member(db, body=body, actor=actor, request_id=request_id)
 
 
 @router.get("/{person_id}", response_model=PersonAdminSummaryOut)
-async def get_member(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_member(person_id: str, db: AsyncSession = Depends(get_db)) -> PersonOut:
     person = await members_service.get_member_or_404(db, person_id)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 @router.put("/{person_id}", response_model=PersonOut)
@@ -52,7 +52,7 @@ async def update_member(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     person = await members_service.get_member_or_404(db, person_id)
     return await members_service.apply_member_update(db, person, body, actor=actor, request_id=request_id)
 

@@ -12,7 +12,7 @@ export const POLL_QUESTION_KINDS = [
   "free_text",
   "rating",
 ] as const;
-export type PollQuestionKind = (typeof POLL_QUESTION_KINDS)[number];
+export type PollQuestionKind = import("@/api-types").PollQuestionOut["kind"];
 
 /** An unknown kind from the API reads as the original `meals` question. */
 export function parsePollKind(value: unknown): PollQuestionKind {
@@ -31,15 +31,14 @@ export function pollKindLabel(kind: PollQuestionKind): string {
   return LABELS[kind]();
 }
 
-interface PollCounts {
-  yesCount: number;
-  noCount: number;
-  peopleTotal: number;
-}
+type PollCounts = Pick<
+  import("@/api-types").PollQuestionOut,
+  "yes_count" | "no_count" | "people_total"
+>;
 
 const SUMMARIES: Record<PollQuestionKind, ((counts: PollCounts) => string) | null> = {
-  yes_no: ({ yesCount, peopleTotal, noCount }) =>
-    m.admin_poll_yes_no_summary({ yes: yesCount, people: peopleTotal, no: noCount }),
+  yes_no: ({ yes_count, people_total, no_count }) =>
+    m.admin_poll_yes_no_summary({ yes: yes_count, people: people_total, no: no_count }),
   meals: null,
   single_choice: null,
   free_text: null,

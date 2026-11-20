@@ -9,7 +9,7 @@ for (const roles of [
   ["member"],
   ["organization-contact"],
   ["admin", "volunteer", "member"],
-]) {
+] satisfies string[][]) {
   test(`separate browser journey: ${roles.join(" + ")}`, async ({ page }) => {
     await page.addInitScript((selected) => {
       localStorage.setItem("PARAGLIDE_LOCALE", "en");
@@ -27,11 +27,15 @@ for (const roles of [
       const browserPath = "/src/mocks/browser.ts";
       const httpPath = "/node_modules/msw/lib/http/index.js";
       const { worker } = await import(/* @vite-ignore */ browserPath);
-      const { http, HttpResponse } = await import(/* @vite-ignore */ httpPath);
+      const { http, HttpResponse }: typeof import("msw/http") = await import(
+        /* @vite-ignore */ httpPath
+      );
       worker.use(
-        http.get("/api/me/membership", () => HttpResponse.json({ state: "active" })),
+        http.get("/api/me/membership", () =>
+          HttpResponse.json<import("@/api-types").MembershipSummary>({ state: "active" }),
+        ),
         http.get("/api/me/volunteer", () =>
-          HttpResponse.json({
+          HttpResponse.json<import("@/api-types").VolunteerIdentityOut>({
             linked: true,
             name: "Synthetic volunteer",
             national_register_number: null,
@@ -66,7 +70,7 @@ for (const roles of [
   });
 }
 
-for (const width of [1280]) {
+for (const width of [1280] as const) {
   test(`populated preparation task rehearsal at ${width}`, async ({ page }) => {
     test.setTimeout(90000);
     await page.setViewportSize({ width, height: 600 });
@@ -86,7 +90,7 @@ test("workspace and account pass WCAG A/AA scans", async ({ page }) => {
   ] as const) {
     await page.setViewportSize({ width: scenario.width, height: 720 });
     await page.emulateMedia({ colorScheme: scenario.colorScheme });
-    for (const path of ["/admin", "/me"]) {
+    for (const path of ["/admin", "/me"] as const) {
       await page.goto(path);
       await expect(page.getByRole("navigation", { name: "My tasks", exact: true })).toBeVisible();
       await settleAnimations(page);

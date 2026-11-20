@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
+import { toAmount } from "@/utils/money";
 import { isDraftDirty, useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
@@ -96,7 +97,7 @@ const BLANK_FORM: RegistrationCreateForm = {
 
 const formatMoney = (amount: number) => `€${amount.toFixed(2)}`;
 
-const paymentStatusLabel = (status: Registration["paymentStatus"]) =>
+const paymentStatusLabel = (status: Registration["payment_status"]) =>
   status === "paid"
     ? m.admin_payment_paid()
     : status === "partial"
@@ -133,13 +134,13 @@ export default function RegistrationCreateModal({
         .filter((product) => (quantities[product.id] ?? 0) > 0)
         .map((product) => ({ productId: product.id, quantity: quantities[product.id] ?? 0 }));
       const request = {
-        personId: value.personOption.value,
+        personId: value.personOption.id,
         eventId: value.eventId,
         guestCount: value.guestCount,
         notes: value.notes.trim(),
         orderItems,
         orderAnswers: orderAnswers.filter((a) =>
-          event.orderQuestions?.some((q) => q.id === a.question_id && q.active),
+          event.order_questions?.some((q) => q.id === a.question_id && q.active),
         ),
       };
       const signature = JSON.stringify(request);
@@ -309,15 +310,15 @@ export default function RegistrationCreateModal({
                 <div className="flex items-center gap-2">
                   <Icon icon={CircleCheckIcon} />
                   {m.admin_registration_created_summary({
-                    person: created.person?.name ?? values.personOption?.label ?? "",
+                    person: created.person?.name ?? values.personOption?.name ?? "",
                     event: created.event?.title ?? selectedEvent?.title ?? "",
-                    guests: created.guestCount,
+                    guests: created.guest_count,
                   })}
                 </div>
                 <div>
                   {m.admin_registration_created_total({
-                    total: formatMoney(created.amountDue ?? 0),
-                    status: paymentStatusLabel(created.paymentStatus),
+                    total: formatMoney(toAmount(created.amount_due)),
+                    status: paymentStatusLabel(created.payment_status),
                   })}
                 </div>
               </Alert>
@@ -407,7 +408,7 @@ export default function RegistrationCreateModal({
                             <AdminOption key={ev.id} value={ev.id}>
                               {[
                                 ev.title,
-                                ev.edition?.editionType && ev.edition.editionType !== "festival"
+                                ev.edition?.edition_type && ev.edition.edition_type !== "festival"
                                   ? m.admin_filter_edition_standalone()
                                   : null,
                               ]
@@ -439,7 +440,7 @@ export default function RegistrationCreateModal({
                   onCancel={() => setAddingPerson(false)}
                   onCreated={(person) => {
                     selectPerson(person);
-                    setAddedPerson(person.label);
+                    setAddedPerson(person.name);
                   }}
                   onUseExisting={(person) => {
                     selectPerson(person);
@@ -460,10 +461,8 @@ export default function RegistrationCreateModal({
                         }}
                         onInputValueChange={setPersonQuery}
                         filter={null}
-                        itemToStringLabel={(option: PersonOption) => option.label}
-                        isItemEqualToValue={(a: PersonOption, b: PersonOption) =>
-                          a.value === b.value
-                        }
+                        itemToStringLabel={(option: PersonOption) => option.name}
+                        isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.id === b.id}
                       >
                         <ComboboxInput
                           id="registration-person"
@@ -500,20 +499,18 @@ export default function RegistrationCreateModal({
                           )}
                           <ComboboxList>
                             {(opt: PersonOption) => (
-                              <ComboboxItem key={opt.value} value={opt}>
+                              <ComboboxItem key={opt.id} value={opt}>
                                 <div>
                                   <div>
-                                    <HighlightedText
-                                      text={opt.label}
-                                      query={debouncedPersonQuery}
-                                    />
+                                    <HighlightedText text={opt.name} query={debouncedPersonQuery} />
                                   </div>
                                   <small className="text-muted-foreground">
                                     {[
                                       opt.email,
                                       opt.phone,
                                       m.admin_registration_person_bookings({
-                                        count: opt.registrationCount,
+                                        count:
+                                          "registration_count" in opt ? opt.registration_count : 0,
                                       }),
                                     ]
                                       .filter(Boolean)
@@ -591,7 +588,7 @@ export default function RegistrationCreateModal({
                         {products.map((product) => (
                           <AdminField className="site-sm:w-6/12" key={product.id}>
                             <AdminLabel>
-                              {product.name} · {formatMoney(product.price)}
+                              {product.name} · {formatMoney(Number(product.price))}
                               {product.required && ` · ${m.admin_products_required_badge()}`}
                             </AdminLabel>
                             <AdminInput
@@ -629,7 +626,7 @@ export default function RegistrationCreateModal({
 
               <OrderAnswerInputs
                 admin
-                questions={(selectedEvent?.orderQuestions ?? []).filter((q) => q.active)}
+                questions={(selectedEvent?.order_questions ?? []).filter((q) => q.active)}
                 answers={orderAnswers}
                 onChange={setOrderAnswers}
                 disabled={createRegistrationMutation.isPending}

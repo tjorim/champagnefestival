@@ -14,9 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.schemas import ProductCreate, ProductOut, ProductUpdate
+from app.schemas import ProductChangePreviewOut, ProductCreate, ProductOut, ProductUpdate
 from app.services import products_service
-from app.utils import product_to_dict
+from app.utils import product_to_out
 
 router = APIRouter(
     prefix="/api/products",
@@ -31,25 +31,25 @@ async def create_product(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> ProductOut:
     product = await products_service.create_product(
         db, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    return product_to_dict(product)
+    return product_to_out(product)
 
 
 @router.get("", response_model=list[ProductOut])
 async def list_products(
     db: AsyncSession = Depends(get_db),
     event_id: str | None = Query(default=None),
-) -> list[dict]:
+) -> list[ProductOut]:
     products = await products_service.list_products(db, event_id)
-    return [product_to_dict(p) for p in products]
+    return [product_to_out(p) for p in products]
 
 
 @router.get("/{product_id}", response_model=ProductOut)
-async def get_product(product_id: str, db: AsyncSession = Depends(get_db)) -> dict:
-    return product_to_dict(await products_service.get_product_or_404(db, product_id))
+async def get_product(product_id: str, db: AsyncSession = Depends(get_db)) -> ProductOut:
+    return product_to_out(await products_service.get_product_or_404(db, product_id))
 
 
 @router.put("/{product_id}", response_model=ProductOut)
@@ -59,15 +59,17 @@ async def update_product(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> ProductOut:
     product = await products_service.update_product(
         db, product_id, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    return product_to_dict(product)
+    return product_to_out(product)
 
 
-@router.post("/{product_id}/preview")
-async def preview_product(product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+@router.post("/{product_id}/preview", response_model=ProductChangePreviewOut)
+async def preview_product(
+    product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)
+) -> ProductChangePreviewOut:
     return await products_service.preview_product_update(db, product_id, body)
 
 

@@ -129,7 +129,7 @@ for (const [width, height, zoom] of [
   [1280, 800, 1.5],
   [1366, 768, 1.25],
   [1440, 900, 1],
-]) {
+] as const) {
   test(`preparation editors ${width}x${height} at native zoom ${zoom}`, async ({ baseURL }) => {
     test.setTimeout(90000);
     const { chromium } = await import("@playwright/test");

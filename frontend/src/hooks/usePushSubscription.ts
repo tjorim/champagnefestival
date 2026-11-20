@@ -65,13 +65,13 @@ export function usePushSubscription(): UsePushSubscriptionResult {
         if (!cancelled) setState("unsupported");
         return;
       }
-      const vapid = await getVapidPublicKey().catch(() => ({ publicKey: "", enabled: false }));
+      const vapid = await getVapidPublicKey().catch(() => ({ public_key: "", enabled: false }));
       if (cancelled) return;
-      if (!vapid.enabled || !vapid.publicKey) {
+      if (!vapid.enabled || !vapid.public_key) {
         setState("disabled");
         return;
       }
-      setVapidPublicKey(vapid.publicKey);
+      setVapidPublicKey(vapid.public_key);
       const registration = await serviceWorkerReadyOrTimeout();
       if (cancelled) return;
       if (registration === "timeout") {

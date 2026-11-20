@@ -3,12 +3,13 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from app.openapi_responses import binary_response
 from app.services.edition_artwork import NAME, PREFIX, public_root
 
 router = APIRouter(tags=["editions"])
 
 
-@router.get(PREFIX + "{name}")
+@router.get(PREFIX + "{name}", **binary_response("image/jpeg", "Edition artwork"))
 async def public_edition_artwork(name: str) -> Response:
     if not NAME.fullmatch(name):
         raise HTTPException(404, "Image not found.")

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/email-consents", tags=["email-consents"])
 @router.post("/confirm", response_model=EmailConsentConfirmedOut)
 async def confirm_email_consent(
     body: EmailConsentConfirm, request: Request, db: AsyncSession = Depends(get_db)
-) -> dict:
+) -> EmailConsentConfirmedOut:
     """Activate the consent behind a confirmation link. The link works once; a used, expired or unknown one is a 404."""
     if not check_rate_limit(get_client_ip(request), scope="email-consent-confirm"):
         raise ApiHTTPException(
@@ -32,4 +32,4 @@ async def confirm_email_consent(
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
-    return {"category_key": category.key, "category_name": category.localized_name(body.locale)}
+    return EmailConsentConfirmedOut(category_key=category.key, category_name=category.localized_name(body.locale))

@@ -39,7 +39,7 @@ function Configuration({
   const query = useQuery({
     queryKey: ["event-order-questions", eventId],
     queryFn: async () => {
-      const event = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      const event = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").EventOut>(
         `/api/events/${encodeURIComponent(eventId)}`,
         { headers: authHeaders() },
         m.admin_content_error_load(),
@@ -50,7 +50,7 @@ function Configuration({
   const questions = draft ?? query.data ?? [];
   const save = useMutation({
     mutationFn: () =>
-      fetchJsonOrThrowWithUnauthorized<unknown>(
+      fetchJsonOrThrowWithUnauthorized<OrderQuestion[]>(
         `/api/events/${encodeURIComponent(eventId)}/order-questions`,
         {
           method: "PUT",

@@ -17,6 +17,7 @@ from app.ratelimit import check_push_subscription_rate_limit, check_rate_limit, 
 from app.schemas import (
     PushSubscribeRequest,
     PushSubscriptionOut,
+    PushTestQueuedOut,
     PushTestRequest,
     PushUnsubscribeRequest,
     VapidPublicKeyOut,
@@ -94,6 +95,7 @@ async def unsubscribe_from_push(
 
 @router.post(
     "/test",
+    response_model=PushTestQueuedOut,
     status_code=status.HTTP_202_ACCEPTED,
     dependencies=[Depends(require_admin)],
 )
@@ -102,7 +104,7 @@ async def send_test_push(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PushTestQueuedOut:
     """Queue a restricted admin test notification via the durable outbox (#947).
 
     Not retry-safe with the same request: each call enqueues a fresh job (a
@@ -131,4 +133,4 @@ async def send_test_push(
         request_id=request_id,
     )
     await db.commit()
-    return {"queued": True, "job_id": job.id}
+    return PushTestQueuedOut(queued=True, job_id=job.id)

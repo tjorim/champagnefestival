@@ -19,7 +19,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, dump_response, validate_with_schema
 from app.schemas import EditionCreate, EditionType, EditionUpdate, SponsorTier
 from app.services import editions_service
 
@@ -54,7 +54,7 @@ async def create_edition(
     )
     async with session_factory() as db:
         try:
-            return await editions_service.create_edition(db, body=body, actor=actor)
+            return dump_response(await editions_service.create_edition(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -63,7 +63,7 @@ async def get_edition(session_factory: Any, edition_id: str) -> dict:
     async with session_factory() as db:
         try:
             edition = await editions_service.get_edition_or_404(db, edition_id)
-            return await editions_service.edition_payload(db, edition, active_only=False)
+            return dump_response(await editions_service.edition_payload(db, edition, active_only=False))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -122,7 +122,7 @@ async def update_edition(
     async with session_factory() as db:
         try:
             edition = await editions_service.get_edition_or_404(db, edition_id)
-            return await editions_service.apply_edition_update(db, edition, body, actor=actor)
+            return dump_response(await editions_service.apply_edition_update(db, edition, body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 

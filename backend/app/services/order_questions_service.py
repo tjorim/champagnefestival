@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EventOrderOption, EventOrderQuestion, RegistrationOrderAnswer
-from app.schemas import OrderAnswerIn, OrderQuestionList, VolunteerPollAnswerIn
+from app.schemas import OrderAnswerIn, OrderQuestionList, OrderQuestionOut, VolunteerPollAnswerIn
 from app.services import product_inventory as inventory
 from app.services.errors import ApiHTTPException
 from app.services.poll_kinds import KINDS, scalar_answer_fields
@@ -18,7 +18,7 @@ from app.services.public_render_cache import notify_render_cache_invalidate
 
 async def configure(
     db: AsyncSession, event_id: str, body: OrderQuestionList, *, actor: str, request_id: str | None
-) -> list[dict]:
+) -> list[OrderQuestionOut]:
     event = await inventory.lock_event(db, event_id)
     existing = {q.id: q for q in event.order_questions}
     used = set(
@@ -103,7 +103,7 @@ async def configure(
     await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(event, ["order_questions"])
-    return [q.as_dict() for q in event.order_questions]
+    return [q.to_out() for q in event.order_questions]
 
 
 async def validate_answers(

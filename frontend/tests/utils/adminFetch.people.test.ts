@@ -1,4 +1,5 @@
-import { http, HttpResponse } from "msw/http";
+import { jsonResponse } from "@/mocks/response";
+import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { fetchVolunteer } from "@/utils/adminFetch";
 import { server } from "@/mocks/server";
@@ -28,7 +29,10 @@ describe("bounded volunteer detail", () => {
   it("fetchVolunteer returns one volunteer with their help periods", async () => {
     server.use(
       http.get("/api/volunteers/:id", ({ params }) =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").VolunteerOut>({
+          retired_roles: {},
+          role_history: {},
+          oidc_subject: null,
           ...personPayload(String(params.id), { roles: ["volunteer"] }),
           help_periods: [{ id: 4, first_help_day: "2026-10-10", last_help_day: null, notes: "" }],
         }),
@@ -38,8 +42,8 @@ describe("bounded volunteer detail", () => {
     const volunteer = await fetchVolunteer("v1", authHeaders);
 
     expect(volunteer.id).toBe("v1");
-    expect(volunteer.helpPeriods).toEqual([
-      { id: 4, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
+    expect(volunteer.help_periods).toEqual([
+      { id: 4, first_help_day: "2026-10-10", last_help_day: null, notes: "" },
     ]);
   });
 });

@@ -1,6 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import PersonEmailConsents from "@/components/admin/PersonEmailConsents";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -44,7 +45,9 @@ afterEach(cleanup);
 describe("PersonEmailConsents", () => {
   it("shows the history and offers an opt-out only for active consent, never a grant", async () => {
     server.use(
-      http.get("/api/people/per_1/email-consents", () => HttpResponse.json([active, withdrawn])),
+      http.get("/api/people/per_1/email-consents", () =>
+        jsonResponse<import("@/api-types").EmailConsentOut[]>([active, withdrawn]),
+      ),
     );
     mount();
 
@@ -59,10 +62,12 @@ describe("PersonEmailConsents", () => {
   it("records an opt-out after confirmation and shows the updated history", async () => {
     let called = false;
     server.use(
-      http.get("/api/people/per_1/email-consents", () => HttpResponse.json([active])),
+      http.get("/api/people/per_1/email-consents", () =>
+        jsonResponse<import("@/api-types").EmailConsentOut[]>([active]),
+      ),
       http.post("/api/people/per_1/email-consents/club_news/opt-out", () => {
         called = true;
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").EmailConsentOut[]>([
           { ...active, revoked_at: "2026-10-24T10:00:00Z", revoked_source: "admin" },
         ]);
       }),
@@ -80,7 +85,11 @@ describe("PersonEmailConsents", () => {
   });
 
   it("says when the person never gave consent", async () => {
-    server.use(http.get("/api/people/per_1/email-consents", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/people/per_1/email-consents", () =>
+        jsonResponse<import("@/api-types").EmailConsentOut[]>([]),
+      ),
+    );
     mount();
     expect(await screen.findByText("This person has never given consent.")).toBeInTheDocument();
   });

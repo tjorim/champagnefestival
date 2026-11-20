@@ -1,3 +1,4 @@
+import type { OrganizationOut } from "@/api-types";
 import { AdminEmptyState } from "./AdminEmptyState";
 import OrganizationChangeReview from "@/components/admin/OrganizationChangeReview";
 import { Button } from "@/components/ui/button";
@@ -41,8 +42,9 @@ import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
 import type { ItemDraft } from "./itemTypes";
-import type { Edition, EditionType } from "./editionTypes";
-import type { Venue } from "@/types/admin";
+import type { EditionType } from "./editionTypes";
+import type { Edition } from "@/api-types";
+import type { Venue } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import {
   deleteContentSectionItem,
@@ -93,7 +95,7 @@ function editionTypeLabel(type: EditionType | "all") {
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
-  onOrganizationSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
+  onOrganizationSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
   onOrganizationDeleted?: (id: number, isCurrent: () => boolean) => void;
   /** Takes the organizations collection's session fence; called before each write request. */
   captureOrganizationsFence?: () => () => boolean;
@@ -108,7 +110,7 @@ interface ContentSectionProps {
   title: string;
   authHeaders: () => Record<string, string>;
   /** `isCurrent` is the session fence taken before the request (always true without `captureFence`). */
-  onItemSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
+  onItemSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
   onItemDeleted?: (id: number, isCurrent: () => boolean) => void;
   /** Takes a session fence before each write request, so a write that settles after sign-out can be dropped. */
   captureFence?: () => () => boolean;
@@ -195,13 +197,13 @@ export function ContentSection({
       if (s) {
         return (
           item.name.toLowerCase().includes(s) ||
-          (item.contactPerson?.name ?? "").toLowerCase().includes(s)
+          (item.contact_person?.name ?? "").toLowerCase().includes(s)
         );
       }
       return true;
     };
-    const activeItems: ItemDraft[] = [];
-    const archivedItems: ItemDraft[] = [];
+    const activeItems: OrganizationOut[] = [];
+    const archivedItems: OrganizationOut[] = [];
     let totalActive = 0;
     let totalArchived = 0;
     for (const item of items) {
@@ -254,12 +256,15 @@ export function ContentSection({
       const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
         const saved = await saveItemMutation.mutateAsync(draft);
-        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) => {
-          const idx = prev.findIndex((item) => item.id === saved.id);
-          return idx >= 0
-            ? prev.map((item) => (item.id === saved.id ? saved : item))
-            : [...prev, saved];
-        });
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => {
+            const idx = prev.findIndex((item) => item.id === saved.id);
+            return idx >= 0
+              ? prev.map((item) => (item.id === saved.id ? saved : item))
+              : [...prev, saved];
+          },
+        );
         setImageErrors((prev) => {
           const copy = new Set(prev);
           copy.delete(saved.id);
@@ -285,8 +290,9 @@ export function ContentSection({
           id,
           active: false,
         });
-        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
-          prev.map((item) => (item.id === id ? saved : item)),
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
         if (sectionKey === "organizations" && isCurrent())
@@ -307,8 +313,9 @@ export function ContentSection({
           id,
           active: true,
         });
-        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
-          prev.map((item) => (item.id === id ? saved : item)),
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
         if (sectionKey === "organizations" && isCurrent())
@@ -334,8 +341,9 @@ export function ContentSection({
       const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
         await deleteItemMutation.mutateAsync(id);
-        queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
-          prev.filter((item) => item.id !== id),
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.filter((item) => item.id !== id),
         );
         onItemDeleted?.(id, isCurrent);
       } catch (error) {
@@ -356,7 +364,7 @@ export function ContentSection({
       snapshot.filter((_, i) => results[i]?.status === "fulfilled").map((item) => item.id),
     );
     if (succeededIds.size > 0) {
-      queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+      queryClient.setQueryData<OrganizationOut[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
         prev.map((item) => (succeededIds.has(item.id) ? { ...item, active: false } : item)),
       );
       snapshot
@@ -428,10 +436,10 @@ export function ContentSection({
             {typeLabel(item.type)}
           </Badge>
           <small className="text-subtle truncate hidden site-md:inline">{item.image}</small>
-          {item.contactPerson && (
+          {item.contact_person && (
             <small className="text-subtle truncate hidden site-lg:inline">
               <Icon icon={UserIcon} className="me-1" />
-              {item.contactPerson.name}
+              {item.contact_person.name}
             </small>
           )}
         </span>
@@ -660,16 +668,16 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
   const visibleEditions = useMemo(
     () =>
       (editionsQuery.data ?? []).filter(
-        (edition) => editionTypeFilter === "all" || edition.editionType === editionTypeFilter,
+        (edition) => editionTypeFilter === "all" || edition.edition_type === editionTypeFilter,
       ),
     [editionTypeFilter, editionsQuery.data],
   );
   const groupedEditions = useMemo(
     () => ({
-      festival: visibleEditions.filter((edition) => edition.editionType === "festival"),
-      bourse: visibleEditions.filter((edition) => edition.editionType === "bourse"),
+      festival: visibleEditions.filter((edition) => edition.edition_type === "festival"),
+      bourse: visibleEditions.filter((edition) => edition.edition_type === "bourse"),
       capsule_exchange: visibleEditions.filter(
-        (edition) => edition.editionType === "capsule_exchange",
+        (edition) => edition.edition_type === "capsule_exchange",
       ),
     }),
     [visibleEditions],

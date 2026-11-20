@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectNoAxeViolations } from "./axe";
 
-for (const width of [1366, 390]) {
+for (const width of [1366, 390] as const) {
   test(`shared admin controls retain keyboard and mobile behaviour at ${width}px`, async ({
     page,
   }) => {

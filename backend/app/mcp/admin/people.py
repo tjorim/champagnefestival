@@ -14,11 +14,11 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.mcp.utils import MCPToolError, as_value_error, get_or_error, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, dump_response, get_or_error, validate_with_schema
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import people_service
-from app.utils import person_summary_dict
+from app.utils import person_admin_summary_out
 
 
 async def create_person(
@@ -49,7 +49,7 @@ async def create_person(
     )
     async with session_factory() as db:
         try:
-            return await people_service.create_person(db, body=body, actor=actor)
+            return dump_response(await people_service.create_person(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -57,7 +57,7 @@ async def create_person(
 async def get_person(session_factory: Any, person_id: str) -> dict:
     async with session_factory() as db:
         person = await get_or_error(db, Person, person_id, f"Person '{person_id}' not found.")
-        return person_summary_dict(person)
+        return person_admin_summary_out(person).model_dump(exclude_unset=True)
 
 
 async def update_person(
@@ -95,7 +95,7 @@ async def update_person(
     async with session_factory() as db:
         person = await get_or_error(db, Person, person_id, f"Person '{person_id}' not found.")
         try:
-            return await people_service.apply_person_update(db, person, body, actor=actor)
+            return dump_response(await people_service.apply_person_update(db, person, body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -119,6 +119,6 @@ async def merge_people(session_factory: Any, actor: str, person_id: str, duplica
         canonical = await get_or_error(db, Person, person_id, f"Person '{person_id}' not found.")
         duplicate = await get_or_error(db, Person, duplicate_id, f"Person '{duplicate_id}' not found.")
         try:
-            return await people_service.merge_people(db, canonical, duplicate, actor=actor)
+            return dump_response(await people_service.merge_people(db, canonical, duplicate, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc

@@ -7,14 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import SectionHeading from "@/components/SectionHeading";
 import LazyRegistrationModal from "@/components/LazyRegistrationModal";
-import type { Event } from "@/types/event";
+import type { EventPublicOut as Event } from "@/api-types";
 import { type ApiUpcomingEdition, useOtherEventItems } from "@/hooks/useOtherEvents";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { eventDescription, eventTitle } from "@/utils/eventText";
 
-function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
-  switch (editionType) {
+function getEditionTitle(edition_type: ApiUpcomingEdition["edition_type"]) {
+  switch (edition_type) {
     case "bourse":
       return m.other_events_type_bourse();
     case "capsule_exchange":
@@ -55,7 +55,7 @@ export default function OtherEvents() {
 
   useEffect(() => {
     const nextDeadline = items
-      .map((item) => item.event.registrationsCloseAt)
+      .map((item) => item.event.registrations_close_at)
       .filter((deadline): deadline is string => Boolean(deadline))
       .map((deadline) => new Date(deadline).getTime())
       .filter((deadline) => Number.isFinite(deadline) && deadline > now)
@@ -98,12 +98,12 @@ export default function OtherEvents() {
                     <div className="flex justify-between items-start gap-4 flex-wrap">
                       <div>
                         <h5 aria-level={3} className="mb-1">
-                          {getEditionTitle(item.editionType)}
+                          {getEditionTitle(item.edition_type)}
                         </h5>
                         <p className="mb-1 font-semibold">{eventTitle(item.event, locale)}</p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={CalendarDaysIcon} className="me-2" />
-                          {formatDate(item.event.date)} • {item.event.startTime}
+                          {formatDate(item.event.date)} • {item.event.start_time}
                         </p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={MapPinIcon} className="me-2" />
@@ -126,12 +126,12 @@ export default function OtherEvents() {
                             )}
                           </p>
                         )}
-                        {item.event.volunteersOnly && (
+                        {item.event.volunteers_only && (
                           <Badge variant="info" className="mb-2">
                             {m.event_volunteers_only()}
                           </Badge>
                         )}
-                        {item.event.membersOnly && (
+                        {item.event.members_only && (
                           <Badge variant="info" className="mb-2">
                             {m.event_members_only()}
                           </Badge>
@@ -139,21 +139,21 @@ export default function OtherEvents() {
                         <p className="mb-2">{eventDescription(item.event, locale)}</p>
                       </div>
 
-                      {(item.event.registrationRequired || item.event.products.length > 0) && (
+                      {(item.event.registration_required || item.event.products.length > 0) && (
                         <Button
                           variant="warning"
                           disabled={Boolean(
-                            item.event.registrationsCloseAt &&
-                            new Date(item.event.registrationsCloseAt).getTime() <= now,
+                            item.event.registrations_close_at &&
+                            new Date(item.event.registrations_close_at).getTime() <= now,
                           )}
                           onClick={() => setSelectedEvent(item.event)}
                         >
                           <Icon icon={CalendarCheckIcon} />
-                          {item.event.registrationsCloseAt &&
-                          new Date(item.event.registrationsCloseAt).getTime() <= now
+                          {item.event.registrations_close_at &&
+                          new Date(item.event.registrations_close_at).getTime() <= now
                             ? m.registration_closed()
-                            : item.event.registrationRequired
-                              ? item.editionType === "bourse"
+                            : item.event.registration_required
+                              ? item.edition_type === "bourse"
                                 ? m.other_events_reserve_table()
                                 : m.other_events_rsvp()
                               : m.other_events_order()}

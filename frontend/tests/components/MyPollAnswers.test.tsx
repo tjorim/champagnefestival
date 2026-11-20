@@ -1,3 +1,5 @@
+import { jsonResponse } from "@/mocks/response";
+import type { VolunteerPollQuestionOut, VolunteerPollOut } from "@/api-types";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -12,22 +14,37 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 function setup(closed = false) {
-  const questions = [
-    {
-      id: "choice",
-      kind: "single_choice",
-      title: "Vervoer",
-      closed,
-      options: [{ id: "bus", label: "Bus" }],
-      option_id: null,
-    },
-    { id: "text", kind: "free_text", title: "Suggestie", closed, text: null },
-    { id: "rating", kind: "rating", title: "Score", closed, rating: null },
-  ];
+  const questions: VolunteerPollQuestionOut[] = (
+    [
+      {
+        id: "choice",
+        kind: "single_choice",
+        title: "Vervoer",
+        closed,
+        options: [{ id: "bus", label: "Bus", dietary_tags: [] }],
+        option_id: null,
+      },
+      { id: "text", kind: "free_text", title: "Suggestie", closed, text: null },
+      { id: "rating", kind: "rating", title: "Score", closed, rating: null },
+    ] satisfies (Partial<VolunteerPollQuestionOut> &
+      Pick<VolunteerPollQuestionOut, "id" | "kind" | "title" | "closed">)[]
+  ).map((question): VolunteerPollQuestionOut => ({
+    event_id: null,
+    description: "",
+    closes_at: null,
+    options: [],
+    selections: [],
+    attending: null,
+    people: 0,
+    option_id: null,
+    text: null,
+    rating: null,
+    ...question,
+  }));
   const writes: unknown[] = [];
   server.use(
     http.get("/api/me/volunteer/poll", () =>
-      HttpResponse.json({ edition_id: "edition", questions }),
+      jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null }),
     ),
     http.put("/api/me/volunteer/poll/questions/:id", async ({ request, params }) => {
       const body = await request.json();
@@ -36,7 +53,7 @@ function setup(closed = false) {
         questions.find((q) => q.id === params.id)!,
         body,
       );
-      return HttpResponse.json({ edition_id: "edition", questions });
+      return jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null });
     }),
   );
   render(
@@ -98,7 +115,12 @@ it("preserves a failed draft while serializing delayed saves", async () => {
       await new Promise<void>((resolve) => {
         finish = resolve;
       });
-      return HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 500 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "PRIVATE DIAGNOSTIC",
+        },
+        { status: 500 },
+      );
     }),
   );
   const user = userEvent.setup();

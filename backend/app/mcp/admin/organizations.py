@@ -10,12 +10,12 @@ from typing import Any
 
 from sqlalchemy import select
 
-from app.mcp.utils import MCPToolError, get_or_error, validate_with_schema
+from app.mcp.utils import MCPToolError, dump_response, get_or_error, validate_with_schema
 from app.models import Organization
 from app.schemas import OrganizationCreate, OrganizationUpdate
 from app.services import organizations_service
 from app.services.errors import ServiceError
-from app.utils import organization_to_dict
+from app.utils import organization_to_out
 
 
 async def create_organization(
@@ -46,7 +46,7 @@ async def create_organization(
     )
     async with session_factory() as db:
         try:
-            return await organizations_service.create_organization(db, body=body, actor=actor)
+            return dump_response(await organizations_service.create_organization(db, body=body, actor=actor))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -54,8 +54,8 @@ async def create_organization(
 async def get_organization(session_factory: Any, organization_id: int) -> dict:
     async with session_factory() as db:
         e = await get_or_error(db, Organization, organization_id, f"Organization '{organization_id}' not found.")
-        contact = await organizations_service.load_contact(db, e.contact_person_id)
-        return organization_to_dict(e, contact)
+        contact = dump_response(await organizations_service.load_contact(db, e.contact_person_id))
+        return organization_to_out(e, contact).model_dump(exclude_unset=True)
 
 
 async def list_organizations(session_factory: Any, organization_type: str | None = None) -> dict:
@@ -66,10 +66,12 @@ async def list_organizations(session_factory: Any, organization_type: str | None
         result = await db.execute(stmt)
         organizations = result.scalars().all()
         person_ids = [e.contact_person_id for e in organizations if e.contact_person_id]
-        contacts = await organizations_service.load_contacts_by_ids(db, person_ids)
+        contacts = dump_response(await organizations_service.load_contacts_by_ids(db, person_ids))
         return {
             "organizations": [
-                organization_to_dict(e, contacts.get(e.contact_person_id) if e.contact_person_id else None)
+                organization_to_out(e, contacts.get(e.contact_person_id) if e.contact_person_id else None).model_dump(
+                    exclude_unset=True
+                )
                 for e in organizations
             ]
         }
@@ -110,8 +112,10 @@ async def update_organization(
     async with session_factory() as db:
         e = await get_or_error(db, Organization, organization_id, f"Organization '{organization_id}' not found.")
         try:
-            return await organizations_service.apply_organization_update(
-                db, e, body, actor=actor, clear_contact_person=clear_contact_person
+            return dump_response(
+                await organizations_service.apply_organization_update(
+                    db, e, body, actor=actor, clear_contact_person=clear_contact_person
+                )
             )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

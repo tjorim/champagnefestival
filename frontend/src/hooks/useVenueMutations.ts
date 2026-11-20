@@ -1,5 +1,16 @@
 import { useMutation } from "@tanstack/react-query";
-import type { Room, TableType } from "@/types/admin";
+import type {
+  AreaOut,
+  AreaUpdate,
+  LayoutOut,
+  RoomOut,
+  RoomUpdate,
+  TableTypeCreate,
+  TableTypeOut,
+  TableTypeUpdate,
+  VenueOut,
+  VenueUpdate,
+} from "@/api-types";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
@@ -68,7 +79,7 @@ export function useVenueMutations({
       lat: number;
       lng: number;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<VenueOut>(
         "/api/venues",
         {
           method: "POST",
@@ -82,30 +93,13 @@ export function useVenueMutations({
   });
 
   const updateVenueMutation = useMutation({
-    mutationFn: ({
-      venueId,
-      postalCode,
-      ...data
-    }: {
-      venueId: string;
-      postalCode?: string;
-      name?: string;
-      address?: string;
-      city?: string;
-      country?: string;
-      lat?: number;
-      lng?: number;
-      active?: boolean;
-    }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    mutationFn: ({ venueId, ...data }: { venueId: string } & VenueUpdate) =>
+      fetchJsonOrThrowWithUnauthorized<VenueOut>(
         `/api/venues/${venueId}`,
         {
           method: "PUT",
           headers: authHeaders(),
-          body: JSON.stringify({
-            ...data,
-            ...(postalCode === undefined ? {} : { postal_code: postalCode }),
-          }),
+          body: JSON.stringify(data),
         },
         data.active === true
           ? m.admin_error_restore_venue()
@@ -142,7 +136,7 @@ export function useVenueMutations({
       lengthM: number;
       color: string;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<RoomOut>(
         "/api/rooms",
         {
           method: "POST",
@@ -162,23 +156,17 @@ export function useVenueMutations({
   });
 
   const updateRoomMutation = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>;
-    }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    mutationFn: ({ id, data }: { id: string; data: RoomUpdate }) =>
+      fetchJsonOrThrowWithUnauthorized<RoomOut>(
         `/api/rooms/${id}`,
         {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
-            ...(data.venueId !== undefined && { venue_id: data.venueId }),
+            ...(data.venue_id !== undefined && { venue_id: data.venue_id }),
             ...(data.name !== undefined && { name: data.name }),
-            ...(data.widthM !== undefined && { width_m: data.widthM }),
-            ...(data.lengthM !== undefined && { length_m: data.lengthM }),
+            ...(data.width_m !== undefined && { width_m: data.width_m }),
+            ...(data.length_m !== undefined && { length_m: data.length_m }),
             ...(data.color !== undefined && { color: data.color }),
             ...(data.active !== undefined && { active: data.active }),
           }),
@@ -202,7 +190,7 @@ export function useVenueMutations({
 
   const createLayoutMutation = useMutation({
     mutationFn: ({ roomId, eventId, label }: { roomId: string; eventId: string; label?: string }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<LayoutOut>(
         "/api/layouts",
         {
           method: "POST",
@@ -282,7 +270,7 @@ export function useVenueMutations({
       y?: number;
       rotation?: number;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<AreaOut>(
         "/api/areas",
         {
           method: "POST",
@@ -306,8 +294,8 @@ export function useVenueMutations({
   });
 
   const assignAreaMutation = useMutation({
-    mutationFn: ({ areaId, body }: { areaId: string; body: Record<string, unknown> }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    mutationFn: ({ areaId, body }: { areaId: string; body: AreaUpdate }) =>
+      fetchJsonOrThrowWithUnauthorized<AreaOut>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
         m.admin_error_assign_area(),
@@ -328,19 +316,19 @@ export function useVenueMutations({
   });
 
   const createTableTypeMutation = useMutation({
-    mutationFn: (data: Omit<TableType, "id">) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    mutationFn: (data: TableTypeCreate) =>
+      fetchJsonOrThrowWithUnauthorized<TableTypeOut>(
         "/api/table-types",
         {
           method: "POST",
           headers: authHeaders(),
           body: JSON.stringify({
             name: data.name,
-            venue_id: data.venueId,
+            venue_id: data.venue_id,
             shape: data.shape,
-            width_m: data.widthM,
-            length_m: data.lengthM,
-            height_type: data.heightType,
+            width_m: data.width_m,
+            length_m: data.length_m,
+            height_type: data.height_type,
             capacity: data.capacity,
           }),
         },
@@ -351,19 +339,19 @@ export function useVenueMutations({
   });
 
   const updateTableTypeMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<TableType, "id">> }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    mutationFn: ({ id, data }: { id: string; data: TableTypeUpdate }) =>
+      fetchJsonOrThrowWithUnauthorized<TableTypeOut>(
         `/api/table-types/${id}`,
         {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
             ...(data.name !== undefined && { name: data.name }),
-            ...(data.venueId !== undefined && { venue_id: data.venueId }),
+            ...(data.venue_id !== undefined && { venue_id: data.venue_id }),
             ...(data.shape !== undefined && { shape: data.shape }),
-            ...(data.widthM !== undefined && { width_m: data.widthM }),
-            ...(data.lengthM !== undefined && { length_m: data.lengthM }),
-            ...(data.heightType !== undefined && { height_type: data.heightType }),
+            ...(data.width_m !== undefined && { width_m: data.width_m }),
+            ...(data.length_m !== undefined && { length_m: data.length_m }),
+            ...(data.height_type !== undefined && { height_type: data.height_type }),
             ...(data.capacity !== undefined && { capacity: data.capacity }),
             ...(data.active !== undefined && { active: data.active }),
           }),
@@ -371,7 +359,7 @@ export function useVenueMutations({
         m.admin_error_update_table_type(),
       ),
     // A capacity change reaches the capacity of the tables of that type.
-    ...refetchAfter<{ id: string; data: Partial<Omit<TableType, "id">> }>(
+    ...refetchAfter<{ id: string; data: TableTypeUpdate }>(
       ["tableTypes"],
       ({ data }) => data.capacity !== undefined,
     ),

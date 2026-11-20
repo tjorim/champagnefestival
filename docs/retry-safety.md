@@ -16,6 +16,15 @@ same value; no automatic retries are performed. Temporary defaults for empty
 columns are derived only for rendering and are not included when saving another
 column choice.
 
+## Response-model migration (#1657)
+
+The admin FAQ and integration-client services now return existing output models;
+MCP adapters dump them in Python mode to preserve their previous dictionaries and
+datetime values. This changes response construction only. FAQ create/update/reorder
+and credential create/rotate remain **not retry safe**; FAQ deletion and credential
+revocation retain the convergent-state-only contract below. No replay storage or
+automatic retry is introduced.
+
 ## Supported strategies
 
 - **Natural-key upsert:** repeated application of the desired state converges on
@@ -1178,3 +1187,88 @@ and no-store semantics. Changing an ID or HTTP method does not create a fresh
 route-template allowance. This rejection causes no handler write; it does not
 prove that an earlier timed-out write failed. Existing idempotency keys or
 reconciliation rules still govern retries. Mounted MCP policies stay separate.
+
+## Generated people and check-in client types (#1657)
+
+The person forms, booking person picker and volunteer check-in/delivery controls now read generated response fields directly. Their existing write URLs, bodies, idempotency strategies and `retry: false` decisions are unchanged. No automatic retry is added: person creation still needs reconciliation before retry; check-in keeps its server-owned already-checked-in result, and delivery updates continue to send absolute delivered quantities.
+
+## Generated event, product and edition responses (#1657)
+
+The frontend reads event/product/edition and nested registration write responses directly as generated
+API records. Request methods, payloads and retry policy are unchanged: this migration adds no automatic
+retry. In particular, event/product/edition creation and artwork upload remain unsafe to blindly retry
+after an ambiguous response; reconcile with a read. Updates/deletes keep their existing endpoint strategy.
+
+### Shared response-model construction (#1657)
+
+The response-builder migration changes no write's mutation, locking, transaction,
+notification, idempotency scope, request hash or retry policy. Events/products/editions,
+registrations, people/members/volunteers, organisations, floor plans and settings
+retain their documented decisions above. No new retry is advertised or enabled.
+Bulk room/table-type/table/layout creation explicitly dumps its existing output
+model in Python mode before the existing replay JSON conversion, preserving stored
+date/timestamp representation. Admin registration creation still stores JSON-mode
+`RegistrationOut` and now validates replayed data into that model. Private replay
+metadata preserves MCP's existing JSON-valued cached response (which omits the
+fresh response's extra `edition_id`); it is never serialized or exposed in OpenAPI. The existing
+bulk and registration idempotency tests cover duplicate prevention, matching
+replays and conflicts; MCP/REST parity tests cover the response boundaries.
+
+## Remaining generated frontend responses (#1657)
+
+Content/organisation and poll writes, volunteer identity and answers, email preferences and unsubscribe,
+push subscription responses, settings, policies and signage now use generated response records. Their
+HTTP methods, URLs, payload shapes and existing retry decisions remain unchanged. No automatic write
+retry is introduced. Create/copy/upload operations still require reconciliation after an ambiguous
+failure; absolute answer/preference/status updates retain their existing endpoint-specific policy.
+The new regression test pins the organisation payload while checking that its response is preserved.
+MSW fixture corrections add required response fields only; they do not change production retry semantics.
+
+## Specialized backend response models (#1657)
+
+Organization proposal submit/decision, order-question configuration, product update/preview
+and signage export create/upload/submit/cancel only change response construction. Existing
+transaction boundaries, locks, proposal submission IDs, decision replay, product preview
+fingerprints/confirmation and export idempotency keys remain unchanged. Preview still rolls
+back; no write gains automatic retry. Ambiguous writes retain their existing reconciliation
+and endpoint-specific retry requirements. Nested question/answer serialization does not
+change stored definitions, answer validation or checkout locking.
+
+## Independent service response models (#1657)
+
+This response-only migration leaves each write's transaction, lock, side effects, request
+shape and retry decision unchanged. It adds no automatic retries or new safety promise.
+
+- Payment append/reversal keeps its existing scoped idempotency key, request hash,
+  booking lock and atomic JSON replay storage. First-use and cached responses now
+  validate as `PaymentTransactionOut`; the stored amount remains a decimal string.
+- Announcement/category/email-category create, policy draft creation/publication,
+  composer draft creation/scheduling, stamp-card type creation and layout revision save/restore keep their existing
+  reconciliation requirements after ambiguous failures; model construction does not
+  make these operations safe to blindly repeat. Update/reorder/delete behaviour is
+  unchanged, including existing conflict checks and acknowledgements.
+- Waitlist handled timestamps remain convergent; consent preference updates/opt-out and stamp reward
+  hand-out retain their existing convergence rules. Stamp check-in still operates
+  inside its caller's transaction. Poll answer/note replacement, question/option
+  create/update/reorder/copy and linked registration changes keep their current
+  lock order, conflict rules and existing retry decisions.
+- Organisation proposal submission/decision keeps its existing submission identity
+  and decision convergence. Video export cancel retains its existing state transition
+  and creator scope. Video creation/upload/submission keeps its existing idempotency key, indexed slide upload and state checks; this response migration changes none of those retry decisions. No worker protocol or file lifecycle changes.
+
+The existing integration tests exercise these write paths and payment replay/races;
+response parity tests additionally pin nullable translations, native timestamps,
+localisation fallback, decimal strings and composer counts/snapshots.
+
+## Final response-model consolidation (#1657)
+
+Scratchpad writes, stamp/check-in transitions, policy render previews, email confirmations
+and member opt-out retain their existing transaction, locking, payload and retry decisions.
+Only response construction changes; no write is retried automatically. Stamp progress stays
+a model between services and is serialized only by the existing REST/MCP boundary.
+
+## Generated fixture contracts (#1657)
+
+The final frontend fixture pass changes test data and static checks only. The venue-plan
+edition reader now names its generated response type without changing its request or
+response handling. No production write payload, retry decision or automatic retry changes.

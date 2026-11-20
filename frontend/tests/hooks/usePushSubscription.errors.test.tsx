@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -38,7 +39,10 @@ beforeEach(() => {
   stubBrowserPush();
   server.use(
     http.get("/api/push/vapid-public-key", () =>
-      HttpResponse.json({ public_key: "AQAB", enabled: true }),
+      jsonResponse<import("@/api-types").VapidPublicKeyOut>({
+        public_key: "AQAB",
+        enabled: true,
+      }),
     ),
   );
 });
@@ -54,7 +58,10 @@ describe("usePushSubscription errors", () => {
     server.use(
       http.post("/api/push/subscriptions", () =>
         HttpResponse.json(
-          { detail: "Too many requests. Please try again later.", code: "rate_limited" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Too many requests. Please try again later.",
+            code: "rate_limited",
+          },
           { status: 429 },
         ),
       ),
@@ -72,7 +79,10 @@ describe("usePushSubscription errors", () => {
     server.use(
       http.post("/api/push/subscriptions", () =>
         HttpResponse.json(
-          { detail: "A brand new English rule.", code: "not_yet_translated" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "A brand new English rule.",
+            code: "not_yet_translated",
+          },
           { status: 400 },
         ),
       ),

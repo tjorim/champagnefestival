@@ -1,13 +1,11 @@
+import type { TemplateOut } from "@/api-types";
 import type { Background, Layer } from "./types";
-export interface TemplateDraft {
-  name: string;
-  background: Background;
-  layers: Layer[];
-}
-export interface Template extends TemplateDraft {
-  id: string;
-}
-export type TemplateKind = "organizations" | "notice" | "image";
+export type TemplateDraft = Omit<
+  Required<import("@/api-types").TemplateWrite>,
+  "background" | "layers"
+> & { background: Background; layers: Layer[] };
+export type Template = Omit<TemplateOut, "background" | "layers"> & TemplateDraft;
+export type TemplateKind = import("@/api-types").SlideOut["kind"];
 export const requiredBindings = {
   organizations: ["logo", "name", "sponsor"],
   notice: ["title", "text"],

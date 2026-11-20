@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { CommunicationPreferenceOut, VolunteerIdentityOut } from "../src/api-types";
 import { THEME_VARIANTS } from "./variants";
 
 for (const theme of [
@@ -11,7 +12,7 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
+] as const) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} account and check-in widgets at ${width}px (${colorScheme})`, async ({
       page,
@@ -21,14 +22,21 @@ for (const theme of [
       await page.addInitScript((selected) => {
         localStorage.setItem("champagnefestival:visualTheme", selected);
       }, theme);
-      await page
-        .context()
-        .route("**/api/me/communication-preference", (route) =>
-          route.fulfill({ json: { preferred_language: "en" } }),
-        );
-      await page
-        .context()
-        .route("**/api/me/volunteer", (route) => route.fulfill({ json: { linked: false } }));
+      await page.context().route("**/api/me/communication-preference", (route) =>
+        route.fulfill({
+          json: { preferred_language: "en" } satisfies CommunicationPreferenceOut,
+        }),
+      );
+      await page.context().route("**/api/me/volunteer", (route) =>
+        route.fulfill({
+          json: {
+            linked: false,
+            name: null,
+            national_register_number: null,
+            eid_document_number: null,
+          } satisfies VolunteerIdentityOut,
+        }),
+      );
       await page.goto("/me");
       const account = page.getByRole("tab", { name: "Account settings", exact: true });
       await expect(account).toBeVisible();

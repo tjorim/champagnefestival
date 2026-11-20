@@ -1,21 +1,4 @@
-export interface ContactPerson {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-}
-
-export interface ItemDraft {
-  id: number;
-  name: string;
-  image: string;
-  website?: string;
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
-
-  active?: boolean; // undefined treated as true (backward-compat with existing persisted data)
-  type?: string;
-  contactPersonId?: string | null;
-  contactPerson?: ContactPerson | null;
-}
+import type { OrganizationOut, PersonSummaryOut } from "@/api-types";
+export type ContactPerson = PersonSummaryOut;
+/** Editor state: new items have no server timestamps or persisted contact yet. */
+export type ItemDraft = Pick<OrganizationOut, "id" | "name" | "image"> & Partial<OrganizationOut>;

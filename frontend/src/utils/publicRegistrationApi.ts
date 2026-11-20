@@ -1,58 +1,16 @@
-import type { StampProgress } from "@/utils/stampCards";
+import type {
+  CheckInGuestOut,
+  CheckInOut,
+  RegistrationGuestOut,
+  OrderItemOut,
+  VisitorSessionStatus as ApiVisitorSessionStatus,
+} from "@/api-types";
 import { apiErrorFromResponse, apiErrorMessage } from "@/utils/apiErrors";
-import { parseOrderAnswers, orderAnswersBody, type OrderAnswer } from "@/utils/orderQuestions";
+import { orderAnswersBody } from "@/utils/orderQuestions";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, RegistrationFormData, RegistrationStatus } from "@/types/registration";
 
-export interface CheckInData {
-  stampProgress?: StampProgress | null;
-  id: string;
-  name: string;
-  eventId: string;
-  editionId?: string;
-  eventTitle: string;
-  guestCount: number;
-  tableName?: string;
-  tableId?: string;
-  orderItems: {
-    productId: string;
-    name: string;
-    quantity: number;
-    deliveredQuantity: number;
-    remainingQuantity: number;
-    price: number;
-    category: string;
-    delivered: boolean;
-  }[];
-  notes: string;
-  status: RegistrationStatus;
-  checkedIn: boolean;
-  checkedInAt?: string;
-  strapIssued: boolean;
-}
-
-interface CheckInResponseRegistration {
-  id?: string;
-  name?: string;
-  event_id?: string;
-  edition_id?: string | null;
-  event_title?: string;
-  guest_count?: number;
-  table_name?: string | null;
-  table_id?: string | null;
-  order_items?: Record<string, unknown>[];
-  notes?: string;
-  status?: RegistrationStatus;
-  checked_in?: boolean;
-  checked_in_at?: string;
-  strap_issued?: boolean;
-}
-
-interface CheckInMutationResponse {
-  stamp_progress?: StampProgress | null;
-  registration?: CheckInResponseRegistration;
-  already_checked_in?: boolean;
-}
+export type CheckInData = CheckInGuestOut;
 
 export class CheckInError extends Error {
   code: "not_found" | "invalid_token" | "request_failed";
@@ -61,52 +19,6 @@ export class CheckInError extends Error {
     super(message);
     this.code = code;
   }
-}
-
-function normalizeDeliveredQuantities(item: {
-  quantity: number;
-  delivered: boolean;
-  delivered_quantity?: number | null;
-}): { deliveredQuantity: number; remainingQuantity: number; delivered: boolean } {
-  const quantity = Number.isFinite(item.quantity) ? Math.max(0, item.quantity) : 0;
-  const deliveredQuantityRaw = item.delivered_quantity ?? (item.delivered ? quantity : 0);
-  const deliveredQuantity = Number.isFinite(deliveredQuantityRaw)
-    ? Math.max(0, Math.min(quantity, deliveredQuantityRaw))
-    : 0;
-  const remainingQuantity = quantity - deliveredQuantity;
-  return {
-    deliveredQuantity,
-    remainingQuantity,
-    delivered: remainingQuantity === 0,
-  };
-}
-
-function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
-  const rawOrders: unknown[] = data.order_items ?? [];
-
-  return {
-    id: data.id ?? "",
-    name: data.name ?? "",
-    eventId: data.event_id ?? "",
-    editionId: data.edition_id ?? undefined,
-    eventTitle: data.event_title ?? "",
-    guestCount: data.guest_count ?? 1,
-    tableName: data.table_name ?? undefined,
-    tableId: data.table_id ?? undefined,
-    orderItems: rawOrders.filter(isGuestOrderItemResponse).map((item) => ({
-      ...normalizeDeliveredQuantities(item),
-      productId: item.product_id,
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      category: typeof item.category === "string" ? item.category : "other",
-    })),
-    notes: data.notes ?? "",
-    status: data.status ?? "pending",
-    checkedIn: data.checked_in ?? false,
-    checkedInAt: data.checked_in_at,
-    strapIssued: data.strap_issued ?? false,
-  };
 }
 
 export async function fetchCheckInRegistration(
@@ -134,13 +46,13 @@ export async function fetchCheckInRegistration(
     );
   }
 
-  return mapCheckInData((await response.json()) as CheckInResponseRegistration);
+  return (await response.json()) as CheckInGuestOut;
 }
 
 export async function submitCheckIn(
   registrationId: string,
   checkInToken: string,
-): Promise<{ registration: CheckInData; alreadyCheckedIn: boolean }> {
+): Promise<CheckInOut> {
   const response = await fetch(`/api/check-in/${encodeURIComponent(registrationId)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -158,74 +70,15 @@ export async function submitCheckIn(
     );
   }
 
-  const data = (await response.json()) as CheckInMutationResponse;
-  return {
-    registration: {
-      ...mapCheckInData(data.registration ?? {}),
-      stampProgress: data.stamp_progress,
-    },
-    alreadyCheckedIn: data.already_checked_in ?? false,
-  };
+  return (await response.json()) as CheckInOut;
 }
 
-export interface GuestRegistration {
-  orderAnswers?: OrderAnswer[];
-  id: string;
-  eventTitle: string;
-  eventDate?: string;
-  checkInToken: string;
-  guestCount: number;
-  status: RegistrationStatus;
-  paymentStatus: PaymentStatus;
-  checkedIn: boolean;
-  checkedInAt?: string;
-  strapIssued: boolean;
-  createdAt: string;
-  orderItems: {
-    productId: string;
-    name: string;
-    quantity: number;
-    deliveredQuantity: number;
-    remainingQuantity: number;
-    price: number;
-    category: string;
-    delivered: boolean;
-    visible: boolean;
-  }[];
-}
+export type GuestRegistration = RegistrationGuestOut;
+type GuestRegistrationResponse = RegistrationGuestOut;
+type GuestOrderItemResponse = OrderItemOut;
 
-interface GuestOrderItemResponse {
-  product_id: string;
-  name: string;
-  quantity: number;
-  delivered_quantity?: number | null;
-  price: number;
-  category: string;
-  delivered: boolean;
-  visible?: boolean;
-}
-
-interface GuestRegistrationResponse {
-  order_answers?: unknown;
-  id: string;
-  event_title: string;
-  event_date?: string | null;
-  check_in_token: string;
-  guest_count: number;
-  status: RegistrationStatus;
-  payment_status: PaymentStatus;
-  checked_in: boolean;
-  checked_in_at?: string | null;
-  strap_issued: boolean;
-  created_at: string;
-  order_items: GuestOrderItemResponse[];
-}
-
-export interface RegistrationLookupRequestAcceptedResponse {
-  ok: boolean;
-  delivery_mode: "email";
-  expires_in_minutes: number;
-}
+export type RegistrationLookupRequestAcceptedResponse =
+  import("@/api-types").RegistrationLookupRequestAccepted;
 
 export class RegistrationLookupError extends Error {
   code: "invalid_email" | "invalid_token" | "request_failed";
@@ -308,37 +161,7 @@ function parseRegistrationLookupRequestAccepted(
   ) {
     throw new Error("Invalid registration lookup request response.");
   }
-  return {
-    ok: value.ok,
-    delivery_mode: value.delivery_mode,
-    expires_in_minutes: value.expires_in_minutes,
-  };
-}
-
-function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistration[] {
-  return data.map((registration) => ({
-    id: registration.id,
-    eventTitle: registration.event_title,
-    orderAnswers: parseOrderAnswers(registration.order_answers),
-    eventDate: registration.event_date ?? undefined,
-    checkInToken: registration.check_in_token,
-    guestCount: registration.guest_count,
-    status: registration.status as RegistrationStatus,
-    paymentStatus: registration.payment_status as PaymentStatus,
-    checkedIn: registration.checked_in,
-    checkedInAt: registration.checked_in_at ?? undefined,
-    strapIssued: registration.strap_issued,
-    createdAt: registration.created_at,
-    orderItems: registration.order_items.map((item) => ({
-      ...normalizeDeliveredQuantities(item),
-      productId: item.product_id,
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      category: item.category,
-      visible: item.visible !== false,
-    })),
-  }));
+  return value as RegistrationLookupRequestAcceptedResponse;
 }
 
 async function parseRegistrationLookupResponse(response: Response): Promise<GuestRegistration[]> {
@@ -350,7 +173,7 @@ async function parseRegistrationLookupResponse(response: Response): Promise<Gues
   }
 
   const data = parseGuestRegistrationsResponse(await response.json());
-  return mapGuestRegistrations(data);
+  return data;
 }
 
 export async function fetchOwnedRegistrations(accessToken: string): Promise<GuestRegistration[]> {
@@ -457,19 +280,12 @@ export async function fetchOwnedRegistrationsViaSession(): Promise<GuestRegistra
   return parseRegistrationLookupResponse(response);
 }
 
-export interface VisitorSessionStatus {
-  authenticated: boolean;
-  expiresAt: string | null;
-}
+export type VisitorSessionStatus = ApiVisitorSessionStatus;
 
 export async function getVisitorSessionStatus(): Promise<VisitorSessionStatus> {
   const response = await fetch("/api/visitor-sessions/status");
-  if (!response.ok) return { authenticated: false, expiresAt: null };
-  const data = (await response.json()) as { authenticated?: unknown; expires_at?: unknown };
-  return {
-    authenticated: data.authenticated === true,
-    expiresAt: typeof data.expires_at === "string" ? data.expires_at : null,
-  };
+  if (!response.ok) return { authenticated: false, expires_at: null };
+  return (await response.json()) as VisitorSessionStatus;
 }
 
 export async function signOutVisitorSession(): Promise<void> {
@@ -491,7 +307,7 @@ export class RegistrationSubmitError extends Error {
 export async function submitRegistration(
   payload: RegistrationFormData,
   accessToken?: string | null,
-): Promise<{ id: string }> {
+): Promise<import("@/api-types").RegistrationPublicOut> {
   if (!navigator.onLine) throw new RegistrationSubmitError(m.public_offline_write());
   const response = await fetch("/api/registrations", {
     method: "POST",
@@ -509,7 +325,7 @@ export async function submitRegistration(
       // The server resolves name/price/category from the event's real products —
       // see OrderItemRequest in the backend schema — so only these two are sent.
       order_items: payload.orderItems.map((order) => ({
-        product_id: order.productId,
+        product_id: order.product_id,
         quantity: order.quantity,
       })),
       notes: payload.notes,
@@ -528,9 +344,9 @@ export async function submitRegistration(
       ),
     );
   }
-  const data = (await response.json()) as { id?: unknown };
+  const data = (await response.json()) as import("@/api-types").RegistrationPublicOut;
   if (typeof data.id !== "string") throw new RegistrationSubmitError(m.registration_error());
-  return { id: data.id };
+  return data;
 }
 
 export interface WaitlistJoinPayload {

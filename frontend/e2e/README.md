@@ -181,3 +181,18 @@ of MSW. One online visit warms the shell and public information; Playwright then
 sets the context offline and reloads, checking FAQ, schedule, venue, contact,
 cache timestamp and refused form submission. The production-worker CI job runs
 this alongside signage playback.
+
+### API fixture contracts
+
+Browser specs are included in `pnpm typecheck`. Type successful MSW responses with
+an explicit generated response type from `@/api-types`; retain module types when
+loading MSW through a dynamic browser import. Unit-test handlers use
+`jsonResponse<GeneratedResponse>` from `@/mocks/response`, which requires an
+explicit type argument. Include the API's required metadata and nested fields.
+
+Deliberately malformed, legacy-incomplete, error and unreachable control fixtures
+may use raw `HttpResponse.json` with an inline `Fixture exception:` comment that
+explains the particular exception. `tests/types/fixtureContracts.test.ts` checks
+that test-local response calls are typed or explicitly exceptional; compile-only
+negative fixtures ensure API drift is rejected. Keep assertions and meaningful
+fixture values when completing a response shape.

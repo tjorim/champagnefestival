@@ -8,10 +8,12 @@ async function seedPlan(page: Page, tableCount = 24) {
     const browserPath = "/src/mocks/browser.ts";
     const httpPath = "/node_modules/msw/lib/http/index.js";
     const { worker } = await import(/* @vite-ignore */ browserPath);
-    const { http, HttpResponse } = await import(/* @vite-ignore */ httpPath);
+    const { http, HttpResponse }: typeof import("msw/http") = await import(
+      /* @vite-ignore */ httpPath
+    );
     worker.use(
       http.get("/api/venue-plan/:edition", () =>
-        HttpResponse.json({
+        HttpResponse.json<import("@/api-types").VenuePlanOut>({
           edition_id: "test",
           layouts: [
             {
@@ -29,6 +31,7 @@ async function seedPlan(page: Page, tableCount = 24) {
               },
               areas: [],
               tables: Array.from({ length: count }, (_, i) => ({
+                table_type_id: "round",
                 id: `table-${i + 1}`,
                 name: `Table ${i + 1}`,
                 capacity: 8,
@@ -51,7 +54,7 @@ async function seedPlan(page: Page, tableCount = 24) {
   });
 }
 
-for (const width of [390, 1280]) {
+for (const width of [390, 1280] as const) {
   test(`dense plan navigation at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 800 });
     await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
@@ -82,7 +85,7 @@ for (const width of [390, 1280]) {
   });
 }
 
-for (const zoom of [1.25, 1.5, 2]) {
+for (const zoom of [1.25, 1.5, 2] as const) {
   test(`dense plan at browser zoom ${zoom * 100}%`, async ({ baseURL }) => {
     const { chromium } = await import("@playwright/test");
     const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");
@@ -151,7 +154,7 @@ for (const scenario of [
   { width: 1280, height: 600, tables: 1 },
   { width: 1366, height: 568, tables: 24 },
   { width: 1440, height: 650, tables: 96 },
-]) {
+] as const) {
   test(`reduced laptop height and wheel navigation: ${scenario.width}x${scenario.height}, ${scenario.tables} tables`, async ({
     page,
   }) => {

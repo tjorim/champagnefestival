@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { afterEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
@@ -15,7 +16,7 @@ import {
   resetAdminTablesCollection,
 } from "@/state/adminTablesCollection";
 import { seedTables } from "@/mocks/data/venue";
-import type { FloorTableRecord } from "@/types/admin";
+import type { FloorTableRecord } from "@/api-types";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { createTable } from "@/utils/adminFetch";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -61,8 +62,8 @@ describe("admin tables collection", () => {
 
     expect(collection.size).toBe(seedTables.length);
     const row = collection.get("table-01") as FloorTableRecord;
-    expect(row).toMatchObject({ name: "T1", layoutId: "layout-01", tableTypeId: "tt-01" });
-    expect(row).not.toHaveProperty("registrationIds");
+    expect(row).toMatchObject({ name: "T1", layout_id: "layout-01", table_type_id: "tt-01" });
+    expect(row).not.toHaveProperty("registration_ids");
   });
 
   it("applies an update optimistically, sends only the changed fields and refetches", async () => {
@@ -72,10 +73,10 @@ describe("admin tables collection", () => {
       http.put("/api/tables/:id", async ({ request, params }) => {
         bodies.push((await request.json()) as Record<string, unknown>);
         const current = seedTables.find((t) => t.id === params.id)!;
-        return HttpResponse.json({ ...current, ...bodies.at(-1) });
+        return jsonResponse<import("@/api-types").TableOut>({ ...current, ...bodies.at(-1) });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(
+        jsonResponse<import("@/api-types").TableOut[]>(
           seedTables.map((t) => (t.id === "table-01" ? { ...t, x: 61, y: 72 } : t)),
         ),
       ),
@@ -99,7 +100,7 @@ describe("admin tables collection", () => {
     server.use(
       http.put("/api/tables/:id", async ({ request }) => {
         bodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json(seedTables[0]);
+        return jsonResponse<import("@/api-types").TableOut>(seedTables[0]!);
       }),
     );
 
@@ -110,7 +111,7 @@ describe("admin tables collection", () => {
       .when("settled");
     await collection
       .update("table-01", (draft) => {
-        draft.tableTypeId = "tt-02";
+        draft.table_type_id = "tt-02";
       })
       .when("settled");
     await collection
@@ -125,7 +126,14 @@ describe("admin tables collection", () => {
   it("rolls the optimistic update back when the server rejects it", async () => {
     const { collection } = await createLoadedCollection();
     server.use(
-      http.put("/api/tables/:id", () => HttpResponse.json({ detail: "nope" }, { status: 500 })),
+      http.put("/api/tables/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "nope",
+          },
+          { status: 500 },
+        ),
+      ),
     );
 
     const tx = collection.update("table-01", (draft) => {
@@ -142,8 +150,8 @@ describe("admin tables collection", () => {
 
     const created = await createTable(authHeaders, {
       name: "T9",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
     await collection.utils.writeUpsert(created);
 
@@ -160,7 +168,9 @@ describe("admin tables collection", () => {
         return new HttpResponse(null, { status: 204 });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+        jsonResponse<import("@/api-types").TableOut[]>(
+          seedTables.filter((t) => t.id !== "table-02"),
+        ),
       ),
     );
 
@@ -178,7 +188,12 @@ describe("admin tables collection", () => {
     const { collection } = await createLoadedCollection();
     server.use(
       http.delete("/api/tables/:id", () =>
-        HttpResponse.json({ detail: "allocated" }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "allocated",
+          },
+          { status: 409 },
+        ),
       ),
     );
 
@@ -196,14 +211,17 @@ describe("admin tables collection", () => {
     const inLayout = seedTables.filter((t) => t.layout_id === layoutId);
 
     const restored: FloorTableRecord = {
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+      event_id: "event-1",
       id: "table-restored",
       name: "Restored",
       capacity: 6,
       x: 5,
       y: 5,
-      tableTypeId: "tt-01",
+      table_type_id: "tt-01",
       rotation: 0,
-      layoutId: layoutId as string,
+      layout_id: layoutId as string,
     };
     await replaceAdminTablesForLayout(collection, layoutId as string, [restored]);
     expect(collection.has("table-restored")).toBe(true);
@@ -216,7 +234,11 @@ describe("admin tables collection", () => {
 
   it("refetches the server state on demand", async () => {
     const { collection } = await createLoadedCollection();
-    server.use(http.get("/api/tables", () => HttpResponse.json(seedTables.slice(0, 1))));
+    server.use(
+      http.get("/api/tables", () =>
+        jsonResponse<import("@/api-types").TableOut[]>(seedTables.slice(0, 1)),
+      ),
+    );
 
     await refetchAdminTables(collection);
 
@@ -246,8 +268,8 @@ describe("admin tables writes after an API call", () => {
 
     await addAdminTable(collection, authHeaders, {
       name: "T9",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
 
     expect(Array.from(collection.values()).some((t) => t.name === "T9")).toBe(true);
@@ -259,8 +281,22 @@ describe("admin tables writes after an API call", () => {
     server.use(
       http.post("/api/tables", async () => {
         await gate;
-        return HttpResponse.json(
-          { ...seedTables[0], id: "late-table", name: "Late" },
+        return jsonResponse<import("@/api-types").TableOut>(
+          {
+            event_id: "",
+            capacity: 0,
+            x: 0,
+            y: 0,
+            table_type_id: "",
+            rotation: 0,
+            layout_id: "",
+            registration_ids: [],
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            ...seedTables[0],
+            id: "late-table",
+            name: "Late",
+          },
           { status: 201 },
         );
       }),
@@ -268,8 +304,8 @@ describe("admin tables writes after an API call", () => {
 
     const add = addAdminTable(collection, authHeaders, {
       name: "Late",
-      layoutId: "layout-01",
-      tableTypeId: "tt-01",
+      layout_id: "layout-01",
+      table_type_id: "tt-01",
     });
     await resetAdminTablesCollection(collection);
     release();
@@ -287,7 +323,9 @@ describe("admin tables writes after an API call", () => {
         return new HttpResponse(null, { status: 204 });
       }),
       http.get("/api/tables", () =>
-        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+        jsonResponse<import("@/api-types").TableOut[]>(
+          seedTables.filter((t) => t.id !== "table-02"),
+        ),
       ),
     );
 
@@ -328,14 +366,17 @@ describe("admin tables writes after an API call", () => {
 
 function createRow(id: string): FloorTableRecord {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id,
     name: id,
     capacity: 6,
     x: 1,
     y: 1,
-    tableTypeId: "tt-01",
+    table_type_id: "tt-01",
     rotation: 0,
-    layoutId: "layout-01",
+    layout_id: "layout-01",
   };
 }
 
@@ -372,7 +413,21 @@ describe("admin tables live events", () => {
     cleanups.push(registerAdminTablesCollection(collection));
     server.use(
       http.get("/api/tables/:id", () =>
-        HttpResponse.json({ ...seedTables[0], name: "Renamed elsewhere" }),
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Renamed elsewhere",
+        }),
       ),
     );
 
@@ -399,7 +454,10 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", () => {
         fetched = true;
-        return HttpResponse.json(null, { status: 404 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        );
       }),
     );
 
@@ -413,14 +471,46 @@ describe("admin tables live events", () => {
     const { collection } = await createLoadedCollection();
     cleanups.push(registerAdminTablesCollection(collection));
     server.use(
-      http.get("/api/tables/:id", () => HttpResponse.json({ ...seedTables[0], name: "Newest" })),
+      http.get("/api/tables/:id", () =>
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Newest",
+        }),
+      ),
     );
     const newest = seatingEnvelope();
     const stale = seatingEnvelope({ ts: new Date(Date.parse(newest.ts) - 5000).toISOString() });
 
     await patchAdminTableLiveEvent(newest, authHeaders);
     server.use(
-      http.get("/api/tables/:id", () => HttpResponse.json({ ...seedTables[0], name: "Stale" })),
+      http.get("/api/tables/:id", () =>
+        jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Stale",
+        }),
+      ),
     );
     await patchAdminTableLiveEvent(stale, authHeaders);
 
@@ -437,7 +527,21 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", async () => {
         await gate;
-        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+        return jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Late response",
+        });
       }),
     );
 
@@ -461,7 +565,21 @@ describe("admin tables live events", () => {
     server.use(
       http.get("/api/tables/:id", async () => {
         await gate;
-        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+        return jsonResponse<import("@/api-types").TableOut>({
+          event_id: "",
+          id: "",
+          capacity: 0,
+          x: 0,
+          y: 0,
+          table_type_id: "",
+          rotation: 0,
+          layout_id: "",
+          registration_ids: [],
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...seedTables[0],
+          name: "Late response",
+        });
       }),
     );
 

@@ -61,7 +61,7 @@ export default function MembersManagement({
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<{ member_limit: number | null }>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").AppSettingsOut>(
         "/api/settings",
         { headers: authHeaders() },
         m.admin_error_load_settings(),
@@ -136,17 +136,17 @@ export default function MembersManagement({
             <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
           ),
         }),
-        columnHelper.accessor("lastAttended", {
-          id: "lastAttended",
+        columnHelper.accessor("last_attended", {
+          id: "last_attended",
           header: m.admin_members_last_attended(),
           cell: ({ row }) => (
             <span>
-              {row.original.lastAttended ?? "—"}
-              {row.original.inactivityHighlight && !row.original.inactivityExempt && (
+              {row.original.last_attended ?? "—"}
+              {row.original.inactivity_highlight && !row.original.inactivity_exempt && (
                 <span className="ms-2 text-warning">{m.admin_members_inactivity_warning()}</span>
               )}
-              {row.original.inactivityExempt && (
-                <span className="ms-2 text-subtle" title={row.original.inactivityExemptNote}>
+              {row.original.inactivity_exempt && (
+                <span className="ms-2 text-subtle" title={row.original.inactivity_exempt_note}>
                   {m.admin_members_inactivity_exempt()}
                 </span>
               )}
@@ -173,7 +173,7 @@ export default function MembersManagement({
           enableSorting: false,
           cell: ({ row }) => {
             const notes = row.original.notes;
-            const preview = truncateText(notes);
+            const preview = truncateText(notes ?? "");
             return (
               <span className="text-sm text-subtle" title={notes || undefined}>
                 {preview || "—"}
@@ -181,7 +181,7 @@ export default function MembersManagement({
             );
           },
         }),
-        columnHelper.accessor((row) => row.registrationCount ?? 0, {
+        columnHelper.accessor((row) => row.registration_count ?? 0, {
           id: "registrations",
           header: m.admin_registrations_tab(),
           cell: ({ getValue }) => <span className="text-sm">{String(getValue())}</span>,
@@ -225,8 +225,8 @@ export default function MembersManagement({
                       setEmailDraft(
                         buildMemberEmailDraft(
                           member.name,
-                          member.email,
-                          member.preferredLanguage ?? "nl",
+                          member.email ?? "",
+                          member.preferred_language ?? "nl",
                         ),
                       )
                     }
@@ -335,7 +335,7 @@ export default function MembersManagement({
           <PeopleDataTable
             id="members"
             getRowClassName={(person) =>
-              person.inactivityHighlight && !person.inactivityExempt ? "bg-warning/10" : undefined
+              person.inactivity_highlight && !person.inactivity_exempt ? "bg-warning/10" : undefined
             }
             authHeaders={authHeaders}
             columns={columns}

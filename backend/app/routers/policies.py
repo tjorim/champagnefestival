@@ -4,6 +4,8 @@ Business logic lives in ``app.services.policies_service``; this router is a thin
 adapter that translates ``ServiceError`` into ``HTTPException`` (see #944).
 """
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +40,7 @@ async def get_current(
     policy_key: str,
     locale: FaqLocale = Query(default="nl"),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> PolicyPublicOut:
     """Public: the latest published version, rendered for `locale`.
 
     A locale without content gets Dutch instead, and
@@ -46,25 +48,25 @@ async def get_current(
     """
     policy, version = await _call(service.get_published(db, policy_key=policy_key))
     title, content, language = service.resolve_published(policy, version, locale)
-    return {
-        "key": policy.key,
-        "title": title,
-        "locale": language,
-        "html": render_markdown(content),
-        "version_number": version.version_number,
-        "published_at": version.published_at,
-    }
+    return PolicyPublicOut(
+        key=policy.key,
+        title=title,
+        locale=cast(FaqLocale, language),
+        html=render_markdown(content),
+        version_number=version.version_number,
+        published_at=version.published_at,
+    )
 
 
 @router.post("/render", response_model=PolicyRenderOut, dependencies=[Depends(require_admin)])
-async def render_preview(body: PolicyRenderRequest) -> dict:
+async def render_preview(body: PolicyRenderRequest) -> PolicyRenderOut:
     """Admin: render not-yet-saved Markdown with the exact same renderer/sanitizer
     used for public output, for live preview while editing a draft."""
-    return {"html": render_markdown(body.markdown)}
+    return PolicyRenderOut(html=render_markdown(body.markdown))
 
 
 @router.get("", response_model=list[PolicyOut], dependencies=[Depends(require_admin)])
-async def list_policies(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_policies(db: AsyncSession = Depends(get_db)) -> list[PolicyOut]:
     return await service.list_policies(db)
 
 

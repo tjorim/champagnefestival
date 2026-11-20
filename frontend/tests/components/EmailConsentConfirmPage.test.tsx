@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -42,7 +43,7 @@ describe("EmailConsentConfirmPage", () => {
     server.use(
       http.post("/api/email-consents/confirm", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").EmailConsentConfirmedOut>({
           category_key: "new_editions",
           category_name: "New festival editions",
         });
@@ -66,7 +67,10 @@ describe("EmailConsentConfirmPage", () => {
     server.use(
       http.post("/api/email-consents/confirm", () =>
         HttpResponse.json(
-          { detail: "Invalid or expired confirmation link.", code: "consent_confirmation_invalid" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Invalid or expired confirmation link.",
+            code: "consent_confirmation_invalid",
+          },
           { status: 404 },
         ),
       ),

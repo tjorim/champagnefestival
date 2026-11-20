@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.models import IntegrationClient
+from app.schemas import IntegrationClientOut
 from app.services import integration_clients_service as ics
 from app.services.errors import ConflictError, ValidationFailedError
 
@@ -38,19 +39,20 @@ def test_generated_raw_key_has_prefix_and_high_entropy():
 
 
 @pytest.mark.anyio
-async def test_create_integration_client_returns_dict_and_raw_key(db_session):
+async def test_create_integration_client_returns_model_and_raw_key(db_session):
     client_dict, raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="Home Assistant", allowed_role="volunteer"
     )
-    assert client_dict["name"] == "Home Assistant"
-    assert client_dict["allowed_role"] == "volunteer"
-    assert client_dict["is_active"] is True
-    assert client_dict["created_by_actor"] == "admin-1"
+    assert isinstance(client_dict, IntegrationClientOut)
+    assert client_dict.name == "Home Assistant"
+    assert client_dict.allowed_role == "volunteer"
+    assert client_dict.is_active is True
+    assert client_dict.created_by_actor == "admin-1"
     assert raw_key.startswith(ics.TOKEN_PREFIX)
-    assert client_dict["key_preview"] == raw_key[-8:]
+    assert client_dict.key_preview == raw_key[-8:]
     # The raw key itself is never persisted anywhere retrievable.
-    assert "key" not in client_dict
-    assert "key_hash" not in client_dict
+    assert "key" not in client_dict.model_dump()
+    assert "key_hash" not in client_dict.model_dump()
 
 
 @pytest.mark.anyio
@@ -99,7 +101,7 @@ async def test_create_integration_client_allows_admin_creator_to_mint_volunteer_
     client_dict, _raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    assert client_dict["allowed_role"] == "volunteer"
+    assert client_dict.allowed_role == "volunteer"
 
 
 @pytest.mark.anyio
@@ -107,7 +109,7 @@ async def test_create_integration_client_allows_admin_creator_to_mint_admin_tier
     client_dict, _raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="admin"
     )
-    assert client_dict["allowed_role"] == "admin"
+    assert client_dict.allowed_role == "admin"
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +142,7 @@ async def test_authenticate_rejects_revoked_client(db_session):
     client_dict, raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
 
     assert await ics.authenticate_integration_client(db_session, raw_key) is None
 
@@ -150,12 +152,12 @@ async def test_authenticate_rejects_key_after_rotation(db_session):
     client_dict, old_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    new_dict, new_key = await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    new_dict, new_key = await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
 
     assert await ics.authenticate_integration_client(db_session, old_key) is None
     assert await ics.authenticate_integration_client(db_session, new_key) is not None
-    assert new_dict["key_preview"] == new_key[-8:]
-    assert new_dict["key_preview"] != client_dict["key_preview"]
+    assert new_dict.key_preview == new_key[-8:]
+    assert new_dict.key_preview != client_dict.key_preview
 
 
 @pytest.mark.anyio
@@ -163,7 +165,7 @@ async def test_authenticate_updates_last_used_at(db_session):
     client_dict, raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    assert client_dict["last_used_at"] is None
+    assert client_dict.last_used_at is None
 
     client = await ics.authenticate_integration_client(db_session, raw_key)
     assert client is not None
@@ -196,8 +198,8 @@ async def test_check_rate_limit_allows_up_to_the_configured_limit(db_session):
         db_session, actor="admin", creator_role="admin", name="rl-1", allowed_role="volunteer", rate_limit_per_minute=5
     )
     for _ in range(5):
-        assert await ics.check_rate_limit(db_session, client_dict["id"]) is True
-    assert await ics.check_rate_limit(db_session, client_dict["id"]) is False
+        assert await ics.check_rate_limit(db_session, client_dict.id) is True
+    assert await ics.check_rate_limit(db_session, client_dict.id) is False
 
 
 @pytest.mark.anyio
@@ -205,11 +207,11 @@ async def test_check_rate_limit_recovers_after_window_expires(db_session):
     client_dict, _ = await ics.create_integration_client(
         db_session, actor="admin", creator_role="admin", name="rl-2", allowed_role="volunteer", rate_limit_per_minute=1
     )
-    client = await db_session.get(IntegrationClient, client_dict["id"])
+    client = await db_session.get(IntegrationClient, client_dict.id)
     client.rate_limit_window_started_at = datetime.now(UTC) - timedelta(minutes=2)
     client.rate_limit_window_count = 1
     await db_session.commit()
-    assert await ics.check_rate_limit(db_session, client_dict["id"]) is True
+    assert await ics.check_rate_limit(db_session, client_dict.id) is True
 
 
 @pytest.mark.anyio
@@ -238,9 +240,9 @@ async def test_revoke_sets_inactive_and_revoked_at(db_session):
     client_dict, _raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    revoked = await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
-    assert revoked["is_active"] is False
-    assert revoked["revoked_at"] is not None
+    revoked = await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
+    assert revoked.is_active is False
+    assert revoked.revoked_at is not None
 
 
 @pytest.mark.anyio
@@ -248,9 +250,9 @@ async def test_revoke_already_revoked_raises_conflict(db_session):
     client_dict, _raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
     with pytest.raises(ConflictError, match="already revoked"):
-        await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+        await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
 
 
 @pytest.mark.anyio
@@ -258,9 +260,9 @@ async def test_rotate_revoked_client_raises_conflict(db_session):
     client_dict, _raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
     with pytest.raises(ConflictError, match="revoked"):
-        await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+        await ics.rotate_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
 
 
 @pytest.mark.anyio
@@ -278,5 +280,5 @@ async def test_list_integration_clients_never_exposes_key_hash(db_session):
     )
     listed = await ics.list_integration_clients(db_session)
     assert len(listed) == 1
-    assert "key_hash" not in listed[0]
-    assert "key" not in listed[0]
+    assert "key_hash" not in listed[0].model_dump()
+    assert "key" not in listed[0].model_dump()

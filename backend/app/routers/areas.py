@@ -27,7 +27,7 @@ async def create_area(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> AreaOut:
     try:
         return await areas_service.create_area(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -40,12 +40,12 @@ async def create_area(
 async def list_areas(
     layout_id: str | None = Query(default=None, description="Filter by layout ID"),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[AreaOut]:
     return await areas_service.list_areas(db, layout_id)
 
 
 @router.get("/{area_id}", response_model=AreaOut)
-async def get_area(area_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_area(area_id: str, db: AsyncSession = Depends(get_db)) -> AreaOut:
     try:
         return await areas_service.get_area(db, area_id)
     except ServiceError as exc:
@@ -59,7 +59,7 @@ async def update_area(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> AreaOut:
     try:
         return await areas_service.update_area(
             db, actor=actor, area_id=area_id, body=body, request_id=getattr(request.state, "request_id", None)

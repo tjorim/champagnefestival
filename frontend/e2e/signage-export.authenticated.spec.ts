@@ -90,7 +90,7 @@ test("exports rendered PNGs and plays an extracted bundle offline using the syst
     expect(JSON.parse(strFromU8(files["playlist.json"]!)).epoch).toBe(playlist.epoch);
     await mkdir(join(folder, "slides"));
     for (const [name, bytes] of Object.entries(files)) await writeFile(join(folder, name), bytes);
-    for (const name of ["slides/001.png", "slides/002.png"]) {
+    for (const name of ["slides/001.png", "slides/002.png"] as const) {
       const png = Buffer.from(files[name]!);
       expect(png.readUInt32BE(16)).toBe(1920);
       expect(png.readUInt32BE(20)).toBe(1080);

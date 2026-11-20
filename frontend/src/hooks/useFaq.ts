@@ -1,3 +1,4 @@
+import type { FaqItemPublicOut } from "@/api-types";
 /**
  * useFaq — active FAQ items for the public FAQ section, sourced from the
  * admin-editable /api/faq/active endpoint rather than hardcoded per-locale
@@ -10,11 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getLocale } from "@/paraglide/runtime";
 import { queryKeys } from "@/utils/queryKeys";
 
-export interface PublicFaqItem {
-  id: string;
-  question: string;
-  answer: string;
-}
+export type PublicFaqItem = FaqItemPublicOut;
 
 export async function fetchFaqItems(locale: string): Promise<PublicFaqItem[]> {
   const res = await fetch(`/api/faq/active?locale=${encodeURIComponent(locale)}`);

@@ -32,7 +32,18 @@ from app.models import (
     Table,
     TableType,
 )
-from app.schemas import CURRENT_REVISION_REF, LayoutCopyCreate, LayoutCreate, LayoutRevisionSaveRequest
+from app.schemas import (
+    CURRENT_REVISION_REF,
+    LayoutBulkOut,
+    LayoutCopyCreate,
+    LayoutCreate,
+    LayoutOut,
+    LayoutRestorePreview,
+    LayoutRevisionDiff,
+    LayoutRevisionOut,
+    LayoutRevisionSaveRequest,
+    LayoutWithTablesOut,
+)
 from app.services.allocations_service import registration_ids_by_table
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.idempotency import (
@@ -41,7 +52,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import area_to_dict, layout_to_dict, make_id, table_to_dict
+from app.utils import area_to_out, layout_to_out, make_id, table_to_out
 
 _BULK_SCOPE = "layouts.bulk_create"
 
@@ -151,8 +162,8 @@ async def resolve_layout_event(db: AsyncSession, body: LayoutCreate) -> dt_date:
     return event.date
 
 
-async def layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict]:
-    return [layout_to_dict(layout, date=layout.event.date) for layout in layouts]
+async def layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[LayoutOut]:
+    return [layout_to_out(layout, date=layout.event.date) for layout in layouts]
 
 
 async def _reject_if_duplicate(db: AsyncSession, *, room_id: str, event_id: str) -> None:
@@ -169,7 +180,7 @@ async def create_layout(
     actor: str,
     body: LayoutCreate,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     resolved_date = await resolve_layout_event(db, body)
 
     # Lock the room row so a concurrent room deletion (which refuses to proceed
@@ -204,7 +215,7 @@ async def create_layout(
     )
     await db.commit()
     await db.refresh(lay)
-    return layout_to_dict(lay, date=resolved_date)
+    return layout_to_out(lay, date=resolved_date)
 
 
 async def bulk_create_layouts(
@@ -271,7 +282,7 @@ async def bulk_create_layouts(
             details={"room_id": lay.room_id, "event_id": lay.event_id, "bulk": True},
         )
 
-    # layout_to_dict() reads edition_id via lay.event, which flush() does not
+    # layout_to_out() reads edition_id via lay.event, which flush() does not
     # populate on these freshly constructed rows — reload with it so the
     # hybrid property doesn't need an implicit (and, under AsyncSession,
     # unsafe) lazy load during serialization.
@@ -280,11 +291,16 @@ async def bulk_create_layouts(
         for lay in (await db.execute(select(Layout).where(Layout.id.in_([lay.id for lay in rows])))).scalars().all()
     }
     response = {
-        "items": [layout_to_dict(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
+        "items": [layout_to_out(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
     }
     if idempotency_key:
         record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
+            db,
+            scope=_BULK_SCOPE,
+            key=idempotency_key,
+            actor=actor,
+            request_hash=request_hash,
+            response_body=LayoutBulkOut.model_validate(response).model_dump(),
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
@@ -297,7 +313,7 @@ async def copy_layout(
     source_layout_id: str,
     body: LayoutCopyCreate,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     source = await db.get(Layout, source_layout_id)
     if source is None:
         raise NotFoundError(f"Layout '{source_layout_id}' not found.")
@@ -413,7 +429,7 @@ async def copy_layout(
     )
     await db.commit()
     await db.refresh(cloned)
-    return layout_to_dict(cloned, date=resolved_date)
+    return layout_to_out(cloned, date=resolved_date)
 
 
 async def list_layouts(
@@ -424,7 +440,7 @@ async def list_layouts(
     edition_id: str | None = None,
     room_id: str | None = None,
     event_id: str | None = None,
-) -> list[dict]:
+) -> list[LayoutOut]:
     stmt = select(Layout).order_by(Layout.created_at, Layout.id).offset(offset)
     if edition_id is not None:
         stmt = stmt.where(Layout.edition_id == edition_id)
@@ -439,7 +455,7 @@ async def list_layouts(
     return await layout_payloads(db, layouts)
 
 
-async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool = False) -> dict:
+async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool = False) -> LayoutOut:
     if include_tables:
         result = await db.execute(
             select(Layout)
@@ -456,8 +472,11 @@ async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool =
     if include_tables:
         table_ids = [t.id for t in lay.tables]
         table_res_map = await registration_ids_by_table(db, table_ids)
-        payload["tables"] = [table_to_dict(t, table_res_map.get(t.id, [])) for t in lay.tables]
-        payload["areas"] = [area_to_dict(a) for a in lay.areas]
+        return LayoutWithTablesOut(
+            **payload.model_dump(),
+            tables=[table_to_out(t, table_res_map.get(t.id, [])) for t in lay.tables],
+            areas=[area_to_out(a) for a in lay.areas],
+        )
     return payload
 
 
@@ -491,17 +510,17 @@ async def delete_layout(db: AsyncSession, *, actor: str, layout_id: str, request
 # ---------------------------------------------------------------------------
 
 
-def _revision_to_dict(rev: LayoutRevision) -> dict:
-    return {
-        "id": rev.id,
-        "layout_id": rev.layout_id,
-        "revision_number": rev.revision_number,
-        "label": rev.label,
-        "change_note": rev.change_note,
-        "created_by": rev.created_by,
-        "created_at": rev.created_at,
-        "snapshot": rev.snapshot,
-    }
+def _revision_to_out(rev: LayoutRevision) -> LayoutRevisionOut:
+    return LayoutRevisionOut(
+        id=rev.id,
+        layout_id=rev.layout_id,
+        revision_number=rev.revision_number,
+        label=rev.label,
+        change_note=rev.change_note,
+        created_by=rev.created_by,
+        created_at=rev.created_at,
+        snapshot=rev.snapshot,
+    )
 
 
 async def _build_snapshot(db: AsyncSession, layout: Layout) -> dict:
@@ -569,7 +588,7 @@ async def save_layout_revision(
     layout_id: str,
     body: LayoutRevisionSaveRequest,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutRevisionOut:
     layout = await db.get(Layout, layout_id)
     if layout is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
@@ -606,10 +625,10 @@ async def save_layout_revision(
     )
     await db.commit()
     await db.refresh(revision)
-    return _revision_to_dict(revision)
+    return _revision_to_out(revision)
 
 
-async def list_layout_revisions(db: AsyncSession, layout_id: str) -> list[dict]:
+async def list_layout_revisions(db: AsyncSession, layout_id: str) -> list[LayoutRevisionOut]:
     if await db.get(Layout, layout_id) is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
     result = await db.execute(
@@ -617,7 +636,7 @@ async def list_layout_revisions(db: AsyncSession, layout_id: str) -> list[dict]:
         .where(LayoutRevision.layout_id == layout_id)
         .order_by(LayoutRevision.revision_number.desc())
     )
-    return [_revision_to_dict(r) for r in result.scalars().all()]
+    return [_revision_to_out(r) for r in result.scalars().all()]
 
 
 async def _get_revision(db: AsyncSession, layout_id: str, revision_number: int) -> LayoutRevision:
@@ -633,8 +652,8 @@ async def _get_revision(db: AsyncSession, layout_id: str, revision_number: int) 
     return rev
 
 
-async def get_layout_revision(db: AsyncSession, layout_id: str, revision_number: int) -> dict:
-    return _revision_to_dict(await _get_revision(db, layout_id, revision_number))
+async def get_layout_revision(db: AsyncSession, layout_id: str, revision_number: int) -> LayoutRevisionOut:
+    return _revision_to_out(await _get_revision(db, layout_id, revision_number))
 
 
 async def _resolve_snapshot(db: AsyncSession, layout_id: str, ref: str) -> dict:
@@ -677,7 +696,7 @@ def _diff_objects(before: list[dict], after: list[dict], fields: tuple[str, ...]
     return added, removed, changed
 
 
-async def compare_layout_revisions(db: AsyncSession, layout_id: str, from_ref: str, to_ref: str) -> dict:
+async def compare_layout_revisions(db: AsyncSession, layout_id: str, from_ref: str, to_ref: str) -> LayoutRevisionDiff:
     if await db.get(Layout, layout_id) is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
     from_snapshot = await _resolve_snapshot(db, layout_id, from_ref)
@@ -689,17 +708,17 @@ async def compare_layout_revisions(db: AsyncSession, layout_id: str, from_ref: s
     added_areas, removed_areas, changed_areas = _diff_objects(
         from_snapshot["areas"], to_snapshot["areas"], _AREA_DIFF_FIELDS
     )
-    return {
-        "layout_id": layout_id,
-        "from_ref": from_ref,
-        "to_ref": to_ref,
-        "added_tables": added_tables,
-        "removed_tables": removed_tables,
-        "changed_tables": changed_tables,
-        "added_areas": added_areas,
-        "removed_areas": removed_areas,
-        "changed_areas": changed_areas,
-    }
+    return LayoutRevisionDiff(
+        layout_id=layout_id,
+        from_ref=from_ref,
+        to_ref=to_ref,
+        added_tables=added_tables,
+        removed_tables=removed_tables,
+        changed_tables=changed_tables,
+        added_areas=added_areas,
+        removed_areas=removed_areas,
+        changed_areas=changed_areas,
+    )
 
 
 async def _allocation_conflicts(
@@ -772,7 +791,7 @@ async def _allocation_conflicts(
     return conflicts
 
 
-async def _build_restore_plan(db: AsyncSession, layout: Layout, revision: LayoutRevision) -> dict:
+async def _build_restore_plan(db: AsyncSession, layout: Layout, revision: LayoutRevision) -> LayoutRestorePreview:
     current_snapshot = await _build_snapshot(db, layout)
     target_snapshot = revision.snapshot
 
@@ -790,21 +809,21 @@ async def _build_restore_plan(db: AsyncSession, layout: Layout, revision: Layout
         areas_to_remove=areas_to_remove,
         areas_to_update=areas_to_update,
     )
-    return {
-        "layout_id": layout.id,
-        "revision_number": revision.revision_number,
-        "tables_to_add": tables_to_add,
-        "tables_to_update": tables_to_update,
-        "tables_to_remove": tables_to_remove,
-        "areas_to_add": areas_to_add,
-        "areas_to_update": areas_to_update,
-        "areas_to_remove": areas_to_remove,
-        "allocation_conflicts": conflicts,
-        "has_conflicts": bool(conflicts),
-    }
+    return LayoutRestorePreview(
+        layout_id=layout.id,
+        revision_number=revision.revision_number,
+        tables_to_add=tables_to_add,
+        tables_to_update=tables_to_update,
+        tables_to_remove=tables_to_remove,
+        areas_to_add=areas_to_add,
+        areas_to_update=areas_to_update,
+        areas_to_remove=areas_to_remove,
+        allocation_conflicts=conflicts,
+        has_conflicts=bool(conflicts),
+    )
 
 
-async def preview_layout_restore(db: AsyncSession, layout_id: str, revision_number: int) -> dict:
+async def preview_layout_restore(db: AsyncSession, layout_id: str, revision_number: int) -> LayoutRestorePreview:
     layout = await db.get(Layout, layout_id)
     if layout is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
@@ -820,7 +839,7 @@ async def restore_layout_revision(
     revision_number: int,
     resolve_allocations: bool = False,
     request_id: str | None = None,
-) -> dict:
+) -> LayoutOut:
     layout = await db.get(Layout, layout_id)
     if layout is None:
         raise NotFoundError(f"Layout '{layout_id}' not found.")
@@ -861,7 +880,7 @@ async def restore_layout_revision(
     }
 
     plan = await _build_restore_plan(db, layout, revision)
-    if plan["allocation_conflicts"] and not resolve_allocations:
+    if plan.allocation_conflicts and not resolve_allocations:
         raise ConflictError(
             "Restoring this revision would delete or move table(s)/area(s) with live "
             "allocations. Pass resolve_allocations=true to restore anyway."

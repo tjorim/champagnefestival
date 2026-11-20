@@ -51,7 +51,7 @@ from app.services.idempotency import (
     record_idempotency_key,
 )
 from app.services.outbox_service import enqueue_registration_confirmation
-from app.utils import make_id, registration_to_dict
+from app.utils import make_id, registration_to_out
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ async def assign_registration_to_volunteer(
     *,
     actor: str,
     request_id: str | None = None,
-) -> dict:
+) -> RegistrationOut:
     """Admin override (#1044): attach an unowned registration to a
     volunteer's own portal account. The same convergent,
     existing-owner-protected write self-service claiming uses
@@ -123,7 +123,7 @@ async def assign_registration_to_volunteer(
     registration = locked
     if registration.user_id == user.id:
         person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
-        return registration_to_dict(registration, person, registration.event)
+        return registration_to_out(registration, person, registration.event)
     if registration.user_id is not None:
         raise HTTPException(
             status_code=409,
@@ -141,7 +141,7 @@ async def assign_registration_to_volunteer(
     )
     await db.commit()
     person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
-    return registration_to_dict(registration, person, registration.event)
+    return registration_to_out(registration, person, registration.event)
 
 
 def ensure_registration_can_check_in(registration: Registration) -> None:
@@ -203,7 +203,7 @@ async def admin_create_registration(
     request_id: str | None = None,
     commit: bool = True,
     poll_question_id: str | None = None,
-) -> dict:
+) -> RegistrationOut:
     idempotency_key = body.idempotency_key if commit else None
     request_hash = hash_request(body.model_dump(mode="json", exclude={"idempotency_key"}))
     if idempotency_key:
@@ -214,7 +214,9 @@ async def admin_create_registration(
         except ConflictError as exc:
             raise to_http_exception(exc) from exc
         if cached is not None:
-            return cached
+            response = RegistrationOut.model_validate(cached)
+            response._from_idempotency_replay = True
+            return response
 
     person = await people_service.get_person_or_404(db, body.person_id)
     event = await inventory.lock_event(db, body.event_id)
@@ -262,14 +264,14 @@ async def admin_create_registration(
     if not commit:
         await db.flush()
         registration = await get_registration_or_404(db, registration.id)
-        return registration_to_dict(registration, person, event)
+        return registration_to_out(registration, person, event)
 
     # The replayed response is staged in the same transaction as the booking, so
     # it is only ever visible once the booking is committed.
     if idempotency_key:
         # Stored in its serialized form: the order totals are Decimals, which the JSON column cannot hold.
         response = RegistrationOut.model_validate(
-            registration_to_dict(await get_registration_or_404(db, registration.id), person, event)
+            registration_to_out(await get_registration_or_404(db, registration.id), person, event)
         ).model_dump(mode="json")
         record_idempotency_key(
             db,
@@ -284,7 +286,7 @@ async def admin_create_registration(
     except ConflictError as exc:
         raise to_http_exception(exc) from exc
     registration = await get_registration_or_404(db, registration.id)
-    return registration_to_dict(registration, person, event)
+    return registration_to_out(registration, person, event)
 
 
 async def apply_registration_update(
@@ -297,7 +299,7 @@ async def apply_registration_update(
     clear_amount_due: bool = False,
     commit: bool = True,
     from_poll: bool = False,
-) -> dict:
+) -> RegistrationOut:
     """Apply a partial registration update and return the refreshed payload.
 
     ``clear_amount_due`` exists for the MCP adapter, whose
@@ -537,8 +539,8 @@ async def apply_registration_update(
     registration = await get_registration_or_404(db, registration.id)
     person_map = await fetch_person_map(db, [registration])
 
-    result = registration_to_dict(registration, person_map[registration.person_id], registration.event)
-    result["stamp_progress"] = stamp_progress
+    result = registration_to_out(registration, person_map[registration.person_id], registration.event)
+    result = result.model_copy(update={"stamp_progress": stamp_progress})
     return result
 
 

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
@@ -12,15 +13,26 @@ it("confirms hand-out and displays a translated refusal without closing", async 
   const writes: unknown[] = [];
   server.use(
     http.get("/api/stamp-cards/people/alice", () =>
-      HttpResponse.json([
+      jsonResponse<import("@/api-types").StampCardOut[]>([
         {
+          person_id: "",
+          type_id: "",
+          reward_label_fr: null,
+          reward_label_en: null,
           id: "card",
           box_count: 2,
           opened_at: "2026-10-01T12:00:00Z",
           completed_at: "2026-10-24T12:00:00Z",
           reward_label_nl: "Fles",
-          stamps: [{ id: "1" }, { id: "2" }],
+          stamps: [
+            { card_id: "", registration_id: "", created_at: "2026-01-01T00:00:00Z", id: "1" },
+            { card_id: "", registration_id: "", created_at: "2026-01-01T00:00:00Z", id: "2" },
+          ],
           reward: {
+            card_id: "",
+            reward_label_fr: null,
+            reward_label_en: null,
+            handed_out_by: null,
             id: "reward",
             reward_label_nl: "Fles",
             earned_at: "2026-10-24T12:00:00Z",
@@ -32,7 +44,10 @@ it("confirms hand-out and displays a translated refusal without closing", async 
     http.put("/api/stamp-cards/rewards/reward", async ({ request }) => {
       writes.push(await request.json());
       return HttpResponse.json(
-        { code: "stamp_card_has_successor", detail: "English diagnostic" },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          code: "stamp_card_has_successor",
+          detail: "English diagnostic",
+        },
         { status: 409 },
       );
     }),
@@ -59,11 +74,29 @@ it("confirms hand-out and displays a translated refusal without closing", async 
 it("preserves the translated type draft after one failed write", async () => {
   const writes: unknown[] = [];
   server.use(
-    http.get("/api/stamp-cards/types", () => HttpResponse.json([])),
-    http.get("/api/settings", () => HttpResponse.json({ stamp_card_type_id: null })),
+    http.get("/api/stamp-cards/types", () =>
+      jsonResponse<import("@/api-types").StampCardTypeOut[]>([]),
+    ),
+    http.get("/api/settings", () =>
+      jsonResponse<import("@/api-types").AppSettingsOut>({
+        member_limit: null,
+        member_inactivity_months: null,
+        maintenance_mode: false,
+        public_email: "",
+        public_phone: "",
+        facebook_url: "",
+        updated_at: "2026-01-01T00:00:00Z",
+        stamp_card_type_id: null,
+      }),
+    ),
     http.post("/api/stamp-cards/types", async ({ request }) => {
       writes.push(await request.json());
-      return HttpResponse.json({ detail: "English diagnostic" }, { status: 500 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "English diagnostic",
+        },
+        { status: 500 },
+      );
     }),
   );
   render(<StampCardTypes authHeaders={authHeaders} />, { wrapper: createTestQueryClientWrapper() });

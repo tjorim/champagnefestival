@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import type { Event } from "@/types/event";
+import type { EventPublicOut as Event } from "@/api-types";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { eventDescription, eventTitle } from "@/utils/eventText";
 
@@ -98,7 +98,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
         {days.map((day) => {
           const sortedEvents = events
             .filter((event) => event.date === day.date)
-            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
           return (
             <TabsContent key={day.id} value={day.id}>
               {sortedEvents.length > 0 ? (
@@ -110,19 +110,19 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                         <CardContent>
                           <div className="flex justify-between items-start gap-4">
                             <div className="event-time me-4 whitespace-nowrap">
-                              {event.endTime ? (
+                              {event.end_time ? (
                                 <>
-                                  <div title={m.schedule_start_time()}>{event.startTime}</div>
-                                  <div title={m.schedule_end_time()}>{event.endTime}</div>
+                                  <div title={m.schedule_start_time()}>{event.start_time}</div>
+                                  <div title={m.schedule_end_time()}>{event.end_time}</div>
                                   <span className="sr-only">
                                     {m.schedule_time_range({
-                                      start: event.startTime,
-                                      end: event.endTime,
+                                      start: event.start_time,
+                                      end: event.end_time,
                                     })}
                                   </span>
                                 </>
                               ) : (
-                                <span title={m.schedule_time()}>{event.startTime}</span>
+                                <span title={m.schedule_time()}>{event.start_time}</span>
                               )}
                             </div>
                             <div className="grow">
@@ -130,12 +130,12 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                               <h5 aria-level={3} className="event-title mb-1">
                                 {eventTitle(event, locale)}
                               </h5>
-                              {event.volunteersOnly && (
+                              {event.volunteers_only && (
                                 <Badge variant="info" className="mb-2">
                                   {m.event_volunteers_only()}
                                 </Badge>
                               )}
-                              {event.membersOnly && (
+                              {event.members_only && (
                                 <Badge variant="info" className="mb-2">
                                   {m.event_members_only()}
                                 </Badge>
@@ -145,7 +145,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                   {label}
                                 </Badge>
                               )}
-                              {event.registrationRequired ? (
+                              {event.registration_required ? (
                                 <Badge variant="warning" className="mb-2 ms-2">
                                   {m.schedule_registration()}
                                 </Badge>

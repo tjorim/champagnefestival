@@ -13,9 +13,7 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 
-interface ApiScratchpad {
-  content: string;
-}
+type ApiScratchpad = import("@/api-types").EditionScratchpadOut;
 
 export default function ScratchpadManagement({
   authHeaders,

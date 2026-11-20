@@ -41,7 +41,7 @@ import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/ho
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { Category } from "@/types/category";
+import type { Category } from "@/api-types";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
@@ -98,10 +98,10 @@ const EMPTY_FORM: CategoryForm = {
 function toForm(category: Category): CategoryForm {
   return {
     key: category.key,
-    labelNl: category.labelNl ?? "",
-    labelFr: category.labelFr ?? "",
-    labelEn: category.labelEn ?? "",
-    sortOrder: String(category.sortOrder),
+    labelNl: category.label_nl ?? "",
+    labelFr: category.label_fr ?? "",
+    labelEn: category.label_en ?? "",
+    sortOrder: String(category.sort_order),
   };
 }
 
@@ -136,7 +136,7 @@ export default function CategoryManagement({
 
   const saveMutation = useMutation({
     mutationFn: ({ editing, data }: { editing: string | null; data: CategoryForm }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").CategoryOut>(
         editing ? `${config.path}/${encodeURIComponent(editing)}` : config.path,
         {
           method: editing ? "PUT" : "POST",
@@ -162,7 +162,7 @@ export default function CategoryManagement({
 
   const openAdd = useCallback(() => {
     setEditingKey(null);
-    setForm({ ...EMPTY_FORM, sortOrder: String((categories.at(-1)?.sortOrder ?? 0) + 10) });
+    setForm({ ...EMPTY_FORM, sortOrder: String((categories.at(-1)?.sort_order ?? 0) + 10) });
     setError(null);
     setShowModal(true);
   }, [categories]);
@@ -255,9 +255,19 @@ export default function CategoryManagement({
                   <TableRow key={category.key}>
                     <TableCell className="font-mono text-sm">{category.key}</TableCell>
                     {LANGUAGES.map(({ language, field }) => (
-                      <TableCell key={language}>{category[field] ?? "—"}</TableCell>
+                      <TableCell key={language}>
+                        {category[
+                          (
+                            {
+                              labelNl: "label_nl",
+                              labelFr: "label_fr",
+                              labelEn: "label_en",
+                            } as const
+                          )[field]
+                        ] ?? "—"}
+                      </TableCell>
                     ))}
-                    <TableCell>{category.sortOrder}</TableCell>
+                    <TableCell>{category.sort_order}</TableCell>
                     <TableCell className="w-px whitespace-nowrap">
                       <RowActions
                         destructive={

@@ -1,6 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import AnnouncementManagement from "@/components/admin/AnnouncementManagement";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -8,7 +9,11 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const announcement = {
+const announcement: import("@/api-types").AnnouncementOut = {
+  published_at: null,
+  published_by: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "ann-1",
   text_nl: "Deuren open om zes",
   text_fr: null,
@@ -26,7 +31,11 @@ const announcement = {
 
 beforeEach(() => {
   setLocale("en", { reload: false });
-  server.use(http.get("/api/announcements", () => HttpResponse.json([announcement])));
+  server.use(
+    http.get("/api/announcements", () =>
+      jsonResponse<import("@/api-types").AnnouncementOut[]>([announcement]),
+    ),
+  );
 });
 
 afterEach(() => {
@@ -49,7 +58,9 @@ describe("AnnouncementManagement", () => {
     server.use(
       http.post("/api/announcements", async ({ request }) => {
         sent = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(announcement, { status: 201 });
+        return jsonResponse<import("@/api-types").AnnouncementOut>(announcement, {
+          status: 201,
+        });
       }),
     );
     render(<AnnouncementManagement authHeaders={authHeaders} />, {

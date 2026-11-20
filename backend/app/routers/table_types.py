@@ -27,7 +27,7 @@ async def create_table_type(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> TableTypeOut:
     try:
         return await table_types_service.create_table_type(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -60,12 +60,12 @@ async def list_table_types(
     db: AsyncSession = Depends(get_db),
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-) -> list[dict]:
+) -> list[TableTypeOut]:
     return await table_types_service.list_table_types(db, limit=limit, offset=offset)
 
 
 @router.get("/{type_id}", response_model=TableTypeOut)
-async def get_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_table_type(type_id: str, db: AsyncSession = Depends(get_db)) -> TableTypeOut:
     try:
         return await table_types_service.get_table_type(db, type_id)
     except ServiceError as exc:
@@ -79,7 +79,7 @@ async def update_table_type(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> TableTypeOut:
     try:
         return await table_types_service.update_table_type(
             db, actor=actor, type_id=type_id, body=body, request_id=getattr(request.state, "request_id", None)

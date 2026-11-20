@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
 import { delay } from "msw/utils/delay";
@@ -36,7 +37,12 @@ function serve() {
           status === "all" ||
           (status === "handled" ? item.handled_at !== null : item.handled_at === null),
       );
-      return HttpResponse.json({ items, total: items.length, limit: 20, page: 1 });
+      return jsonResponse<import("@/api-types").ContactMessageListEnvelope>({
+        items,
+        total: items.length,
+        limit: 20,
+        page: 1,
+      });
     }),
   );
 }
@@ -78,7 +84,7 @@ describe("ContactMessagesManagement", () => {
         await delay(50);
         const target = messages.find((item) => item.id === params.id)!;
         target.handled_at = "2026-09-03T10:00:00Z";
-        return HttpResponse.json(target);
+        return jsonResponse<import("@/api-types").ContactMessageOut>(target);
       }),
     );
     renderInbox();

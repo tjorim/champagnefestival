@@ -22,12 +22,12 @@ export function editionDisplayName(edition: { year: number; month: string }): st
  * a festival: the active-edition strip, its filter toggle and the home tasks.
  */
 export function editionDisplayNameWithType(edition: {
-  editionType: string;
+  edition_type: string;
   year: number;
   month: string;
 }): string {
   const name = editionDisplayName(edition);
-  switch (edition.editionType) {
+  switch (edition.edition_type) {
     case "bourse":
       return `${m.admin_edition_type_bourse()} · ${name}`;
     case "capsule_exchange":

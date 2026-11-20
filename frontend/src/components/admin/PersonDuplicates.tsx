@@ -5,13 +5,14 @@ import { fetchPeopleByEmail } from "@/utils/adminPeopleQueries";
 import { m } from "@/paraglide/messages";
 
 export function usePersonDuplicates(
-  person: { id: string; email: string } | null,
+  person: { id: string; email?: string } | null,
   authHeaders: () => Record<string, string>,
   enabled = true,
 ) {
   const query = useQuery({
     queryKey: ["admin", "people", "by-email", person?.email ?? "", person?.id ?? ""],
-    queryFn: ({ signal }) => fetchPeopleByEmail(authHeaders, person!.email, person!.id, signal),
+    queryFn: ({ signal }) =>
+      fetchPeopleByEmail(authHeaders, person!.email ?? "", person!.id, signal),
     enabled: enabled && !!person?.email,
     retry: false,
   });

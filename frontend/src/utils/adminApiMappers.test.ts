@@ -1,19 +1,11 @@
 /**
- * Tests for adminApiMappers.ts — snake_case → camelCase field mappers and
- * person-merge helpers used by the admin dashboard.
+ * Tests for adminApiMappers.ts — person-merge helpers used by the admin dashboard.
  */
 
-import type { FloorArea, FloorTableRecord, Layout, Room, TableType, Venue } from "../types/admin";
 import type { Person } from "../types/person";
 
 import { describe, expect, it } from "vitest";
 import {
-  apiVenueToVenue,
-  apiLayoutToLayout,
-  apiTableTypeToTableType,
-  apiRoomToRoom,
-  apiTableToTable,
-  apiAreaToArea,
   mergeVolunteerPerson,
   mergePeopleWithVolunteers,
   attachVolunteerDetails,
@@ -24,477 +16,35 @@ import {
 
 function makePerson(overrides: Partial<Person> = {}): Person {
   return {
+    preferred_language: null,
+    inactivity_exempt: false,
+    inactivity_exempt_note: "",
     id: "p1",
     name: "Alice",
     email: "alice@example.com",
     phone: "0470000000",
     address: "Kursaal 1",
     roles: [],
-    nationalRegisterNumber: null,
-    eidDocumentNumber: null,
-    visitsPerMonth: null,
+    national_register_number: null,
+    eid_document_number: null,
+    visits_per_month: null,
     notes: "",
     anonymised: false,
-    retiredRoles: {},
-    roleHistory: {},
-    helpPeriods: [],
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
+    retired_roles: {},
+    role_history: {},
+    help_periods: [],
+    created_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-01-01T00:00:00Z",
     ...overrides,
   };
 }
 
-// ─── apiVenueToVenue ──────────────────────────────────────────────────────────
-
-describe("apiVenueToVenue", () => {
-  const minimal = {
-    id: "v1",
-    name: "Ostend Convention Center",
-  };
-
-  const full = {
-    id: "v2",
-    name: "Grand Hall",
-    address: "Kursaal 1",
-    city: "Ostend",
-    postal_code: "8400",
-    country: "BE",
-    lat: 51.2312,
-    lng: 2.9166,
-    active: false,
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiVenueToVenue(full)).toEqual<Venue>({
-      id: "v2",
-      name: "Grand Hall",
-      address: "Kursaal 1",
-      city: "Ostend",
-      postalCode: "8400",
-      country: "BE",
-      lat: 51.2312,
-      lng: 2.9166,
-      active: false,
-    });
-  });
-
-  it("maps postal_code to postalCode", () => {
-    const venue = apiVenueToVenue({ ...full, postal_code: "9000" });
-    expect(venue.postalCode).toBe("9000");
-  });
-
-  it("defaults address to empty string when absent", () => {
-    expect(apiVenueToVenue(minimal).address).toBe("");
-  });
-
-  it("defaults city to empty string when absent", () => {
-    expect(apiVenueToVenue(minimal).city).toBe("");
-  });
-
-  it("defaults postalCode to empty string when absent", () => {
-    expect(apiVenueToVenue(minimal).postalCode).toBe("");
-  });
-
-  it("defaults country to empty string when absent", () => {
-    expect(apiVenueToVenue(minimal).country).toBe("");
-  });
-
-  it("defaults lat to 0 when absent", () => {
-    expect(apiVenueToVenue(minimal).lat).toBe(0);
-  });
-
-  it("defaults lng to 0 when absent", () => {
-    expect(apiVenueToVenue(minimal).lng).toBe(0);
-  });
-
-  it("defaults active to true when absent", () => {
-    expect(apiVenueToVenue(minimal).active).toBe(true);
-  });
-
-  it("preserves active: false when explicitly provided", () => {
-    expect(apiVenueToVenue({ ...minimal, active: false }).active).toBe(false);
-  });
-
-  it("preserves lat: 0 when explicitly provided (no false default override)", () => {
-    expect(apiVenueToVenue({ ...minimal, lat: 0 }).lat).toBe(0);
-  });
-});
-
-// ─── apiTableToTable ──────────────────────────────────────────────────────────
-
-describe("apiTableToTable", () => {
-  const minimal = {
-    id: "t1",
-    name: "Table 1",
-    capacity: 4,
-    x: 25,
-    y: 50,
-    table_type_id: "tt1",
-    layout_id: "l1",
-  };
-
-  const full = {
-    ...minimal,
-    rotation: 90,
-    registration_ids: ["r1", "r2"],
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiTableToTable(full)).toEqual<FloorTableRecord>({
-      id: "t1",
-      name: "Table 1",
-      capacity: 4,
-      x: 25,
-      y: 50,
-      tableTypeId: "tt1",
-      rotation: 90,
-      layoutId: "l1",
-    });
-  });
-
-  it("maps table_type_id to tableTypeId", () => {
-    expect(apiTableToTable(minimal).tableTypeId).toBe("tt1");
-  });
-
-  it("maps layout_id to layoutId", () => {
-    expect(apiTableToTable(minimal).layoutId).toBe("l1");
-  });
-
-  it("defaults rotation to 0 when absent", () => {
-    expect(apiTableToTable(minimal).rotation).toBe(0);
-  });
-
-  it("preserves explicit rotation value", () => {
-    expect(apiTableToTable({ ...minimal, rotation: 270 }).rotation).toBe(270);
-  });
-
-  it("ignores the server's registration_ids: occupancy is derived, not stored", () => {
-    expect(apiTableToTable(full)).not.toHaveProperty("registrationIds");
-  });
-
-  it("preserves x and y positions", () => {
-    const result = apiTableToTable({ ...minimal, x: 10.5, y: 75.25 });
-    expect(result.x).toBe(10.5);
-    expect(result.y).toBe(75.25);
-  });
-});
-
-// ─── apiAreaToArea ────────────────────────────────────────────────────────────
-
-describe("apiAreaToArea", () => {
-  const minimal = {
-    id: "a1",
-    layout_id: "l1",
-  };
-
-  const full = {
-    id: "a2",
-    layout_id: "l2",
-    icon: "bi-star",
-    organization_id: 42,
-    label: "Organization stand",
-    x: 30,
-    y: 60,
-    rotation: 45,
-    width_m: 2.0,
-    length_m: 3.0,
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiAreaToArea(full)).toEqual<FloorArea>({
-      id: "a2",
-      layoutId: "l2",
-      icon: "bi-star",
-      organizationId: 42,
-      label: "Organization stand",
-      x: 30,
-      y: 60,
-      rotation: 45,
-      widthM: 2.0,
-      lengthM: 3.0,
-    });
-  });
-
-  it("maps layout_id to layoutId", () => {
-    expect(apiAreaToArea(minimal).layoutId).toBe("l1");
-  });
-
-  it("defaults icon to 'bi-shop' when absent", () => {
-    expect(apiAreaToArea(minimal).icon).toBe("bi-shop");
-  });
-
-  it("uses provided icon when present", () => {
-    expect(apiAreaToArea({ ...minimal, icon: "bi-cup" }).icon).toBe("bi-cup");
-  });
-
-  it("defaults organizationId to null when absent", () => {
-    expect(apiAreaToArea(minimal).organizationId).toBeNull();
-  });
-
-  it("maps organization_id to organizationId", () => {
-    expect(apiAreaToArea({ ...minimal, organization_id: 7 }).organizationId).toBe(7);
-  });
-
-  it("preserves explicit organizationId null", () => {
-    expect(apiAreaToArea({ ...minimal, organization_id: null }).organizationId).toBeNull();
-  });
-
-  it("defaults label to empty string when absent", () => {
-    expect(apiAreaToArea(minimal).label).toBe("");
-  });
-
-  it("defaults x to 50 when absent", () => {
-    expect(apiAreaToArea(minimal).x).toBe(50);
-  });
-
-  it("defaults y to 50 when absent", () => {
-    expect(apiAreaToArea(minimal).y).toBe(50);
-  });
-
-  it("defaults rotation to 0 when absent", () => {
-    expect(apiAreaToArea(minimal).rotation).toBe(0);
-  });
-
-  it("defaults widthM to 1.5 when absent", () => {
-    expect(apiAreaToArea(minimal).widthM).toBe(1.5);
-  });
-
-  it("defaults lengthM to 1.0 when absent", () => {
-    expect(apiAreaToArea(minimal).lengthM).toBe(1.0);
-  });
-
-  it("maps width_m to widthM", () => {
-    expect(apiAreaToArea({ ...minimal, width_m: 4.5 }).widthM).toBe(4.5);
-  });
-
-  it("maps length_m to lengthM", () => {
-    expect(apiAreaToArea({ ...minimal, length_m: 2.25 }).lengthM).toBe(2.25);
-  });
-});
-
-// ─── apiLayoutToLayout ────────────────────────────────────────────────────────
-
-describe("apiLayoutToLayout", () => {
-  const minimal = {
-    id: "ly1",
-    room_id: "r1",
-    created_at: "2025-01-01T00:00:00Z",
-  };
-
-  const full = {
-    id: "ly2",
-    event_id: "event-2",
-    event_title: "Breakfast tasting",
-    edition_id: "ed1",
-    room_id: "r2",
-    date: "2025-06-01",
-    label: "Day 1",
-    created_at: "2025-01-15T10:00:00Z",
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiLayoutToLayout(full)).toEqual<Layout>({
-      id: "ly2",
-      eventId: "event-2",
-      eventTitle: "Breakfast tasting",
-      editionId: "ed1",
-      roomId: "r2",
-      date: "2025-06-01",
-      label: "Day 1",
-      createdAt: "2025-01-15T10:00:00Z",
-    });
-  });
-
-  it("maps room_id to roomId", () => {
-    expect(apiLayoutToLayout(minimal).roomId).toBe("r1");
-  });
-
-  it("maps created_at to createdAt", () => {
-    expect(apiLayoutToLayout(minimal).createdAt).toBe("2025-01-01T00:00:00Z");
-  });
-
-  it("defaults editionId to null when absent", () => {
-    expect(apiLayoutToLayout(minimal).editionId).toBeNull();
-  });
-
-  it("preserves explicit edition_id when present", () => {
-    expect(apiLayoutToLayout({ ...minimal, edition_id: "ed42" }).editionId).toBe("ed42");
-  });
-
-  it("defaults date to null when absent", () => {
-    expect(apiLayoutToLayout(minimal).date).toBeNull();
-  });
-
-  it("preserves explicit date when present", () => {
-    expect(apiLayoutToLayout({ ...minimal, date: "2025-07-04" }).date).toBe("2025-07-04");
-  });
-
-  it("defaults label to empty string when absent", () => {
-    expect(apiLayoutToLayout(minimal).label).toBe("");
-  });
-
-  it("defaults eventTitle to empty string when absent", () => {
-    expect(apiLayoutToLayout(minimal).eventTitle).toBe("");
-  });
-
-  it("maps edition_id to editionId", () => {
-    expect(apiLayoutToLayout({ ...minimal, edition_id: "ed1" }).editionId).toBe("ed1");
-  });
-});
-
-// ─── apiTableTypeToTableType ──────────────────────────────────────────────────
-
-describe("apiTableTypeToTableType", () => {
-  const minimal = {
-    id: "tt1",
-    name: "Standard",
-    venue_id: "venue-1",
-  };
-
-  const full = {
-    id: "tt2",
-    name: "Round VIP",
-    venue_id: "venue-1",
-    shape: "round",
-    width_m: 1.2,
-    length_m: 1.2,
-    height_type: "high",
-    capacity: 6,
-    active: false,
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiTableTypeToTableType(full)).toEqual<TableType>({
-      id: "tt2",
-      name: "Round VIP",
-      venueId: "venue-1",
-      shape: "round",
-      widthM: 1.2,
-      lengthM: 1.2,
-      heightType: "high",
-      capacity: 6,
-      active: false,
-    });
-  });
-
-  it("defaults shape to 'rectangle' when absent", () => {
-    expect(apiTableTypeToTableType(minimal).shape).toBe("rectangle");
-  });
-
-  it("preserves 'round' shape", () => {
-    expect(apiTableTypeToTableType({ ...minimal, shape: "round" }).shape).toBe("round");
-  });
-
-  it("defaults widthM to 1.8 when absent", () => {
-    expect(apiTableTypeToTableType(minimal).widthM).toBe(1.8);
-  });
-
-  it("maps width_m to widthM", () => {
-    expect(apiTableTypeToTableType({ ...minimal, width_m: 2.4 }).widthM).toBe(2.4);
-  });
-
-  it("defaults lengthM to 0.7 when absent", () => {
-    expect(apiTableTypeToTableType(minimal).lengthM).toBe(0.7);
-  });
-
-  it("maps length_m to lengthM", () => {
-    expect(apiTableTypeToTableType({ ...minimal, length_m: 1.2 }).lengthM).toBe(1.2);
-  });
-
-  it("defaults heightType to 'low' when absent", () => {
-    expect(apiTableTypeToTableType(minimal).heightType).toBe("low");
-  });
-
-  it("maps height_type to heightType", () => {
-    expect(apiTableTypeToTableType({ ...minimal, height_type: "high" }).heightType).toBe("high");
-  });
-
-  it("defaults capacity to 4 when absent", () => {
-    expect(apiTableTypeToTableType(minimal).capacity).toBe(4);
-  });
-
-  it("maps capacity to capacity", () => {
-    expect(apiTableTypeToTableType({ ...minimal, capacity: 8 }).capacity).toBe(8);
-  });
-
-  it("defaults active to true when absent", () => {
-    expect(apiTableTypeToTableType(minimal).active).toBe(true);
-  });
-
-  it("preserves active: false when explicitly provided", () => {
-    expect(apiTableTypeToTableType({ ...minimal, active: false }).active).toBe(false);
-  });
-});
-
-// ─── apiRoomToRoom ────────────────────────────────────────────────────────────
-
-describe("apiRoomToRoom", () => {
-  const minimal = {
-    id: "r1",
-    venue_id: "v1",
-    name: "Main Hall",
-    width_m: 20,
-    length_m: 40,
-    color: "#ff0000",
-  };
-
-  const full = {
-    ...minimal,
-    active: false,
-  };
-
-  it("maps all fields from a fully populated response", () => {
-    expect(apiRoomToRoom({ ...full, dimensions_placeholder: true })).toEqual<Room>({
-      id: "r1",
-      venueId: "v1",
-      name: "Main Hall",
-      widthM: 20,
-      lengthM: 40,
-      color: "#ff0000",
-      active: false,
-      dimensionsPlaceholder: true,
-    });
-  });
-
-  it("maps venue_id to venueId", () => {
-    expect(apiRoomToRoom(minimal).venueId).toBe("v1");
-  });
-
-  it("maps width_m to widthM", () => {
-    expect(apiRoomToRoom(minimal).widthM).toBe(20);
-  });
-
-  it("maps length_m to lengthM", () => {
-    expect(apiRoomToRoom(minimal).lengthM).toBe(40);
-  });
-
-  it("defaults active to true when absent", () => {
-    expect(apiRoomToRoom(minimal).active).toBe(true);
-  });
-
-  it("preserves active: false when explicitly provided", () => {
-    expect(apiRoomToRoom({ ...minimal, active: false }).active).toBe(false);
-  });
-
-  it("preserves color value", () => {
-    expect(apiRoomToRoom({ ...minimal, color: "#00ff00" }).color).toBe("#00ff00");
-  });
-
-  it("defaults dimensionsPlaceholder to false when absent", () => {
-    expect(apiRoomToRoom(minimal).dimensionsPlaceholder).toBe(false);
-  });
-
-  it("preserves dimensions_placeholder: true when explicitly provided", () => {
-    expect(apiRoomToRoom({ ...minimal, dimensions_placeholder: true }).dimensionsPlaceholder).toBe(
-      true,
-    );
-  });
-});
-
 // ─── mergeVolunteerPerson ─────────────────────────────────────────────────────
 
 describe("mergeVolunteerPerson", () => {
-  const helpPeriods = [{ id: 1, firstHelpDay: "2025-06-01", lastHelpDay: "2025-06-02", notes: "" }];
+  const help_periods = [
+    { id: 1, first_help_day: "2025-06-01", last_help_day: "2025-06-02", notes: "" },
+  ];
 
   it("always includes 'volunteer' in roles", () => {
     const result = mergeVolunteerPerson(undefined, makePerson({ roles: ["member"] }));
@@ -509,10 +59,10 @@ describe("mergeVolunteerPerson", () => {
     expect(result.roles).toContain("volunteer");
   });
 
-  it("uses volunteer helpPeriods over existing helpPeriods", () => {
-    const existing = makePerson({ helpPeriods: [] });
-    const volunteer = makePerson({ helpPeriods });
-    expect(mergeVolunteerPerson(existing, volunteer).helpPeriods).toEqual(helpPeriods);
+  it("uses volunteer help_periods over existing help_periods", () => {
+    const existing = makePerson({ help_periods: [] });
+    const volunteer = makePerson({ help_periods });
+    expect(mergeVolunteerPerson(existing, volunteer).help_periods).toEqual(help_periods);
   });
 
   it("prefers existing email when volunteer email is empty", () => {
@@ -551,8 +101,20 @@ describe("mergePeopleWithVolunteers", () => {
   });
 
   it("merges a volunteer record into the matching person", () => {
-    const person = makePerson({ id: "p1", roles: [] });
-    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: [],
+    });
+    const volunteer = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     const result = mergePeopleWithVolunteers([person], [volunteer]);
     expect(result).toHaveLength(1);
     expect(result[0]?.roles).toContain("volunteer");
@@ -568,7 +130,13 @@ describe("mergePeopleWithVolunteers", () => {
 
   it("does not duplicate when the same person appears in both lists", () => {
     const person = makePerson({ id: "p1" });
-    const volunteer = makePerson({ id: "p1", roles: ["volunteer"] });
+    const volunteer = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     expect(mergePeopleWithVolunteers([person], [volunteer])).toHaveLength(1);
   });
 });
@@ -583,18 +151,18 @@ describe("mergePersonUpdate", () => {
 
   it("returns updated directly when updated has no volunteer role", () => {
     const existing = makePerson({
-      helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }],
+      help_periods: [{ id: 1, first_help_day: "2025-01-01", last_help_day: null, notes: "" }],
     });
     const updated = makePerson({ roles: ["member"] });
     expect(mergePersonUpdate(existing, updated)).toBe(updated);
   });
 
-  it("preserves existing helpPeriods when updated has volunteer role", () => {
-    const helpPeriods = [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }];
-    const existing = makePerson({ helpPeriods });
-    const updated = makePerson({ roles: ["volunteer"], helpPeriods: [] });
+  it("preserves existing help_periods when updated has volunteer role", () => {
+    const help_periods = [{ id: 1, first_help_day: "2025-01-01", last_help_day: null, notes: "" }];
+    const existing = makePerson({ help_periods });
+    const updated = makePerson({ roles: ["volunteer"], help_periods: [] });
     const result = mergePersonUpdate(existing, updated);
-    expect(result.helpPeriods).toEqual(helpPeriods);
+    expect(result.help_periods).toEqual(help_periods);
   });
 });
 
@@ -602,21 +170,42 @@ describe("mergePersonUpdate", () => {
 
 describe("attachVolunteerDetails", () => {
   it("adds help periods to a matching volunteer and leaves other rows untouched", () => {
-    const helpPeriods = [{ id: 1, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
-    const person = makePerson({ id: "p1", roles: ["volunteer"] });
+    const help_periods = [{ id: 1, first_help_day: "2026-10-10", last_help_day: null, notes: "" }];
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["volunteer"],
+    });
     const other = makePerson({ id: "p2", roles: ["member"] });
 
     const result = attachVolunteerDetails(
       [person, other],
-      [makePerson({ id: "p1", roles: ["volunteer"], helpPeriods })],
+      [
+        makePerson({
+          preferred_language: null,
+          inactivity_exempt: false,
+          inactivity_exempt_note: "",
+          id: "p1",
+          roles: ["volunteer"],
+          help_periods,
+        }),
+      ],
     );
 
-    expect(result[0]?.helpPeriods).toEqual(helpPeriods);
+    expect(result[0]?.help_periods).toEqual(help_periods);
     expect(result[1]).toBe(other);
   });
 
   it("never adds a volunteer that is not already in the list", () => {
-    const person = makePerson({ id: "p1", roles: ["member"] });
+    const person = makePerson({
+      preferred_language: null,
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      id: "p1",
+      roles: ["member"],
+    });
 
     const result = attachVolunteerDetails(
       [person],

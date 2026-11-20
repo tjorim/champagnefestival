@@ -1,3 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
+import type { PersonListItemOut, PersonOut } from "@/api-types";
+import { registrationOut } from "@/mocks/data/builders";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
@@ -17,16 +21,59 @@ afterEach(() => {
 });
 
 describe("fetchAdminPersonRegistrations", () => {
-  it("maps the event title from the registration list response", async () => {
+  it("preserves the nested event and exact money in the registration list response", async () => {
     server.use(
       http.get("/api/people/person-1/registrations", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationOut[]>([
           {
+            poll_question_id: null,
+            stamp_progress: null,
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            order_items: [],
+            notes: "",
+            table_id: null,
+            refund_due: "0",
+            checked_in_at: null,
+            strap_issued: false,
+            updated_at: "2026-01-01T00:00:00Z",
             id: "reg-1",
             event: {
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
               id: "event-1",
               title: "Festival Friday",
-              edition: { id: "edition-2026", year: 2026, month: "march" },
+              edition: {
+                edition_type: "festival",
+                active: false,
+                id: "edition-2026",
+                year: 2026,
+                month: "march",
+              },
             },
             guest_count: 2,
             status: "confirmed",
@@ -35,25 +82,26 @@ describe("fetchAdminPersonRegistrations", () => {
             created_at: "2026-08-09T10:00:00Z",
             amount_paid: "150.00",
             amount_due: "150.00",
-            edition_id: "edition-2026",
           },
         ]),
       ),
     );
 
-    await expect(fetchAdminPersonRegistrations("person-1", authHeaders)).resolves.toEqual([
+    await expect(fetchAdminPersonRegistrations("person-1", authHeaders)).resolves.toMatchObject([
       {
         id: "reg-1",
-        eventTitle: "Festival Friday",
-        guestCount: 2,
+        event: {
+          id: "event-1",
+          title: "Festival Friday",
+          edition: { id: "edition-2026", year: 2026, month: "march" },
+        },
+        guest_count: 2,
         status: "confirmed",
-        paymentStatus: "paid",
-        checkedIn: false,
-        createdAt: "2026-08-09T10:00:00Z",
-        amountPaid: 150,
-        amountDue: 150,
-        editionId: "edition-2026",
-        editionLabel: "March 2026",
+        payment_status: "paid",
+        checked_in: false,
+        created_at: "2026-08-09T10:00:00Z",
+        amount_paid: "150.00",
+        amount_due: "150.00",
       },
     ]);
   });
@@ -61,17 +109,19 @@ describe("fetchAdminPersonRegistrations", () => {
   it("rejects a registration whose nested event has no title", async () => {
     server.use(
       http.get("/api/people/person-1/registrations", () =>
-        HttpResponse.json([
-          {
-            id: "reg-1",
-            event: { id: "event-1" },
-            guest_count: 2,
-            status: "confirmed",
-            payment_status: "paid",
-            checked_in: false,
-            created_at: "2026-08-09T10:00:00Z",
-          },
-        ]),
+        HttpResponse.json(
+          /* Deliberately malformed response: exercises runtime rejection. */ [
+            {
+              id: "reg-1",
+              event: { id: "event-1" },
+              guest_count: 2,
+              status: "confirmed",
+              payment_status: "paid",
+              checked_in: false,
+              created_at: "2026-08-09T10:00:00Z",
+            },
+          ],
+        ),
       ),
     );
 
@@ -82,10 +132,10 @@ describe("fetchAdminPersonRegistrations", () => {
 });
 
 describe("fetchPersonPaymentSummary", () => {
-  it("maps the ledger-derived totals from the person payment-summary response", async () => {
+  it("preserves the ledger-derived decimal totals from the person payment-summary response", async () => {
     server.use(
       http.get("/api/people/person-1/payment-summary", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").PersonPaymentSummary>({
           received: "160.00",
           refunded: "10.00",
           net_paid: "150.00",
@@ -97,12 +147,12 @@ describe("fetchPersonPaymentSummary", () => {
     );
 
     await expect(fetchPersonPaymentSummary("person-1", authHeaders)).resolves.toEqual({
-      received: 160,
-      refunded: 10,
-      netPaid: 150,
-      due: 150,
-      outstanding: 0,
-      refundLiability: 0,
+      received: "160.00",
+      refunded: "10.00",
+      net_paid: "150.00",
+      due: "150.00",
+      outstanding: "0.00",
+      refund_liability: "0.00",
     });
   });
 
@@ -121,40 +171,41 @@ describe("fetchPersonPaymentSummary", () => {
 });
 
 describe("fetchAdminPersonOptions", () => {
-  const stubPeople = (body: unknown) =>
-    server.use(http.get("/api/people", () => HttpResponse.json(body as never)));
-
-  it("maps the people in the {items, total, limit, page} envelope the API returns", async () => {
-    stubPeople({
-      items: [
-        {
-          id: "person-1",
-          name: "Alice",
-          email: "alice@example.com",
-          phone: "123",
-          registration_count: 3,
-        },
-      ],
-      total: 1,
-      limit: 200,
-      page: 1,
-    });
-
-    await expect(fetchAdminPersonOptions("ali", authHeaders)).resolves.toEqual([
-      {
-        value: "person-1",
-        label: "Alice",
-        sub: "alice@example.com · 123",
-        name: "Alice",
-        email: "alice@example.com",
-        phone: "123",
-        registrationCount: 3,
-      },
-    ]);
+  it("reads generated people from the list envelope without projecting fields", async () => {
+    const person: PersonListItemOut = {
+      ...seedPeople[0]!,
+      id: "person-1",
+      name: "Alice",
+      email: "alice@example.com",
+      phone: "123",
+      registration_count: 3,
+      reward_due: false,
+      last_attended: null,
+      inactivity_highlight: false,
+    };
+    server.use(
+      http.get("/api/people", () =>
+        jsonResponse<import("@/api-types").PersonListEnvelope>({
+          items: [person],
+          total: 1,
+          limit: 200,
+          page: 1,
+        }),
+      ),
+    );
+    await expect(fetchAdminPersonOptions("ali", authHeaders)).resolves.toEqual([person]);
   });
 
   it("rejects a bare array instead of reading it as no matches", async () => {
-    stubPeople([{ id: "person-1", name: "Alice", email: "", phone: "" }]);
+    server.use(
+      http.get("/api/people", () =>
+        HttpResponse.json(
+          /* Deliberately malformed response: bare array instead of the people envelope. */ [
+            { id: "person-1", name: "Alice", email: "", phone: "" },
+          ],
+        ),
+      ),
+    );
 
     await expect(fetchAdminPersonOptions("ali", authHeaders)).rejects.toThrow(
       /expected \{items, total, limit, page\}/,
@@ -164,7 +215,15 @@ describe("fetchAdminPersonOptions", () => {
 
 describe("fetchRegistrableEvents", () => {
   it("rejects a malformed response instead of reporting no events", async () => {
-    server.use(http.get("/api/events", () => HttpResponse.json({ detail: "oops" })));
+    server.use(
+      http.get("/api/events", () =>
+        HttpResponse.json(
+          /* Fixture exception: malformed success body; exercises runtime rejection. */ {
+            detail: "oops",
+          },
+        ),
+      ),
+    );
 
     await expect(fetchRegistrableEvents(authHeaders)).rejects.toThrow(/expected an array/);
   });
@@ -176,14 +235,14 @@ describe("createAdminPerson", () => {
     server.use(
       http.post("/api/people", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").PersonOut>(
           {
+            ...seedPeople[0]!,
             id: "person-9",
             name: "Zoë",
             email: "zoe@example.com",
             phone: "",
-            registration_count: 0,
-          },
+          } satisfies PersonOut,
           { status: 201 },
         );
       }),
@@ -194,7 +253,7 @@ describe("createAdminPerson", () => {
         { name: "Zoë", email: "zoe@example.com", phone: "", preferredLanguage: "nl" },
         authHeaders,
       ),
-    ).resolves.toMatchObject({ value: "person-9", label: "Zoë", registrationCount: 0 });
+    ).resolves.toMatchObject({ id: "person-9", name: "Zoë" });
     expect(body).toEqual({
       name: "Zoë",
       email: "zoe@example.com",
@@ -208,7 +267,29 @@ describe("createAdminPerson", () => {
     server.use(
       http.post("/api/people", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "p", name: "Zoë", email: "", phone: "" }, { status: 201 });
+        return jsonResponse<import("@/api-types").PersonOut>(
+          {
+            preferred_language: null,
+            address: "",
+            roles: [],
+            retired_roles: {},
+            role_history: {},
+            national_register_number: null,
+            eid_document_number: null,
+            inactivity_exempt: false,
+            inactivity_exempt_note: "",
+            visits_per_month: null,
+            notes: "",
+            anonymised: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "p",
+            name: "Zoë",
+            email: "",
+            phone: "",
+          },
+          { status: 201 },
+        );
       }),
     );
 
@@ -227,7 +308,10 @@ describe("createAdminRegistration", () => {
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "reg-1", guest_count: 2 }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          registrationOut({ id: "reg-1", guest_count: 2 }),
+          { status: 201 },
+        );
       }),
     );
 
@@ -255,7 +339,10 @@ describe("createAdminRegistration", () => {
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "reg-1" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          registrationOut({ id: "reg-1" }),
+          { status: 201 },
+        );
       }),
     );
 

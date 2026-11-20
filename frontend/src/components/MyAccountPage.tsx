@@ -206,19 +206,19 @@ export default function MyAccountPage() {
         <>
           <Alert variant="secondary">
             <h3 className="text-base font-medium leading-tight">{m.my_eid_identity_heading()}</h3>
-            {(!identity.nationalRegisterNumber || !identity.eidDocumentNumber) && (
+            {(!identity.national_register_number || !identity.eid_document_number) && (
               <p className="text-sm">{m.my_eid_optional_details()}</p>
             )}
             <dl className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-0 text-sm">
               <dt className="w-5/12">{m.my_eid_niss_label()}</dt>
               <dd className="w-7/12">
-                {identity.nationalRegisterNumber
-                  ? formatNiss(identity.nationalRegisterNumber)
+                {identity.national_register_number
+                  ? formatNiss(identity.national_register_number)
                   : "—"}
               </dd>
               <dt className="w-5/12 mb-0">{m.my_eid_eid_label()}</dt>
               <dd className="w-7/12 mb-0">
-                {identity.eidDocumentNumber ? formatEidNumber(identity.eidDocumentNumber) : "—"}
+                {identity.eid_document_number ? formatEidNumber(identity.eid_document_number) : "—"}
               </dd>
             </dl>
           </Alert>

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -97,7 +98,7 @@ describe("ContactForm component", () => {
   });
 
   it("shows success message after successful submission", async () => {
-    const sent = serveContact(() => HttpResponse.json({ message: "success" }));
+    const sent = serveContact(() => jsonResponse<import("@/api-types").OkOut>({ ok: true }));
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), {
       target: { name: "name", value: "John Doe" },
@@ -124,7 +125,14 @@ describe("ContactForm component", () => {
   });
 
   it("shows error message when submission fails", async () => {
-    const sent = serveContact(() => HttpResponse.json({ detail: "Server error" }, { status: 500 }));
+    const sent = serveContact(() =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "Server error",
+        },
+        { status: 500 },
+      ),
+    );
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -151,7 +159,9 @@ describe("ContactForm component", () => {
   it("shows a FastAPI validation message when detail is an array", async () => {
     serveContact(() =>
       HttpResponse.json(
-        { detail: [{ loc: ["body", "email"], msg: "Invalid email" }] },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: [{ loc: ["body", "email"], msg: "Invalid email" }],
+        },
         { status: 422 },
       ),
     );
@@ -168,7 +178,14 @@ describe("ContactForm component", () => {
   });
 
   it("falls back when FastAPI detail is not textual", async () => {
-    serveContact(() => HttpResponse.json({ detail: { reason: "bad" } }, { status: 400 }));
+    serveContact(() =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: { reason: "bad" },
+        },
+        { status: 400 },
+      ),
+    );
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -201,7 +218,7 @@ describe("ContactForm component", () => {
     await waitFor(() => {
       expect(screen.getByText("Sending...")).toBeInTheDocument();
     });
-    resolvePromise(HttpResponse.json({}));
+    resolvePromise(jsonResponse<import("@/api-types").OkOut>({ ok: true }));
 
     await waitFor(() => {
       expect(screen.queryByText("Sending...")).toBeNull();

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-const slides = [0, 1].map((index) => ({
+import type { Playlist, ServerTimeOut } from "../src/api-types";
+
+const slides = [0, 1].map((index): Playlist["slides"][number] => ({
   id: String(index),
   kind: "image",
   duration: 2,
@@ -35,13 +37,17 @@ test("wrong-clock screens synchronise and reload offline", async ({ browser }) =
         if (offline && index === 0) return route.abort("internetdisconnected");
         const url = new URL(route.request().url());
         if (url.pathname === "/api/signage/time")
-          return route.fulfill({ json: { server_time: new Date().toISOString() } });
+          return route.fulfill({
+            json: { server_time: new Date().toISOString() } satisfies ServerTimeOut,
+          });
         if (url.pathname.endsWith("/playlist"))
           return route.fulfill({
             headers: { ETag: '"v1"' },
-            json: { revision: "v1", epoch: "2026-10-01T00:00:00Z", slides },
+            json: { revision: "v1", epoch: "2026-10-01T00:00:00Z", slides } satisfies Playlist,
           });
-        return route.fulfill({ json: {} });
+        return route.fulfill({
+          json: {} /* Fixture exception: unrelated API calls get an empty body; the signage client never reads it. */,
+        });
       });
       const page = await context.newPage();
       if (index === 1) await page.clock.setFixedTime(new Date(Date.now() + 3_601_500));
@@ -157,7 +163,9 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
     await context.route("**/api/**", (route) => {
       if (route.request().url().endsWith("/time")) {
         timeRequests++;
-        return route.fulfill({ json: { server_time: new Date(serverNow).toISOString() } });
+        return route.fulfill({
+          json: { server_time: new Date(serverNow).toISOString() } satisfies ServerTimeOut,
+        });
       }
       if (route.request().url().includes("/playlist")) {
         conditional ||= route.request().headers()["if-none-match"] === '"v1"';
@@ -171,10 +179,12 @@ test("revisions wait for a cycle boundary and wake lock is reacquired", async ({
               duration: 20,
               text: `${revision}:${slide.id}`,
             })),
-          },
+          } satisfies Playlist,
         });
       }
-      return route.fulfill({ json: {} });
+      return route.fulfill({
+        json: {} /* Fixture exception: unrelated API calls get an empty body; the signage client never reads it. */,
+      });
     });
     await page.goto("http://localhost:5178/signage/test");
     await expect(page.getByText("v1:0", { exact: true })).toBeVisible();

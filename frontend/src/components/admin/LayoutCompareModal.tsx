@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogBody,
 } from "@/components/ui/dialog";
-import type { FloorArea, FloorTable, Layout, TableType } from "@/types/admin";
+import type { FloorArea, FloorTable, Layout, TableType } from "@/api-types";
 import { m } from "@/paraglide/messages";
 import { getDayLabel, type DayOption } from "./LayoutEditor";
 
@@ -64,11 +64,11 @@ function diffTables(
         m.admin_layout_compare_capacity_changed({ before: a.capacity, after: b.capacity }),
       );
     }
-    if (a.tableTypeId !== b.tableTypeId) {
+    if (a.table_type_id !== b.table_type_id) {
       changes.push(
         m.admin_layout_compare_type_changed({
-          before: tableTypeName(a.tableTypeId, tableTypes),
-          after: tableTypeName(b.tableTypeId, tableTypes),
+          before: tableTypeName(a.table_type_id, tableTypes),
+          after: tableTypeName(b.table_type_id, tableTypes),
         }),
       );
     }
@@ -97,8 +97,8 @@ function diffAreas(before: FloorArea[], after: FloorArea[]): AreaDiffRow[] {
       Math.round(a.x) !== Math.round(b.x) ||
       Math.round(a.y) !== Math.round(b.y) ||
       a.rotation !== b.rotation ||
-      a.widthM !== b.widthM ||
-      a.lengthM !== b.lengthM;
+      a.width_m !== b.width_m ||
+      a.length_m !== b.length_m;
     return { label, status: changed ? "changed" : "unchanged" };
   });
 }
@@ -155,19 +155,19 @@ export default function LayoutCompareModal({
   }
 
   const baselineTables = useMemo(
-    () => tables.filter((t) => t.layoutId === baselineId),
+    () => tables.filter((t) => t.layout_id === baselineId),
     [tables, baselineId],
   );
   const currentTables = useMemo(
-    () => tables.filter((t) => t.layoutId === currentId),
+    () => tables.filter((t) => t.layout_id === currentId),
     [tables, currentId],
   );
   const baselineAreas = useMemo(
-    () => areas.filter((a) => a.layoutId === baselineId),
+    () => areas.filter((a) => a.layout_id === baselineId),
     [areas, baselineId],
   );
   const currentAreas = useMemo(
-    () => areas.filter((a) => a.layoutId === currentId),
+    () => areas.filter((a) => a.layout_id === currentId),
     [areas, currentId],
   );
 

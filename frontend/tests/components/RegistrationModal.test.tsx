@@ -1,9 +1,12 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, productOut } from "@/mocks/data/builders";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
-import { NO_PRODUCT_TRANSLATIONS, type Event, type Product } from "@/types/event";
+import type { Event, Product } from "@/api-types";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { noEventTranslations } from "../utils/eventFixtures";
@@ -71,35 +74,35 @@ vi.mock("@/paraglide/runtime", () => ({
   setLocale: vi.fn(),
 }));
 
-const champagneProduct: Product = {
+const champagneProduct: Product = productOut({
   id: "champagne-standard",
-  eventId: "fri-vip",
+  event_id: "fri-vip",
   ...NO_PRODUCT_TRANSLATIONS,
   name: "Champagne Bottle (Standard)",
   description: "",
-  price: 65,
+  price: "65",
   category: "champagne",
   purchasable: true,
   required: false,
-  createdAt: "",
-  updatedAt: "",
-};
+  created_at: "",
+  updated_at: "",
+});
 
-const vipEvent: Event = {
+const vipEvent: Event = eventOut({
   id: "fri-vip",
-  editionId: "ed-1",
+  edition_id: "ed-1",
   ...noEventTranslations,
   title: "VIP Reception",
-  startTime: "19:30",
+  start_time: "19:30",
   description: "VIP event",
   category: "vip" as const,
   date: "2025-10-03",
-  registrationRequired: true,
+  registration_required: true,
   active: true,
-  createdAt: "",
-  updatedAt: "",
+  created_at: "",
+  updated_at: "",
   products: [champagneProduct],
-};
+});
 
 function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
   const wrapper = createTestQueryClientWrapper();
@@ -169,7 +172,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", async ({ request }) => {
         requestBody = (await request.json()) as { new_editions_opt_in?: boolean };
-        return HttpResponse.json({ id: "reg-opt-in" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-opt-in",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -199,7 +253,58 @@ describe("RegistrationModal component", () => {
       server.use(
         http.post("/api/registrations", async ({ request }) => {
           requestBody = (await request.json()) as { form_start_time?: string };
-          return HttpResponse.json({ id: "reg-start-time" }, { status: 201 });
+          return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+            {
+              order_answers: [],
+              booked_table_quantity: 0,
+              allocations: [],
+              person_id: "",
+              person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+              event_id: "",
+              event: {
+                title: "",
+                description: "",
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                id: "",
+                edition_id: "",
+                date: "2026-01-01",
+                start_time: "",
+                end_time: null,
+                category: "",
+                volunteers_only: false,
+                members_only: false,
+                registration_required: false,
+                registrations_open_from: null,
+                registrations_close_at: null,
+                active: false,
+                order_questions: [],
+                products: [],
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+              },
+              guest_count: 0,
+              order_items: [],
+              notes: "",
+              table_id: null,
+              status: "pending",
+              payment_status: "unpaid",
+              amount_due: null,
+              amount_paid: "0",
+              refund_due: "0",
+              checked_in: false,
+              checked_in_at: null,
+              strap_issued: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              id: "reg-start-time",
+            },
+            { status: 201 },
+          );
         }),
       );
       const view = renderModal({ show: false });
@@ -227,7 +332,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", async ({ request }) => {
         requestBody = (await request.json()) as { preferred_language?: string };
-        return HttpResponse.json({ id: "reg-language" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-language",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -262,7 +418,58 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/registrations", ({ request }) => {
         authorization = request.headers.get("Authorization") ?? "";
-        return HttpResponse.json({ id: "reg-owned" }, { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-owned",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -291,11 +498,11 @@ describe("RegistrationModal component", () => {
     // Defense in depth: the public API never actually returns a hidden
     // product, but the component must not offer a buy control for one if it
     // somehow appeared in the payload.
-    const hiddenProduct: Product = {
+    const hiddenProduct: Product = productOut({
       ...champagneProduct,
       id: "hidden-champagne",
       purchasable: false,
-    };
+    });
     renderModal({
       event: { ...vipEvent, products: [champagneProduct, hiddenProduct] },
     });
@@ -310,16 +517,16 @@ describe("RegistrationModal component", () => {
   });
 
   it("hides order products when the event has only a hidden product", () => {
-    const hiddenProduct: Product = {
+    const hiddenProduct: Product = productOut({
       ...champagneProduct,
       purchasable: false,
-    };
+    });
     renderModal({ event: { ...vipEvent, products: [hiddenProduct] } });
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
   it("shows a sold-out badge and disables increasing quantity for a sold-out product", () => {
-    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
     renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
 
     expect(screen.getByText("Sold out")).toBeInTheDocument();
@@ -330,7 +537,7 @@ describe("RegistrationModal component", () => {
   });
 
   it("requires a name and valid email before joining the waitlist for a sold-out product", () => {
-    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
     renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
 
     fireEvent.click(screen.getByRole("button", { name: "Join waitlist" }));
@@ -345,11 +552,11 @@ describe("RegistrationModal component", () => {
     server.use(
       http.post("/api/waitlist", async ({ request }) => {
         submittedBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ok: true });
+        return jsonResponse<import("@/api-types").OkOut>({ ok: true });
       }),
     );
 
-    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
     renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
 
     fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Nancy Cattrysse" } });
@@ -382,7 +589,12 @@ describe("RegistrationModal component", () => {
   it("shows error message on submission failure (server error)", async () => {
     server.use(
       http.post("/api/registrations", () =>
-        HttpResponse.json({ error: "Internal server error" }, { status: 500 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            error: "Internal server error",
+          },
+          { status: 500 },
+        ),
       ),
     );
 
@@ -467,23 +679,23 @@ describe("RegistrationModal component", () => {
   });
 
   describe("required products", () => {
-    const vipEntry: Product = {
+    const vipEntry: Product = productOut({
       id: "vip-entry",
-      eventId: "fri-vip",
+      event_id: "fri-vip",
       ...NO_PRODUCT_TRANSLATIONS,
       name: "VIP Entry",
       description: "",
-      price: 50,
+      price: "50",
       category: "other",
       purchasable: true,
       required: true,
-      createdAt: "",
-      updatedAt: "",
-    };
-    const eventWithRequiredProduct: Event = {
+      created_at: "",
+      updated_at: "",
+    });
+    const eventWithRequiredProduct: Event = eventOut({
       ...vipEvent,
       products: [vipEntry, champagneProduct],
-    };
+    });
 
     it("disables an optional product's increase button until the required one is added", () => {
       renderModal({ event: eventWithRequiredProduct });
@@ -522,38 +734,38 @@ describe("RegistrationModal component", () => {
   });
 
   describe("bundled products", () => {
-    const bottle: Product = {
+    const bottle: Product = productOut({
       id: "bottle",
-      eventId: "fri-vip",
+      event_id: "fri-vip",
       ...NO_PRODUCT_TRANSLATIONS,
       name: "Champagne Bottle",
       description: "",
-      price: 65,
+      price: "65",
       category: "champagne",
       purchasable: true,
       required: false,
-      createdAt: "",
-      updatedAt: "",
-    };
-    const vipTable: Product = {
+      created_at: "",
+      updated_at: "",
+    });
+    const vipTable: Product = productOut({
       id: "vip-table",
-      eventId: "fri-vip",
+      event_id: "fri-vip",
       ...NO_PRODUCT_TRANSLATIONS,
       name: "VIP Table",
       description: "",
-      price: 200,
+      price: "200",
       category: "other",
       purchasable: true,
       required: true,
-      includedProductId: "bottle",
-      includedPerGuests: 2,
-      createdAt: "",
-      updatedAt: "",
-    };
-    const eventWithBundle: Event = {
+      included_product_id: "bottle",
+      included_per_guests: 2,
+      created_at: "",
+      updated_at: "",
+    });
+    const eventWithBundle: Event = eventOut({
       ...vipEvent,
       products: [vipTable, bottle],
-    };
+    });
 
     it("shows no included-quantity note before the bundling product is selected", () => {
       renderModal({ event: eventWithBundle });
@@ -595,7 +807,58 @@ it("submits optional event answers with the order using translated labels", asyn
   server.use(
     http.post("/api/registrations", async ({ request }) => {
       body = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({ id: "with-answers" }, { status: 201 });
+      return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+        {
+          order_answers: [],
+          booked_table_quantity: 0,
+          allocations: [],
+          person_id: "",
+          person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+          event_id: "",
+          event: {
+            title: "",
+            description: "",
+            title_nl: null,
+            title_fr: null,
+            title_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            id: "",
+            edition_id: "",
+            date: "2026-01-01",
+            start_time: "",
+            end_time: null,
+            category: "",
+            volunteers_only: false,
+            members_only: false,
+            registration_required: false,
+            registrations_open_from: null,
+            registrations_close_at: null,
+            active: false,
+            order_questions: [],
+            products: [],
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          guest_count: 0,
+          order_items: [],
+          notes: "",
+          table_id: null,
+          status: "pending",
+          payment_status: "unpaid",
+          amount_due: null,
+          amount_paid: "0",
+          refund_due: "0",
+          checked_in: false,
+          checked_in_at: null,
+          strap_issued: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "with-answers",
+        },
+        { status: 201 },
+      );
     }),
   );
   const base = {
@@ -610,7 +873,7 @@ it("submits optional event answers with the order using translated labels", asyn
     event: {
       ...vipEvent,
       products: [],
-      orderQuestions: [
+      order_questions: [
         { ...base, id: "text", kind: "free_text", title_nl: "Opmerking", title_en: "Comment" },
         { ...base, id: "rating", kind: "rating", title_nl: "Score", title_en: null },
         {

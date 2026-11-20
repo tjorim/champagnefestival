@@ -43,11 +43,16 @@ export default function OrganizationTranslationSuggestion({
     queryFn: async ({ signal }) => {
       const response = await fetch(url, { headers: headers(), signal });
       if (!response.ok) throw new Error("Translation capabilities unavailable");
-      return (await response.json()) as { languages: string[] };
+      return (await response.json()) as import("@/api-types").TranslationCapabilities;
     },
   });
   const languages = capabilities.data?.languages ?? [];
-  if (source === target || !languages.includes(source) || !languages.includes(target)) return null;
+  if (
+    source === target ||
+    !languages.some((language) => language === source) ||
+    !languages.some((language) => language === target)
+  )
+    return null;
 
   async function suggest() {
     const snapshot = latest.current;
@@ -72,7 +77,7 @@ export default function OrganizationTranslationSuggestion({
           response.status === 429 ? m.translation_rate_limit() : m.translation_error(),
         );
       }
-      const draft = (await response.json()) as { text: string };
+      const draft = (await response.json()) as import("@/api-types").TranslationDraft;
       if (controller.signal.aborted || !isCurrent()) return;
       if (
         Object.entries(snapshot).some(

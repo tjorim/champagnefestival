@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import VolunteerFormModal from "@/components/admin/VolunteerFormModal";
-import { apiToPerson } from "@/types/person";
+import { makePerson } from "../utils/personFixture";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
@@ -16,7 +16,7 @@ function mount(edit = false) {
       show
       volunteer={
         edit
-          ? apiToPerson({ id: "volunteer", name: "Alice", roles: ["volunteer"], help_periods: [] })
+          ? makePerson({ id: "volunteer", name: "Alice", roles: ["volunteer"], help_periods: [] })
           : null
       }
       onSave={onSave}
@@ -40,9 +40,9 @@ describe("optional volunteer details", () => {
       expect(onSave).toHaveBeenCalledWith({
         name: "Alice",
         address: "",
-        nationalRegisterNumber: "",
-        eidDocumentNumber: "",
-        helpPeriods: [],
+        national_register_number: "",
+        eid_document_number: "",
+        help_periods: [],
       }),
     );
     expect(onHide).toHaveBeenCalledOnce();
@@ -57,7 +57,7 @@ describe("optional volunteer details", () => {
     await user.click(save);
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "Updated Alice", helpPeriods: [] }),
+        expect.objectContaining({ name: "Updated Alice", help_periods: [] }),
       ),
     );
   });
@@ -73,7 +73,7 @@ describe("optional volunteer details", () => {
     await user.click(screen.getByRole("button", { name: "admin_volunteers_remove_help_period" }));
     await user.click(save);
     await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ helpPeriods: [] })),
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ help_periods: [] })),
     );
   });
 });

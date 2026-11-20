@@ -6,6 +6,7 @@ import hashlib
 import json
 from collections import defaultdict
 from decimal import Decimal
+from typing import Literal, overload
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -14,7 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.live import mapping, notify_live_event
 from app.models import Product, Registration
-from app.schemas import ProductTextFields, ProductUpdate
+from app.schemas import (
+    ProductChangeBookingOut,
+    ProductChangePreviewOut,
+    ProductChangeShortageOut,
+    ProductTextFields,
+    ProductUpdate,
+)
 from app.services import product_categories_service
 from app.services import product_inventory as inventory
 from app.services.errors import ServiceError, to_http_exception
@@ -50,9 +57,33 @@ async def ensure_category_exists(db: AsyncSession, key: str) -> None:
         raise to_http_exception(exc) from exc
 
 
+@overload
+async def change_product(
+    db: AsyncSession,
+    product_id: str,
+    body: ProductUpdate,
+    *,
+    preview: Literal[True],
+    actor: str,
+    request_id: str | None,
+) -> ProductChangePreviewOut: ...
+
+
+@overload
+async def change_product(
+    db: AsyncSession,
+    product_id: str,
+    body: ProductUpdate,
+    *,
+    preview: Literal[False],
+    actor: str,
+    request_id: str | None,
+) -> Product: ...
+
+
 async def change_product(
     db: AsyncSession, product_id: str, body: ProductUpdate, *, preview: bool, actor: str, request_id: str | None
-):
+) -> Product | ProductChangePreviewOut:
     product = await db.get(Product, product_id)
     if product is None:
         raise HTTPException(404, "Product not found.")
@@ -178,15 +209,15 @@ async def change_product(
             raise HTTPException(409, "Adjust this booking's table allocations before applying the package change.")
         total = inventory.order_total(items)
         changed_rows.append(
-            {
-                "id": registration.id,
-                "before_total": str(inventory.order_total(registration.order_items)),
-                "after_total": str(total),
-                "amount_paid": str(registration.amount_paid),
-                "refund_due": str(max(0, registration.amount_paid - total)),
-                "before_items": registration.order_items,
-                "after_items": items,
-            }
+            ProductChangeBookingOut(
+                id=registration.id,
+                before_total=str(inventory.order_total(registration.order_items)),
+                after_total=str(total),
+                amount_paid=str(registration.amount_paid),
+                refund_due=str(max(0, registration.amount_paid - total)),
+                before_items=registration.order_items,
+                after_items=items,
+            )
         )
         projected.append((registration, items, snapshot))
     totals: dict[str, int] = defaultdict(int)
@@ -195,23 +226,19 @@ async def change_product(
             for key, qty in inventory.quantities(items).items():
                 totals[key] += qty
     shortages = [
-        {
-            "product_id": p.id,
-            "name": p.name,
-            "stock": p.stock,
-            "reserved": totals[p.id],
-            "shortage": totals[p.id] - p.stock,
-        }
+        ProductChangeShortageOut(
+            product_id=p.id, name=p.name, stock=p.stock, reserved=totals[p.id], shortage=totals[p.id] - p.stock
+        )
         for p in event.products
         if p.stock is not None and totals[p.id] > p.stock
     ]
-    result = {
-        "preview_token": token,
-        "bookings": changed_rows,
-        "shortages": shortages,
-        "price_changed": price_changed,
-        "contents_changed": contents_changed,
-    }
+    result = ProductChangePreviewOut(
+        preview_token=token,
+        bookings=changed_rows,
+        shortages=shortages,
+        price_changed=price_changed,
+        contents_changed=contents_changed,
+    )
     if preview:
         return result
     requires_shortage_confirmation = bool(shortages) and (

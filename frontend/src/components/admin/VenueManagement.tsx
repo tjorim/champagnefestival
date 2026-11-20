@@ -47,7 +47,17 @@ import {
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
+import type {
+  FloorTable,
+  Layout,
+  Room,
+  RoomUpdate,
+  TableType,
+  TableTypeCreate,
+  TableTypeUpdate,
+  Venue,
+  VenueUpdate,
+} from "@/api-types";
 import ConfirmModal from "@/components/ConfirmModal";
 import { safeRoomColor } from "@/utils/layoutUtils";
 
@@ -68,7 +78,7 @@ interface VenueManagementProps {
     lat: number,
     lng: number,
   ) => Promise<void>;
-  onUpdate: (id: string, data: Partial<Omit<Venue, "id" | "active">>) => Promise<void>;
+  onUpdate: (id: string, data: VenueUpdate) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
   onRestore: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -79,15 +89,12 @@ interface VenueManagementProps {
     lengthM: number,
     color: string,
   ) => Promise<void>;
-  onUpdateRoom: (
-    roomId: string,
-    data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>,
-  ) => Promise<void>;
+  onUpdateRoom: (roomId: string, data: RoomUpdate) => Promise<void>;
   onArchiveRoom: (roomId: string) => Promise<void>;
   onRestoreRoom: (roomId: string) => Promise<void>;
   onDeleteRoom: (roomId: string) => Promise<void>;
-  onAddTableType: (data: Omit<TableType, "id">) => Promise<void>;
-  onUpdateTableType: (id: string, data: Partial<Omit<TableType, "id">>) => Promise<void>;
+  onAddTableType: (data: TableTypeCreate) => Promise<void>;
+  onUpdateTableType: (id: string, data: TableTypeUpdate) => Promise<void>;
   onArchiveTableType: (id: string) => Promise<void>;
   onRestoreTableType: (id: string) => Promise<void>;
   onDeleteTableType: (id: string) => Promise<void>;
@@ -192,7 +199,7 @@ export default function VenueManagement({
             name: editingVenue.name,
             address: editingVenue.address,
             city: editingVenue.city,
-            postalCode: editingVenue.postalCode,
+            postalCode: editingVenue.postal_code,
             country: editingVenue.country,
             lat: editingVenue.lat,
             lng: editingVenue.lng,
@@ -212,7 +219,7 @@ export default function VenueManagement({
           name: value.name.trim(),
           address: value.address.trim(),
           city: value.city.trim(),
-          postalCode: value.postalCode.trim(),
+          postal_code: value.postalCode.trim(),
           country: value.country.trim(),
           lat: value.lat,
           lng: value.lng,
@@ -223,7 +230,7 @@ export default function VenueManagement({
             data.name,
             data.address,
             data.city,
-            data.postalCode,
+            data.postal_code,
             data.country,
             data.lat,
             data.lng,
@@ -300,10 +307,10 @@ export default function VenueManagement({
     () =>
       editingRoom
         ? {
-            venueId: editingRoom.venueId,
+            venueId: editingRoom.venue_id,
             name: editingRoom.name,
-            widthM: editingRoom.widthM,
-            lengthM: editingRoom.lengthM,
+            widthM: editingRoom.width_m,
+            lengthM: editingRoom.length_m,
             color: editingRoom.color,
           }
         : { ...emptyRoomForm, venueId: addRoomVenueId ?? "" },
@@ -333,12 +340,12 @@ export default function VenueManagement({
           // make an untouched save look like a dimension change.
           const dimensionsChanged =
             editingRoom === null ||
-            editingRoom.widthM !== value.widthM ||
-            editingRoom.lengthM !== value.lengthM;
+            editingRoom.width_m !== value.widthM ||
+            editingRoom.length_m !== value.lengthM;
           await onUpdateRoom(editingRoomId, {
-            venueId: value.venueId,
+            venue_id: value.venueId,
             name: value.name.trim(),
-            ...(dimensionsChanged ? { widthM: value.widthM, lengthM: value.lengthM } : {}),
+            ...(dimensionsChanged ? { width_m: value.widthM, length_m: value.lengthM } : {}),
             color: value.color,
           });
         } else {
@@ -439,12 +446,12 @@ export default function VenueManagement({
     () =>
       editingTableType
         ? {
-            venueId: editingTableType.venueId,
+            venueId: editingTableType.venue_id,
             name: editingTableType.name,
             shape: editingTableType.shape,
-            widthM: editingTableType.widthM,
-            lengthM: editingTableType.lengthM,
-            heightType: editingTableType.heightType,
+            widthM: editingTableType.width_m,
+            lengthM: editingTableType.length_m,
+            heightType: editingTableType.height_type,
             capacity: editingTableType.capacity,
             active: editingTableType.active,
           }
@@ -489,15 +496,15 @@ export default function VenueManagement({
         editingTableTypeId &&
         editingTableType &&
         (value.shape !== editingTableType.shape ||
-          widthM !== editingTableType.widthM ||
-          lengthM !== editingTableType.lengthM)
+          widthM !== editingTableType.width_m ||
+          lengthM !== editingTableType.length_m)
       ) {
         const affectedTableLayoutIds = tables
-          .filter((t) => t.tableTypeId === editingTableTypeId)
-          .map((t) => t.layoutId);
+          .filter((t) => t.table_type_id === editingTableTypeId)
+          .map((t) => t.layout_id);
         const affectedRoomIds = new Set(
           affectedTableLayoutIds
-            .map((layoutId) => layouts.find((l) => l.id === layoutId)?.roomId)
+            .map((layoutId) => layouts.find((l) => l.id === layoutId)?.room_id)
             .filter((roomId): roomId is string => Boolean(roomId)),
         );
         if (affectedTableLayoutIds.length > 0) {
@@ -524,11 +531,19 @@ export default function VenueManagement({
     payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number },
     editingId: string | null,
   ) => {
+    const body: TableTypeCreate = {
+      name: payload.name,
+      venue_id: payload.venueId,
+      shape: payload.shape,
+      width_m: payload.widthM,
+      length_m: payload.lengthM,
+      height_type: payload.heightType,
+      capacity: payload.capacity,
+    };
     if (editingId) {
-      const { active: _active, ...updateData } = payload;
-      await onUpdateTableType(editingId, updateData);
+      await onUpdateTableType(editingId, body);
     } else {
-      await onAddTableType(payload);
+      await onAddTableType(body);
     }
     setShowTableTypeModal(false);
   };
@@ -614,9 +629,9 @@ export default function VenueManagement({
         ) : (
           venues.map((venue) => {
             const isArchived = !venue.active;
-            const venueRooms = rooms.filter((r) => r.venueId === venue.id);
-            const venueTableTypes = tableTypes.filter((tt) => tt.venueId === venue.id);
-            const locationLine = [venue.address, venue.city, venue.postalCode, venue.country]
+            const venueRooms = rooms.filter((r) => r.venue_id === venue.id);
+            const venueTableTypes = tableTypes.filter((tt) => tt.venue_id === venue.id);
+            const locationLine = [venue.address, venue.city, venue.postal_code, venue.country]
               .filter(Boolean)
               .join(", ");
             return (
@@ -699,7 +714,7 @@ export default function VenueManagement({
                                 /* oxlint-enable shadcn/no-inline-styles */
                               />
                               {room.name}
-                              {room.dimensionsPlaceholder && (
+                              {room.dimensions_placeholder && (
                                 <span
                                   role="img"
                                   aria-label={m.admin_room_dimensions_placeholder_badge()}

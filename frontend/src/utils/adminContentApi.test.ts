@@ -1,3 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
+import type { EditionOut, EventOut } from "@/api-types";
+import { editionOut, eventOut } from "@/mocks/data/builders";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
@@ -6,12 +9,12 @@ import { saveEdition, saveEditionEvent } from "./adminContentApi";
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
 /** Answers every API write with `body` and returns the JSON bodies it received, in order. */
-function serveJson(body: Record<string, unknown>): Record<string, unknown>[] {
+function serveJson(body: EditionOut | EventOut): Record<string, unknown>[] {
   const sent: Record<string, unknown>[] = [];
   server.use(
     http.all("/api/*", async ({ request }) => {
       sent.push((await request.json()) as Record<string, unknown>);
-      return HttpResponse.json(body);
+      return jsonResponse<EditionOut | EventOut>(body);
     }),
   );
   return sent;
@@ -31,10 +34,10 @@ describe("saveEdition", () => {
   };
 
   it("sends the selected organization ids for a festival edition", async () => {
-    const fetchMock = serveJson({ id: "2026-march" });
+    const fetchMock = serveJson(editionOut({ id: "2026-march" }));
 
     await saveEdition(
-      { ...basePayload, editionType: "festival", organizationIds: [1, 2] },
+      { ...basePayload, edition_type: "festival", organizations: [1, 2] },
       authHeaders,
       "2026-march",
     );
@@ -44,12 +47,12 @@ describe("saveEdition", () => {
   });
 
   it("sends the lineup order and sponsor levels, and none for off-festival editions", async () => {
-    const festivalFetch = serveJson({ id: "2026-march" });
+    const festivalFetch = serveJson(editionOut({ id: "2026-march" }));
     await saveEdition(
       {
         ...basePayload,
-        editionType: "festival",
-        organizationIds: [3, 1, 2],
+        edition_type: "festival",
+        organizations: [3, 1, 2],
         sponsorTiers: { 3: "main", 2: "supporter" },
       },
       authHeaders,
@@ -58,9 +61,9 @@ describe("saveEdition", () => {
     expect(festivalFetch[0]!.organizations).toEqual([3, 1, 2]);
     expect(festivalFetch[0]!.sponsor_tiers).toEqual({ 3: "main", 2: "supporter" });
 
-    const bourseFetch = serveJson({ id: "2026-march" });
+    const bourseFetch = serveJson(editionOut({ id: "2026-march" }));
     await saveEdition(
-      { ...basePayload, editionType: "bourse", organizationIds: [3], sponsorTiers: { 3: "main" } },
+      { ...basePayload, edition_type: "bourse", organizations: [3], sponsorTiers: { 3: "main" } },
       authHeaders,
       "2026-march",
     );
@@ -69,11 +72,11 @@ describe("saveEdition", () => {
 
   it.each(["bourse", "capsule_exchange"] as const)(
     "explicitly sends an empty organizations list when converting to %s",
-    async (editionType) => {
-      const fetchMock = serveJson({ id: "2026-march" });
+    async (edition_type) => {
+      const fetchMock = serveJson(editionOut({ id: "2026-march" }));
 
       await saveEdition(
-        { ...basePayload, editionType, organizationIds: [1, 2] },
+        { ...basePayload, edition_type, organizations: [1, 2] },
         authHeaders,
         "2026-march",
       );
@@ -87,27 +90,27 @@ describe("saveEdition", () => {
 
 describe("saveEditionEvent", () => {
   it("converts datetime-local registration bounds to ISO datetimes", async () => {
-    const fetchMock = serveJson({ id: "event-1", products: [] });
+    const fetchMock = serveJson(eventOut({ id: "event-1", products: [] }));
 
     await saveEditionEvent(
       {
         editionId: "2026-march",
         formData: {
-          editionId: "2026-march",
-          titleNl: "Proeverij",
-          titleFr: "",
-          titleEn: "",
-          descriptionNl: "",
-          descriptionFr: "",
-          descriptionEn: "",
+          edition_id: "2026-march",
+          title_nl: "Proeverij",
+          title_fr: "",
+          title_en: "",
+          description_nl: "",
+          description_fr: "",
+          description_en: "",
           date: "2026-03-21",
-          startTime: "18:00",
-          endTime: "20:00",
+          start_time: "18:00",
+          end_time: "20:00",
           category: "tasting",
-          registrationRequired: true,
-          registrationsOpenFrom: "2026-03-20T18:00",
-          registrationsCloseAt: "2026-03-21T17:00",
-          sortOrder: "",
+          registration_required: true,
+          registrations_open_from: "2026-03-20T18:00",
+          registrations_close_at: "2026-03-21T17:00",
+
           active: true,
         },
       },
@@ -120,23 +123,23 @@ describe("saveEditionEvent", () => {
   });
 
   it("sends the per-language text, with blank translations cleared", async () => {
-    const fetchMock = serveJson({ id: "event-1", products: [] });
+    const fetchMock = serveJson(eventOut({ id: "event-1", products: [] }));
     const formData = {
-      editionId: "2026-march",
-      titleNl: "Degustatie",
-      titleFr: " Dégustation ",
-      titleEn: "Tasting",
-      descriptionNl: "",
-      descriptionFr: "",
-      descriptionEn: "",
+      edition_id: "2026-march",
+      title_nl: "Degustatie",
+      title_fr: " Dégustation ",
+      title_en: "Tasting",
+      description_nl: "",
+      description_fr: "",
+      description_en: "",
       date: "2026-03-21",
-      startTime: "18:00",
-      endTime: "",
+      start_time: "18:00",
+      end_time: "",
       category: "tasting",
-      registrationRequired: false,
-      registrationsOpenFrom: "",
-      registrationsCloseAt: "",
-      sortOrder: "",
+      registration_required: false,
+      registrations_open_from: "",
+      registrations_close_at: "",
+
       active: true,
     };
 
@@ -157,11 +160,11 @@ describe("saveEditionEvent", () => {
     expect(fetchMock[0]!).not.toHaveProperty("title");
     expect(fetchMock[0]!).not.toHaveProperty("title_language");
 
-    const withDescription = serveJson({ id: "event-1", products: [] });
+    const withDescription = serveJson(eventOut({ id: "event-1", products: [] }));
     await saveEditionEvent(
       {
         editionId: "2026-march",
-        formData: { ...formData, descriptionNl: "Een avond", descriptionEn: "An evening" },
+        formData: { ...formData, description_nl: "Een avond", description_en: "An evening" },
       },
       authHeaders,
     );
@@ -192,10 +195,10 @@ describe("error handling", () => {
           id: "2026-march",
           year: 2026,
           month: "march",
-          editionType: "festival",
+          edition_type: "festival",
           venueId: "venue-1",
           active: true,
-          organizationIds: [],
+          organizations: [],
         },
         authHeaders,
         "2026-march",
@@ -214,10 +217,10 @@ describe("error handling", () => {
           id: "2026-march",
           year: 2026,
           month: "march",
-          editionType: "festival",
+          edition_type: "festival",
           venueId: "venue-1",
           active: true,
-          organizationIds: [],
+          organizations: [],
         },
         authHeaders,
         "2026-march",

@@ -1,3 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
+import { makePerson } from "../utils/personFixture";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useIsMutating } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
@@ -5,7 +8,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
 import { captureAdminPeopleFence, resetAdminPeopleSession } from "@/state/adminPeopleSession";
-import { apiToPerson, localIsoDate } from "@/types/person";
+import { localIsoDate } from "@/types/person";
 import { fetchPeoplePage, type PeoplePage } from "@/utils/adminPeopleQueries";
 import { queryKeys } from "@/utils/queryKeys";
 import { createTestQueryClientHarness } from "../utils/queryClient";
@@ -24,6 +27,11 @@ const data = {
   anonymised: false,
 };
 const person = (id: string) => ({
+  ...seedPeople[0]!,
+  registration_count: 0,
+  reward_due: false,
+  last_attended: null,
+  inactivity_highlight: false,
   id,
   updated_at: "2026-01-01",
   ...data,
@@ -47,7 +55,7 @@ function harness() {
   const key = queryKeys.admin.peopleList(params);
   const membersKey = queryKeys.admin.peopleList({ ...params, role: "member" });
   const page = (): PeoplePage => ({
-    items: rows.map(apiToPerson),
+    items: rows.map((row) => makePerson(row)),
     total: rows.length,
     page: 1,
     limit: 20,
@@ -62,7 +70,12 @@ function harness() {
     http.get("/api/people", ({ request }) => {
       const role = new URL(request.url).searchParams.get("role");
       const matching = rows.filter((row) => !role || row.roles.includes(role));
-      return HttpResponse.json({ items: matching, total: matching.length, page: 1, limit: 20 });
+      return jsonResponse<import("@/api-types").PersonListEnvelope>({
+        items: matching,
+        total: matching.length,
+        page: 1,
+        limit: 20,
+      });
     }),
   );
   const view = renderHook(
@@ -97,7 +110,27 @@ describe("optimistic people mutations", () => {
       http.put("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0] = { ...h.rows()[0]!, ...data, updated_at: "2026-10-06" };
-        return HttpResponse.json({ ...h.rows()[0], updated_at: "2026-10-06" });
+        return jsonResponse<import("@/api-types").PersonOut>({
+          id: "",
+          name: "",
+          email: "",
+          phone: "",
+          preferred_language: null,
+          address: "",
+          roles: [],
+          retired_roles: {},
+          role_history: {},
+          national_register_number: null,
+          eid_document_number: null,
+          inactivity_exempt: false,
+          inactivity_exempt_note: "",
+          visits_per_month: null,
+          notes: "",
+          anonymised: false,
+          created_at: "2026-01-01T00:00:00Z",
+          ...h.rows()[0],
+          updated_at: "2026-10-06",
+        });
       }),
     );
     let promise!: Promise<unknown>;
@@ -111,7 +144,7 @@ describe("optimistic people mutations", () => {
       await promise;
     });
     expect(h.cached().items[0]?.name).toBe("Updated");
-    expect(h.cached().items[0]?.updatedAt).toBe("2026-10-06");
+    expect(h.cached().items[0]?.updated_at).toBe("2026-10-06");
     await waitFor(() => expect(h.result.current.pending).toBe(0));
   });
 
@@ -124,7 +157,7 @@ describe("optimistic people mutations", () => {
       http.put("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0]!.roles = [];
-        return HttpResponse.json(h.rows()[0]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
       }),
     );
     let promise!: Promise<unknown>;
@@ -151,7 +184,12 @@ describe("optimistic people mutations", () => {
       http.delete("/api/people/:id", async () => {
         await gate.promise;
         h.rows()[0]!.name = "Changed elsewhere";
-        return HttpResponse.json({ detail: "Refused" }, { status: 409 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Refused",
+          },
+          { status: 409 },
+        );
       }),
     );
     let promise!: Promise<unknown>;
@@ -173,8 +211,18 @@ describe("optimistic people mutations", () => {
   it("restores the snapshot if both the write and reconciliation fail", async () => {
     const h = harness();
     server.use(
-      http.put("/api/members/:id", () => HttpResponse.json({}, { status: 500 })),
-      http.get("/api/people", () => HttpResponse.json({}, { status: 500 })),
+      http.put("/api/members/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      ),
+      http.get("/api/people", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      ),
     );
     await act(async () => {
       await h.result.current.updateMemberMutation
@@ -191,9 +239,13 @@ describe("optimistic people mutations", () => {
     server.use(
       http.put("/api/people/:id", async ({ params }) => {
         await (params.id === "a" ? a.promise : b.promise);
-        if (params.id === "a") return HttpResponse.json({}, { status: 409 });
+        if (params.id === "a")
+          return HttpResponse.json(
+            /* Fixture exception: error response; intentionally outside the success schema. */ {},
+            { status: 409 },
+          );
         h.rows()[1]!.name = "Second edit";
-        return HttpResponse.json(h.rows()[1]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[1]!);
       }),
     );
     let first!: Promise<unknown>;
@@ -230,7 +282,7 @@ describe("optimistic people mutations", () => {
         seen.push(body.name);
         if (seen.length === 1) await gate.promise;
         h.rows()[0]!.name = body.name;
-        return HttpResponse.json(h.rows()[0]);
+        return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
       }),
     );
     let first!: Promise<unknown>;
@@ -262,7 +314,9 @@ describe("optimistic people mutations", () => {
         http.put("/api/people/:id", async () => {
           requests++;
           await gate.promise;
-          return HttpResponse.json(h.rows()[0], { status: success ? 200 : 409 });
+          return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!, {
+            status: success ? 200 : 409,
+          });
         }),
       );
       let promise!: Promise<unknown>;
@@ -277,7 +331,7 @@ describe("optimistic people mutations", () => {
       h.queryClient.removeQueries({ queryKey: queryKeys.admin.people });
       expect(fence()).toBe(false);
       const replacement = {
-        items: [apiToPerson({ ...person("a"), name: "Next session" })],
+        items: [makePerson({ ...person("a"), name: "Next session" })],
         total: 1,
         page: 1,
         limit: 20,
@@ -306,7 +360,7 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.deactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.retiredRoles).toEqual({ member: localIsoDate() }),
+      expect(h.cached().items[0]?.retired_roles).toEqual({ member: localIsoDate() }),
     );
     expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
@@ -325,7 +379,7 @@ describe("optimistic people mutations", () => {
       http.post("/api/volunteers/:id/deactivate", async () => {
         await gate.promise;
         Object.assign(h.rows()[0]!, { retired_roles: { volunteer: localIsoDate() } });
-        (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
+        (h.rows()[0]!.help_periods[0]! as { last_help_day: string | null }).last_help_day =
           localIsoDate();
         return new HttpResponse(null, { status: 204 });
       }),
@@ -335,12 +389,12 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.deactivateVolunteerMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
+      expect(h.cached().items[0]?.help_periods?.[0]?.last_help_day).toBe(localIsoDate()),
     );
-    expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: localIsoDate() });
+    expect(h.cached().items[0]?.retired_roles).toEqual({ volunteer: localIsoDate() });
     expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
-    expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
+    expect(h.cached().items[0]?.help_periods).toHaveLength(1);
     expect(h.cached().total).toBe(2);
     gate.resolve();
     await act(async () => {
@@ -355,7 +409,7 @@ describe("optimistic people mutations", () => {
     const seeded = h.cached();
     h.queryClient.setQueryData(h.key, {
       ...seeded,
-      items: [{ ...seeded.items[0]!, retiredRoles: retired }, ...seeded.items.slice(1)],
+      items: [{ ...seeded.items[0]!, retired_roles: retired }, ...seeded.items.slice(1)],
     });
     const gate = deferred();
     server.use(
@@ -370,7 +424,7 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.reactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: "2026-02-01" }),
+      expect(h.cached().items[0]?.retired_roles).toEqual({ volunteer: "2026-02-01" }),
     );
     gate.resolve();
     await act(async () => {
@@ -389,7 +443,7 @@ it("keeps creates non-optimistic until the server assigns an id", async () => {
       await gate.promise;
       const created = person("c");
       h.setRows([...h.rows(), created]);
-      return HttpResponse.json(created, { status: 201 });
+      return jsonResponse<import("@/api-types").PersonOut>(created, { status: 201 });
     }),
   );
   let promise!: Promise<unknown>;
@@ -417,7 +471,7 @@ it("does not send a queued same-person request after sign-out", async () => {
     http.put("/api/people/:id", async () => {
       requests++;
       await gate.promise;
-      return HttpResponse.json(h.rows()[0]);
+      return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
     }),
   );
   let first!: Promise<unknown>;
@@ -444,7 +498,10 @@ it("accepts the server state when an ambiguous failure actually committed", asyn
   server.use(
     http.put("/api/people/:id", () => {
       h.rows()[0]!.name = "Committed elsewhere";
-      return HttpResponse.json({}, { status: 500 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 500 },
+      );
     }),
   );
   await act(async () => {
@@ -462,7 +519,7 @@ it("applies a pending edit to a page loaded during the request", async () => {
     http.put("/api/people/:id", async () => {
       await gate.promise;
       h.rows()[0]!.name = "Updated";
-      return HttpResponse.json(h.rows()[0]);
+      return jsonResponse<import("@/api-types").PersonOut>(h.rows()[0]!);
     }),
   );
   let promise!: Promise<unknown>;
@@ -490,7 +547,7 @@ it("does not lower totals for a different cached search", async () => {
   const gate = deferred();
   const key = queryKeys.admin.peopleList({ page: 1, limit: 20, q: "Original b" });
   h.queryClient.setQueryData(key, {
-    items: [apiToPerson(person("b"))],
+    items: [makePerson(person("b"))],
     total: 1,
     page: 1,
     limit: 20,
@@ -498,7 +555,10 @@ it("does not lower totals for a different cached search", async () => {
   server.use(
     http.delete("/api/people/:id", async () => {
       await gate.promise;
-      return HttpResponse.json({}, { status: 409 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 409 },
+      );
     }),
   );
   let promise!: Promise<unknown>;

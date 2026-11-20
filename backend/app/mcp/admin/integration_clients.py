@@ -24,7 +24,7 @@ async def create_integration_client(
 ) -> dict:
     async with session_factory() as db:
         try:
-            client_dict, raw_key = await ics.create_integration_client(
+            client, raw_key = await ics.create_integration_client(
                 db,
                 actor=actor,
                 creator_role="admin",  # _require_admin() already gated this call
@@ -34,18 +34,18 @@ async def create_integration_client(
             )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
-        return {**client_dict, "key": raw_key}
+        return {**client.model_dump(), "key": raw_key}
 
 
 async def list_integration_clients(session_factory: Any) -> dict:
     async with session_factory() as db:
-        return {"integration_clients": await ics.list_integration_clients(db)}
+        return {"integration_clients": [client.model_dump() for client in await ics.list_integration_clients(db)]}
 
 
 async def revoke_integration_client(session_factory: Any, actor: str, client_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await ics.revoke_integration_client(db, actor=actor, client_id=client_id)
+            return (await ics.revoke_integration_client(db, actor=actor, client_id=client_id)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -53,7 +53,7 @@ async def revoke_integration_client(session_factory: Any, actor: str, client_id:
 async def rotate_integration_client(session_factory: Any, actor: str, client_id: str) -> dict:
     async with session_factory() as db:
         try:
-            client_dict, raw_key = await ics.rotate_integration_client(db, actor=actor, client_id=client_id)
+            client, raw_key = await ics.rotate_integration_client(db, actor=actor, client_id=client_id)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
-        return {**client_dict, "key": raw_key}
+        return {**client.model_dump(), "key": raw_key}

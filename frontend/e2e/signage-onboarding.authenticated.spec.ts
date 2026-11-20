@@ -10,7 +10,7 @@ const t = en;
 for (const viewport of [
   { width: 1280, height: 800 },
   { width: 390, height: 844 },
-]) {
+] as const) {
   test(`first notice keeps its draft through template creation at ${viewport.width}px`, async ({
     page,
   }) => {

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
@@ -17,12 +18,25 @@ vi.mock("@/paraglide/runtime", () => ({
   getLocale: vi.fn().mockReturnValue("en"),
 }));
 
-const apiEdition = {
+const apiEdition: import("@/api-types").EditionPublicOut = {
+  edition_type: "festival",
+  vendors: [],
+  co_organizer: null,
+  flyer_image: null,
+  hero_image: null,
+  share_image: null,
+  active: false,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "2026-march",
   year: 2026,
   month: "march",
   dates: ["2026-03-13", "2026-03-14", "2026-03-15"],
   venue: {
+    id: "",
+    active: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     name: "Staf Versluys",
     address: "Kapelstraat 76",
     city: "Bredene",
@@ -47,7 +61,10 @@ describe("EventStructuredData", () => {
     server.use(
       http.get("/api/editions/active", () => {
         handled();
-        return HttpResponse.json(null, { status: 404 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        );
       }),
     );
 
@@ -62,7 +79,11 @@ describe("EventStructuredData", () => {
   });
 
   it("renders the active edition as schema.org Event data", async () => {
-    server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+    server.use(
+      http.get("/api/editions/active", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),
+      ),
+    );
 
     const wrapper = createTestQueryClientWrapper();
     const { container } = render(<EventStructuredData />, { wrapper });
@@ -87,7 +108,9 @@ describe("EventStructuredData", () => {
     const hero = `/uploads/editions/${"c".repeat(32)}-${"d".repeat(64)}.jpg`;
     const render_ = async (extra: Record<string, unknown>) => {
       server.use(
-        http.get("/api/editions/active", () => HttpResponse.json({ ...apiEdition, ...extra })),
+        http.get("/api/editions/active", () =>
+          jsonResponse<import("@/api-types").EditionPublicOut>({ ...apiEdition, ...extra }),
+        ),
       );
       const { container, unmount } = render(<EventStructuredData />, {
         wrapper: createTestQueryClientWrapper(),

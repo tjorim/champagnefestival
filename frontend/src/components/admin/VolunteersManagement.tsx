@@ -33,10 +33,10 @@ interface VolunteersManagementProps {
 
 const columnHelper = createAppColumnHelper<Person>();
 
-function formatPeriod(period: Person["helpPeriods"][number]): string {
-  return period.lastHelpDay
-    ? `${period.firstHelpDay} → ${period.lastHelpDay}`
-    : `${period.firstHelpDay} →`;
+function formatPeriod(period: NonNullable<Person["help_periods"]>[number]): string {
+  return period.last_help_day
+    ? `${period.first_help_day} → ${period.last_help_day}`
+    : `${period.first_help_day} →`;
 }
 
 export default function VolunteersManagement({
@@ -111,12 +111,12 @@ export default function VolunteersManagement({
           header: m.admin_people_address_label(),
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
-        columnHelper.accessor("nationalRegisterNumber", {
+        columnHelper.accessor("national_register_number", {
           header: m.admin_people_national_register_number_label(),
           enableSorting: false,
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
-        columnHelper.accessor("eidDocumentNumber", {
+        columnHelper.accessor("eid_document_number", {
           header: m.admin_people_eid_document_number_label(),
           enableSorting: false,
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
@@ -136,7 +136,7 @@ export default function VolunteersManagement({
           header: m.admin_volunteers_last_helped_label(),
           enableSorting: false,
           cell: ({ row }) => {
-            const last = lastHelpedDay(row.original.helpPeriods);
+            const last = lastHelpedDay(row.original.help_periods ?? []);
             return (
               <span className="text-sm text-subtle">
                 {last === "ongoing" ? m.admin_volunteers_last_helped_ongoing() : (last ?? "—")}
@@ -145,13 +145,13 @@ export default function VolunteersManagement({
           },
         }),
         columnHelper.display({
-          id: "helpPeriods",
+          id: "help_periods",
           header: m.admin_volunteers_help_periods_label(),
           enableSorting: false,
           cell: ({ row }) => (
             <div className="flex flex-col gap-1 text-sm">
-              {row.original.helpPeriods.length > 0 ? (
-                row.original.helpPeriods.map((period) => (
+              {(row.original.help_periods ?? []).length > 0 ? (
+                (row.original.help_periods ?? []).map((period) => (
                   <span key={period.id} className="text-subtle">
                     {formatPeriod(period)}
                     {period.notes && (

@@ -177,17 +177,17 @@ async def test_concurrent_decisions(engine, db_session, manager):
     async def run(value):
         async with factory() as db:
             try:
-                return await organization_changes.decide(db, change["id"], value, None, actor=value)
+                return await organization_changes.decide(db, change.id, value, None, actor=value)
             except ConflictError:
                 return "conflict"
 
     results = await asyncio.gather(run("accepted"), run("rejected"))
     assert results.count("conflict") == 1
     async with factory() as db:
-        recorded = await db.get(OrganizationChange, change["id"])
+        recorded = await db.get(OrganizationChange, change.id)
         assert recorded is not None
-        replay = await organization_changes.decide(db, change["id"], recorded.status, None, actor="retry")
-        assert replay["status"] == recorded.status
+        replay = await organization_changes.decide(db, change.id, recorded.status, None, actor="retry")
+        assert replay.status == recorded.status
         actions = (
             await db.scalars(
                 select(AuditEntry).where(
@@ -223,7 +223,7 @@ async def test_notification_uses_configured_recipient(db_session, manager, monke
     sent = []
     monkeypatch.setattr(email, "_send_message_sync", lambda message: sent.append(message))
     monkeypatch.setattr(settings, "organization_review_recipient", "changed@example.com")
-    assert await email.deliver_organization_change_notification(change["id"])
+    assert await email.deliver_organization_change_notification(change.id)
     assert len(sent) == 1 and sent[0]["To"] == "shared@example.com"
     assert "awaiting review" in sent[0]["Subject"]
 
@@ -290,5 +290,5 @@ async def test_mcp_review_authorization_and_supersession(db_session, manager, mo
         mcp_session_factory(db_session), "mcp-admin", row.id, website="https://admin.example"
     )
     with pytest.raises(ValueError, match="superseded"):
-        await backend.decide_organization_change(change["id"], "accepted")
+        await backend.decide_organization_change(change.id, "accepted")
     await db_session.rollback()

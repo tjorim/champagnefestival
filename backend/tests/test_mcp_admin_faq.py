@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pytest
 
 from app.mcp.admin import faq as mcp_faq
@@ -19,12 +21,30 @@ async def test_create_list_faq_item(db_session):
         question_en="Question?",
         answer_en="Answer.",
     )
+    assert set(created) == {
+        "id",
+        "question_nl",
+        "question_fr",
+        "question_en",
+        "answer_nl",
+        "answer_fr",
+        "answer_en",
+        "sort_order",
+        "active",
+        "created_at",
+        "updated_at",
+    }
+    assert isinstance(created["created_at"], datetime)
+    assert isinstance(created["updated_at"], datetime)
+    assert created["sort_order"] == 0
+    assert created["active"] is True
+    assert created["answer_fr"] is None
     assert created["question_nl"] == "Vraag?"
     assert created["question_en"] == "Question?"
     assert created["question_fr"] is None
 
     listed = await mcp_faq.list_faq_items(factory)
-    assert any(item["id"] == created["id"] for item in listed["faq_items"])
+    assert listed == {"faq_items": [created]}
 
 
 async def test_update_faq_item_clears_optional_locale_with_empty_string(db_session):

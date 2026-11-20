@@ -4,10 +4,9 @@ import type { AdminTableState } from "@/utils/adminTableState";
 /** Which part of a queue is showing; an absent URL filter means the actionable default. */
 export type QueueStatus = "unhandled" | "handled" | "all";
 
-export interface QueuePage<T> {
+export type QueuePage<T> = Omit<import("@/api-types").ContactMessageListEnvelope, "items"> & {
   items: T[];
-  total: number;
-}
+};
 
 export function queueStatus(state: AdminTableState): QueueStatus {
   const value = state.filters.status;
@@ -35,17 +34,10 @@ export async function fetchQueuePage<T>(
   headers: () => Record<string, string>,
   signal: AbortSignal,
   fallbackMessage: string,
-  mapper: (item: Record<string, unknown>) => T,
 ): Promise<QueuePage<T>> {
-  const body = await fetchJsonOrThrowWithUnauthorized<{ items?: unknown; total?: unknown }>(
+  return fetchJsonOrThrowWithUnauthorized<QueuePage<T>>(
     `${path}?${query}`,
     { headers: headers(), signal },
     fallbackMessage,
   );
-  return {
-    items: Array.isArray(body.items)
-      ? body.items.map((item) => mapper(item as Record<string, unknown>))
-      : [],
-    total: Number(body.total ?? 0),
-  };
 }

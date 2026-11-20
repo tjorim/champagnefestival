@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import ComposedMessage, EmailCategory, EmailConsent, Person
-from app.schemas import EmailCategoryCreate, EmailCategoryTexts, EmailCategoryUpdate
+from app.schemas import EmailCategoryCreate, EmailCategoryOut, EmailCategoryTexts, EmailCategoryUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 
 TEXT_FIELDS = ("name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en")
@@ -104,23 +104,23 @@ def person_allows(person: Person, category: EmailCategory) -> bool:
     return not allowed or bool(active_roles(person) & set(allowed))
 
 
-def category_to_dict(category: EmailCategory, locale: str | None = None) -> dict:
-    return {
-        "key": category.key,
-        "name": category.localized_name(locale),
-        "description": category.localized_description(locale),
+def category_to_out(category: EmailCategory, locale: str | None = None) -> EmailCategoryOut:
+    return EmailCategoryOut(
+        key=category.key,
+        name=category.localized_name(locale),
+        description=category.localized_description(locale),
         **{name: getattr(category, name) for name in TEXT_FIELDS},
-        "allowed_roles": list(category.allowed_roles or []),
-        "automatic": category.automatic,
-        "sort_order": category.sort_order,
-        "created_at": category.created_at,
-        "updated_at": category.updated_at,
-    }
+        allowed_roles=list(category.allowed_roles or []),
+        automatic=category.automatic,
+        sort_order=category.sort_order,
+        created_at=category.created_at,
+        updated_at=category.updated_at,
+    )
 
 
-async def list_categories(db: AsyncSession, *, locale: str | None = None) -> list[dict]:
+async def list_categories(db: AsyncSession, *, locale: str | None = None) -> list[EmailCategoryOut]:
     result = await db.execute(select(EmailCategory).order_by(EmailCategory.sort_order, EmailCategory.key))
-    return [category_to_dict(category, locale) for category in result.scalars().all()]
+    return [category_to_out(category, locale) for category in result.scalars().all()]
 
 
 async def _get_locked(db: AsyncSession, key: str) -> EmailCategory:
@@ -138,7 +138,7 @@ def _unique_roles(roles: list[str]) -> list[str]:
 
 async def create_category(
     db: AsyncSession, *, actor: str, body: EmailCategoryCreate, request_id: str | None = None
-) -> dict:
+) -> EmailCategoryOut:
     if await db.get(EmailCategory, body.key) is not None:
         raise ConflictError(f"Email category '{body.key}' already exists.", code="email_category_exists")
     category = EmailCategory(
@@ -160,12 +160,12 @@ async def create_category(
     )
     await db.commit()
     await db.refresh(category)
-    return category_to_dict(category)
+    return category_to_out(category)
 
 
 async def update_category(
     db: AsyncSession, *, actor: str, key: str, body: EmailCategoryUpdate, request_id: str | None = None
-) -> dict:
+) -> EmailCategoryOut:
     category = await _get_locked(db, key)
     # Validate the merged texts before mutating: a partial update may change a single translation.
     texts = {name: getattr(category, name) for name in TEXT_FIELDS}
@@ -191,7 +191,7 @@ async def update_category(
     )
     await db.commit()
     await db.refresh(category)
-    return category_to_dict(category)
+    return category_to_out(category)
 
 
 async def delete_category(db: AsyncSession, *, actor: str, key: str, request_id: str | None = None) -> None:

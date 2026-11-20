@@ -27,7 +27,7 @@ async def create_venue(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> VenueOut:
     try:
         return await venues_service.create_venue(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -42,12 +42,12 @@ async def list_venues(
     db: AsyncSession = Depends(get_db),
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
-) -> list[dict]:
+) -> list[VenueOut]:
     return await venues_service.list_venues(db, limit=limit, offset=offset)
 
 
 @router.get("/{venue_id}", response_model=VenueOut, dependencies=[Depends(require_admin)])
-async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_venue(venue_id: str, db: AsyncSession = Depends(get_db)) -> VenueOut:
     try:
         return await venues_service.get_venue(db, venue_id)
     except ServiceError as exc:
@@ -62,7 +62,7 @@ async def update_venue(
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> VenueOut:
     try:
         return await venues_service.update_venue(
             db, actor=actor, venue_id=venue_id, body=body, request_id=getattr(request.state, "request_id", None)

@@ -1,67 +1,7 @@
-import type { StampProgress } from "@/utils/stampCards";
+import type { CheckInGuestOut, CheckInOut, VolunteerRegistrationUpdate } from "@/api-types";
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import type { CheckInData } from "@/utils/publicRegistrationApi";
-import type { RegistrationStatus } from "@/types/registration";
-
-interface VolunteerRegistrationResponse {
-  id?: string;
-  name?: string;
-  event_id?: string;
-  edition_id?: string | null;
-  event_title?: string;
-  table_id?: string | null;
-  table_name?: string | null;
-  guest_count?: number;
-  order_items?: Record<string, unknown>[];
-  notes?: string;
-  status?: RegistrationStatus;
-  checked_in?: boolean;
-  checked_in_at?: string | null;
-  strap_issued?: boolean;
-}
-
-function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInData {
-  const rawOrders = Array.isArray(data.order_items) ? data.order_items : [];
-
-  return {
-    id: data.id ?? "",
-    name: data.name ?? "",
-    eventId: data.event_id ?? "",
-    editionId: data.edition_id ?? undefined,
-    eventTitle: data.event_title ?? "",
-    guestCount: data.guest_count ?? 1,
-    tableName: data.table_name ?? undefined,
-    tableId: data.table_id ?? undefined,
-    orderItems: rawOrders.map((item) => {
-      const quantityRaw = Number(item.quantity ?? 0);
-      const quantity = Number.isFinite(quantityRaw) ? Math.max(0, quantityRaw) : 0;
-      const deliveredQuantityRaw = Number(
-        item.delivered_quantity ?? (item.delivered === true ? quantity : 0),
-      );
-      const deliveredQuantity = Number.isFinite(deliveredQuantityRaw)
-        ? Math.max(0, Math.min(quantity, deliveredQuantityRaw))
-        : 0;
-      const remainingQuantity = quantity - deliveredQuantity;
-
-      return {
-        productId: String(item.product_id ?? ""),
-        name: String(item.name ?? ""),
-        quantity,
-        deliveredQuantity,
-        remainingQuantity,
-        price: Number(item.price ?? 0),
-        category: typeof item.category === "string" ? item.category : "other",
-        delivered: remainingQuantity === 0,
-      };
-    }),
-    notes: data.notes ?? "",
-    status: data.status ?? "pending",
-    checkedIn: data.checked_in ?? false,
-    checkedInAt: data.checked_in_at ?? undefined,
-    strapIssued: data.strap_issued ?? false,
-  };
-}
 
 export async function searchVolunteerRegistrations(
   query: string,
@@ -73,15 +13,14 @@ export async function searchVolunteerRegistrations(
     `/api/volunteer/registrations?${params.toString()}`,
     { method: "GET", headers: authHeaders(), signal },
     m.checkin_search_error(),
-    (item) => mapVolunteerRegistration(item),
   );
 }
 
 export async function submitVolunteerCheckIn(
   registrationId: string,
   authHeaders: () => Record<string, string>,
-): Promise<{ registration: CheckInData; alreadyCheckedIn: boolean }> {
-  const registration = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+): Promise<CheckInOut> {
+  return fetchJsonOrThrowWithUnauthorized<CheckInOut>(
     `/api/volunteer/registrations/${encodeURIComponent(registrationId)}/check-in`,
     {
       method: "POST",
@@ -90,37 +29,29 @@ export async function submitVolunteerCheckIn(
     },
     m.checkin_error(),
   );
-
-  return {
-    registration: {
-      ...mapVolunteerRegistration(registration.registration as VolunteerRegistrationResponse),
-      stampProgress: registration.stamp_progress as StampProgress | null | undefined,
-    },
-    alreadyCheckedIn: Boolean(registration.already_checked_in),
-  };
 }
 
 export async function updateVolunteerRegistration(
   registrationId: string,
-  payload: { orderItems?: CheckInData["orderItems"]; strapIssued?: boolean },
+  payload: { order_items?: CheckInData["order_items"]; strap_issued?: boolean },
   authHeaders: () => Record<string, string>,
 ): Promise<CheckInData> {
-  const body: Record<string, unknown> = {};
-  if (payload.orderItems) {
-    body.order_items = payload.orderItems.map((order) => ({
-      product_id: order.productId,
-      delivered_quantity: order.deliveredQuantity,
+  const body: VolunteerRegistrationUpdate = {};
+  if (payload.order_items) {
+    body.order_items = payload.order_items.map((order) => ({
+      product_id: order.product_id,
+      delivered_quantity: order.delivered_quantity,
     }));
   }
-  if (payload.strapIssued !== undefined) {
-    body.strap_issued = payload.strapIssued;
+  if (payload.strap_issued !== undefined) {
+    body.strap_issued = payload.strap_issued;
   }
 
-  const registration = await fetchJsonOrThrowWithUnauthorized<VolunteerRegistrationResponse>(
+  const registration = await fetchJsonOrThrowWithUnauthorized<CheckInGuestOut>(
     `/api/volunteer/registrations/${encodeURIComponent(registrationId)}`,
     { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
     m.admin_error_update_registration(),
   );
 
-  return mapVolunteerRegistration(registration);
+  return registration;
 }

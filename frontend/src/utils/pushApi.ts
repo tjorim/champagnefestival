@@ -1,17 +1,14 @@
+import type { VapidPublicKeyOut, PushSubscriptionOut } from "@/api-types";
 import { fetchVoidOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 
-export interface VapidPublicKeyResponse {
-  publicKey: string;
-  enabled: boolean;
-}
+export type VapidPublicKeyResponse = VapidPublicKeyOut;
 
 export async function getVapidPublicKey(): Promise<VapidPublicKeyResponse> {
   const response = await fetch("/api/push/vapid-public-key");
   if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
-  const data = (await response.json()) as { public_key: string; enabled: boolean };
-  return { publicKey: data.public_key, enabled: data.enabled };
+  return response.json();
 }
 
 export interface PushSubscribeInput {
@@ -23,11 +20,7 @@ export interface PushSubscribeInput {
   eventIds?: string[];
 }
 
-export interface PushSubscriptionResult {
-  id: string;
-  categories: string[];
-  eventIds: string[];
-}
+export type PushSubscriptionResult = PushSubscriptionOut;
 
 export async function subscribeToPush(input: PushSubscribeInput): Promise<PushSubscriptionResult> {
   const response = await fetch("/api/push/subscriptions", {
@@ -42,8 +35,7 @@ export async function subscribeToPush(input: PushSubscribeInput): Promise<PushSu
     }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
-  const data = (await response.json()) as { id: string; categories: string[]; event_ids: string[] };
-  return { id: data.id, categories: data.categories, eventIds: data.event_ids };
+  return response.json();
 }
 
 export async function unsubscribeFromPush(endpoint: string): Promise<void> {

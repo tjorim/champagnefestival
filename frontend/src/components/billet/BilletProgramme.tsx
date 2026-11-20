@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import type { Event } from "@/types/event";
+import type { EventPublicOut as Event } from "@/api-types";
 import { eventDescription, eventTitle } from "@/utils/eventText";
 
 interface BilletProgrammeProps {
@@ -30,7 +30,7 @@ const BilletProgramme = ({ events }: BilletProgrammeProps) => {
       date,
       events: events
         .filter((event) => event.date === date)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+        .sort((a, b) => a.start_time.localeCompare(b.start_time)),
     }));
   }, [events]);
 
@@ -56,29 +56,29 @@ const BilletProgramme = ({ events }: BilletProgrammeProps) => {
               return (
                 <li key={event.id} className="billet-event">
                   <div className="billet-event__time">
-                    {event.endTime ? (
+                    {event.end_time ? (
                       <>
-                        <span aria-hidden="true">{event.startTime}</span>
+                        <span aria-hidden="true">{event.start_time}</span>
                         <span aria-hidden="true" className="billet-event__end">
-                          {event.endTime}
+                          {event.end_time}
                         </span>
                         <span className="sr-only">
-                          {m.schedule_time_range({ start: event.startTime, end: event.endTime })}
+                          {m.schedule_time_range({ start: event.start_time, end: event.end_time })}
                         </span>
                       </>
                     ) : (
-                      <span>{event.startTime}</span>
+                      <span>{event.start_time}</span>
                     )}
                   </div>
                   <div className="billet-event__body">
                     <h4 className="billet-event__title">{eventTitle(event, locale)}</h4>
                     <div className="billet-event__tags">
                       {label && <Badge variant="secondary">{label}</Badge>}
-                      {event.volunteersOnly && (
+                      {event.volunteers_only && (
                         <Badge variant="info">{m.event_volunteers_only()}</Badge>
                       )}
-                      {event.membersOnly && <Badge variant="info">{m.event_members_only()}</Badge>}
-                      {event.registrationRequired ? (
+                      {event.members_only && <Badge variant="info">{m.event_members_only()}</Badge>}
+                      {event.registration_required ? (
                         <Badge variant="warning">{m.schedule_registration()}</Badge>
                       ) : (
                         event.products.length > 0 && (

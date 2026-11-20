@@ -30,7 +30,7 @@ export const AXE_SCENARIOS: readonly AxeScenario[] = [
 
 export interface AxeTheme {
   value: string;
-  colorMode: "system" | "light" | "dark";
+  colorMode: (typeof themeDefinitions)[number]["colorMode"];
 }
 
 /** The theme every route is scanned in, with all scenarios. */

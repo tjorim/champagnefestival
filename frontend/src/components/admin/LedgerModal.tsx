@@ -25,7 +25,7 @@ import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
 import { m } from "@/paraglide/messages";
 import type { LedgerSortKey } from "@/utils/adminFetch";
-import type { LedgerTransaction } from "@/types/registration";
+import type { LedgerTransaction } from "@/api-types";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
 
@@ -38,7 +38,7 @@ import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
 // `sort`/`sortDir` params fetchPaymentTransactionsLedger takes, without
 // redefining the column-id-to-backend-key mapping only this module owns.
 export const LEDGER_SORT_KEY_BY_COLUMN: Record<string, LedgerSortKey> = {
-  effectiveDate: "effective_date",
+  effective_date: "effective_date",
   amount: "amount",
 };
 
@@ -92,13 +92,13 @@ export default function LedgerModal({
   const columns = useMemo(
     () =>
       columnHelper.columns([
-        columnHelper.accessor("effectiveDate", {
+        columnHelper.accessor("effective_date", {
           header: m.admin_payment_transaction_date(),
         }),
         columnHelper.accessor("amount", {
           header: m.admin_payment_amount_label(),
           cell: ({ getValue }) => {
-            const amount = getValue();
+            const amount = Number(getValue());
             return (
               <>
                 <strong>{transactionAmountLabel(amount)}</strong> {amount >= 0 ? "+" : ""}€
@@ -122,7 +122,7 @@ export default function LedgerModal({
             );
           },
         }),
-        columnHelper.accessor("personName", {
+        columnHelper.accessor("person_name", {
           header: m.admin_person_label(),
           enableSorting: false,
         }),
@@ -132,10 +132,10 @@ export default function LedgerModal({
           enableSorting: false,
           cell: ({ row }) => {
             const entry = row.original;
-            return `${entry.eventTitle} (${entry.editionLabel})`;
+            return `${entry.event_title} (${entry.edition_label})`;
           },
         }),
-        columnHelper.accessor("recordedBy", {
+        columnHelper.accessor("recorded_by", {
           header: m.admin_ledger_column_recorded_by(),
           enableSorting: false,
         }),
@@ -149,7 +149,7 @@ export default function LedgerModal({
   // the modal's own scope — the person view doesn't need a person column;
   // the edition view doesn't need an event/edition column.
   const columnVisibility = useMemo(
-    () => ({ personName: showPerson, event: showEvent }),
+    () => ({ person_name: showPerson, event: showEvent }),
     [showPerson, showEvent],
   );
 

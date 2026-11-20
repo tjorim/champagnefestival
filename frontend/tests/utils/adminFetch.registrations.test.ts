@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { seedRegistrations } from "@/mocks/data/registrations";
@@ -22,7 +23,12 @@ function serveRegistrations(total: number, requested: string[] = []) {
       const items = Array.from({ length: Math.max(0, Math.min(limit, total - first)) }, (_, i) =>
         registrationPayload(`reg-${first + i}`),
       );
-      return HttpResponse.json({ items, total, limit, page });
+      return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+        items,
+        total,
+        limit,
+        page,
+      });
     }),
   );
 }
@@ -81,7 +87,12 @@ describe("fetchAllRegistrations — reads every page", () => {
           page === 1
             ? Array.from({ length: 1000 }, (_, i) => registrationPayload(`reg-${i}`))
             : [registrationPayload("reg-999"), registrationPayload("reg-1000")];
-        return HttpResponse.json({ items, total: 1001, limit: 1000, page });
+        return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+          items,
+          total: 1001,
+          limit: 1000,
+          page,
+        });
       }),
     );
 
@@ -89,7 +100,15 @@ describe("fetchAllRegistrations — reads every page", () => {
   });
 
   it("rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
-    server.use(http.get("/api/registrations", () => HttpResponse.json([registrationPayload("x")])));
+    server.use(
+      http.get("/api/registrations", () =>
+        HttpResponse.json(
+          /* Deliberately malformed response: exercises runtime rejection. */ [
+            registrationPayload("x"),
+          ],
+        ),
+      ),
+    );
 
     await expect(fetchAllRegistrations(authHeaders, "march-2026")).rejects.toThrow(
       /expected \{items, total, limit, page\}/,

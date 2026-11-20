@@ -49,7 +49,7 @@ async def test_verify_token_rejects_revoked_client(db_session):
     client_dict, raw_key = await ics.create_integration_client(
         db_session, actor="admin-1", creator_role="admin", name="X", allowed_role="volunteer"
     )
-    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict["id"])
+    await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_dict.id)
     verifier = IntegrationKeyTokenVerifier(mcp_session_factory(db_session))
 
     assert await verifier.verify_token(raw_key) is None

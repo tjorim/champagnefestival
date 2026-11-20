@@ -107,11 +107,15 @@ function MealsAnswer({ question, saving, save }: AnswerInputProps) {
       <p className="text-sm mb-2">{m.my_poll_meals_hint()}</p>
       <ul className="list-none p-0 mb-2">
         {question.options.map((option) => {
-          const quantity = question.selections[option.id] ?? 0;
+          const quantity =
+            question.selections.find((selection) => selection.option_id === option.id)?.quantity ??
+            0;
           const setQuantity = (next: number) =>
             save((accessToken, locale) =>
               answerMyMealsQuestion(accessToken, locale, question.id, {
-                ...question.selections,
+                ...Object.fromEntries(
+                  question.selections.map((selection) => [selection.option_id, selection.quantity]),
+                ),
                 [option.id]: next,
               }),
             );
@@ -119,7 +123,7 @@ function MealsAnswer({ question, saving, save }: AnswerInputProps) {
             <li key={option.id} className="flex items-center justify-between gap-2 mb-2">
               <span>
                 <span id={`my-poll-${option.id}-label`}>{option.label}</span>
-                {option.dietaryTags.map((tag) => (
+                {option.dietary_tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="ms-2">
                     {dietaryTagLabel(tag)}
                   </Badge>
@@ -167,7 +171,7 @@ function SingleChoiceAnswer({ question, saving, save }: AnswerInputProps) {
       kind="single_choice"
       label={m.admin_poll_order_answer_label()}
       options={question.options}
-      value={{ option_id: question.optionId }}
+      value={{ option_id: question.option_id }}
       disabled={question.closed || saving}
       onChange={(value) =>
         save((token, locale) =>

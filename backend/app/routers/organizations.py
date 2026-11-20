@@ -14,6 +14,7 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Organization, OrganizationChange
+from app.openapi_responses import binary_response
 from app.schemas import (
     OrganizationChangeDecision,
     OrganizationChangeOut,
@@ -24,7 +25,7 @@ from app.schemas import (
 from app.services import organization_changes, organization_logos, organizations_service
 from app.services import organization_translation as translation
 from app.services.errors import ServiceError, to_http_exception
-from app.utils import get_or_404, organization_to_dict
+from app.utils import get_or_404, organization_to_out
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
@@ -50,7 +51,7 @@ async def list_organizations(
     organization_type: str | None = Query(default=None, alias="type"),
     db: AsyncSession = Depends(get_db),
     pagination: Pagination = Depends(),
-) -> list[dict]:
+) -> list[OrganizationOut]:
     stmt = select(Organization).order_by(Organization.id)
     if organization_type is not None:
         stmt = stmt.where(Organization.type == organization_type)
@@ -60,7 +61,7 @@ async def list_organizations(
     person_ids = [e.contact_person_id for e in organizations if e.contact_person_id]
     contacts = await organizations_service.load_contacts_by_ids(db, person_ids)
     return [
-        organization_to_dict(e, contacts.get(e.contact_person_id) if e.contact_person_id else None)
+        organization_to_out(e, contacts.get(e.contact_person_id) if e.contact_person_id else None)
         for e in organizations
     ]
 
@@ -76,7 +77,7 @@ async def create_organization(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     try:
         return await organizations_service.create_organization(
             db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -86,7 +87,7 @@ async def create_organization(
 
 
 @router.get("/changes", response_model=list[OrganizationChangeOut], dependencies=[Depends(require_admin)])
-async def pending_changes(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def pending_changes(db: AsyncSession = Depends(get_db)) -> list[OrganizationChangeOut]:
     """List private pending proposals with current values for side-by-side review."""
     return await organization_changes.list_pending(db)
 
@@ -99,7 +100,7 @@ async def decide_change(
     body: OrganizationChangeDecision,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationChangeOut:
     """Accept/reject once. Repeating the same decision returns the recorded outcome."""
     try:
         return await organization_changes.decide(db, change_id, body.decision, body.reason, actor=actor)
@@ -114,7 +115,7 @@ async def update_organization(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     e = await get_or_404(db, Organization, organization_id, "Organization not found.")
     try:
         return await organizations_service.apply_organization_update(
@@ -150,7 +151,7 @@ async def upload_logo(
     file: UploadFile,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> OrganizationOut:
     """Publish a validated logo immediately, superseding the manager's logo proposal."""
     try:
         await get_or_404(db, Organization, organization_id, "Organization not found.")
@@ -163,7 +164,11 @@ async def upload_logo(
         raise to_http_exception(exc) from exc
 
 
-@router.get("/changes/{change_id}/logo", dependencies=[Depends(require_admin)])
+@router.get(
+    "/changes/{change_id}/logo",
+    dependencies=[Depends(require_admin)],
+    **binary_response("image/png", "Proposed logo"),
+)
 async def preview_logo(change_id: str, db: AsyncSession = Depends(get_db)) -> Response:
     change = await db.get(OrganizationChange, change_id)
     if change is None:

@@ -12,6 +12,7 @@ from starlette.responses import StreamingResponse
 from app.auth import require_volunteer
 from app.live import live_bus
 from app.live.events import LiveEvent
+from app.openapi_responses import binary_response
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ async def _sse_generator(
             last_sent = loop.time()
 
 
-@router.get("/stream")
+@router.get("/stream", **binary_response("text/event-stream", "Server-sent events"))
 async def live_stream(
     edition_id: str | None = None,
     event_id: str | None = None,

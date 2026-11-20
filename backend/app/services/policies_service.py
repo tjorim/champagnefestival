@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Policy, PolicyVersion
-from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
+from app.schemas import PolicyDraftCreate, PolicyDraftUpdate, PolicyOut, PolicyVersionOut
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import make_id
@@ -38,32 +38,18 @@ def resolve_published(policy: Policy, version: PolicyVersion, locale: str | None
     return policy.localized_title(locale), content, language
 
 
-def _version_to_dict(item: PolicyVersion) -> dict:
-    return {
-        "id": item.id,
-        "policy_key": item.policy_key,
-        "version_number": item.version_number,
-        "status": item.status,
-        "content_nl": item.content_nl,
-        "content_fr": item.content_fr,
-        "content_en": item.content_en,
-        "change_summary": item.change_summary,
-        "created_at": item.created_at,
-        "created_by": item.created_by,
-        "updated_at": item.updated_at,
-        "published_at": item.published_at,
-        "published_by": item.published_by,
-    }
+def _version_to_out(item: PolicyVersion) -> PolicyVersionOut:
+    return PolicyVersionOut.model_validate(item, from_attributes=True)
 
 
-def _policy_to_dict(policy: Policy, versions: list[PolicyVersion]) -> dict:
-    return {
-        "key": policy.key,
-        "title_nl": policy.title_nl,
-        "title_fr": policy.title_fr,
-        "title_en": policy.title_en,
-        "versions": [_version_to_dict(v) for v in sorted(versions, key=lambda v: v.version_number, reverse=True)],
-    }
+def _policy_to_out(policy: Policy, versions: list[PolicyVersion]) -> PolicyOut:
+    return PolicyOut(
+        key=policy.key,
+        title_nl=policy.title_nl,
+        title_fr=policy.title_fr,
+        title_en=policy.title_en,
+        versions=[_version_to_out(v) for v in sorted(versions, key=lambda v: v.version_number, reverse=True)],
+    )
 
 
 async def _get_policy_locked(db: AsyncSession, policy_key: str) -> Policy:
@@ -73,21 +59,21 @@ async def _get_policy_locked(db: AsyncSession, policy_key: str) -> Policy:
     return policy
 
 
-async def list_policies(db: AsyncSession) -> list[dict]:
+async def list_policies(db: AsyncSession) -> list[PolicyOut]:
     policies = (await db.execute(select(Policy))).scalars().all()
     out = []
     for policy in policies:
         versions = (await db.execute(select(PolicyVersion).where(PolicyVersion.policy_key == policy.key))).scalars()
-        out.append(_policy_to_dict(policy, list(versions)))
+        out.append(_policy_to_out(policy, list(versions)))
     return out
 
 
-async def get_policy(db: AsyncSession, *, policy_key: str) -> dict:
+async def get_policy(db: AsyncSession, *, policy_key: str) -> PolicyOut:
     policy = await db.get(Policy, policy_key)
     if policy is None:
         raise NotFoundError(f"Policy '{policy_key}' not found.")
     versions = (await db.execute(select(PolicyVersion).where(PolicyVersion.policy_key == policy_key))).scalars()
-    return _policy_to_dict(policy, list(versions))
+    return _policy_to_out(policy, list(versions))
 
 
 async def get_published(db: AsyncSession, *, policy_key: str) -> tuple[Policy, PolicyVersion]:
@@ -106,7 +92,7 @@ async def get_published(db: AsyncSession, *, policy_key: str) -> tuple[Policy, P
 
 async def create_draft(
     db: AsyncSession, *, actor: str, policy_key: str, body: PolicyDraftCreate, request_id: str | None
-) -> dict:
+) -> PolicyVersionOut:
     policy = await _get_policy_locked(db, policy_key)
     existing_draft = (
         await db.execute(
@@ -171,7 +157,7 @@ async def create_draft(
     )
     await db.commit()
     await db.refresh(draft)
-    return _version_to_dict(draft)
+    return _version_to_out(draft)
 
 
 async def _get_draft_locked(db: AsyncSession, policy_key: str) -> PolicyVersion:
@@ -189,7 +175,7 @@ async def _get_draft_locked(db: AsyncSession, policy_key: str) -> PolicyVersion:
 
 async def update_draft(
     db: AsyncSession, *, actor: str, policy_key: str, body: PolicyDraftUpdate, request_id: str | None
-) -> dict:
+) -> PolicyVersionOut:
     draft = await _get_draft_locked(db, policy_key)
     for name, value in body.model_dump(include=body.model_fields_set).items():
         setattr(draft, name, value)
@@ -204,7 +190,7 @@ async def update_draft(
     )
     await db.commit()
     await db.refresh(draft)
-    return _version_to_dict(draft)
+    return _version_to_out(draft)
 
 
 async def discard_draft(db: AsyncSession, *, actor: str, policy_key: str, request_id: str | None) -> None:
@@ -223,7 +209,7 @@ async def discard_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
     await db.commit()
 
 
-async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, request_id: str | None) -> dict:
+async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, request_id: str | None) -> PolicyVersionOut:
     # Locking the parent Policy row serializes concurrent publish attempts for
     # the same policy: the second request blocks here until the first commits
     # (or rolls back), so it always re-reads a consistent draft/published pair
@@ -270,4 +256,4 @@ async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
     await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(draft)
-    return _version_to_dict(draft)
+    return _version_to_out(draft)

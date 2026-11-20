@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import MCPToolError, validate_with_schema
+from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import AreaCreate, AreaUpdate
 from app.services import areas_service
 from app.services.errors import ServiceError
@@ -42,20 +42,20 @@ async def create_area(
     )
     async with session_factory() as db:
         try:
-            return await areas_service.create_area(db, actor=actor, body=body)
+            return dump_response(await areas_service.create_area(db, actor=actor, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
 
 async def list_areas(session_factory: Any, layout_id: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"areas": await areas_service.list_areas(db, layout_id)}
+        return {"areas": dump_response(await areas_service.list_areas(db, layout_id))}
 
 
 async def get_area(session_factory: Any, area_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await areas_service.get_area(db, area_id)
+            return dump_response(await areas_service.get_area(db, area_id))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -103,7 +103,7 @@ async def update_area(
     body = validate_with_schema(AreaUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await areas_service.update_area(db, actor=actor, area_id=area_id, body=body)
+            return dump_response(await areas_service.update_area(db, actor=actor, area_id=area_id, body=body))
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

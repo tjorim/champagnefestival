@@ -1,4 +1,4 @@
-import type { FloorArea, FloorTable, TableType } from "@/types/admin";
+import type { FloorArea, FloorTable, TableType } from "@/api-types";
 import { getAreaSizePx, getTableSizePx } from "@/utils/layoutUtils";
 
 export function getTablesInArea(
@@ -10,7 +10,7 @@ export function getTablesInArea(
 ): FloorTable[] {
   const areaLeft = (area.x / 100) * canvasW;
   const areaTop = (area.y / 100) * canvasH;
-  const { width: areaW, height: areaH } = getAreaSizePx(area.widthM, area.lengthM);
+  const { width: areaW, height: areaH } = getAreaSizePx(area.width_m, area.length_m);
 
   const acx = areaLeft + areaW / 2;
   const acy = areaTop + areaH / 2;

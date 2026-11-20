@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { FloorArea, Layout, Room, TableType, Venue } from "@/types/admin";
+import type { FloorArea, Layout, Room, TableType, Venue } from "@/api-types";
 import {
   createAdminCollection,
   createAdminCollectionLifecycle,
@@ -261,16 +261,16 @@ export async function applyAdminVenueDeleted(
   if (!isCurrent()) return [];
   const roomIds = new Set(
     Array.from(collections.rooms.values())
-      .filter((room) => room.venueId === venueId)
+      .filter((room) => room.venue_id === venueId)
       .map((room) => room.id),
   );
   const layoutIds = new Set(
     Array.from(collections.layouts.values())
-      .filter((layout) => roomIds.has(layout.roomId))
+      .filter((layout) => roomIds.has(layout.room_id))
       .map((layout) => layout.id),
   );
   const areaIds = Array.from(collections.areas.values())
-    .filter((area) => layoutIds.has(area.layoutId))
+    .filter((area) => layoutIds.has(area.layout_id))
     .map((area) => area.id);
   await applyWrite(isCurrent, async () => {
     await deleteRows(collections.venues, [venueId]);
@@ -289,7 +289,7 @@ export function applyAdminLayoutDeleted(
 ): Promise<void> {
   return applyWrite(isCurrent, async () => {
     const areaIds = Array.from(collections.areas.values())
-      .filter((area) => area.layoutId === layoutId)
+      .filter((area) => area.layout_id === layoutId)
       .map((area) => area.id);
     await deleteRows(collections.layouts, [layoutId]);
     await deleteRows(collections.areas, areaIds);
@@ -306,7 +306,7 @@ export function replaceAdminAreasForLayout(
   return applyWrite(isCurrent, async () => {
     const keep = new Set(areas.map((area) => area.id));
     const stale = Array.from(collection.values())
-      .filter((area) => area.layoutId === layoutId && !keep.has(area.id))
+      .filter((area) => area.layout_id === layoutId && !keep.has(area.id))
       .map((area) => area.id);
     await collection.utils.writeBatch(() => {
       if (stale.length > 0) void collection.utils.writeDelete(stale);

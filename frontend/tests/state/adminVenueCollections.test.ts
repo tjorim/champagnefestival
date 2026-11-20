@@ -11,23 +11,25 @@ import {
   replaceAdminAreasForLayout,
   resetAdminVenueCollections,
 } from "@/state/adminVenueCollections";
-import type { FloorArea } from "@/types/admin";
+import type { FloorArea } from "@/api-types";
 import { createTestQueryClient } from "../utils/queryClient";
 
 const authHeaders = () => ({ Authorization: "Bearer test" });
 
-function area(id: string, layoutId: string): FloorArea {
+function area(id: string, layout_id: string): FloorArea {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id,
-    layoutId,
+    layout_id,
     icon: "bi-shop",
-    organizationId: null,
+    organization_id: null,
     label: id,
     x: 1,
     y: 1,
     rotation: 0,
-    widthM: 1,
-    lengthM: 1,
+    width_m: 1,
+    length_m: 1,
   };
 }
 
@@ -43,7 +45,7 @@ async function setup() {
     name: "V1",
     address: "",
     city: "",
-    postalCode: "",
+    postal_code: "",
     country: "",
     lat: 0,
     lng: 0,
@@ -52,45 +54,45 @@ async function setup() {
   await collections.rooms.utils.writeUpsert([
     {
       id: "r1",
-      venueId: "v1",
+      venue_id: "v1",
       name: "R1",
-      widthM: 1,
-      lengthM: 1,
+      width_m: 1,
+      length_m: 1,
       color: "",
       active: true,
-      dimensionsPlaceholder: false,
+      dimensions_placeholder: false,
     },
     {
       id: "r2",
-      venueId: "v2",
+      venue_id: "v2",
       name: "R2",
-      widthM: 1,
-      lengthM: 1,
+      width_m: 1,
+      length_m: 1,
       color: "",
       active: true,
-      dimensionsPlaceholder: false,
+      dimensions_placeholder: false,
     },
   ]);
   await collections.layouts.utils.writeUpsert([
     {
       id: "l1",
-      eventId: "e",
-      eventTitle: "",
-      editionId: null,
-      roomId: "r1",
+      event_id: "e",
+      event_title: "",
+      edition_id: null,
+      room_id: "r1",
       date: null,
       label: "",
-      createdAt: "",
+      created_at: "",
     },
     {
       id: "l2",
-      eventId: "e",
-      eventTitle: "",
-      editionId: null,
-      roomId: "r2",
+      event_id: "e",
+      event_title: "",
+      edition_id: null,
+      room_id: "r2",
       date: null,
       label: "",
-      createdAt: "",
+      created_at: "",
     },
   ]);
   await collections.areas.utils.writeUpsert([area("a1", "l1"), area("a2", "l1"), area("a3", "l2")]);

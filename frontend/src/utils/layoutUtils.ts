@@ -1,4 +1,4 @@
-import type { FloorTable, TableType } from "@/types/admin";
+import type { FloorTable, TableType } from "@/api-types";
 
 // These constants define the canvas a table's/area's x/y percentage is relative to.
 // Mirrored in backend/app/services/layouts_service.py for the area-containment check —
@@ -44,9 +44,9 @@ export function getTableSizePx(
   table: FloorTable,
   tableTypes: TableType[],
 ): { width: number; height: number } {
-  const type = tableTypes.find((t) => t.id === table.tableTypeId);
+  const type = tableTypes.find((t) => t.id === table.table_type_id);
   return {
-    width: Math.max(LAYOUT_MIN_TABLE_SIZE_PX, Math.round((type?.widthM ?? 1) * LAYOUT_PX_PER_M)),
-    height: Math.max(LAYOUT_MIN_TABLE_SIZE_PX, Math.round((type?.lengthM ?? 1) * LAYOUT_PX_PER_M)),
+    width: Math.max(LAYOUT_MIN_TABLE_SIZE_PX, Math.round((type?.width_m ?? 1) * LAYOUT_PX_PER_M)),
+    height: Math.max(LAYOUT_MIN_TABLE_SIZE_PX, Math.round((type?.length_m ?? 1) * LAYOUT_PX_PER_M)),
   };
 }

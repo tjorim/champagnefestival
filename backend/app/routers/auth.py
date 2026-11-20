@@ -4,16 +4,16 @@ import logging
 
 import httpx
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
 
 from app.config import settings
+from app.schemas import ResponseModel
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-class OidcDiscoveryConfig(BaseModel):
+class OidcDiscoveryConfig(ResponseModel):
     """Public OIDC endpoints discovered by native clients from the API."""
 
     issuer: str

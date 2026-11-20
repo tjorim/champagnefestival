@@ -37,7 +37,7 @@ from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
-from app.schemas import PersonCreate, PersonUpdate
+from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import email_consent_service
 from app.services.errors import ApiHTTPException
 from app.services.member_email import (
@@ -47,7 +47,7 @@ from app.services.member_email import (
     flush_member_changes,
 )
 from app.services.role_history import sync_roles
-from app.utils import get_or_404, make_id, person_to_dict
+from app.utils import get_or_404, make_id, person_to_out
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +154,9 @@ def reject_member_fields(body: PersonCreate | PersonUpdate) -> None:
         )
 
 
-async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None) -> dict:
+async def create_person(
+    db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None
+) -> PersonOut:
     reject_member_fields(body)
     national_register_number = normalise_optional_identity(body.national_register_number)
     eid_document_number = normalise_optional_identity(body.eid_document_number)
@@ -196,12 +198,12 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
         check_email_integrity(exc)
         raise_identity_conflict()
     await db.refresh(person)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PersonOut:
     reject_member_fields(body)
     for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
@@ -248,10 +250,10 @@ async def apply_person_update(
         check_email_integrity(exc)
         raise_identity_conflict()
     await db.refresh(person)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
-async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> PersonOut:
     """Blank a person's identity fields in place, keeping their registrations.
 
     See docs/decisions/934-data-retention-and-erasure.md for the retention
@@ -296,7 +298,7 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     )
     await db.commit()
     await db.refresh(person)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 async def delete_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
@@ -338,7 +340,7 @@ async def delete_person(db: AsyncSession, person: Person, *, actor: str, request
 
 async def merge_people(
     db: AsyncSession, canonical: Person, duplicate: Person, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PersonOut:
     """Merge ``duplicate`` into ``canonical``.
 
     - All reservations and organization contacts linked to the duplicate are
@@ -477,4 +479,4 @@ async def merge_people(
     )
     await commit_member_changes(db)
     await db.refresh(canonical)
-    return person_to_dict(canonical)
+    return person_to_out(canonical)

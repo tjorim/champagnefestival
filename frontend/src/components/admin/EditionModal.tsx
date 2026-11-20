@@ -48,8 +48,9 @@ import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirt
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { ItemDraft } from "./itemTypes";
-import type { Edition, EditionType } from "./editionTypes";
-import type { Venue } from "@/types/admin";
+import type { EditionType } from "./editionTypes";
+import type { Edition } from "@/api-types";
+import type { Venue } from "@/api-types";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchEditionModalOrganizations, saveEdition } from "@/utils/adminContentApi";
 import { editionDisplayName } from "@/utils/editionName";
@@ -88,7 +89,7 @@ function lineupOptions(initial: Edition | null | undefined): ItemOption[] {
     ...(initial?.sponsors ?? []).map((e) => [e.id, { name: e.name, type: "sponsor" }] as const),
   ]);
   // Older responses carry no order; fall back to producers then sponsors.
-  const ids = initial?.organizationIds?.length ? initial.organizationIds : [...known.keys()];
+  const ids = initial?.organizations?.length ? initial.organizations : [...known.keys()];
   return ids.flatMap((id) => {
     const entry = known.get(id);
     return entry ? [{ value: id, label: entry.name, isArchived: false, type: entry.type }] : [];
@@ -155,17 +156,17 @@ export default function EditionModal({
       id: record?.id ?? "",
       year: record?.year ?? currentYear,
       month: record?.month ?? "",
-      editionType: (record?.editionType ?? "festival") as EditionType,
+      edition_type: (record?.edition_type ?? "festival") as EditionType,
       venueId: record?.venue?.id ?? fallbackVenueId,
       active: record?.active ?? true,
-      coOrganizerId: record?.coOrganizer?.id ? String(record.coOrganizer.id) : "",
+      coOrganizerId: record?.co_organizer?.id ? String(record.co_organizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
       // In lineup order: the public site lists sponsors in this order (#1226).
       selectedOrganizations: lineupOptions(record),
       sponsorTiers: Object.fromEntries(
         (record?.sponsors ?? []).flatMap((sponsor) =>
-          sponsor.sponsorTier ? [[sponsor.id, sponsor.sponsorTier]] : [],
+          sponsor.sponsor_tier ? [[sponsor.id, sponsor.sponsor_tier]] : [],
         ),
       ) as Record<number, SponsorTier>,
     }),
@@ -184,7 +185,7 @@ export default function EditionModal({
           id: value.id.trim(),
           year: value.year,
           month: value.month.trim(),
-          editionType: value.editionType,
+          edition_type: value.edition_type,
           venueId: value.venueId,
           active: value.active,
           // Producers and sponsors only, deliberately. The API rejects vendor ids
@@ -192,8 +193,8 @@ export default function EditionModal({
           // editions"), so an edition showing vendors is in a state the backend
           // considers invalid — re-sending them would make it unsaveable. Leaving
           // them out lets the next save clear the invalid link.
-          organizationIds:
-            value.editionType === "festival"
+          organizations:
+            value.edition_type === "festival"
               ? value.selectedOrganizations.map((option: ItemOption) => option.value)
               : [],
           // Levels only for sponsors that are still in the lineup.
@@ -247,10 +248,10 @@ export default function EditionModal({
       id: string;
       year: number;
       month: string;
-      editionType: EditionType;
+      edition_type: EditionType;
       venueId: string;
       active: boolean;
-      organizationIds: number[];
+      organizations: number[];
       sponsorTiers: Record<number, SponsorTier>;
       coOrganizerOrganizationId: number | null;
     }) => saveEdition(payload, authHeaders, record?.id),
@@ -267,12 +268,12 @@ export default function EditionModal({
     busy: saveEditionMutation.isPending,
     onDismiss: onHide,
   });
-  const editionType = useSelector(form.atom, (s) => s.values.editionType as EditionType);
+  const edition_type = useSelector(form.atom, (s) => s.values.edition_type as EditionType);
   const sponsorTiers = useSelector(
     form.atom,
     (s) => s.values.sponsorTiers as Record<number, SponsorTier>,
   );
-  const isFestival = editionType === "festival";
+  const isFestival = edition_type === "festival";
   const programmableOrganizations = useMemo(
     () => allOrganizations.filter((organization) => organization.type !== "vendor"),
     [allOrganizations],
@@ -425,7 +426,7 @@ export default function EditionModal({
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_edition_type_label()}
                 </AdminLabel>
-                <form.Field name="editionType">
+                <form.Field name="edition_type">
                   {(field) => (
                     <AdminSelect
                       value={field.value}
@@ -503,7 +504,7 @@ export default function EditionModal({
             <div className="rounded-md border border-subtle p-4 mb-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="text-content text-sm font-semibold">
-                  {typeLabel(editionType)} {m.admin_edition_date_handling()}
+                  {typeLabel(edition_type)} {m.admin_edition_date_handling()}
                 </div>
                 <span className="text-subtle text-sm">{m.admin_edition_dates_info()}</span>
               </div>

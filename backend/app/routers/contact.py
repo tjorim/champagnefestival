@@ -5,7 +5,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import ConfigDict, EmailStr, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,7 @@ from app.email import send_contact_notification
 from app.models import ContactMessage
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import NonEmptyText200
-from app.schemas import RequestModel
+from app.schemas import OkOut, RequestModel, ResponseModel
 from app.spam import check_form_timing, check_honeypot
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
@@ -32,7 +32,7 @@ class ContactRequest(RequestModel):
     form_start_time: str | None = None
 
 
-class ContactMessageOut(BaseModel):
+class ContactMessageOut(ResponseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
@@ -42,7 +42,7 @@ class ContactMessageOut(BaseModel):
     handled_at: datetime | None
 
 
-class ContactMessageListEnvelope(BaseModel):
+class ContactMessageListEnvelope(ResponseModel):
     """One page of the inbox; ``total`` counts every message matching the filters."""
 
     items: list[ContactMessageOut]
@@ -51,12 +51,12 @@ class ContactMessageListEnvelope(BaseModel):
     page: int
 
 
-@router.post("")
+@router.post("", response_model=OkOut)
 async def submit_contact(
     body: ContactRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, bool]:
+) -> OkOut:
     check_honeypot(body.honeypot or "")
     check_form_timing(body.form_start_time or "")
     client_ip = get_client_ip(request)
@@ -79,7 +79,7 @@ async def submit_contact(
     )
     await db.commit()
     if inserted is None:
-        return {"ok": True}
+        return OkOut(ok=True)
 
     await send_contact_notification(
         name=body.name,
@@ -87,7 +87,7 @@ async def submit_contact(
         message_text=body.message,
         message_id=message_id,
     )
-    return {"ok": True}
+    return OkOut(ok=True)
 
 
 @router.get("", response_model=ContactMessageListEnvelope, dependencies=[Depends(require_admin)])

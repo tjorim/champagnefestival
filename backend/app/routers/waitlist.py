@@ -6,11 +6,10 @@ The public submission is self-contained (spam guards, per-client rate limit); th
 administrator queue lives in `app.services.waitlist_service`, shared with the MCP tools.
 """
 
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +20,7 @@ from app.dialect_functions import dialect_insert
 from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
-from app.schemas import RequestModel
+from app.schemas import OkOut, RequestModel, WaitlistEntryAdminOut, WaitlistEntryListEnvelope, WaitlistScopes
 from app.services import waitlist_service as service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
@@ -42,65 +41,12 @@ class WaitlistEntryRequest(RequestModel):
     form_start_time: str | None = None
 
 
-class WaitlistEntryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: str
-    product_id: str
-    name: str
-    email: str
-    phone: str | None
-    guest_count: int
-    notes: str
-    created_at: datetime
-    handled_at: datetime | None
-
-
-class WaitlistEntryAdminOut(WaitlistEntryOut):
-    product_name: str
-    event_id: str
-    event_title: str
-
-
-class WaitlistEntryListEnvelope(BaseModel):
-    """One page of the queue; ``total`` counts every entry matching the filters."""
-
-    items: list[WaitlistEntryAdminOut]
-    total: int
-    limit: int
-    page: int
-
-
-class WaitlistEventScope(BaseModel):
-    id: str
-    title: str
-    outstanding: int
-    total: int
-
-
-class WaitlistProductScope(BaseModel):
-    id: str
-    name: str
-    event_id: str
-    event_title: str
-    outstanding: int
-    total: int
-
-
-class WaitlistScopes(BaseModel):
-    events: list[WaitlistEventScope]
-    products: list[WaitlistProductScope]
-
-
-def _to_admin_out(entry: dict) -> WaitlistEntryAdminOut:
-    return WaitlistEntryAdminOut(**entry)
-
-
-@router.post("")
+@router.post("", response_model=OkOut)
 async def submit_waitlist_entry(
     body: WaitlistEntryRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> dict[str, bool]:
+) -> OkOut:
     check_honeypot(body.honeypot or "")
     check_form_timing(body.form_start_time or "")
     client_ip = get_client_ip(request)
@@ -140,7 +86,7 @@ async def submit_waitlist_entry(
         .on_conflict_do_nothing(index_elements=[WaitlistEntry.id])
     )
     await db.commit()
-    return {"ok": True}
+    return OkOut(ok=True)
 
 
 async def _call(operation):
@@ -159,20 +105,20 @@ async def list_waitlist_entries(
     ),
     product_id: str | None = None,
     event_id: str | None = None,
-) -> dict:
+) -> WaitlistEntryListEnvelope:
     """Oldest first (the manual waitlist order), paged; ``total`` spans the whole filtered queue."""
     return await service.list_entries_page(db, query, status=queue_status, product_id=product_id, event_id=event_id)
 
 
 @router.get("/scopes", response_model=WaitlistScopes, dependencies=[Depends(require_admin)])
-async def list_waitlist_scopes(db: AsyncSession = Depends(get_db)) -> dict:
+async def list_waitlist_scopes(db: AsyncSession = Depends(get_db)) -> WaitlistScopes:
     """The events and products that have entries, for the queue's filter options."""
     return await service.list_scopes(db)
 
 
 @router.put("/{entry_id}/handled", response_model=WaitlistEntryAdminOut, dependencies=[Depends(require_admin)])
 async def mark_waitlist_entry_handled(entry_id: str, db: AsyncSession = Depends(get_db)) -> WaitlistEntryAdminOut:
-    return _to_admin_out(await _call(service.mark_handled(db, entry_id)))
+    return await _call(service.mark_handled(db, entry_id))
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])

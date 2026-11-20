@@ -38,8 +38,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
-import type { RegistrationFormData, OrderItem } from "@/types/registration";
-import type { Event } from "@/types/event";
+import type { OrderItemRequest } from "@/api-types";
+import type { RegistrationFormData } from "@/types/registration";
+import type { EventPublicOut as Event } from "@/api-types";
 import { eventTitle, productDescription, productName } from "@/utils/eventText";
 import {
   RegistrationSubmitError,
@@ -70,7 +71,7 @@ interface RegistrationFields {
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const auth = useAuth();
   const [orderAnswers, setOrderAnswers] = useState<OrderAnswer[]>([]);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItemRequest[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -117,7 +118,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           ...value,
           eventId: event.id,
           orderAnswers: orderAnswers.filter((a) =>
-            event.orderQuestions?.some((q) => q.id === a.question_id && q.active),
+            event.order_questions?.some((q) => q.id === a.question_id && q.active),
           ),
           orderItems: showOrderItems ? orderItems : [],
         });
@@ -134,30 +135,19 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   const handleQuantityChange = useCallback(
     (productId: string, quantity: number) => {
       setOrderItems((prev) => {
-        const existing = prev.find((o) => o.productId === productId);
+        const existing = prev.find((o) => o.product_id === productId);
         if (quantity <= 0) {
-          return prev.filter((o) => o.productId !== productId);
+          return prev.filter((o) => o.product_id !== productId);
         }
         const product = products.find((p) => p.id === productId);
         if (!product) return prev;
 
-        const item: OrderItem = {
-          productId,
-          name: productName(product, getLocale()),
-          quantity,
-          deliveredQuantity: 0,
-          remainingQuantity: quantity,
-          price: product.price,
-          category: product.category,
-          delivered: false,
-          // The server computes and merges any bundle-included quantity on top
-          // of this — the client only ever asks for what's explicitly chosen.
-          includedQuantity: 0,
-          visible: true,
-        };
+        // The server resolves name, price and category, and computes and merges any bundle-included
+        // quantity on top of this — the client only ever asks for what is explicitly chosen.
+        const item: OrderItemRequest = { product_id: productId, quantity };
 
         if (existing) {
-          return prev.map((o) => (o.productId === productId ? item : o));
+          return prev.map((o) => (o.product_id === productId ? item : o));
         }
         return [...prev, item];
       });
@@ -224,7 +214,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     [purchasableProducts],
   );
   const hasRequiredSelected = useMemo(
-    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
+    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.product_id)),
     [orderItems, requiredProducts],
   );
 
@@ -241,11 +231,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       const nextPath = new Set([...path, id]);
       const edges =
         product.inclusions ??
-        (product.includedProductId && product.includedPerGuests
+        (product.included_product_id && product.included_per_guests
           ? [
               {
-                product_id: product.includedProductId,
-                quantity: Math.floor((guestCount || 0) / product.includedPerGuests),
+                product_id: product.included_product_id,
+                quantity: Math.floor((guestCount || 0) / product.included_per_guests),
                 per_quantity: quantity,
                 rounding: "down" as const,
               },
@@ -264,9 +254,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       }
     };
     for (const order of orderItems) {
-      const ordered = products.find((p) => p.id === order.productId);
+      const ordered = products.find((p) => p.id === order.product_id);
       expand(
-        order.productId,
+        order.product_id,
         order.quantity,
         ordered ? productName(ordered, getLocale()) : "",
         new Set(),
@@ -317,7 +307,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         </DialogHeader>
 
         <DialogBody>
-          {event?.membersOnly && (
+          {event?.members_only && (
             <Alert className="mb-3">
               {m.member_sign_in_prompt()}{" "}
               <AlertLink href="/me">{m.member_sign_in_link()}</AlertLink>
@@ -329,7 +319,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.registration_error()}
             </Alert>
-          ) : event.volunteersOnly ? (
+          ) : event.volunteers_only ? (
             <Alert>
               {m.volunteer_event_poll_required()}{" "}
               <AlertLink href="/me">{m.volunteer_event_portal_link()}</AlertLink>
@@ -542,7 +532,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   )}
 
                   {purchasableProducts.map((product) => {
-                    const currentItem = orderItems.find((o) => o.productId === product.id);
+                    const currentItem = orderItems.find((o) => o.product_id === product.id);
                     const qty = currentItem?.quantity ?? 0;
                     const label = `${productName(product, getLocale())} - €${product.price}`;
                     const isLockedOptional =
@@ -553,7 +543,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                         <div className="flex items-center justify-between">
                           <span className="text-foreground text-sm">
                             {label}
-                            {product.soldOut && (
+                            {product.sold_out && (
                               <>
                                 <Badge variant="danger" className="ms-2">
                                   {m.registration_order_sold_out()}
@@ -598,9 +588,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               onClick={() => handleQuantityChange(product.id, qty + 1)}
                               disabled={
                                 isLockedOptional ||
-                                product.soldOut ||
-                                (product.availableQuantity != null &&
-                                  qty + (included?.quantity ?? 0) >= product.availableQuantity)
+                                product.sold_out ||
+                                (product.available_quantity != null &&
+                                  qty + (included?.quantity ?? 0) >= product.available_quantity)
                               }
                               aria-label={m.registration_increase_quantity({ name: label })}
                             >
@@ -608,9 +598,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             </Button>
                           </div>
                         </div>
-                        {product.availableQuantity != null && (
+                        {product.available_quantity != null && (
                           <div className="text-subtle text-sm">
-                            {m.registration_order_available()}: {product.availableQuantity}
+                            {m.registration_order_available()}: {product.available_quantity}
                           </div>
                         )}
                         {included && (
@@ -634,7 +624,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               )}
 
               <OrderAnswerInputs
-                questions={(event?.orderQuestions ?? []).filter((q) => q.active)}
+                questions={(event?.order_questions ?? []).filter((q) => q.active)}
                 answers={orderAnswers}
                 onChange={setOrderAnswers}
                 disabled={isSubmitting}

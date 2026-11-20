@@ -17,15 +17,13 @@ import { Alert } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import type { FloorTable } from "@/types/admin";
-import { NO_PRODUCT_TRANSLATIONS, type Product } from "@/types/event";
-import type {
-  BookingUpdate,
-  PaymentTransactionCreate,
-  Registration,
-  RegistrationStatus,
-  TableAllocation,
-} from "@/types/registration";
+import type { FloorTable } from "@/api-types";
+import { toAmount } from "@/utils/money";
+import type { OrderAnswer } from "@/utils/orderQuestions";
+import type { Product } from "@/api-types";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
+import type { PaymentTransactionCreate, TableAllocation } from "@/api-types";
+import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
@@ -60,8 +58,8 @@ export default function BookingEditor({
       if (r.status === "cancelled" || r.id === registration.id) continue;
       for (const allocation of r.allocations ?? []) {
         occupied.set(
-          allocation.tableId,
-          (occupied.get(allocation.tableId) ?? 0) + allocation.guestCount,
+          allocation.table_id,
+          (occupied.get(allocation.table_id) ?? 0) + allocation.guest_count,
         );
       }
     }
@@ -70,34 +68,43 @@ export default function BookingEditor({
   const purchased = useMemo(
     () =>
       Object.fromEntries(
-        registration.orderItems.map((item) => [
-          item.productId,
-          item.quantity - item.includedQuantity,
+        registration.order_items.map((item) => [
+          item.product_id,
+          item.quantity - item.included_quantity,
         ]),
       ),
     [registration],
   );
   const products = useMemo<Product[]>(() => {
     const current = registration.event?.products ?? [];
-    const missing = registration.orderItems
-      .filter((item) => !current.some((product) => product.id === item.productId))
+    const missing = registration.order_items
+      .filter((item) => !current.some((product) => product.id === item.product_id))
       .map((item) => ({
-        id: item.productId,
-        eventId: registration.eventId,
+        id: item.product_id,
+        event_id: registration.event_id,
         ...NO_PRODUCT_TRANSLATIONS,
         name: item.name,
         description: "",
-        price: item.price,
+        price: String(item.price),
         category: item.category,
         purchasable: false,
         required: false,
-        createdAt: "",
-        updatedAt: "",
+        created_at: "",
+        updated_at: "",
+        unit: "item" as const,
+        stock: null,
+        reserved_quantity: 0,
+        available_quantity: null,
+        shortage: 0,
+        sold_out: false,
+        inclusions: null,
+        included_product_id: null,
+        included_per_guests: null,
       }));
     return [...current, ...missing];
   }, [registration]);
   const bookedPrices = useMemo(
-    () => Object.fromEntries(registration.orderItems.map((item) => [item.productId, item.price])),
+    () => Object.fromEntries(registration.order_items.map((item) => [item.product_id, item.price])),
     [registration],
   );
   const [pending, setPending] = useState(false);
@@ -105,11 +112,11 @@ export default function BookingEditor({
 
   const form = useForm({
     defaultValues: {
-      guestCount: registration.guestCount,
+      guestCount: registration.guest_count,
       quantities: purchased,
       allocations: registration.allocations ?? ([] as TableAllocation[]),
       notes: registration.notes,
-      orderAnswers: registration.orderAnswers ?? [],
+      orderAnswers: registration.order_answers as OrderAnswer[],
       status: registration.status,
     },
     onSubmit: async ({ value }) => {
@@ -152,10 +159,10 @@ export default function BookingEditor({
       try {
         await onAddTransaction(registration.id, {
           amount: Number(value.amount),
-          effectiveDate: value.date,
+          effective_date: value.date,
           reference: value.reference.trim() || undefined,
           note: value.note.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
+          idempotency_key: crypto.randomUUID(),
         });
         transactionForm.setFieldValue("amount", "");
         transactionForm.setFieldValue("reference", "");
@@ -179,29 +186,29 @@ export default function BookingEditor({
   const amountDue = products.length
     ? products.reduce(
         (sum, product) =>
-          sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? product.price),
+          sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? Number(product.price)),
         0,
       )
-    : (registration.amountDue ?? 0);
-  const amountPaid = registration.amountPaid ?? 0;
+    : toAmount(registration.amount_due);
+  const amountPaid = toAmount(registration.amount_paid);
   const calculatedTableQuantity = products.reduce(
     (sum, product) => (product.unit === "table" ? sum + (quantities[product.id] ?? 0) : sum),
     0,
   );
   const tableQuantity = products.some((product) => product.unit === "table")
     ? calculatedTableQuantity
-    : (registration.bookedTableQuantity ?? 0);
+    : (registration.booked_table_quantity ?? 0);
   const assigned = tableQuantity
     ? allocations.length
-    : allocations.reduce((sum, item) => sum + item.guestCount, 0);
+    : allocations.reduce((sum, item) => sum + item.guest_count, 0);
   const allocationTotal = tableQuantity || guestCount;
   const invalidGuestCount = !Number.isInteger(guestCount) || guestCount < 1 || guestCount > 20;
   const invalidAllocation = allocations.some(
     (item) =>
-      !item.tableId ||
-      !Number.isInteger(item.guestCount) ||
-      item.guestCount < (tableQuantity ? 0 : 1) ||
-      item.guestCount > 20,
+      !item.table_id ||
+      !Number.isInteger(item.guest_count) ||
+      item.guest_count < (tableQuantity ? 0 : 1) ||
+      item.guest_count > 20,
   );
 
   const changeAllocation = (index: number, patch: Partial<TableAllocation>) =>
@@ -222,7 +229,7 @@ export default function BookingEditor({
         items.map((item) => ({
           ...item,
           exclusive: nextTableQuantity > 0,
-          guestCount: nextTableQuantity > 0 ? 0 : Math.max(1, item.guestCount),
+          guestCount: nextTableQuantity > 0 ? 0 : Math.max(1, item.guest_count),
         })),
       );
     }
@@ -302,7 +309,7 @@ export default function BookingEditor({
           {products.map((product) => (
             <AdminField className="site-sm:w-6/12" key={product.id}>
               <AdminLabel>
-                {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
+                {product.name} · €{(bookedPrices[product.id] ?? Number(product.price)).toFixed(2)}
               </AdminLabel>
               <AdminInput
                 aria-label={`${m.admin_booking_quantity()} ${product.name}`}
@@ -346,7 +353,7 @@ export default function BookingEditor({
 
         <OrderAnswerInputs
           admin
-          questions={registration.event?.orderQuestions ?? []}
+          questions={registration.event?.order_questions ?? []}
           answers={orderAnswers}
           onChange={(answers) => form.setFieldValue("orderAnswers", answers)}
           disabled={pending}
@@ -375,20 +382,23 @@ export default function BookingEditor({
           </p>
         )}
         {allocations.map((entry, index) => (
-          <div key={`${entry.tableId}:${index}`} className="flex flex-wrap gap-2 mb-2 items-center">
+          <div
+            key={`${entry.table_id}:${index}`}
+            className="flex flex-wrap gap-2 mb-2 items-center"
+          >
             <AdminSelect
               aria-label={m.admin_inventory_unit_table()}
-              aria-invalid={!entry.tableId}
+              aria-invalid={!entry.table_id}
               aria-describedby={invalidAllocation ? "booking-allocation-error" : undefined}
-              value={entry.tableId}
-              onValueChange={(event) => changeAllocation(index, { tableId: event })}
+              value={entry.table_id}
+              onValueChange={(event) => changeAllocation(index, { table_id: event })}
             >
               <AdminOption value="">{m.admin_unassigned()}</AdminOption>
               {tables
                 .filter(
                   (table) =>
-                    table.id === entry.tableId ||
-                    !allocations.some((item) => item.tableId === table.id),
+                    table.id === entry.table_id ||
+                    !allocations.some((item) => item.table_id === table.id),
                 )
                 .map((table) => (
                   <AdminOption key={table.id} value={table.id}>
@@ -406,14 +416,14 @@ export default function BookingEditor({
               max={20}
               aria-label={m.admin_guests_count()}
               aria-invalid={
-                !Number.isInteger(entry.guestCount) ||
-                entry.guestCount < (tableQuantity ? 0 : 1) ||
-                entry.guestCount > 20
+                !Number.isInteger(entry.guest_count) ||
+                entry.guest_count < (tableQuantity ? 0 : 1) ||
+                entry.guest_count > 20
               }
               aria-describedby={invalidAllocation ? "booking-allocation-error" : undefined}
-              value={entry.guestCount}
+              value={entry.guest_count}
               onChange={(event) =>
-                changeAllocation(index, { guestCount: Number(event.target.value) })
+                changeAllocation(index, { guest_count: Number(event.target.value) })
               }
               className="max-w-24"
             />
@@ -431,8 +441,8 @@ export default function BookingEditor({
           disabled={assigned >= allocationTotal}
           onClick={() =>
             form.pushFieldValue("allocations", {
-              tableId: "",
-              guestCount: tableQuantity ? 0 : Math.max(1, allocationTotal - assigned),
+              table_id: "",
+              guest_count: tableQuantity ? 0 : Math.max(1, allocationTotal - assigned),
               exclusive: tableQuantity > 0,
             })
           }
@@ -484,13 +494,13 @@ export default function BookingEditor({
                   <PresentationListItem key={entry.id} className="px-0 py-1">
                     <div className="text-sm flex justify-between flex-wrap gap-2">
                       <span>
-                        <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
-                        {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
+                        <strong>{transactionAmountLabel(Number(entry.amount))}</strong>{" "}
+                        {Number(entry.amount) >= 0 ? "+" : ""}€{Number(entry.amount).toFixed(2)}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                       <span className="text-subtle">
-                        {entry.effectiveDate} · {entry.recordedBy}
+                        {entry.effective_date} · {entry.recorded_by}
                       </span>
                     </div>
                   </PresentationListItem>

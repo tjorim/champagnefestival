@@ -40,7 +40,9 @@ from app.translations import Language
 async def list_poll_questions(session_factory: Any, edition_id: str, locale: Language | None = None) -> list[dict]:
     async with session_factory() as db:
         try:
-            return await poll_questions_service.list_poll_questions(db, edition_id, locale)
+            return [
+                item.model_dump() for item in await poll_questions_service.list_poll_questions(db, edition_id, locale)
+            ]
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -75,7 +77,7 @@ async def create_poll_question(
     )
     async with session_factory() as db:
         try:
-            return await poll_questions_service.create_poll_question(db, body, actor=actor)
+            return (await poll_questions_service.create_poll_question(db, body, actor=actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -126,7 +128,7 @@ async def update_poll_question(
     body = validate_with_schema(PollQuestionUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await poll_questions_service.update_poll_question(db, question_id, body, actor=actor)
+            return (await poll_questions_service.update_poll_question(db, question_id, body, actor=actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -148,7 +150,12 @@ async def reorder_poll_questions(session_factory: Any, actor: str, *, edition_id
     body = validate_with_schema(PollQuestionReorder, edition_id=edition_id, ordered_ids=ordered_ids)
     async with session_factory() as db:
         try:
-            return {"questions": await poll_questions_service.reorder_poll_questions(db, body, actor=actor)}
+            return {
+                "questions": [
+                    item.model_dump()
+                    for item in await poll_questions_service.reorder_poll_questions(db, body, actor=actor)
+                ]
+            }
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -157,7 +164,12 @@ async def copy_poll_questions(session_factory: Any, actor: str, *, from_edition_
     body = validate_with_schema(PollQuestionCopy, from_edition_id=from_edition_id, to_edition_id=to_edition_id)
     async with session_factory() as db:
         try:
-            return {"created": await poll_questions_service.copy_poll_questions(db, body, actor=actor)}
+            return {
+                "created": [
+                    item.model_dump()
+                    for item in await poll_questions_service.copy_poll_questions(db, body, actor=actor)
+                ]
+            }
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -185,7 +197,7 @@ async def create_poll_option(
     )
     async with session_factory() as db:
         try:
-            return await poll_options_service.create_poll_option(db, body, actor=actor)
+            return (await poll_options_service.create_poll_option(db, body, actor=actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -197,9 +209,12 @@ async def list_poll_options(
     locale: Language | None = None,
 ) -> list[dict]:
     async with session_factory() as db:
-        return await poll_options_service.list_poll_options(
-            db, question_id=question_id, edition_id=edition_id, locale=locale
-        )
+        return [
+            item.model_dump()
+            for item in await poll_options_service.list_poll_options(
+                db, question_id=question_id, edition_id=edition_id, locale=locale
+            )
+        ]
 
 
 async def update_poll_option(
@@ -225,7 +240,7 @@ async def update_poll_option(
     body = validate_with_schema(PollOptionUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await poll_options_service.update_poll_option(db, option_id, body, actor=actor)
+            return (await poll_options_service.update_poll_option(db, option_id, body, actor=actor)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -247,7 +262,11 @@ async def reorder_poll_options(session_factory: Any, actor: str, *, question_id:
     body = validate_with_schema(PollOptionReorder, question_id=question_id, ordered_ids=ordered_ids)
     async with session_factory() as db:
         try:
-            return {"options": await poll_options_service.reorder_poll_options(db, body, actor=actor)}
+            return {
+                "options": [
+                    item.model_dump() for item in await poll_options_service.reorder_poll_options(db, body, actor=actor)
+                ]
+            }
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -258,7 +277,7 @@ async def reorder_poll_options(session_factory: Any, actor: str, *, question_id:
 async def list_poll_orders(session_factory: Any, edition_id: str, locale: Language | None = None) -> dict:
     async with session_factory() as db:
         try:
-            return await poll_questions_service.list_poll_orders(db, edition_id, locale)
+            return (await poll_questions_service.list_poll_orders(db, edition_id, locale)).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -293,8 +312,8 @@ async def set_volunteer_poll_order(
     )
     async with session_factory() as db:
         try:
-            return await poll_questions_service.set_volunteer_poll_order(
-                db, edition_id, volunteer_id, body, actor=actor
-            )
+            return (
+                await poll_questions_service.set_volunteer_poll_order(db, edition_id, volunteer_id, body, actor=actor)
+            ).model_dump()
         except HTTPException as exc:
             raise as_value_error(exc) from exc

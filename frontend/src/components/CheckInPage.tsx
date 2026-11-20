@@ -78,8 +78,8 @@ interface CheckInCardProps {
   isUpdatingRegistration: boolean;
   canManageEntranceActions: boolean;
   onCheckIn: () => void;
-  onAdjustOrderItem: (productId: string, delta: number) => void;
-  onSetOrderItemQuantity: (productId: string, quantity: number) => void;
+  onAdjustOrderItem: (product_id: string, delta: number) => void;
+  onSetOrderItemQuantity: (product_id: string, quantity: number) => void;
   onIssueStrap: () => void;
   onReturnToScanner: () => void;
 }
@@ -130,11 +130,11 @@ function CheckInCard({
                 ? m.admin_status_confirmed()
                 : m.admin_status_pending()}
           </Badge>
-          <Badge variant={registration.checkedIn ? "success" : "secondary"}>
-            {registration.checkedIn && <Icon icon={CircleCheckIcon} className="me-1" />}
-            {registration.checkedIn ? m.admin_checked_in() : m.checkin_manual_not_checked_in()}
+          <Badge variant={registration.checked_in ? "success" : "secondary"}>
+            {registration.checked_in && <Icon icon={CircleCheckIcon} className="me-1" />}
+            {registration.checked_in ? m.admin_checked_in() : m.checkin_manual_not_checked_in()}
           </Badge>
-          {registration.strapIssued && (
+          {registration.strap_issued && (
             <Badge variant="info">
               <Icon icon={ContactRoundIcon} className="me-1" />
               {m.admin_strap_issued()}
@@ -151,7 +151,7 @@ function CheckInCard({
                 <span>
                   <Icon icon={CircleCheckIcon} className="me-2" />
                   <strong>{m.checkin_success()}</strong>
-                  {registration.strapIssued && (
+                  {registration.strap_issued && (
                     <div className="mt-1">{m.checkin_strap_issued()}</div>
                   )}
                 </span>
@@ -163,14 +163,14 @@ function CheckInCard({
             </Alert>
           )}
         </div>
-        {canManageEntranceActions && registration.editionId && registration.tableId && (
+        {canManageEntranceActions && registration.edition_id && registration.table_id && (
           <ButtonLink
             render={
               <Link
                 to="/venue-plan"
                 search={{
-                  edition: registration.editionId,
-                  table: registration.tableId,
+                  edition: registration.edition_id,
+                  table: registration.table_id,
                   registration: registration.id,
                 }}
               />
@@ -190,10 +190,10 @@ function CheckInCard({
               {m.admin_status_cancelled()}
             </Alert>
           )}
-          {isAlreadyCheckedIn && !success && registration.checkedInAt && (
+          {isAlreadyCheckedIn && !success && registration.checked_in_at && (
             <Alert variant="warning" className="mb-4">
               <Icon icon={CircleAlertIcon} className="me-2" />
-              {m.checkin_already_in()} {new Date(registration.checkedInAt).toLocaleTimeString()}
+              {m.checkin_already_in()} {new Date(registration.checked_in_at).toLocaleTimeString()}
             </Alert>
           )}
         </div>
@@ -201,23 +201,23 @@ function CheckInCard({
         <PresentationList flush className="bg-card">
           <PresentationListItem className="flex justify-between gap-4">
             <span className="text-subtle">{m.checkin_event()}</span>
-            <span className="text-right">{registration.eventTitle || registration.eventId}</span>
+            <span className="text-right">{registration.event_title || registration.event_id}</span>
           </PresentationListItem>
           <PresentationListItem className="flex justify-between gap-4">
             <span className="text-subtle">{m.checkin_guests()}</span>
-            <span>{registration.guestCount}</span>
+            <span>{registration.guest_count}</span>
           </PresentationListItem>
-          {registration.tableName && (
+          {registration.table_name && (
             <PresentationListItem className="flex justify-between gap-4">
               <span className="text-subtle">{m.checkin_table()}</span>
-              <span className="font-semibold text-highlight">{registration.tableName}</span>
+              <span className="font-semibold text-highlight">{registration.table_name}</span>
             </PresentationListItem>
           )}
         </PresentationList>
 
-        {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
+        {!isCancelled && (!registration.checked_in || !registration.strap_issued) && (
           <div className="my-4 grid gap-2">
-            {!registration.checkedIn && (
+            {!registration.checked_in && (
               <Button
                 variant="warning"
                 className="h-auto w-full whitespace-normal"
@@ -232,7 +232,7 @@ function CheckInCard({
                 {m.checkin_do_checkin()}
               </Button>
             )}
-            {registration.checkedIn && !registration.strapIssued && (
+            {registration.checked_in && !registration.strap_issued && (
               <Button
                 variant="info"
                 className="h-auto w-full whitespace-normal"
@@ -252,16 +252,16 @@ function CheckInCard({
             )}
           </div>
         )}
-        {registration.orderItems.length > 0 && (
+        {registration.order_items.length > 0 && (
           <div className="mt-4">
             <p className="font-semibold text-highlight mb-2">
               <Icon icon={ShoppingCartIcon} className="me-2" />
               {m.checkin_order_items()}
             </p>
             <PresentationList flush>
-              {registration.orderItems.map((item, idx) => (
+              {registration.order_items.map((item, idx) => (
                 <PresentationListItem
-                  key={`${item.productId}-${idx}`}
+                  key={`${item.product_id}-${idx}`}
                   className="flex justify-between items-center gap-4 flex-wrap"
                 >
                   <span>
@@ -269,20 +269,22 @@ function CheckInCard({
                   </span>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={item.delivered ? "success" : "secondary"}>
-                      {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
+                      {m.admin_bottle_delivered()}: {item.delivered_quantity}/{item.quantity}
                     </Badge>
-                    <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
-                      {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
+                    <Badge
+                      variant={item.quantity - item.delivered_quantity > 0 ? "warning" : "success"}
+                    >
+                      {m.admin_bottle_not_delivered()}: {item.quantity - item.delivered_quantity}
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onAdjustOrderItem(item.productId, -1)}
+                        onClick={() => onAdjustOrderItem(item.product_id, -1)}
                         disabled={
                           !canUpdateEntrance ||
                           isUpdatingRegistration ||
-                          item.deliveredQuantity <= 0
+                          item.delivered_quantity <= 0
                         }
                         title={m.admin_mark_not_delivered()}
                       >
@@ -290,7 +292,7 @@ function CheckInCard({
                         <span className="sr-only">{m.admin_mark_not_delivered()}</span>
                       </Button>
                       <PublicInput
-                        key={item.deliveredQuantity}
+                        key={item.delivered_quantity}
                         aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
                         className="w-20 text-center"
                         inputMode="numeric"
@@ -301,11 +303,11 @@ function CheckInCard({
                           if (Number.isFinite(value)) {
                             const bounded = Math.max(0, Math.min(item.quantity, Math.trunc(value)));
                             event.currentTarget.value = String(bounded);
-                            if (bounded !== item.deliveredQuantity) {
-                              onSetOrderItemQuantity(item.productId, bounded);
+                            if (bounded !== item.delivered_quantity) {
+                              onSetOrderItemQuantity(item.product_id, bounded);
                             }
                           } else {
-                            event.currentTarget.value = String(item.deliveredQuantity);
+                            event.currentTarget.value = String(item.delivered_quantity);
                           }
                         }}
                         onKeyDown={(event) => {
@@ -315,17 +317,17 @@ function CheckInCard({
                         }}
                         size="sm"
                         type="number"
-                        defaultValue={item.deliveredQuantity}
+                        defaultValue={item.delivered_quantity}
                         disabled={!canUpdateEntrance || isUpdatingRegistration}
                       />
                       <Button
                         size="sm"
                         variant={item.delivered ? "success" : "outline-success"}
-                        onClick={() => onAdjustOrderItem(item.productId, 1)}
+                        onClick={() => onAdjustOrderItem(item.product_id, 1)}
                         disabled={
                           !canUpdateEntrance ||
                           isUpdatingRegistration ||
-                          item.deliveredQuantity >= item.quantity
+                          item.delivered_quantity >= item.quantity
                         }
                         title={m.admin_mark_delivered()}
                       >
@@ -337,7 +339,7 @@ function CheckInCard({
                 </PresentationListItem>
               ))}
             </PresentationList>
-            {!canManageEntranceActions && registration.checkedIn && registration.strapIssued && (
+            {!canManageEntranceActions && registration.checked_in && registration.strap_issued && (
               <div className="text-sm text-subtle mt-2">
                 <Icon icon={InfoIcon} className="me-1" />
                 {m.checkin_actions_login_required()}
@@ -372,17 +374,17 @@ export default function CheckInPage() {
     null,
   );
   const registrationId = scannedCredentials?.id ?? urlRegistrationId;
-  const checkInToken = scannedCredentials?.token ?? fragmentCheckInToken;
+  const check_in_token = scannedCredentials?.token ?? fragmentCheckInToken;
   const [success, setSuccess] = useState(false);
-  const [stampProgress, setStampProgress] = useState<StampProgress | null>(null);
+  const [stamp_progress, setStampProgress] = useState<StampProgress | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
   const [scannerUnavailable, setScannerUnavailable] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [manualRegistration, setManualRegistration] = useState<CheckInData | null>(null);
-  const hasQrCredentials = Boolean(registrationId && checkInToken);
-  const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", checkInToken ?? "");
+  const hasQrCredentials = Boolean(registrationId && check_in_token);
+  const checkInQueryKey = queryKeys.checkInRegistration(registrationId ?? "", check_in_token ?? "");
   const canManageEntranceActions = auth.hasRole("admin") || auth.hasRole("volunteer");
   const returnTo = location.pathname + location.searchStr;
 
@@ -407,11 +409,11 @@ export default function CheckInPage() {
     return () => window.clearTimeout(timer);
   }, [searchTerm]);
 
-  // A fresh QR scan brings a new registrationId/checkInToken pair — reset the
+  // A fresh QR scan brings a new registrationId/check_in_token pair — reset the
   // local UI state for it. Adjust during render (comparing against the
   // previous scan) rather than in an effect, since this only needs to react
   // to that identity actually changing.
-  const scanKey = `${registrationId ?? ""}:${checkInToken ?? ""}`;
+  const scanKey = `${registrationId ?? ""}:${check_in_token ?? ""}`;
   const [prevScanKey, setPrevScanKey] = useState(scanKey);
   if (scanKey !== prevScanKey) {
     setPrevScanKey(scanKey);
@@ -427,7 +429,7 @@ export default function CheckInPage() {
 
   const registrationQuery = useQuery({
     queryKey: checkInQueryKey,
-    queryFn: () => fetchCheckInRegistration(registrationId!, checkInToken!),
+    queryFn: () => fetchCheckInRegistration(registrationId!, check_in_token!),
     enabled: hasQrCredentials,
     retry: false,
     staleTime: 30 * 1000,
@@ -442,7 +444,7 @@ export default function CheckInPage() {
   });
 
   const checkInMutation = useMutation({
-    mutationFn: () => submitCheckIn(registrationId!, checkInToken!),
+    mutationFn: () => submitCheckIn(registrationId!, check_in_token!),
     retry: false,
     networkMode: "always",
     onMutate: () => {
@@ -452,12 +454,13 @@ export default function CheckInPage() {
     },
     onSuccess: ({
       registration: updatedRegistration,
-      alreadyCheckedIn: mutationAlreadyCheckedIn,
+      already_checked_in: mutationAlreadyCheckedIn,
+      stamp_progress: stampProgress,
     }) => {
       queryClient.setQueryData(checkInQueryKey, updatedRegistration);
       setSuccess(true);
-      setStampProgress(updatedRegistration.stampProgress ?? null);
-      setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
+      setStampProgress(stampProgress);
+      setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checked_in);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({ queryKey: checkInQueryKey });
@@ -475,12 +478,13 @@ export default function CheckInPage() {
     },
     onSuccess: ({
       registration: updatedRegistration,
-      alreadyCheckedIn: mutationAlreadyCheckedIn,
+      already_checked_in: mutationAlreadyCheckedIn,
+      stamp_progress: stampProgress,
     }) => {
       setManualRegistration(updatedRegistration);
       setSuccess(true);
-      setStampProgress(updatedRegistration.stampProgress ?? null);
-      setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
+      setStampProgress(stampProgress);
+      setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checked_in);
     },
     onSettled: async () => {
       await queryClient.invalidateQueries({
@@ -493,14 +497,18 @@ export default function CheckInPage() {
   const updateRegistrationMutation = useMutation({
     mutationFn: ({
       targetRegistration,
-      orderItems,
-      strapIssued,
+      order_items,
+      strap_issued,
     }: {
       targetRegistration: CheckInData;
-      orderItems?: CheckInData["orderItems"];
-      strapIssued?: boolean;
+      order_items?: CheckInData["order_items"];
+      strap_issued?: boolean;
     }) =>
-      updateVolunteerRegistration(targetRegistration.id, { orderItems, strapIssued }, authHeaders),
+      updateVolunteerRegistration(
+        targetRegistration.id,
+        { order_items, strap_issued },
+        authHeaders,
+      ),
     retry: false,
     networkMode: "always",
     onSuccess: (updatedRegistration) => {
@@ -544,7 +552,7 @@ export default function CheckInPage() {
             m.admin_error_update_registration(),
           )
         : "";
-  const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
+  const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checked_in ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
   const showSearchHint =
     !hasQrCredentials && searchTerm.trim().length > 0 && searchTerm.trim().length < 2;
@@ -561,46 +569,46 @@ export default function CheckInPage() {
   }, [checkInMutation, hasQrCredentials, isOnline, manualRegistration, volunteerCheckInMutation]);
 
   const handleSetOrderItemQuantity = useCallback(
-    (productId: string, quantity: number) => {
+    (product_id: string, quantity: number) => {
       if (!isOnline || !registration || !Number.isFinite(quantity)) return;
-      const updatedOrders = registration.orderItems.map((item) => {
-        if (item.productId !== productId) return item;
-        const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
+      const updatedOrders = registration.order_items.map((item) => {
+        if (item.product_id !== product_id) return item;
+        const delivered_quantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
         return {
           ...item,
-          deliveredQuantity,
-          remainingQuantity: item.quantity - deliveredQuantity,
-          delivered: deliveredQuantity === item.quantity,
+          delivered_quantity,
+
+          delivered: delivered_quantity === item.quantity,
         };
       });
       updateRegistrationMutation.mutate({
         targetRegistration: registration,
-        orderItems: updatedOrders,
+        order_items: updatedOrders,
       });
     },
     [isOnline, registration, updateRegistrationMutation],
   );
 
   const handleAdjustOrderItem = useCallback(
-    (productId: string, delta: number) => {
+    (product_id: string, delta: number) => {
       if (!registration) return;
-      const item = registration.orderItems.find((order) => order.productId === productId);
+      const item = registration.order_items.find((order) => order.product_id === product_id);
       if (!item) return;
-      handleSetOrderItemQuantity(productId, item.deliveredQuantity + delta);
+      handleSetOrderItemQuantity(product_id, item.delivered_quantity + delta);
     },
     [handleSetOrderItemQuantity, registration],
   );
 
   const handleIssueStrap = useCallback(() => {
     if (!isOnline || !registration) return;
-    updateRegistrationMutation.mutate({ targetRegistration: registration, strapIssued: true });
+    updateRegistrationMutation.mutate({ targetRegistration: registration, strap_issued: true });
   }, [isOnline, registration, updateRegistrationMutation]);
 
   const handleSelectManualRegistration = useCallback((selected: CheckInData) => {
     setManualRegistration(selected);
     setSuccess(false);
     setStampProgress(null);
-    setAlreadyCheckedIn(selected.checkedIn);
+    setAlreadyCheckedIn(selected.checked_in);
     setSearchOpen(false);
   }, []);
 
@@ -635,10 +643,10 @@ export default function CheckInPage() {
   // pressed explicitly) so entrance actions are never skipped silently.
   const canAutoReturnToScanner =
     success &&
-    !stampProgress?.reward_earned &&
+    !stamp_progress?.reward_earned &&
     (!canManageEntranceActions ||
       registration?.status === "cancelled" ||
-      (registration?.strapIssued ?? false));
+      (registration?.strap_issued ?? false));
   useEffect(() => {
     if (!canAutoReturnToScanner) return;
     const timer = window.setTimeout(handleReturnToScanner, AUTO_RETURN_TO_SCANNER_MS);
@@ -653,10 +661,10 @@ export default function CheckInPage() {
           {m.checkin_title()}
         </h2>
 
-        {stampProgress && (
-          <Alert variant={stampProgress.reward_earned ? "success" : "info"} role="status">
-            {m.stamp_progress({ count: stampProgress.stamps, total: stampProgress.box_count })}
-            {stampProgress.reward_earned && (
+        {stamp_progress && (
+          <Alert variant={stamp_progress.reward_earned ? "success" : "info"} role="status">
+            {m.stamp_progress({ count: stamp_progress.stamps, total: stamp_progress.box_count })}
+            {stamp_progress.reward_earned && (
               <strong className="ms-2">{m.stamp_reward_earned()}</strong>
             )}
           </Alert>
@@ -862,12 +870,12 @@ export default function CheckInPage() {
                                   <span>
                                     <span className="font-semibold block">{result.name}</span>
                                     <span className="text-subtle text-sm">
-                                      {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
-                                      {result.guestCount}
+                                      {result.event_title || result.event_id} · {m.checkin_guests()}
+                                      : {result.guest_count}
                                     </span>
                                   </span>
-                                  <Badge variant={result.checkedIn ? "success" : "secondary"}>
-                                    {result.checkedIn
+                                  <Badge variant={result.checked_in ? "success" : "secondary"}>
+                                    {result.checked_in
                                       ? m.admin_checked_in()
                                       : m.checkin_manual_not_checked_in()}
                                   </Badge>

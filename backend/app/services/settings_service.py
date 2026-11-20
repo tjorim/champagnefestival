@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.database import violated_constraint_name
 from app.models import AppSettings
-from app.schemas import AppSettingsUpdate
-from app.utils import app_settings_to_dict
+from app.schemas import AppSettingsOut, AppSettingsUpdate
+from app.utils import app_settings_to_out
 
 _SETTINGS_ID = "app_settings"
 
@@ -63,15 +63,15 @@ async def get_or_create_settings(db: AsyncSession) -> AppSettings:
     return settings
 
 
-async def get_settings(db: AsyncSession) -> dict:
+async def get_settings(db: AsyncSession) -> AppSettingsOut:
     settings = await get_or_create_settings(db)
     await db.commit()  # persist a freshly-created default row; a no-op otherwise
-    return app_settings_to_dict(settings)
+    return app_settings_to_out(settings)
 
 
 async def update_settings(
     db: AsyncSession, *, actor: str, body: AppSettingsUpdate, request_id: str | None = None
-) -> dict:
+) -> AppSettingsOut:
     settings = await get_or_create_settings(db)
     for field in ("member_limit", "member_inactivity_months"):
         if field in body.model_fields_set:
@@ -100,4 +100,4 @@ async def update_settings(
     )
     await db.commit()
     await db.refresh(settings)
-    return app_settings_to_dict(settings)
+    return app_settings_to_out(settings)

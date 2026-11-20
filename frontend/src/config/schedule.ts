@@ -6,7 +6,7 @@
  */
 
 import { EMPTY_EDITION } from "./editions";
-import type { Event } from "./editions";
+import type { ScheduleEvent } from "./editions";
 
 export interface FestivalDay {
   id: number;
@@ -56,7 +56,7 @@ export function getEventsByDate(date: string) {
 /**
  * Helper function to get events by category
  */
-export function getEventsByCategory(category: Event["category"]) {
+export function getEventsByCategory(category: ScheduleEvent["category"]) {
   return scheduleEvents.filter((event) => event.category === category);
 }
 
@@ -68,13 +68,13 @@ export function getAllEventsSorted() {
     if (a.date !== b.date) {
       return a.date.localeCompare(b.date);
     }
-    return a.startTime.localeCompare(b.startTime);
+    return a.start_time.localeCompare(b.start_time);
   });
 }
 
 /**
  * Helper function to check if an event requires registration
  */
-export function requiresRegistration(event: Event): boolean {
-  return event.registrationRequired;
+export function requiresRegistration(event: ScheduleEvent): boolean {
+  return event.registration_required;
 }

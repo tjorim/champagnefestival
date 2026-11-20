@@ -19,10 +19,10 @@ from sqlalchemy.orm import selectinload
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
 from app.models import Event, Registration
-from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate, OrderQuestionList, OrderQuestionWrite
+from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate, OrderQuestionList, OrderQuestionOut
 from app.services import events_service
 from app.services import organization_translation as translation
-from app.utils import event_to_summary_dict
+from app.utils import event_to_summary_out
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -36,7 +36,7 @@ async def list_events(
     category: str | None = Query(default=None),
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
-) -> list[dict]:
+) -> list[EventOut]:
     stmt = (
         select(Event)
         .options(selectinload(Event.edition), selectinload(Event.products))
@@ -55,7 +55,7 @@ async def list_events(
     if active is not None:
         stmt = stmt.where(Event.active.is_(active))
     events = (await db.execute(stmt)).scalars().all()
-    return [event_to_summary_dict(event, include_edition=True) for event in events]
+    return [event_to_summary_out(event, include_edition=True) for event in events]
 
 
 @router.get(
@@ -122,9 +122,9 @@ async def suggest_translation(
 
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])
-async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_event(event_id: str, db: AsyncSession = Depends(get_db)) -> EventOut:
     event = await events_service.get_event_or_404(db, event_id)
-    return event_to_summary_dict(event, include_edition=True)
+    return event_to_summary_out(event, include_edition=True)
 
 
 @router.post(
@@ -138,7 +138,7 @@ async def create_event(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EventOut:
     return await events_service.create_event(
         db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
@@ -151,7 +151,7 @@ async def update_event(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EventOut:
     event = await events_service.get_event_or_404(db, event_id)
     return await events_service.apply_event_update(
         db, event, body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -169,16 +169,14 @@ async def delete_event(
     await events_service.delete_event(db, event, actor=actor, request_id=getattr(request.state, "request_id", None))
 
 
-@router.put(
-    "/{event_id}/order-questions", response_model=list[OrderQuestionWrite], dependencies=[Depends(require_admin)]
-)
+@router.put("/{event_id}/order-questions", response_model=list[OrderQuestionOut], dependencies=[Depends(require_admin)])
 async def set_order_questions(
     event_id: str,
     body: OrderQuestionList,
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[OrderQuestionOut]:
     from app.services import order_questions_service
 
     return await order_questions_service.configure(

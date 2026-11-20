@@ -101,7 +101,7 @@ async def test_admin_write_is_audited_with_each_credentials_own_identity(db_sess
         e.auth_source: e
         for e in (await db_session.execute(select(AuditEntry).where(AuditEntry.action == "venue_created"))).scalars()
     }
-    assert entries["integration"].subject == f"integration:{client_row['id']}"
+    assert entries["integration"].subject == f"integration:{client_row.id}"
     assert entries["keycloak"].subject == "keycloak-user-1"
 
 
@@ -141,7 +141,7 @@ async def test_missing_invalid_and_revoked_credentials_are_refused(db_session, c
         client_row, credential = await ics.create_integration_client(
             db_session, actor="admin-1", creator_role="admin", name="Retired", allowed_role="volunteer"
         )
-        await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_row["id"])
+        await ics.revoke_integration_client(db_session, actor="admin-1", client_id=client_row.id)
     app = _build_app(db_session)
     headers = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
     if credential is not None:

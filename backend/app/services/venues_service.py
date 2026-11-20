@@ -13,12 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Edition, Room, Venue
-from app.schemas import VenueCreate, VenueUpdate
+from app.schemas import VenueCreate, VenueOut, VenueUpdate
 from app.services.errors import ConflictError, NotFoundError
-from app.utils import make_id, venue_to_dict
+from app.utils import make_id, venue_to_out
 
 
-async def create_venue(db: AsyncSession, *, actor: str, body: VenueCreate, request_id: str | None = None) -> dict:
+async def create_venue(db: AsyncSession, *, actor: str, body: VenueCreate, request_id: str | None = None) -> VenueOut:
     v = Venue(
         id=make_id("venue"),
         name=body.name,
@@ -42,27 +42,27 @@ async def create_venue(db: AsyncSession, *, actor: str, body: VenueCreate, reque
     )
     await db.commit()
     await db.refresh(v)
-    return venue_to_dict(v)
+    return venue_to_out(v)
 
 
-async def list_venues(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[dict]:
+async def list_venues(db: AsyncSession, *, limit: int | None = None, offset: int = 0) -> list[VenueOut]:
     stmt = select(Venue).order_by(Venue.created_at).offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
     result = await db.execute(stmt)
-    return [venue_to_dict(v) for v in result.scalars().all()]
+    return [venue_to_out(v) for v in result.scalars().all()]
 
 
-async def get_venue(db: AsyncSession, venue_id: str) -> dict:
+async def get_venue(db: AsyncSession, venue_id: str) -> VenueOut:
     v = await db.get(Venue, venue_id)
     if v is None:
         raise NotFoundError(f"Venue '{venue_id}' not found.")
-    return venue_to_dict(v)
+    return venue_to_out(v)
 
 
 async def update_venue(
     db: AsyncSession, *, actor: str, venue_id: str, body: VenueUpdate, request_id: str | None = None
-) -> dict:
+) -> VenueOut:
     v = await db.get(Venue, venue_id)
     if v is None:
         raise NotFoundError(f"Venue '{venue_id}' not found.")
@@ -79,7 +79,7 @@ async def update_venue(
     )
     await db.commit()
     await db.refresh(v)
-    return venue_to_dict(v)
+    return venue_to_out(v)
 
 
 async def delete_venue(db: AsyncSession, *, actor: str, venue_id: str, request_id: str | None = None) -> dict:

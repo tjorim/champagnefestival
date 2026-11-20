@@ -8,20 +8,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.mcp.utils import validate_with_schema
+from app.mcp.utils import dump_response, validate_with_schema
 from app.schemas import AppSettingsUpdate
 from app.services import settings_service
 
 
 async def get_settings(session_factory: Any) -> dict:
     async with session_factory() as db:
-        return await settings_service.get_settings(db)
+        return dump_response(await settings_service.get_settings(db))
 
 
 async def set_maintenance_mode(session_factory: Any, actor: str, *, maintenance_mode: bool) -> dict:
     body = validate_with_schema(AppSettingsUpdate, maintenance_mode=maintenance_mode)
     async with session_factory() as db:
-        return await settings_service.update_settings(db, actor=actor, body=body)
+        return dump_response(await settings_service.update_settings(db, actor=actor, body=body))
 
 
 async def set_member_indicators(
@@ -32,4 +32,4 @@ async def set_member_indicators(
         AppSettingsUpdate, member_limit=member_limit, member_inactivity_months=member_inactivity_months
     )
     async with session_factory() as db:
-        return await settings_service.update_settings(db, actor=actor, body=body)
+        return dump_response(await settings_service.update_settings(db, actor=actor, body=body))

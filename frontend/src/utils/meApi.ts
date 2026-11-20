@@ -10,7 +10,7 @@ export async function getCommunicationPreference(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error(m.my_account_preference_error());
-  const data = (await response.json()) as { preferred_language?: unknown };
+  const data = (await response.json()) as import("@/api-types").CommunicationPreferenceOut;
   return data.preferred_language === "nl" ||
     data.preferred_language === "fr" ||
     data.preferred_language === "en"

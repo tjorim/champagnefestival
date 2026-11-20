@@ -20,13 +20,13 @@ from app.services.policy_markdown import render_markdown
 async def list_policies(session_factory: Any) -> dict:
     """Every policy with its full version history, newest version first."""
     async with session_factory() as db:
-        return {"policies": await service.list_policies(db)}
+        return {"policies": [item.model_dump() for item in await service.list_policies(db)]}
 
 
 async def get_policy(session_factory: Any, policy_key: str) -> dict:
     async with session_factory() as db:
         try:
-            return await service.get_policy(db, policy_key=policy_key)
+            return (await service.get_policy(db, policy_key=policy_key)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -44,7 +44,9 @@ async def create_policy_draft(
     body = validate_with_schema(PolicyDraftCreate, source_version_number=source_version_number)
     async with session_factory() as db:
         try:
-            return await service.create_draft(db, actor=actor, policy_key=policy_key, body=body, request_id=None)
+            return (
+                await service.create_draft(db, actor=actor, policy_key=policy_key, body=body, request_id=None)
+            ).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -74,7 +76,9 @@ async def update_policy_draft(
     body = validate_with_schema(PolicyDraftUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await service.update_draft(db, actor=actor, policy_key=policy_key, body=body, request_id=None)
+            return (
+                await service.update_draft(db, actor=actor, policy_key=policy_key, body=body, request_id=None)
+            ).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -92,6 +96,6 @@ async def publish_policy_draft(session_factory: Any, actor: str, policy_key: str
     """Publish the open draft; the previous published version becomes superseded."""
     async with session_factory() as db:
         try:
-            return await service.publish_draft(db, actor=actor, policy_key=policy_key, request_id=None)
+            return (await service.publish_draft(db, actor=actor, policy_key=policy_key, request_id=None)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

@@ -21,10 +21,10 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
   const sorts: Record<string, PeopleListParams["sort"]> = {
     name: "name",
     email: "email",
-    lastAttended: "last_attended",
+    last_attended: "last_attended",
     registrations: "registration_count",
-    createdAt: "created",
-    updatedAt: "updated",
+    created_at: "created",
+    updated_at: "updated",
   };
   const sort = state.sort && Object.hasOwn(sorts, state.sort) ? sorts[state.sort] : undefined;
   return {
@@ -73,12 +73,12 @@ export function PersonName({ person, role }: { person: Person; role?: string }) 
         <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>
       )}
       {!role &&
-        Object.keys(person.retiredRoles).map((retired) => (
+        Object.keys(person.retired_roles).map((retired) => (
           <Badge key={retired} variant="outline">
             {m.admin_people_retired_role_badge({ role: retired })}
           </Badge>
         ))}
-      {person.rewardDue && <Badge variant="warning">{m.stamp_reward_due()}</Badge>}
+      {person.reward_due && <Badge variant="warning">{m.stamp_reward_due()}</Badge>}
       {pending > 0 && <Spinner size="sm" label={m.admin_settings_saving()} />}
     </span>
   );
@@ -173,10 +173,10 @@ export function PeopleDataTable({
           ? { phone: false, memberSince: false, notes: false }
           : id === "volunteers"
             ? {
-                nationalRegisterNumber: false,
-                eidDocumentNumber: false,
+                national_register_number: false,
+                eid_document_number: false,
                 volunteerSince: false,
-                helpPeriods: false,
+                help_periods: false,
               }
             : { phone: false }
       }

@@ -35,7 +35,7 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 1024, height: 768 },
   { width: 1280, height: 800 },
-]) {
+] as const) {
   test(`registration actions remain reachable at ${viewport.width}×${viewport.height}`, async ({
     page,
   }, testInfo) => {
@@ -212,7 +212,7 @@ for (const [locale, messages] of Object.entries({ en, nl, fr })) {
 
 // The test-only extension uses chrome.tabs.setZoom: browser zoom, rather than
 // CSS zoom or CDP pinch emulation. DPR and visual scale verify the distinction.
-for (const zoom of [1.25, 1.5, 2]) {
+for (const zoom of [1.25, 1.5, 2] as const) {
   test(`browser zoom ${zoom * 100}% preserves entrance actions`, async ({ baseURL }, testInfo) => {
     const { chromium } = await import("@playwright/test");
     const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");
@@ -284,7 +284,7 @@ for (const zoom of [1.25, 1.5, 2]) {
           { width: 1366, height: 768 },
           { width: 1440, height: 900 },
           { width: 1280, height: 650 },
-        ]) {
+        ] as const) {
           await page.setViewportSize(viewport);
           const action = page.getByRole("button", { name: "Check in", exact: true }).first();
           await expect
@@ -353,7 +353,7 @@ for (const [locale, messages] of Object.entries({ nl, fr })) {
     await seedRegistrations(page);
     await page.getByRole("searchbox").fill("Review");
     await expect(page.getByRole("button", { name: "Review Guest 01", exact: true })).toBeVisible();
-    for (const width of [1280, 390]) {
+    for (const width of [1280, 390] as const) {
       await page.setViewportSize({ width, height: 768 });
       const entrance = page
         .getByRole("button", { name: messages.admin_mark_checked_in, exact: true })

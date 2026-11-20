@@ -19,13 +19,17 @@ async def list_waitlist_entries(
 ) -> dict:
     """Waitlist entries, oldest first, optionally narrowed to one product or one event."""
     async with session_factory() as db:
-        return {"entries": await service.list_entries(db, product_id=product_id, event_id=event_id)}
+        return {
+            "entries": [
+                item.model_dump() for item in await service.list_entries(db, product_id=product_id, event_id=event_id)
+            ]
+        }
 
 
 async def mark_waitlist_entry_handled(session_factory: Any, entry_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await service.mark_handled(db, entry_id)
+            return (await service.mark_handled(db, entry_id)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

@@ -18,8 +18,8 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
-  for (const width of [1440, 390]) {
+] as const) {
+  for (const width of [1440, 390] as const) {
     test(`${theme} public widgets at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript((selected) => {

@@ -4,7 +4,7 @@ import en from "../messages/en.json" with { type: "json" };
 for (const viewport of [
   { width: 1366, height: 768 },
   { width: 390, height: 844 },
-]) {
+] as const) {
   test(`organisation setup at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/admin?section=organizations");

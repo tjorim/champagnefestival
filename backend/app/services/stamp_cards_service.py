@@ -18,15 +18,11 @@ from app.models import (
     StampCardReward,
     StampCardType,
 )
-from app.schemas import StampCardTypeWrite
+from app.schemas import StampCardOut, StampCardTypeOut, StampCardTypeWrite, StampOut, StampProgress, StampRewardOut
 from app.services import reward_mail
 from app.services.errors import ApiHTTPException
 
 LABELS = ("reward_label_nl", "reward_label_fr", "reward_label_en")
-
-
-def as_dict(row) -> dict:
-    return {column.key: getattr(row, column.key) for column in row.__table__.columns}
 
 
 async def require_active_type(db: AsyncSession, type_id: str) -> StampCardType:
@@ -40,17 +36,14 @@ async def lock_person(db: AsyncSession, person_id: str) -> None:
     await db.execute(select(Person.id).where(Person.id == person_id).with_for_update())
 
 
-async def progress(db: AsyncSession, card: StampCard) -> dict:
+async def progress(db: AsyncSession, card: StampCard) -> StampProgress:
     count = await db.scalar(select(func.count()).select_from(Stamp).where(Stamp.card_id == card.id))
-    return {
-        "card_id": card.id,
-        "stamps": count,
-        "box_count": card.box_count,
-        "reward_earned": card.completed_at is not None,
-    }
+    return StampProgress(
+        card_id=card.id, stamps=count or 0, box_count=card.box_count, reward_earned=card.completed_at is not None
+    )
 
 
-async def sync_check_in(db: AsyncSession, registration: Registration, checked_in: bool) -> dict | None:
+async def sync_check_in(db: AsyncSession, registration: Registration, checked_in: bool) -> StampProgress | None:
     # The registration lock precedes this person lock on both write paths.
     await lock_person(db, registration.person_id)
     stamp = await db.scalar(select(Stamp).where(Stamp.registration_id == registration.id))
@@ -115,21 +108,26 @@ async def sync_check_in(db: AsyncSession, registration: Registration, checked_in
     db.add(Stamp(id=uuid4().hex, card_id=card.id, registration_id=registration.id))
     await db.flush()
     result = await progress(db, card)
-    if result["stamps"] == card.box_count:
+    if result.stamps == card.box_count:
         card.completed_at = datetime.now(UTC)
         reward = StampCardReward(id=uuid4().hex, card_id=card.id, **{key: getattr(card, key) for key in LABELS})
         db.add(reward)
         await db.flush()
         await reward_mail.enqueue_reward_ready(db, reward, card)
-        result["reward_earned"] = True
+        result.reward_earned = True
     return result
 
 
-async def list_types(db: AsyncSession) -> list[dict]:
-    return [as_dict(row) for row in (await db.scalars(select(StampCardType).order_by(StampCardType.id))).all()]
+async def list_types(db: AsyncSession) -> list[StampCardTypeOut]:
+    return [
+        StampCardTypeOut.model_validate(row, from_attributes=True)
+        for row in (await db.scalars(select(StampCardType).order_by(StampCardType.id))).all()
+    ]
 
 
-async def save_type(db: AsyncSession, *, actor: str, body: StampCardTypeWrite, type_id: str | None = None) -> dict:
+async def save_type(
+    db: AsyncSession, *, actor: str, body: StampCardTypeWrite, type_id: str | None = None
+) -> StampCardTypeOut:
     row = await db.get(StampCardType, type_id) if type_id else StampCardType(id=uuid4().hex)
     if row is None:
         raise ApiHTTPException(404, "stamp_card_type_not_found", "Stamp card type not found.")
@@ -141,10 +139,10 @@ async def save_type(db: AsyncSession, *, actor: str, body: StampCardTypeWrite, t
     )
     await db.commit()
     await db.refresh(row)
-    return as_dict(row)
+    return StampCardTypeOut.model_validate(row, from_attributes=True)
 
 
-async def list_cards(db: AsyncSession, person_id: str) -> list[dict]:
+async def list_cards(db: AsyncSession, person_id: str) -> list[StampCardOut]:
     result = []
     for card in (
         await db.scalars(
@@ -156,16 +154,24 @@ async def list_cards(db: AsyncSession, person_id: str) -> list[dict]:
             await db.scalars(select(Stamp).where(Stamp.card_id == card.id).order_by(Stamp.created_at, Stamp.id))
         ).all()
         result.append(
-            {
-                **as_dict(card),
-                "stamps": [as_dict(stamp) for stamp in stamps],
-                "reward": as_dict(reward) if reward else None,
-            }
+            StampCardOut(
+                id=card.id,
+                person_id=card.person_id,
+                type_id=card.type_id,
+                box_count=card.box_count,
+                reward_label_nl=card.reward_label_nl,
+                reward_label_fr=card.reward_label_fr,
+                reward_label_en=card.reward_label_en,
+                opened_at=card.opened_at,
+                completed_at=card.completed_at,
+                stamps=[StampOut.model_validate(stamp, from_attributes=True) for stamp in stamps],
+                reward=StampRewardOut.model_validate(reward, from_attributes=True) if reward else None,
+            )
         )
     return result
 
 
-async def set_reward(db: AsyncSession, *, reward_id: str, handed_out: bool, actor: str) -> dict:
+async def set_reward(db: AsyncSession, *, reward_id: str, handed_out: bool, actor: str) -> StampRewardOut:
     person_id = await db.scalar(
         select(StampCard.person_id)
         .join(StampCardReward, StampCardReward.card_id == StampCard.id)
@@ -201,7 +207,7 @@ async def set_reward(db: AsyncSession, *, reward_id: str, handed_out: bool, acto
         )
     await db.commit()
     await db.refresh(reward)
-    return as_dict(reward)
+    return StampRewardOut.model_validate(reward, from_attributes=True)
 
 
 async def guard_registration_history(db: AsyncSession, registration_id: str) -> None:

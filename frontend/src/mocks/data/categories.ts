@@ -1,15 +1,7 @@
 /** Seed data for event and product categories (the defaults migration 006 creates). */
 
-export type SeedCategory = {
-  key: string;
-  label: string;
-  label_nl: string | null;
-  label_fr: string | null;
-  label_en: string | null;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-};
+import type { CategoryOut as SeedCategory } from "@/api-types";
+export type { CategoryOut as SeedCategory } from "@/api-types";
 
 function category(key: string, order: number, nl: string, fr: string, en: string): SeedCategory {
   return {

@@ -1,6 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -9,8 +10,8 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 beforeEach(() => {
   setLocale("en", { reload: false });
   server.use(
-    http.get("/api/announcements", () => HttpResponse.json([])),
-    http.get("/api/composer", () => HttpResponse.json([])),
+    http.get("/api/announcements", () => jsonResponse<import("@/api-types").AnnouncementOut[]>([])),
+    http.get("/api/composer", () => jsonResponse<import("@/api-types").ComposedMessageOut[]>([])),
   );
 });
 

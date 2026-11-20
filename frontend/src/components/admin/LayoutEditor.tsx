@@ -61,8 +61,15 @@ import {
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Registration } from "@/types/registration";
-import type { TableAllocation } from "@/types/registration";
-import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/types/admin";
+import type {
+  Room,
+  FloorTable,
+  TableAllocation,
+  FloorArea,
+  TableType,
+  Layout,
+  LayoutRevision,
+} from "@/api-types";
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx, safeRoomColor } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
@@ -113,10 +120,10 @@ function getInitialNewLayoutState(dayOptions: DayOption[]) {
 }
 
 export function getDayLabel(
-  layout: { eventId: string | null; eventTitle?: string; date?: string | null; label?: string },
+  layout: { event_id: string | null; event_title?: string; date?: string | null; label?: string },
   dayOptions: DayOption[],
 ): string {
-  const { eventId, eventTitle, date, label = "" } = layout;
+  const { event_id: eventId, event_title: eventTitle, date, label = "" } = layout;
   if (eventId) {
     const fromDayOptions = dayOptions.find((day) => day.eventId === eventId)?.label;
     if (fromDayOptions) return fromDayOptions;
@@ -228,7 +235,7 @@ function DraggableTable({
   });
 
   const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
-  const type = tableTypes.find((t) => t.id === table.tableTypeId);
+  const type = tableTypes.find((t) => t.id === table.table_type_id);
   const shape = type?.shape ?? "rectangle";
 
   const leftPx = (table.x / 100) * canvasW;
@@ -338,7 +345,7 @@ function DraggableArea({
     disabled: !isInteractive,
   });
 
-  const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
+  const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.width_m, area.length_m);
 
   const leftPx = (area.x / 100) * canvasW;
   const topPx = (area.y / 100) * canvasH;
@@ -502,7 +509,7 @@ function RoomCanvas({
   onMoveTable,
   onMoveArea,
 }: RoomCanvasProps) {
-  const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+  const { width: canvasW, height: canvasH } = getCanvasSizePx(room.width_m, room.length_m);
 
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null);
 
@@ -525,7 +532,7 @@ function RoomCanvas({
       if (activeId.startsWith("area_")) {
         const area = roomAreas.find((a) => a.id === activeId);
         if (!area) return;
-        const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.widthM, area.lengthM);
+        const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.width_m, area.length_m);
         const leftPx = (area.x / 100) * canvasW + dx;
         const topPx = (area.y / 100) * canvasH + dy;
         const clampedX = Math.min(Math.max(0, leftPx), canvasW - AREA_W);
@@ -550,7 +557,7 @@ function RoomCanvas({
   return (
     <div className="overflow-auto pb-2" role="region" aria-label={room.name} tabIndex={0}>
       <p className="text-subtle text-sm mb-1">
-        {m.admin_room_size({ width: room.widthM, length: room.lengthM })}
+        {m.admin_room_size({ width: room.width_m, length: room.length_m })}
         <span className="ms-2">
           <Icon icon={InfoIcon} className="me-1" />
           {m.admin_table_move_hint()}
@@ -588,10 +595,10 @@ function RoomCanvas({
           )}
           {roomTables.map((table) => {
             const assigned = registrations
-              .filter((r) => r.status !== "cancelled" && table.registrationIds.includes(r.id))
+              .filter((r) => r.status !== "cancelled" && table.registration_ids.includes(r.id))
               .reduce(
                 (sum, r) =>
-                  sum + (r.allocations?.find((a) => a.tableId === table.id)?.guestCount ?? 0),
+                  sum + (r.allocations?.find((a) => a.table_id === table.id)?.guest_count ?? 0),
                 0,
               );
             const isInSelectedArea = selectedArea
@@ -611,7 +618,7 @@ function RoomCanvas({
                 exclusive={registrations.some(
                   (r) =>
                     r.status !== "cancelled" &&
-                    r.allocations?.some((a) => a.tableId === table.id && a.exclusive),
+                    r.allocations?.some((a) => a.table_id === table.id && a.exclusive),
                 )}
                 isSelected={selectedTable === table.id}
                 isInteractive={layer === "seating"}
@@ -626,9 +633,9 @@ function RoomCanvas({
             );
           })}
           {roomAreas.map((area) => {
-            const assignedLabel = area.organizationId
-              ? (organizations.find((e) => e.id === area.organizationId)?.name ??
-                m.admin_organization_fallback({ id: area.organizationId }))
+            const assignedLabel = area.organization_id
+              ? (organizations.find((e) => e.id === area.organization_id)?.name ??
+                m.admin_organization_fallback({ id: area.organization_id }))
               : null;
             return (
               <DraggableArea
@@ -704,8 +711,8 @@ export default function LayoutEditor({
 
   const activeLayout = layouts.find((layout) => layout.id === activeLayoutId);
   const historicalEventId =
-    activeLayout && !dayOptions.some((day) => day.eventId === activeLayout.eventId)
-      ? activeLayout.eventId
+    activeLayout && !dayOptions.some((day) => day.eventId === activeLayout.event_id)
+      ? activeLayout.event_id
       : undefined;
   const historicalRegistrations = useQuery({
     queryKey: [...queryKeys.admin.registrations, "layout-event", historicalEventId],
@@ -736,7 +743,7 @@ export default function LayoutEditor({
   // valid one if the current selection is no longer in this room's layouts
   // (also idempotent — see above).
   if (activeRoomId) {
-    const roomLayouts = layouts.filter((l) => l.roomId === activeRoomId);
+    const roomLayouts = layouts.filter((l) => l.room_id === activeRoomId);
     if (roomLayouts.length === 0) {
       if (activeLayoutId !== null) setActiveLayoutId(null);
     } else if (!roomLayouts.find((l) => l.id === activeLayoutId)) {
@@ -894,27 +901,29 @@ export default function LayoutEditor({
   );
 
   const selectedTableData = tables.find((t) => t.id === selectedTable);
-  const selectedType = tableTypes.find((t) => t.id === selectedTableData?.tableTypeId);
+  const selectedType = tableTypes.find((t) => t.id === selectedTableData?.table_type_id);
   const selectedRegistrations = selectedTableData
-    ? registrations.filter((r) => selectedTableData.registrationIds.includes(r.id))
+    ? registrations.filter((r) => selectedTableData.registration_ids.includes(r.id))
     : [];
 
   const eventLayoutIds = new Set(
-    layouts.filter((layout) => layout.eventId === activeLayout?.eventId).map((layout) => layout.id),
+    layouts
+      .filter((layout) => layout.event_id === activeLayout?.event_id)
+      .map((layout) => layout.id),
   );
-  const eventTables = tables.filter((table) => eventLayoutIds.has(table.layoutId));
+  const eventTables = tables.filter((table) => eventLayoutIds.has(table.layout_id));
   const assignableRegistrations = registrations.filter((registration) => {
-    if (registration.status === "cancelled" || registration.eventId !== activeLayout?.eventId)
+    if (registration.status === "cancelled" || registration.event_id !== activeLayout?.event_id)
       return false;
     if (
-      registration.allocations?.some((allocation) => allocation.tableId === selectedTableData?.id)
+      registration.allocations?.some((allocation) => allocation.table_id === selectedTableData?.id)
     )
       return false;
-    const used = registration.bookedTableQuantity
+    const used = registration.booked_table_quantity
       ? (registration.allocations?.length ?? 0)
-      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guestCount, 0) ??
+      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guest_count, 0) ??
         0);
-    return used < (registration.bookedTableQuantity || registration.guestCount);
+    return used < (registration.booked_table_quantity || registration.guest_count);
   });
   const selectedBookingToAssign = assignableRegistrations.find(
     (item) => item.id === bookingToAssign,
@@ -938,16 +947,16 @@ export default function LayoutEditor({
     () => (activeLayout ? getDayLabel(activeLayout, dayOptions) : ""),
     [activeLayout, dayOptions],
   );
-  const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
+  const activeRoom = rooms.find((r) => r.id === (activeLayout?.room_id ?? activeRoomId));
   const roomLayouts = layouts
-    .filter((l) => l.roomId === activeRoomId)
+    .filter((l) => l.room_id === activeRoomId)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-  const canvasTables = activeLayoutId ? tables.filter((t) => t.layoutId === activeLayoutId) : [];
-  const canvasAreas = activeLayoutId ? areas.filter((a) => a.layoutId === activeLayoutId) : [];
+  const canvasTables = activeLayoutId ? tables.filter((t) => t.layout_id === activeLayoutId) : [];
+  const canvasAreas = activeLayoutId ? areas.filter((a) => a.layout_id === activeLayoutId) : [];
 
   const selectedAreaData = canvasAreas.find((a) => a.id === selectedArea);
 
-  const areaCanvas = activeRoom ? getCanvasSizePx(activeRoom.widthM, activeRoom.lengthM) : null;
+  const areaCanvas = activeRoom ? getCanvasSizePx(activeRoom.width_m, activeRoom.length_m) : null;
   const areaCanvasW = areaCanvas?.width ?? 0;
   const areaCanvasH = areaCanvas?.height ?? 0;
   const tablesInSelectedArea = selectedAreaData
@@ -961,7 +970,7 @@ export default function LayoutEditor({
   // selection is cleared or valid again for the active room's venue.
   if (
     newTable.tableTypeId &&
-    !tableTypes.some((tt) => tt.id === newTable.tableTypeId && tt.venueId === activeRoom?.venueId)
+    !tableTypes.some((tt) => tt.id === newTable.tableTypeId && tt.venue_id === activeRoom?.venue_id)
   ) {
     setNewTable((p) => ({ ...p, tableTypeId: "" }));
   }
@@ -1007,8 +1016,8 @@ export default function LayoutEditor({
             >
               {rooms.map((room) => {
                 const roomTableCount = layouts
-                  .filter((l) => l.roomId === room.id)
-                  .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
+                  .filter((l) => l.room_id === room.id)
+                  .reduce((sum, l) => sum + tables.filter((t) => t.layout_id === l.id).length, 0);
                 return (
                   <ToggleGroupItem key={room.id} value={room.id}>
                     <span
@@ -1238,10 +1247,10 @@ export default function LayoutEditor({
                   )}
                   {selectedType && (
                     <Badge
-                      variant={selectedType.heightType === "high" ? "info" : "dark"}
+                      variant={selectedType.height_type === "high" ? "info" : "dark"}
                       className="border border-subtle"
                     >
-                      {selectedType.heightType === "high"
+                      {selectedType.height_type === "high"
                         ? m.admin_table_height_type_high()
                         : m.admin_table_height_type_low()}
                     </Badge>
@@ -1280,9 +1289,9 @@ export default function LayoutEditor({
                     variant="outline-danger"
                     size="sm"
                     onClick={() => setConfirmDeleteTableId(selectedTableData.id)}
-                    disabled={selectedTableData.registrationIds.length > 0}
+                    disabled={selectedTableData.registration_ids.length > 0}
                     title={
-                      selectedTableData.registrationIds.length > 0
+                      selectedTableData.registration_ids.length > 0
                         ? m.admin_layout_table_delete_blocked()
                         : m.admin_delete_item({ name: selectedTableData.name })
                     }
@@ -1336,7 +1345,7 @@ export default function LayoutEditor({
                   <AdminSelect
                     size="sm"
                     className={ADMIN_CONTROL_CLASS}
-                    value={selectedTableData.tableTypeId}
+                    value={selectedTableData.table_type_id}
                     onValueChange={async (e) => {
                       setUpdateTableError(null);
                       try {
@@ -1350,9 +1359,9 @@ export default function LayoutEditor({
                     {tableTypes
                       .filter(
                         (tt) =>
-                          (tt.venueId === activeRoom?.venueId ||
-                            tt.id === selectedTableData.tableTypeId) &&
-                          (tt.active || tt.id === selectedTableData.tableTypeId),
+                          (tt.venue_id === activeRoom?.venue_id ||
+                            tt.id === selectedTableData.table_type_id) &&
+                          (tt.active || tt.id === selectedTableData.table_type_id),
                       )
                       .map((tt) => (
                         <AdminOption key={tt.id} value={tt.id} disabled={!tt.active}>
@@ -1371,7 +1380,7 @@ export default function LayoutEditor({
                           <span className="font-semibold me-auto">{r.person.name}</span>
                           {(() => {
                             const allocation = r.allocations?.find(
-                              (item) => item.tableId === selectedTableData.id,
+                              (item) => item.table_id === selectedTableData.id,
                             );
                             if (!allocation) return null;
                             return (
@@ -1381,7 +1390,7 @@ export default function LayoutEditor({
                                   type="number"
                                   min={allocation.exclusive ? 0 : 1}
                                   max={20}
-                                  defaultValue={allocation.guestCount}
+                                  defaultValue={allocation.guest_count}
                                   disabled={allocationPending || allocation.exclusive}
                                   className="bg-muted text-content border-input w-20"
 
@@ -1390,13 +1399,13 @@ export default function LayoutEditor({
                                     if (
                                       Number.isInteger(guestCount) &&
                                       guestCount >= 1 &&
-                                      guestCount !== allocation.guestCount
+                                      guestCount !== allocation.guest_count
                                     ) {
                                       void savePlanAllocations(
                                         r,
                                         (r.allocations ?? []).map((item) =>
-                                          item.tableId === selectedTableData.id
-                                            ? { ...item, guestCount }
+                                          item.table_id === selectedTableData.id
+                                            ? { ...item, guest_count: guestCount }
                                             : item,
                                         ),
                                       );
@@ -1412,8 +1421,8 @@ export default function LayoutEditor({
                                     void savePlanAllocations(
                                       r,
                                       (r.allocations ?? []).map((item) =>
-                                        item.tableId === selectedTableData.id
-                                          ? { ...item, tableId: event }
+                                        item.table_id === selectedTableData.id
+                                          ? { ...item, table_id: event }
                                           : item,
                                       ),
                                     )
@@ -1424,7 +1433,7 @@ export default function LayoutEditor({
                                       (table) =>
                                         table.id === selectedTableData.id ||
                                         !(r.allocations ?? []).some(
-                                          (item) => item.tableId === table.id,
+                                          (item) => item.table_id === table.id,
                                         ),
                                     )
                                     .map((table) => (
@@ -1441,7 +1450,7 @@ export default function LayoutEditor({
                                     void savePlanAllocations(
                                       r,
                                       (r.allocations ?? []).filter(
-                                        (item) => item.tableId !== selectedTableData.id,
+                                        (item) => item.table_id !== selectedTableData.id,
                                       ),
                                     )
                                   }
@@ -1469,13 +1478,13 @@ export default function LayoutEditor({
                         const id = event;
                         const booking = assignableRegistrations.find((item) => item.id === id);
                         const alreadyAssigned =
-                          booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ??
+                          booking?.allocations?.reduce((sum, item) => sum + item.guest_count, 0) ??
                           0;
                         setBookingToAssign(id);
                         setGuestsToAssign(
-                          booking?.bookedTableQuantity
+                          booking?.booked_table_quantity
                             ? 0
-                            : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
+                            : Math.max(1, (booking?.guest_count ?? 1) - alreadyAssigned),
                         );
                       }}
                     >
@@ -1489,13 +1498,13 @@ export default function LayoutEditor({
                     <AdminInput
                       aria-label={m.admin_guests_count()}
                       type="number"
-                      min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
+                      min={selectedBookingToAssign?.booked_table_quantity ? 0 : 1}
                       max={20}
                       value={guestsToAssign}
                       disabled={
                         allocationPending ||
                         !bookingToAssign ||
-                        Boolean(selectedBookingToAssign?.bookedTableQuantity)
+                        Boolean(selectedBookingToAssign?.booked_table_quantity)
                       }
                       onChange={(event) => setGuestsToAssign(Number(event.target.value))}
                       className="w-24"
@@ -1508,11 +1517,11 @@ export default function LayoutEditor({
                         await savePlanAllocations(selectedBookingToAssign, [
                           ...(selectedBookingToAssign.allocations ?? []),
                           {
-                            tableId: selectedTableData.id,
-                            guestCount: selectedBookingToAssign.bookedTableQuantity
+                            table_id: selectedTableData.id,
+                            guest_count: selectedBookingToAssign.booked_table_quantity
                               ? 0
                               : guestsToAssign,
-                            exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
+                            exclusive: Boolean(selectedBookingToAssign.booked_table_quantity),
                           },
                         ]);
                         setBookingToAssign("");
@@ -1625,13 +1634,13 @@ export default function LayoutEditor({
                       max={50}
                       step={0.1}
                       className={ADMIN_CONTROL_CLASS}
-                      defaultValue={selectedAreaData.widthM}
+                      defaultValue={selectedAreaData.width_m}
                       onBlur={async (e) => {
                         const val = parseFloat(e.target.value);
-                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.widthM) {
+                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.width_m) {
                           setResizeAreaError(null);
                           try {
-                            await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
+                            await onResizeArea(selectedAreaData.id, val, selectedAreaData.length_m);
                           } catch (err) {
                             setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                           }
@@ -1651,13 +1660,13 @@ export default function LayoutEditor({
                       max={50}
                       step={0.1}
                       className={ADMIN_CONTROL_CLASS}
-                      defaultValue={selectedAreaData.lengthM}
+                      defaultValue={selectedAreaData.length_m}
                       onBlur={async (e) => {
                         const val = parseFloat(e.target.value);
-                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.lengthM) {
+                        if (!isNaN(val) && val > 0 && val !== selectedAreaData.length_m) {
                           setResizeAreaError(null);
                           try {
-                            await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
+                            await onResizeArea(selectedAreaData.id, selectedAreaData.width_m, val);
                           } catch (err) {
                             setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                           }
@@ -1683,7 +1692,7 @@ export default function LayoutEditor({
                         try {
                           await onAssignAreaToItem(
                             selectedAreaData.id,
-                            selectedAreaData.organizationId,
+                            selectedAreaData.organization_id,
                             undefined,
                             newIcon,
                           );
@@ -1709,7 +1718,9 @@ export default function LayoutEditor({
                     size="sm"
                     className={ADMIN_CONTROL_CLASS}
                     value={
-                      selectedAreaData.organizationId ? `e:${selectedAreaData.organizationId}` : ""
+                      selectedAreaData.organization_id
+                        ? `e:${selectedAreaData.organization_id}`
+                        : ""
                     }
                     onValueChange={async (ev) => {
                       const val = ev;
@@ -2026,12 +2037,12 @@ export default function LayoutEditor({
               >
                 <AdminOption value="">— {m.admin_table_type_select()} —</AdminOption>
                 {tableTypes
-                  .filter((tt) => tt.venueId === activeRoom?.venueId)
+                  .filter((tt) => tt.venue_id === activeRoom?.venue_id)
                   .map((tt) => (
                     <AdminOption key={tt.id} value={tt.id}>
                       {tt.name} (
-                      {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
-                      {tt.heightType === "high"
+                      {tt.shape === "round" ? `⌀${tt.width_m}m` : `${tt.width_m}×${tt.length_m}m`},{" "}
+                      {tt.height_type === "high"
                         ? m.admin_table_height_type_high()
                         : m.admin_table_height_type_low()}
                       , {m.admin_layout_capacity_max()} {tt.capacity})

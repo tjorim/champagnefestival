@@ -1,3 +1,5 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, productOut } from "@/mocks/data/builders";
 import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -6,7 +8,8 @@ import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import EventProductsModal from "@/components/admin/EventProductsModal";
 import { server } from "@/mocks/server";
-import type { Event } from "@/types/event";
+import type { Event } from "@/api-types";
+
 import { createTestQueryClient } from "../utils/queryClient";
 import { noEventTranslations } from "../utils/eventFixtures";
 
@@ -20,32 +23,34 @@ vi.mock("@/paraglide/messages", () => ({
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const event: Event = {
+const event: Event = eventOut({
   id: "event-01",
-  editionId: "edition-01",
+  edition_id: "edition-01",
   ...noEventTranslations,
   title: "VIP Evening",
   description: "",
   date: "2027-03-07",
-  startTime: "18:00",
+  start_time: "18:00",
   category: "vip",
-  registrationRequired: true,
+  registration_required: true,
   active: true,
-  createdAt: "",
-  updatedAt: "",
+  created_at: "",
+  updated_at: "",
   products: [],
-};
+});
 
 const nameIn = (language: string) =>
   `admin_products_name_in({"language":"admin_language_${language}"})`;
 
-function renderModal(products: Record<string, unknown>[]) {
+function renderModal(products: import("@/api-types").ProductOut[]) {
   server.use(
     http.get("/api/products", ({ request }) => {
       const eventId = new URL(request.url).searchParams.get("event_id");
       // The API always returns the Dutch name next to the translations.
-      return HttpResponse.json(
-        products.filter((p) => p.event_id === eventId).map((p) => ({ name_nl: p.name, ...p })),
+      return jsonResponse<import("@/api-types").ProductOut[]>(
+        products
+          .filter((p) => p.event_id === eventId)
+          .map((p) => ({ ...p, name_nl: p.name_nl || p.name })),
       );
     }),
   );
@@ -60,11 +65,11 @@ function renderModal(products: Record<string, unknown>[]) {
 describe("EventProductsModal", () => {
   it("shows a required badge on required products", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-entry",
         event_id: "event-01",
         name: "VIP Entry",
-        price: 50,
+        price: "50",
         category: "other",
         purchasable: true,
         required: true,
@@ -72,7 +77,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
 
     await screen.findByText("VIP Entry");
@@ -81,11 +86,11 @@ describe("EventProductsModal", () => {
 
   it("shows a purchasable badge and a sold-out badge for a sold-out purchasable product", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -96,7 +101,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
 
     await screen.findByText("Champagne Bottle");
@@ -106,11 +111,11 @@ describe("EventProductsModal", () => {
 
   it("shows a hidden badge without a sold-out badge for a hidden product", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-supply",
         event_id: "event-01",
         name: "Kitchen Supply",
-        price: 1,
+        price: "1",
         category: "other",
         purchasable: false,
         required: false,
@@ -118,7 +123,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
 
     await screen.findByText("Kitchen Supply");
@@ -129,11 +134,11 @@ describe("EventProductsModal", () => {
   it("submits purchasable=false when editing a product to hidden", async () => {
     let saved: Record<string, unknown> | null = null;
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -141,13 +146,13 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Champagne Bottle");
 
     server.use(
       http.post("/api/products/prod-bottle/preview", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
           preview_token: "token-1",
           bookings: [],
           price_changed: false,
@@ -156,8 +161,35 @@ describe("EventProductsModal", () => {
         }),
       ),
       http.put("/api/products/prod-bottle", async ({ request }) => {
-        saved = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...saved, id: "prod-bottle", event_id: "event-01" });
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "prod-bottle",
+          event_id: "event-01",
+        });
       }),
     );
 
@@ -174,24 +206,24 @@ describe("EventProductsModal", () => {
   it("sends the translations and clears a blank one when editing a product", async () => {
     let saved: Record<string, unknown> | null = null;
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Fles",
         name_nl: "Fles",
         name_en: "Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Fles");
     server.use(
       http.post("/api/products/prod-bottle/preview", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
           preview_token: "token-2",
           bookings: [],
           price_changed: false,
@@ -200,8 +232,35 @@ describe("EventProductsModal", () => {
         }),
       ),
       http.put("/api/products/prod-bottle", async ({ request }) => {
-        saved = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...saved, id: "prod-bottle", event_id: "event-01" });
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "prod-bottle",
+          event_id: "event-01",
+        });
       }),
     );
 
@@ -237,11 +296,11 @@ describe("EventProductsModal", () => {
 
   it("unticking purchasable forces required off and disables its checkbox", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-entry",
         event_id: "event-01",
         name: "VIP Entry",
-        price: 50,
+        price: "50",
         category: "other",
         purchasable: true,
         required: true,
@@ -249,7 +308,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("VIP Entry");
 
@@ -268,11 +327,11 @@ describe("EventProductsModal", () => {
 
   it("opens a dedicated editor and returns to the list on Close", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -280,12 +339,12 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
-      {
+      }),
+      productOut({
         id: "prod-cheese",
         event_id: "event-01",
         name: "Cheese Platter",
-        price: 25,
+        price: "25",
         category: "food",
         purchasable: true,
         required: false,
@@ -293,7 +352,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Champagne Bottle");
 
@@ -311,11 +370,11 @@ describe("EventProductsModal", () => {
 
   it("shows the bundle note for a product that includes another", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-entry",
         event_id: "event-01",
         name: "VIP Table",
-        price: 200,
+        price: "200",
         category: "other",
         purchasable: true,
         required: true,
@@ -323,12 +382,12 @@ describe("EventProductsModal", () => {
         included_per_guests: 2,
         created_at: "",
         updated_at: "",
-      },
-      {
+      }),
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -336,7 +395,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
 
     await screen.findByText("VIP Table");
@@ -347,11 +406,11 @@ describe("EventProductsModal", () => {
 
   it("submits required and bundle fields when adding a product", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -359,26 +418,39 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Champagne Bottle");
 
-    let capturedBody: Record<string, unknown> | null = null;
+    let capturedBody: import("@/api-types").ProductCreate | null = null;
     server.use(
       http.post("/api/products", async ({ request }) => {
-        capturedBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(
+        capturedBody = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>(
           {
+            unit: "item",
+            stock: null,
+            reserved_quantity: 0,
+            available_quantity: null,
+            shortage: 0,
+            sold_out: false,
+            inclusions: null,
+            description: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
             id: "prod-new",
             event_id: "event-01",
-            name: capturedBody.name_nl,
-            name_nl: capturedBody.name_nl,
-            price: capturedBody.price,
-            category: capturedBody.category,
+            name: capturedBody.name_nl ?? "",
+            name_nl: capturedBody.name_nl ?? null,
+            price: String(capturedBody.price),
+            category: capturedBody.category ?? "",
             purchasable: true,
-            required: capturedBody.required,
-            included_product_id: capturedBody.included_product_id,
-            included_per_guests: capturedBody.included_per_guests,
+            required: capturedBody.required ?? false,
+            included_product_id: capturedBody.included_product_id ?? null,
+            included_per_guests: capturedBody.included_per_guests ?? null,
             created_at: "",
             updated_at: "",
           },
@@ -417,11 +489,11 @@ describe("EventProductsModal", () => {
 
   it("does not offer a product being edited as its own bundle target", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -429,7 +501,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Champagne Bottle");
 
@@ -442,11 +514,11 @@ describe("EventProductsModal", () => {
 
   it("requires reviewing stock shortages before saving an edit", async () => {
     renderModal([
-      {
+      productOut({
         id: "stocked",
         event_id: event.id,
         name: "Tables",
-        price: 50,
+        price: "50",
         category: "other",
         purchasable: true,
         required: false,
@@ -456,12 +528,12 @@ describe("EventProductsModal", () => {
         reserved_quantity: 3,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     let saved: Record<string, unknown> | null = null;
     server.use(
       http.post("/api/products/stocked/preview", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
           preview_token: "reviewed-state",
           bookings: [],
           price_changed: false,
@@ -472,8 +544,35 @@ describe("EventProductsModal", () => {
         }),
       ),
       http.put("/api/products/stocked", async ({ request }) => {
-        saved = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ ...saved, id: "stocked", event_id: event.id });
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "stocked",
+          event_id: event.id,
+        });
       }),
     );
     await screen.findByText("Tables");
@@ -504,7 +603,36 @@ describe("EventProductsModal", () => {
     server.use(
       http.post("/api/products", () => {
         postCalled = true;
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").ProductOut>(
+          {
+            unit: "item",
+            stock: null,
+            reserved_quantity: 0,
+            available_quantity: null,
+            shortage: 0,
+            sold_out: false,
+            inclusions: null,
+            id: "",
+            event_id: "",
+            name: "",
+            description: "",
+            name_nl: null,
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            price: "",
+            category: "",
+            purchasable: false,
+            required: false,
+            included_product_id: null,
+            included_per_guests: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
 
@@ -523,11 +651,11 @@ describe("EventProductsModal", () => {
 
   it("asks for confirmation before deleting a product, and cancelling keeps it", async () => {
     renderModal([
-      {
+      productOut({
         id: "prod-bottle",
         event_id: "event-01",
         name: "Champagne Bottle",
-        price: 65,
+        price: "65",
         category: "champagne",
         purchasable: true,
         required: false,
@@ -535,7 +663,7 @@ describe("EventProductsModal", () => {
         included_per_guests: null,
         created_at: "",
         updated_at: "",
-      },
+      }),
     ]);
     await screen.findByText("Champagne Bottle");
 
@@ -570,7 +698,14 @@ describe("EventProductsModal", () => {
 
   it("shows an error state and disables adding when the products query fails", async () => {
     server.use(
-      http.get("/api/products", () => HttpResponse.json({ detail: "boom" }, { status: 500 })),
+      http.get("/api/products", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "boom",
+          },
+          { status: 500 },
+        ),
+      ),
     );
     const queryClient = createTestQueryClient();
     render(

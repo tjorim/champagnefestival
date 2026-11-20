@@ -1,3 +1,4 @@
+import { jsonResponse } from "../response";
 import { http, HttpResponse } from "msw/http";
 import type { Channel, Slide, ChannelDraft, SlideDraft } from "@/signage/playlistModel";
 import type { Playlist } from "@/signage/types";
@@ -15,21 +16,29 @@ function authorized(request: Request) {
 export const signageHandlers = [
   http.get("/api/signage/video-exports/capability", ({ request }) =>
     authorized(request)
-      ? HttpResponse.json({ available: false, max_slides: 60, max_seconds: 600 })
+      ? jsonResponse<import("@/api-types").VideoExportCapabilityOut>({
+          available: false,
+          max_slides: 60,
+          max_seconds: 600,
+        })
       : new HttpResponse(null, { status: 401 }),
   ),
   http.get("/api/signage/video-exports", ({ request }) =>
-    authorized(request) ? HttpResponse.json([]) : new HttpResponse(null, { status: 401 }),
+    authorized(request)
+      ? jsonResponse<import("@/api-types").VideoExportOut[]>([])
+      : new HttpResponse(null, { status: 401 }),
   ),
   http.get("/api/signage/templates", ({ request }) =>
-    authorized(request) ? HttpResponse.json(templates) : new HttpResponse(null, { status: 401 }),
+    authorized(request)
+      ? jsonResponse<import("@/api-types").TemplateOut[]>(templates)
+      : new HttpResponse(null, { status: 401 }),
   ),
   http.post("/api/signage/templates", async ({ request }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
     const draft = (await request.json()) as TemplateDraft;
     const template = { ...draft, id: crypto.randomUUID() };
     templates.push(template);
-    return HttpResponse.json(template, { status: 201 });
+    return jsonResponse<import("@/api-types").TemplateOut>(template, { status: 201 });
   }),
   http.put("/api/signage/templates/:id", async ({ request, params }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
@@ -38,20 +47,24 @@ export const signageHandlers = [
     const draft = (await request.json()) as TemplateDraft;
     const template = { ...draft, id: String(params.id) };
     templates[index] = template;
-    return HttpResponse.json(template);
+    return jsonResponse<import("@/api-types").TemplateOut>(template);
   }),
   http.get("/api/signage/slides", ({ request }) =>
-    authorized(request) ? HttpResponse.json(slides) : new HttpResponse(null, { status: 401 }),
+    authorized(request)
+      ? jsonResponse<import("@/api-types").SlideOut[]>(slides)
+      : new HttpResponse(null, { status: 401 }),
   ),
   http.get("/api/signage/channels", ({ request }) =>
-    authorized(request) ? HttpResponse.json(channels) : new HttpResponse(null, { status: 401 }),
+    authorized(request)
+      ? jsonResponse<import("@/api-types").ChannelOut[]>(channels)
+      : new HttpResponse(null, { status: 401 }),
   ),
   http.post("/api/signage/channels", async ({ request }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
     const body = (await request.json()) as ChannelDraft;
     const item = { ...body, id: crypto.randomUUID(), epoch: new Date().toISOString(), revision: 1 };
     channels.push(item);
-    return HttpResponse.json(item, { status: 201 });
+    return jsonResponse<import("@/api-types").ChannelOut>(item, { status: 201 });
   }),
   http.put("/api/signage/channels/:id", async ({ request, params }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
@@ -59,13 +72,13 @@ export const signageHandlers = [
     if (index < 0) return new HttpResponse(null, { status: 404 });
     const item = { ...channels[index]!, ...((await request.json()) as ChannelDraft) };
     channels[index] = item;
-    return HttpResponse.json(item);
+    return jsonResponse<import("@/api-types").ChannelOut>(item);
   }),
   http.post("/api/signage/slides", async ({ request }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
     const item = { ...((await request.json()) as SlideDraft), id: crypto.randomUUID() };
     slides.push(item);
-    return HttpResponse.json(item, { status: 201 });
+    return jsonResponse<import("@/api-types").SlideOut>(item, { status: 201 });
   }),
   http.put("/api/signage/slides/:id", async ({ request, params }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
@@ -73,7 +86,7 @@ export const signageHandlers = [
     if (index < 0) return new HttpResponse(null, { status: 404 });
     const item = { ...((await request.json()) as SlideDraft), id: String(params.id) };
     slides[index] = item;
-    return HttpResponse.json(item);
+    return jsonResponse<import("@/api-types").SlideOut>(item);
   }),
   http.delete("/api/signage/:resource/:id", ({ request, params }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
@@ -90,7 +103,9 @@ export const signageHandlers = [
       const item = slides.find((slide) => slide.id === id && slide.channel_id === params.id);
       if (item) item.sort_order = index;
     });
-    return HttpResponse.json(slides.filter((item) => item.channel_id === params.id));
+    return jsonResponse<import("@/api-types").SlideOut[]>(
+      slides.filter((item) => item.channel_id === params.id),
+    );
   }),
   http.post("/api/signage/preview", async ({ request }) => {
     if (!authorized(request)) return new HttpResponse(null, { status: 401 });
@@ -131,10 +146,15 @@ export const signageHandlers = [
               logo: org.image,
               description: null,
               sponsor: org.type === "sponsor",
+              sponsor_tier: null,
             },
           });
       } else output.push({ ...base, kind: slide.kind });
     }
-    return HttpResponse.json({ epoch: body.at, revision: "preview", slides: output });
+    return jsonResponse<import("@/api-types").Playlist>({
+      epoch: body.at,
+      revision: "preview",
+      slides: output,
+    });
   }),
 ];

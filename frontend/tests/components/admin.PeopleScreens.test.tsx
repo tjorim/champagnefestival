@@ -1,3 +1,5 @@
+import { jsonResponse } from "@/mocks/response";
+import { makePerson } from "../utils/personFixture";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -6,7 +8,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import MembersManagement from "@/components/admin/MembersManagement";
@@ -39,22 +41,23 @@ const authHeaders = () => ({
   "Content-Type": "application/json",
   Authorization: "Bearer mock-access-token",
 });
-const person = (index: number) => ({
-  id: `p${index}`,
-  name: `Person ${String(index).padStart(2, "0")}`,
-  email: `p${index}@example.com`,
-  phone: "0470000000",
-  address: "Street",
-  notes: "Notes",
-  anonymised: index % 2 !== 0,
-  roles: ["member", "volunteer"],
-  registration_count: 42,
-  national_register_number: "123456",
-  eid_document_number: "eid",
-  help_periods: [{ id: index, first_help_day: "2026-10-01", last_help_day: null, notes: "Help" }],
-  created_at: "2026-01-01",
-  updated_at: "2026-01-01",
-});
+const person = (index: number) =>
+  makePerson({
+    id: `p${index}`,
+    name: `Person ${String(index).padStart(2, "0")}`,
+    email: `p${index}@example.com`,
+    phone: "0470000000",
+    address: "Street",
+    notes: "Notes",
+    anonymised: index % 2 !== 0,
+    roles: ["member", "volunteer"],
+    registration_count: 42,
+    national_register_number: "123456",
+    eid_document_number: "eid",
+    help_periods: [{ id: index, first_help_day: "2026-10-01", last_help_day: null, notes: "Help" }],
+    created_at: "2026-01-01",
+    updated_at: "2026-01-01",
+  });
 function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "") {
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);
@@ -74,7 +77,7 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
     if (url.searchParams.get("sort_dir") === "desc") matching = matching.slice().reverse();
     const page = Number(url.searchParams.get("page") ?? 1);
     const limit = Number(url.searchParams.get("limit") ?? 20);
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").PersonListEnvelope>({
       items: matching.slice((page - 1) * limit, page * limit),
       total: matching.length,
       page,
@@ -85,7 +88,12 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
     http.get("/api/people", handler),
     http.get("/api/volunteers", handler),
     http.get("/api/people/by-email", () =>
-      HttpResponse.json({ items: [], total: 0, page: 1, limit: 100 }),
+      jsonResponse<import("@/api-types").PersonListEnvelope>({
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 100,
+      }),
     ),
   );
   const queryClient = createTestQueryClient();
@@ -268,8 +276,13 @@ it("uses exact bounded duplicate lookup and merges with server registration coun
       const url = new URL(request.url);
       expect(url.searchParams.get("email")).toBe("p0@example.com");
       expect(url.searchParams.get("limit")).toBe("100");
-      return HttpResponse.json({
-        items: [{ ...person(1), registration_count: 100 }],
+      return jsonResponse<import("@/api-types").PersonListEnvelope>({
+        items: [
+          {
+            ...person(1),
+            registration_count: 100,
+          },
+        ],
         total: 1,
         page: 1,
         limit: 100,
@@ -313,13 +326,17 @@ it("copies all matching emails only on the explicit action, through bounded page
 it("loads the person registration and payment summary independently of the list page", async () => {
   mount("people", 1);
   server.use(
-    http.get("/api/people/:id/registrations", () => HttpResponse.json([])),
+    http.get("/api/people/:id/registrations", () =>
+      jsonResponse<import("@/api-types").RegistrationOut[]>([]),
+    ),
     http.get("/api/people/:id/payment-summary", () =>
-      HttpResponse.json({
-        total_received: 0,
-        total_refunded: 0,
-        total_paid: 0,
-        total_outstanding: 0,
+      jsonResponse<import("@/api-types").PersonPaymentSummary>({
+        received: "",
+        refunded: "",
+        net_paid: "",
+        due: "",
+        outstanding: "",
+        refund_liability: "",
       }),
     ),
   );

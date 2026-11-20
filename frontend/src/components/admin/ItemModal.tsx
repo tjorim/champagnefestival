@@ -71,7 +71,7 @@ export default function ItemModal({
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(() => {
-    const cp = record?.contactPerson;
+    const cp = record?.contact_person;
     return {
       name: record?.name ?? "",
       image: record?.image ?? "",
@@ -80,16 +80,7 @@ export default function ItemModal({
       description_fr: record?.description_fr ?? "",
       description_en: record?.description_en ?? "",
       type: record?.type ?? "vendor",
-      contactOption: (cp
-        ? {
-            value: cp.id,
-            label: cp.name,
-            sub: [cp.email, cp.phone].filter(Boolean).join(" · "),
-            name: cp.name,
-            email: cp.email ?? "",
-            phone: cp.phone ?? "",
-          }
-        : null) as PersonOption | null,
+      contactOption: cp ?? null,
     };
   }, [record]);
 
@@ -117,15 +108,8 @@ export default function ItemModal({
         description_en: value.description_en.trim() || null,
         active: record?.active ?? true,
         type: value.type,
-        contactPersonId: value.contactOption?.value ?? null,
-        contactPerson: value.contactOption
-          ? {
-              id: value.contactOption.value,
-              name: value.contactOption.label,
-              email: value.contactOption.email,
-              phone: value.contactOption.phone,
-            }
-          : null,
+        contact_person_id: value.contactOption?.id ?? null,
+        contact_person: value.contactOption,
       });
     },
   });
@@ -232,7 +216,10 @@ export default function ItemModal({
                   <AdminSelect
                     className={ADMIN_CONTROL_CLASS}
                     value={field.value}
-                    onValueChange={(e) => field.handleChange(e)}
+                    onValueChange={(e) => {
+                      if (e === "vendor" || e === "producer" || e === "sponsor")
+                        field.handleChange(e);
+                    }}
                     onBlur={field.handleBlur}
                   >
                     <AdminOption value="vendor">{m.admin_item_vendor()}</AdminOption>
@@ -253,8 +240,8 @@ export default function ItemModal({
                     onValueChange={(option) => field.handleChange(option)}
                     onInputValueChange={setPersonQuery}
                     filter={null}
-                    itemToStringLabel={(option: PersonOption) => option.label}
-                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.value === b.value}
+                    itemToStringLabel={(option: PersonOption) => option.name}
+                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.id === b.id}
                   >
                     <ComboboxInput
                       id="item-contact-person"
@@ -277,11 +264,13 @@ export default function ItemModal({
                       )}
                       <ComboboxList>
                         {(opt: PersonOption) => (
-                          <ComboboxItem key={opt.value} value={opt}>
+                          <ComboboxItem key={opt.id} value={opt}>
                             <div>
-                              <div>{opt.label}</div>
-                              {opt.sub && (
-                                <small className="text-muted-foreground">{opt.sub}</small>
+                              <div>{opt.name}</div>
+                              {[opt.email, opt.phone].filter(Boolean).join(" · ") && (
+                                <small className="text-muted-foreground">
+                                  {[opt.email, opt.phone].filter(Boolean).join(" · ")}
+                                </small>
                               )}
                             </div>
                           </ComboboxItem>
@@ -299,7 +288,7 @@ export default function ItemModal({
                 url={`/api/organizations/${initial.id}/logo`}
                 headers={authHeaders}
                 onSaved={(result) => {
-                  if (result.image) form.setFieldValue("image", result.image);
+                  if ("image" in result && result.image) form.setFieldValue("image", result.image);
                   const isCurrent = captureAdminOrganizationsFence();
                   if (isCurrent())
                     void queryClient.invalidateQueries({

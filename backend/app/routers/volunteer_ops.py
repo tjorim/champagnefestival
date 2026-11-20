@@ -27,7 +27,15 @@ from app.dependencies import Pagination
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, Person, Registration, RegistrationAllocation, Table
-from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
+from app.schemas import (
+    CheckInGuestOut,
+    CheckInOut,
+    VolunteerCheckInRequest,
+    VolunteerRegistrationUpdate,
+    VolunteerTableOrdersOut,
+    VolunteerTableOrdersUnresolvedOut,
+    VolunteerTableResolveOut,
+)
 from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
@@ -40,7 +48,7 @@ from app.services.operational_search import (
 )
 from app.services.registrations_service import apply_delivery_updates, ensure_registration_can_check_in
 from app.services.stamp_cards_service import sync_check_in
-from app.utils import registration_to_checkin_dict
+from app.utils import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)
 
@@ -79,29 +87,32 @@ async def _resolve_tables(db: AsyncSession, reference: str) -> list[Table]:
     return [table for _, table in ranked[:DEFAULT_RESULT_LIMIT]]
 
 
-@router.get("/tables/resolve")
+@router.get("/tables/resolve", response_model=VolunteerTableResolveOut)
 async def resolve_table_reference(
     reference: str = Query(min_length=1, description="Visible table number, name, or label"),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VolunteerTableResolveOut:
     """Resolve a human-facing table reference without fuzzy numeric matching."""
 
     tables = await _resolve_tables(db, reference)
-    return {
-        "tables": [
+    return VolunteerTableResolveOut(
+        tables=[
             {"table_id": table.id, "table_name": table.name, "capacity": table.capacity, "layout_id": table.layout_id}
             for table in tables
         ],
-        "count": len(tables),
-    }
+        count=len(tables),
+    )
 
 
-@router.get("/table-orders")
+@router.get(
+    "/table-orders",
+    response_model=VolunteerTableOrdersOut | VolunteerTableOrdersUnresolvedOut,
+)
 async def get_table_order_summary(
     table_id: str | None = Query(default=None),
     table_reference: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> VolunteerTableOrdersOut | VolunteerTableOrdersUnresolvedOut:
     """Return PII-free registration and order details for a table."""
 
     if table_id is None and table_reference is None:
@@ -115,16 +126,14 @@ async def get_table_order_summary(
     elif table_reference is not None:
         candidates = await _resolve_tables(db, table_reference)
         if len(candidates) != 1:
-            return {
-                "table_reference": table_reference,
-                "registrations": [],
-                "candidates": [{"table_id": item.id, "table_name": item.name} for item in candidates],
-                "message": (
-                    "No table matched this reference."
-                    if not candidates
-                    else "Multiple tables matched this reference; choose a table_id."
-                ),
-            }
+            return VolunteerTableOrdersUnresolvedOut(
+                table_reference=table_reference,
+                registrations=[],
+                candidates=[{"table_id": item.id, "table_name": item.name} for item in candidates],
+                message="No table matched this reference."
+                if not candidates
+                else "Multiple tables matched this reference; choose a table_id.",
+            )
         table = candidates[0]
     if table is None:
         raise HTTPException(status_code=404, detail="Table not found.")
@@ -141,16 +150,16 @@ async def get_table_order_summary(
         .scalars()
         .all()
     )
-    return {
-        "table_id": table.id,
-        "table_name": table.name,
-        "registrations": [
-            registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table.name)
+    return VolunteerTableOrdersOut(
+        table_id=table.id,
+        table_name=table.name,
+        registrations=[
+            registration_to_checkin_out(registration, registration.person, registration.event, table_name=table.name)
             for registration in rows
             if registration.person is not None and registration.event is not None
         ],
-        "count": len(rows),
-    }
+        count=len(rows),
+    )
 
 
 @router.get("/registrations", response_model=list[CheckInGuestOut])
@@ -161,7 +170,7 @@ async def search_registrations(
     order_category: str | None = Query(default=None, description="Filter by exact normalized order category"),
     delivery_state: Literal["pending", "delivered"] | None = Query(default=None, description="Filter matching orders"),
     pagination: Pagination = Depends(),
-) -> list[dict]:
+) -> list[CheckInGuestOut]:
     """Search registrations by guest or table for on-site volunteer check-in.
 
     Returns a minimal, PII-free view of matching registrations. No email,
@@ -282,7 +291,7 @@ async def search_registrations(
     limit = bounded_limit(pagination.limit or DEFAULT_RESULT_LIMIT)
     offset = (pagination.page - 1) * limit
     return [
-        registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+        registration_to_checkin_out(registration, registration.person, registration.event, table_name=table_name)
         for _, registration, table_name in ranked_rows[offset : offset + limit]
     ]
 
@@ -294,7 +303,7 @@ async def update_volunteer_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CheckInGuestOut:
     """Update entrance-facing registration fields from volunteer check-in."""
 
     row = (
@@ -359,7 +368,7 @@ async def update_volunteer_registration(
             await notify_live_event(db, live_mapping.check_in_changed(**scope))
         await db.commit()
 
-    return registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
+    return registration_to_checkin_out(registration, registration.person, registration.event, table_name=table_name)
 
 
 @router.post("/registrations/{registration_id}/check-in", response_model=CheckInOut)
@@ -369,7 +378,7 @@ async def volunteer_check_in_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CheckInOut:
     """Mark a registration checked in from the authenticated volunteer flow.
 
     This is the QR-code fallback for entrance volunteers. It accepts the same
@@ -410,7 +419,7 @@ async def volunteer_check_in_registration(
         strap_newly_issued = True
         changed = True
 
-    registration_dict = registration_to_checkin_dict(
+    registration_dict = registration_to_checkin_out(
         registration, registration.person, registration.event, table_name=table_name
     )
 
@@ -449,8 +458,4 @@ async def volunteer_check_in_registration(
         )
     await db.commit()
 
-    return {
-        "registration": registration_dict,
-        "already_checked_in": already,
-        "stamp_progress": stamp_progress,
-    }
+    return CheckInOut(registration=registration_dict, already_checked_in=already, stamp_progress=stamp_progress)

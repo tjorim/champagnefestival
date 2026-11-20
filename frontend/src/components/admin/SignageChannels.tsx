@@ -586,7 +586,7 @@ export default function SignageChannels({
                     {editions.data?.map((item) => (
                       <AdminOption key={item.id} value={item.id}>
                         {editionDisplayNameWithType({
-                          editionType: item.edition_type,
+                          edition_type: item.edition_type,
                           year: item.year,
                           month: item.month,
                         })}
@@ -856,7 +856,9 @@ export default function SignageChannels({
                           data.append("file", file);
                           const headers = { ...authHeaders() };
                           delete headers["Content-Type"];
-                          const result = await fetchJsonOrThrowWithUnauthorized<{ url: string }>(
+                          const result = await fetchJsonOrThrowWithUnauthorized<
+                            import("@/api-types").SignageAssetOut
+                          >(
                             "/api/signage/assets",
                             { method: "POST", headers, body: data },
                             m.signage_channels_error(),

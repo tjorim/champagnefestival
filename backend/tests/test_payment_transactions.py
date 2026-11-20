@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.mcp.admin import payments as mcp_payments
 from app.mcp.utils import MCPToolError
 from app.models import IdempotencyKey, PaymentTransaction
+from app.schemas import PaymentTransactionOut
 from app.services import payments_service, registrations_service
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory, requires_postgres
 
@@ -729,7 +730,7 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
     registration_id = await _registration(client, amount_due="25.00")
     factory = mcp_session_factory(db_session)
 
-    await mcp_payments.create_payment_transaction(
+    response = await mcp_payments.create_payment_transaction(
         factory,
         "admin-1",
         registration_id,
@@ -739,6 +740,11 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
     )
     row = (await db_session.execute(select(IdempotencyKey).where(IdempotencyKey.key == "scope-check-key"))).scalar_one()
     assert row.scope == "payments.record_transaction"
+
+    # Model construction must not replace the replay store's existing ISO encoder.
+    assert row.response_body == _normalize(response)
+    assert row.response_body["recorded_at"].endswith("+00:00")
+    assert isinstance(row.response_body["amount"], str)
 
 
 @pytest.mark.anyio
@@ -799,9 +805,9 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
 
     # With row locks (PostgreSQL) the loser waits, then replays the winner's recorded result; without
     # them (SQLite) it loses the race at commit with a 409. Either way exactly one entry is recorded.
-    results = [outcome for outcome in outcomes if isinstance(outcome, dict)]
-    assert results and len({result["id"] for result in results}) == 1
-    assert all(isinstance(outcome, dict) or outcome == 409 for outcome in outcomes)
+    results = [outcome for outcome in outcomes if isinstance(outcome, PaymentTransactionOut)]
+    assert results and len({result.id for result in results}) == 1
+    assert all(isinstance(outcome, PaymentTransactionOut) or outcome == 409 for outcome in outcomes)
 
     rows = (
         (

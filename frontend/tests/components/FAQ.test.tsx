@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
@@ -35,7 +36,11 @@ function renderFaq(): void {
 
 describe("FAQ component", () => {
   it("supports keyboard disclosure and keeps only one answer open", async () => {
-    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+    server.use(
+      http.get("/api/faq/active", () =>
+        jsonResponse<import("@/api-types").FaqItemPublicOut[]>(ITEMS),
+      ),
+    );
     const user = userEvent.setup();
     renderFaq();
     const first = await screen.findByRole("button", { name: ITEMS[0]!.question });
@@ -53,7 +58,11 @@ describe("FAQ component", () => {
   });
 
   it("renders active FAQ items from the API", async () => {
-    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+    server.use(
+      http.get("/api/faq/active", () =>
+        jsonResponse<import("@/api-types").FaqItemPublicOut[]>(ITEMS),
+      ),
+    );
 
     renderFaq();
 
@@ -64,7 +73,11 @@ describe("FAQ component", () => {
   });
 
   it("renders an Accordion item per FAQ entry", async () => {
-    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+    server.use(
+      http.get("/api/faq/active", () =>
+        jsonResponse<import("@/api-types").FaqItemPublicOut[]>(ITEMS),
+      ),
+    );
 
     renderFaq();
 
@@ -73,7 +86,9 @@ describe("FAQ component", () => {
   });
 
   it("shows an empty state when there are no FAQ items", async () => {
-    server.use(http.get("/api/faq/active", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/faq/active", () => jsonResponse<import("@/api-types").FaqItemPublicOut[]>([])),
+    );
 
     renderFaq();
 
@@ -81,7 +96,14 @@ describe("FAQ component", () => {
   });
 
   it("shows an error state instead of the empty state when the request fails", async () => {
-    server.use(http.get("/api/faq/active", () => HttpResponse.json(null, { status: 500 })));
+    server.use(
+      http.get("/api/faq/active", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 500 },
+        ),
+      ),
+    );
 
     renderFaq();
 

@@ -22,20 +22,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { AdminDataTable, type AdminTableFilter } from "./AdminDataTable";
 import { QueueRowAction } from "./QueueRowAction";
 
-interface WaitlistEntry {
-  id: string;
-  productId: string;
-  productName: string;
-  eventId: string;
-  eventTitle: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  guestCount: number;
-  notes: string;
-  createdAt: string;
-  handledAt: string | null;
-}
+type WaitlistEntry = import("@/api-types").WaitlistEntryAdminOut;
 
 interface WaitlistScope {
   id: string;
@@ -44,21 +31,6 @@ interface WaitlistScope {
   outstanding: number;
   total: number;
 }
-
-const mapEntry = (item: Record<string, unknown>): WaitlistEntry => ({
-  id: String(item.id),
-  productId: String(item.product_id),
-  productName: String(item.product_name),
-  eventId: String(item.event_id),
-  eventTitle: String(item.event_title),
-  name: String(item.name),
-  email: String(item.email),
-  phone: item.phone == null ? null : String(item.phone),
-  guestCount: Number(item.guest_count ?? 1),
-  notes: String(item.notes ?? ""),
-  createdAt: String(item.created_at),
-  handledAt: item.handled_at == null ? null : String(item.handled_at),
-});
 
 const columnHelper = createAppColumnHelper<WaitlistEntry>();
 
@@ -74,17 +46,11 @@ function useWaitlistScopes(authHeaders: () => Record<string, string>) {
   return useQuery({
     queryKey: queryKeys.admin.waitlistScopes,
     queryFn: async ({ signal }) => {
-      const body = await fetchJsonOrThrowWithUnauthorized<{
-        events: { id: string; title: string; outstanding: number; total: number }[];
-        products: {
-          id: string;
-          name: string;
-          event_id: string;
-          event_title: string;
-          outstanding: number;
-          total: number;
-        }[];
-      }>("/api/waitlist/scopes", { headers: authHeaders(), signal }, m.admin_error_load_waitlist());
+      const body = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").WaitlistScopes>(
+        "/api/waitlist/scopes",
+        { headers: authHeaders(), signal },
+        m.admin_error_load_waitlist(),
+      );
       return {
         events: body.events.map((event): WaitlistScope => ({
           id: event.id,
@@ -128,13 +94,12 @@ export default function WaitlistManagement({
       const page = useQuery({
         queryKey: queryKeys.admin.waitlistEntriesPage(query),
         queryFn: ({ signal }) =>
-          fetchQueuePage(
+          fetchQueuePage<WaitlistEntry>(
             "/api/waitlist",
             query,
             authHeaders,
             signal,
             m.admin_error_load_waitlist(),
-            mapEntry,
           ),
         placeholderData: keepPreviousData,
       });
@@ -194,8 +159,8 @@ export default function WaitlistManagement({
         enableSorting: false,
         cell: (info) => (
           <>
-            <strong>{info.row.original.productName}</strong>
-            <div className="text-sm text-subtle">{info.row.original.eventTitle}</div>
+            <strong>{info.row.original.product_name}</strong>
+            <div className="text-sm text-subtle">{info.row.original.event_title}</div>
           </>
         ),
         meta: { tdClassName: "break-words" },
@@ -204,13 +169,13 @@ export default function WaitlistManagement({
         id: "guests",
         header: m.admin_waitlist_col_guests(),
         enableSorting: false,
-        cell: (info) => info.row.original.guestCount,
+        cell: (info) => info.row.original.guest_count,
       }),
       columnHelper.display({
         id: "requested",
         header: m.admin_waitlist_col_requested(),
         enableSorting: false,
-        cell: (info) => new Date(info.row.original.createdAt).toLocaleString(),
+        cell: (info) => new Date(info.row.original.created_at).toLocaleString(),
       }),
       columnHelper.display({
         id: "notes",
@@ -233,7 +198,7 @@ export default function WaitlistManagement({
           const entry = info.row.original;
           return (
             <div className="flex flex-wrap items-start gap-2">
-              {!entry.handledAt && (
+              {!entry.handled_at && (
                 <QueueRowAction
                   label={m.admin_waitlist_mark_handled()}
                   failure={m.admin_waitlist_mark_failed({ name: entry.name })}
@@ -276,16 +241,16 @@ export default function WaitlistManagement({
           columnVisibilityKey="admin-col-vis-waitlist"
           getRowId={(entry) => entry.id}
           getRowLabel={(entry) => entry.name}
-          getRowClassName={(entry) => (entry.handledAt ? "text-subtle" : undefined)}
+          getRowClassName={(entry) => (entry.handled_at ? "text-subtle" : undefined)}
           renderCard={(entry) => (
             <>
               <Person entry={entry} />
               <div>
-                <strong>{entry.productName}</strong> · {entry.eventTitle}
+                <strong>{entry.product_name}</strong> · {entry.event_title}
               </div>
               <div className="text-sm text-subtle">
-                {m.admin_waitlist_guest_count({ count: entry.guestCount })} ·{" "}
-                {new Date(entry.createdAt).toLocaleString()}
+                {m.admin_waitlist_guest_count({ count: entry.guest_count })} ·{" "}
+                {new Date(entry.created_at).toLocaleString()}
               </div>
               {entry.notes && <p className="mb-0 text-sm whitespace-pre-wrap">{entry.notes}</p>}
               <Status entry={entry} />
@@ -322,8 +287,8 @@ export default function WaitlistManagement({
             body={m.admin_waitlist_delete_body({
               name: deleting.name,
               email: deleting.email,
-              product: deleting.productName,
-              event: deleting.eventTitle,
+              product: deleting.product_name,
+              event: deleting.event_title,
             })}
             confirmLabel={m.admin_delete()}
             errorFallback={m.admin_error_delete_waitlist_entry()}
@@ -363,7 +328,7 @@ function Person({ entry }: { entry: WaitlistEntry }) {
 
 /** Icon plus text, so a contacted entry is told apart without relying on colour. */
 function Status({ entry }: { entry: WaitlistEntry }) {
-  return entry.handledAt ? (
+  return entry.handled_at ? (
     <span className="inline-flex items-center gap-1 text-success-text">
       <CheckIcon className="size-4" aria-hidden="true" />
       {m.admin_waitlist_handled()}

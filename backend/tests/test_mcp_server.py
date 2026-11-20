@@ -1857,7 +1857,9 @@ class TestFindProducerStand:
         db.get = AsyncMock(return_value=edition)
 
         async def _load(_db, _edition):
-            return stands
+            from app.schemas import EditionStandsOut
+
+            return EditionStandsOut.model_validate(stands)
 
         monkeypatch.setattr("app.mcp.public.load_edition_stands", _load)
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))

@@ -1,5 +1,6 @@
+import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { server } from "@/mocks/server";
@@ -25,7 +26,18 @@ describe("useVenueMutations", () => {
       http.post("/api/layouts", async ({ request }) => {
         seen.authorization = request.headers.get("authorization") ?? "";
         seen.body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({ id: "lay_1", ...seen.body });
+        return jsonResponse<import("@/api-types").LayoutOut>({
+          event_id: "",
+          event_title: "",
+          edition_id: null,
+          room_id: "",
+          date: null,
+          label: "",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "lay_1",
+          ...seen.body,
+        });
       }),
     );
 

@@ -1,7 +1,8 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import SignageChannels from "@/components/admin/SignageChannels";
 import { server } from "@/mocks/server";
 import { m } from "@/paraglide/messages";
@@ -35,11 +36,46 @@ const channels = [
 beforeEach(() => {
   setLocale("en", { reload: false });
   server.use(
-    http.get("/api/signage/channels", () => HttpResponse.json(channels)),
-    http.get("/api/signage/slides", () => HttpResponse.json([])),
-    http.get("/api/signage/templates", () => HttpResponse.json([])),
+    http.get("/api/signage/channels", () =>
+      jsonResponse<import("@/api-types").ChannelOut[]>(channels),
+    ),
+    http.get("/api/signage/slides", () => jsonResponse<import("@/api-types").SlideOut[]>([])),
+    http.get("/api/signage/templates", () => jsonResponse<import("@/api-types").TemplateOut[]>([])),
     http.get("/api/editions", () =>
-      HttpResponse.json([{ id: "march-2027", edition_type: "bourse", year: 2027, month: "March" }]),
+      jsonResponse<import("@/api-types").EditionOut[]>([
+        {
+          dates: [],
+          venue: {
+            id: "",
+            name: "",
+            address: "",
+            city: "",
+            postal_code: "",
+            country: "",
+            lat: 0,
+            lng: 0,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          events: [],
+          organizations: [],
+          producers: [],
+          sponsors: [],
+          vendors: [],
+          co_organizer: null,
+          flyer_image: null,
+          hero_image: null,
+          share_image: null,
+          active: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "march-2027",
+          edition_type: "bourse",
+          year: 2027,
+          month: "March",
+        },
+      ]),
     ),
   );
 });

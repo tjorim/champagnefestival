@@ -20,20 +20,20 @@ describe("editionDisplayName", () => {
 
 describe("editionDisplayNameWithType", () => {
   it("prefixes a bourse edition with its type label", () => {
-    expect(editionDisplayNameWithType({ editionType: "bourse", year: 2027, month: "march" })).toBe(
+    expect(editionDisplayNameWithType({ edition_type: "bourse", year: 2027, month: "march" })).toBe(
       `${m.admin_edition_type_bourse()} · March 2027`,
     );
   });
 
   it("prefixes a capsule exchange edition with its type label", () => {
     expect(
-      editionDisplayNameWithType({ editionType: "capsule_exchange", year: 2027, month: "march" }),
+      editionDisplayNameWithType({ edition_type: "capsule_exchange", year: 2027, month: "march" }),
     ).toBe(`${m.admin_edition_type_capsule_exchange()} · March 2027`);
   });
 
   it("falls back to the festival name for any other type", () => {
     expect(
-      editionDisplayNameWithType({ editionType: "festival", year: 2027, month: "march" }),
+      editionDisplayNameWithType({ edition_type: "festival", year: 2027, month: "march" }),
     ).toBe(`${m.festival_name()} · March 2027`);
   });
 });

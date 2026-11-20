@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
@@ -47,7 +48,10 @@ function mockAuth(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
   });
 }
 
-const plan = (layouts: unknown[]) => ({ edition_id: "ed-1", layouts });
+const plan = (layouts: import("@/api-types").VenuePlanOut["layouts"]) => ({
+  edition_id: "ed-1",
+  layouts,
+});
 
 function renderPage() {
   return render(<VenuePlanPage />, { wrapper: createTestQueryClientWrapper() });
@@ -82,7 +86,39 @@ describe("VenuePlanPage recovery states", () => {
     search = {};
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([{ id: "ed-1", year: 2026, month: "October", venue: { name: "Hall" } }]),
+        jsonResponse<import("@/api-types").EditionPublicOut[]>([
+          {
+            edition_type: "festival",
+            dates: [],
+            events: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "ed-1",
+            year: 2026,
+            month: "October",
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Hall",
+            },
+          },
+        ]),
       ),
     );
     renderPage();
@@ -100,8 +136,38 @@ describe("VenuePlanPage recovery states", () => {
         attempts += 1;
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json([
-              { id: "ed-1", year: 2026, month: "October", venue: { name: "Hall" } },
+          : jsonResponse<import("@/api-types").EditionPublicOut[]>([
+              {
+                edition_type: "festival",
+                dates: [],
+                events: [],
+                producers: [],
+                sponsors: [],
+                vendors: [],
+                co_organizer: null,
+                flyer_image: null,
+                hero_image: null,
+                share_image: null,
+                active: false,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+                id: "ed-1",
+                year: 2026,
+                month: "October",
+                venue: {
+                  id: "",
+                  address: "",
+                  city: "",
+                  postal_code: "",
+                  country: "",
+                  lat: 0,
+                  lng: 0,
+                  active: false,
+                  created_at: "2026-01-01T00:00:00Z",
+                  updated_at: "2026-01-01T00:00:00Z",
+                  name: "Hall",
+                },
+              },
             ]);
       }),
     );
@@ -118,7 +184,7 @@ describe("VenuePlanPage recovery states", () => {
         attempts += 1;
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json(
+          : jsonResponse<import("@/api-types").VenuePlanOut>(
               plan([
                 {
                   event_id: "e",
@@ -165,9 +231,16 @@ describe("VenuePlanPage recovery states", () => {
   it("sends an unknown edition back to the picker", async () => {
     server.use(
       http.get("/api/venue-plan/:editionId", () =>
-        HttpResponse.json({ detail: "Edition not found." }, { status: 404 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Edition not found.",
+          },
+          { status: 404 },
+        ),
       ),
-      http.get("/api/editions/upcoming", () => HttpResponse.json([])),
+      http.get("/api/editions/upcoming", () =>
+        jsonResponse<import("@/api-types").EditionPublicOut[]>([]),
+      ),
     );
     renderPage();
 
@@ -176,7 +249,11 @@ describe("VenuePlanPage recovery states", () => {
   });
 
   it("keeps a genuinely empty plan distinct from a failure", async () => {
-    server.use(http.get("/api/venue-plan/:editionId", () => HttpResponse.json(plan([]))));
+    server.use(
+      http.get("/api/venue-plan/:editionId", () =>
+        jsonResponse<import("@/api-types").VenuePlanOut>(plan([])),
+      ),
+    );
     renderPage();
 
     expect(await screen.findByText(m.venue_plan_empty())).toBeInTheDocument();
@@ -187,7 +264,7 @@ describe("VenuePlanPage recovery states", () => {
     server.use(
       http.get("/api/venue-plan/:editionId", async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
-        return HttpResponse.json(plan([]));
+        return jsonResponse<import("@/api-types").VenuePlanOut>(plan([]));
       }),
     );
     renderPage();
@@ -197,7 +274,7 @@ describe("VenuePlanPage recovery states", () => {
   });
 });
 
-const denseLayout = {
+const denseLayout: import("@/api-types").VenuePlanOut["layouts"][number] = {
   event_id: "festival",
   event_title: "Festival",
   id: "dense",
@@ -206,6 +283,7 @@ const denseLayout = {
   room: { id: "hall", name: "Main hall", width_m: 20, length_m: 15, color: "#123456" },
   areas: [],
   tables: Array.from({ length: 24 }, (_, index) => ({
+    table_type_id: "round",
     id: `table-${index + 1}`,
     name: `Table ${index + 1}`,
     capacity: 8,
@@ -224,7 +302,7 @@ describe("VenuePlanPage table navigation", () => {
     mockAuth();
     server.use(
       http.get("/api/venue-plan/:editionId", () =>
-        HttpResponse.json(
+        jsonResponse<import("@/api-types").VenuePlanOut>(
           plan([
             denseLayout,
             {
@@ -233,8 +311,8 @@ describe("VenuePlanPage table navigation", () => {
               event_id: "dinner",
               event_title: "Dinner",
               date: "2026-10-29",
-              room: { ...denseLayout.room, id: "side", name: "Side room" },
-              tables: [{ ...denseLayout.tables[0], id: "side-table", name: "Side table" }],
+              room: { ...denseLayout.room!, id: "side", name: "Side room" },
+              tables: [{ ...denseLayout.tables[0]!, id: "side-table", name: "Side table" }],
             },
           ]),
         ),

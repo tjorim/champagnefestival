@@ -15,27 +15,30 @@ from sqlalchemy.orm import selectinload
 
 from app.dependencies import ListQuery
 from app.models import Event, Product, WaitlistEntry
+from app.schemas import WaitlistEntryAdminOut, WaitlistEntryListEnvelope, WaitlistScopes
 from app.services.errors import NotFoundError
 
 
-def to_admin_dict(entry: WaitlistEntry) -> dict:
-    return {
-        "id": entry.id,
-        "product_id": entry.product_id,
-        "name": entry.name,
-        "email": entry.email,
-        "phone": entry.phone,
-        "guest_count": entry.guest_count,
-        "notes": entry.notes,
-        "created_at": entry.created_at,
-        "handled_at": entry.handled_at,
-        "product_name": entry.product.name,
-        "event_id": entry.product.event_id,
-        "event_title": entry.product.event.title,
-    }
+def to_admin_out(entry: WaitlistEntry) -> WaitlistEntryAdminOut:
+    return WaitlistEntryAdminOut(
+        id=entry.id,
+        product_id=entry.product_id,
+        name=entry.name,
+        email=entry.email,
+        phone=entry.phone,
+        guest_count=entry.guest_count,
+        notes=entry.notes,
+        created_at=entry.created_at,
+        handled_at=entry.handled_at,
+        product_name=entry.product.name,
+        event_id=entry.product.event_id,
+        event_title=entry.product.event.title,
+    )
 
 
-async def list_entries(db: AsyncSession, *, product_id: str | None = None, event_id: str | None = None) -> list[dict]:
+async def list_entries(
+    db: AsyncSession, *, product_id: str | None = None, event_id: str | None = None
+) -> list[WaitlistEntryAdminOut]:
     """Oldest first, optionally narrowed to one product or one event."""
     stmt = (
         select(WaitlistEntry)
@@ -47,7 +50,7 @@ async def list_entries(db: AsyncSession, *, product_id: str | None = None, event
         stmt = stmt.where(WaitlistEntry.product_id == product_id)
     if event_id is not None:
         stmt = stmt.join(Event, Event.id == Product.event_id).where(Event.id == event_id)
-    return [to_admin_dict(entry) for entry in (await db.execute(stmt)).scalars().all()]
+    return [to_admin_out(entry) for entry in (await db.execute(stmt)).scalars().all()]
 
 
 QueueStatus = Literal["unhandled", "handled", "all"]
@@ -95,7 +98,7 @@ async def list_entries_page(
     status: QueueStatus = "all",
     product_id: str | None = None,
     event_id: str | None = None,
-) -> dict:
+) -> WaitlistEntryListEnvelope:
     """One bounded page, oldest first (the manual waitlist order), with the full matching total."""
     base = (
         select(WaitlistEntry)
@@ -110,10 +113,10 @@ async def list_entries_page(
         )
     )
     entries = (await db.execute(stmt)).scalars().all()
-    return query.envelope([to_admin_dict(entry) for entry in entries], total)
+    return WaitlistEntryListEnvelope(**query.envelope([to_admin_out(entry) for entry in entries], total))
 
 
-async def list_scopes(db: AsyncSession) -> dict:
+async def list_scopes(db: AsyncSession) -> WaitlistScopes:
     """Events and products that have waitlist entries, with outstanding counts, for the queue filters."""
     outstanding = func.count(WaitlistEntry.id).filter(WaitlistEntry.handled_at.is_(None))
     rows = (
@@ -141,7 +144,7 @@ async def list_scopes(db: AsyncSession) -> dict:
                 "total": all_count,
             }
         )
-    return {"events": list(events.values()), "products": products}
+    return WaitlistScopes(events=list(events.values()), products=products)
 
 
 async def _get_entry(db: AsyncSession, entry_id: str) -> WaitlistEntry:
@@ -155,14 +158,14 @@ async def _get_entry(db: AsyncSession, entry_id: str) -> WaitlistEntry:
     return entry
 
 
-async def mark_handled(db: AsyncSession, entry_id: str) -> dict:
+async def mark_handled(db: AsyncSession, entry_id: str) -> WaitlistEntryAdminOut:
     """Idempotent: an entry that is already handled keeps its original timestamp."""
     entry = await _get_entry(db, entry_id)
     if entry.handled_at is None:
         entry.handled_at = datetime.now(UTC)
         await db.commit()
         await db.refresh(entry, attribute_names=["handled_at"])
-    return to_admin_dict(entry)
+    return to_admin_out(entry)
 
 
 async def delete_entry(db: AsyncSession, entry_id: str) -> None:
