@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { lastHelpedDay } from "@/types/person";
 
-const period = (lastHelpDay: string | null) => ({
+const period = (last_help_day: string | null) => ({
   id: 1,
-  firstHelpDay: "2020-01-01",
-  lastHelpDay,
+  first_help_day: "2020-01-01",
+  last_help_day,
   notes: "",
 });
 

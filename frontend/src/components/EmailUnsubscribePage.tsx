@@ -32,7 +32,7 @@ export default function EmailUnsubscribePage() {
   const linkInvalid =
     hasApiErrorCode(category.error, "unsubscribe_token_invalid") ||
     hasApiErrorCode(unsubscribe.error, "unsubscribe_token_invalid");
-  const categoryName = category.data?.categoryName ?? "";
+  const categoryName = category.data?.category_name ?? "";
   const failure = unsubscribe.error ?? category.error;
 
   return (

@@ -1,26 +1,30 @@
 import type {
-  Room,
-  FloorTableRecord,
-  FloorArea,
-  TableType,
-  Layout,
-  Venue,
-  AuditEntry,
+  AreaOut,
+  AuditEntryOut,
   EditionAttendanceStats,
   EventCheckInStats,
-  Organization,
-  FaqItem,
+  FaqItemOut,
+  FloorArea,
+  FloorTableRecord,
+  LedgerTransaction,
+  Layout,
+  LayoutRestorePreview,
   LayoutRevision,
   LayoutRevisionDiff,
-  LayoutRestorePreview,
-} from "@/types/admin";
-import {
-  apiToLedgerTransaction,
-  apiToPaymentTransaction,
-  apiToRegistration,
-} from "@/types/registrationMapper";
-import type { LedgerTransaction, PaymentTransaction, Registration } from "@/types/registration";
-import { type Person, apiToPerson } from "@/types/person";
+  LayoutWithTablesOut,
+  PaymentTransaction,
+  PaymentTransactionLedgerEnvelope,
+  RegistrationListEnvelope,
+  RegistrationOutWithToken,
+  Room,
+  TableCreate,
+  TableOut,
+  TableType,
+  Venue,
+} from "@/api-types";
+import type { Organization } from "@/types/admin";
+import type { Registration } from "@/types/registration";
+import type { VolunteerOut } from "@/api-types";
 import {
   downloadFileOrThrow,
   fetchArrayOrThrow,
@@ -28,35 +32,15 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
-import {
-  apiVenueToVenue,
-  apiLayoutToLayout,
-  apiTableTypeToTableType,
-  apiRoomToRoom,
-  apiTableToTable,
-  apiAreaToArea,
-  apiAuditEntryToAuditEntry,
-  apiEditionStatsToEditionAttendanceStats,
-  apiEventCheckInStatsToEventCheckInStats,
-  apiFaqItemToFaqItem,
-  apiLayoutRevisionToLayoutRevision,
-  apiLayoutRevisionDiffToLayoutRevisionDiff,
-  apiLayoutRestorePreviewToLayoutRestorePreview,
-} from "@/utils/adminApiMappers";
+import { toTableRecord } from "@/state/tableOccupancy";
 
-export interface RegistrationsPage {
+/** Table query projection: only the envelope's collection key is renamed for the UI. */
+export type RegistrationsPage = Omit<RegistrationListEnvelope, "items"> & {
   registrations: Registration[];
-  total: number;
-  limit: number;
-  page: number;
-}
+};
 
-interface RegistrationListEnvelope {
-  items?: Record<string, unknown>[];
-  total?: number;
-  limit?: number;
-  page?: number;
-}
+// Partial on purpose: the check below rejects the pre-#931 bare array instead of trusting the type.
+type RegistrationListPayload = Partial<RegistrationListEnvelope>;
 
 export type RegistrationSortKey =
   | "name"
@@ -109,7 +93,7 @@ export async function fetchRegistrationsPage(
   if (options.limit) params.set("limit", String(options.limit));
   if (options.page) params.set("page", String(options.page));
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListEnvelope>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListPayload>(
     `/api/registrations${suffix}`,
     { headers: authHeaders(), signal: options.signal },
     m.admin_error_load_data(),
@@ -126,7 +110,7 @@ export async function fetchRegistrationsPage(
     throw new Error("Invalid /api/registrations response: expected {items, total, limit, page}.");
   }
   return {
-    registrations: payload.items.map(apiToRegistration),
+    registrations: payload.items,
     total: payload.total,
     limit: payload.limit,
     page: payload.page,
@@ -184,73 +168,62 @@ export async function fetchRegistration(
   registrationId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<Registration> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
     `/api/registrations/${encodeURIComponent(registrationId)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiToRegistration(payload);
+  return payload;
 }
 
 export async function fetchTables(
   authHeaders: () => Record<string, string>,
 ): Promise<FloorTableRecord[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  const payload = await fetchArrayOrThrow<TableOut>(
     "/api/tables",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiTableToTable) : [];
+  return payload.map(toTableRecord);
 }
 
 export async function fetchTable(
   tableId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiTableToTable(payload);
+  return toTableRecord(payload);
 }
 
-export interface TableCreateInput {
-  name: string;
-  layoutId: string;
-  tableTypeId: string;
-}
+export type TableCreateInput = Pick<TableCreate, "name" | "layout_id" | "table_type_id">;
 
 export async function createTable(
   authHeaders: () => Record<string, string>,
-  { name, layoutId, tableTypeId }: TableCreateInput,
+  { name, layout_id, table_type_id }: TableCreateInput,
 ): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
     "/api/tables",
     {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({
-        name,
-        x: 10,
-        y: 10,
-        rotation: 0,
-        layout_id: layoutId,
-        table_type_id: tableTypeId,
-      }),
+      body: JSON.stringify({ name, x: 10, y: 10, rotation: 0, layout_id, table_type_id }),
     },
     m.admin_error_add_table(),
   );
-  return apiTableToTable((payload.table ?? payload) as Record<string, unknown>);
+  return toTableRecord(payload);
 }
 
 /** The fields an admin can change on an existing table. */
 export type TableUpdateChanges = Partial<
-  Pick<FloorTableRecord, "name" | "x" | "y" | "rotation" | "tableTypeId">
+  Pick<FloorTableRecord, "name" | "x" | "y" | "rotation" | "table_type_id">
 >;
 
 function tableUpdateErrorMessage(changes: TableUpdateChanges): string {
-  if (changes.tableTypeId !== undefined) {
+  if (changes.table_type_id !== undefined) {
     return m.admin_error_change_table_type_status({ status: 500 });
   }
   if (changes.name !== undefined) return m.admin_error_update_table_name_status({ status: 500 });
@@ -263,19 +236,12 @@ export async function updateTable(
   tableId: string,
   changes: TableUpdateChanges,
 ): Promise<void> {
-  const { name, x, y, rotation, tableTypeId } = changes;
-  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  await fetchJsonOrThrowWithUnauthorized<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
     {
       method: "PUT",
       headers: authHeaders(),
-      body: JSON.stringify({
-        ...(name !== undefined ? { name } : {}),
-        ...(x !== undefined ? { x } : {}),
-        ...(y !== undefined ? { y } : {}),
-        ...(rotation !== undefined ? { rotation } : {}),
-        ...(tableTypeId !== undefined ? { table_type_id: tableTypeId } : {}),
-      }),
+      body: JSON.stringify(changes),
     },
     tableUpdateErrorMessage(changes),
   );
@@ -294,11 +260,11 @@ export async function deleteTable(
 
 /** The fields an admin can change on an existing area (the canvas edits, not the organization assignment). */
 export type AreaUpdateChanges = Partial<
-  Pick<FloorArea, "label" | "x" | "y" | "rotation" | "widthM" | "lengthM">
+  Pick<FloorArea, "label" | "x" | "y" | "rotation" | "width_m" | "length_m">
 >;
 
 function areaUpdateErrorMessage(changes: AreaUpdateChanges): string {
-  if (changes.widthM !== undefined || changes.lengthM !== undefined) {
+  if (changes.width_m !== undefined || changes.length_m !== undefined) {
     return m.admin_error_resize_area_status({ status: 500 });
   }
   if (changes.label !== undefined) return m.admin_error_persist_area_label();
@@ -312,61 +278,49 @@ export async function updateArea(
   areaId: string,
   changes: AreaUpdateChanges,
 ): Promise<void> {
-  const { label, x, y, rotation, widthM, lengthM } = changes;
-  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  await fetchJsonOrThrowWithUnauthorized<AreaOut>(
     `/api/areas/${encodeURIComponent(areaId)}`,
     {
       method: "PUT",
       headers: authHeaders(),
-      body: JSON.stringify({
-        ...(label !== undefined ? { label } : {}),
-        ...(x !== undefined ? { x } : {}),
-        ...(y !== undefined ? { y } : {}),
-        ...(rotation !== undefined ? { rotation } : {}),
-        ...(widthM !== undefined ? { width_m: widthM } : {}),
-        ...(lengthM !== undefined ? { length_m: lengthM } : {}),
-      }),
+      body: JSON.stringify(changes),
     },
     areaUpdateErrorMessage(changes),
   );
 }
 
 export async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Venue>(
     "/api/venues",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiVenueToVenue) : [];
 }
 
 export async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Room>(
     "/api/rooms",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiRoomToRoom) : [];
 }
 
 export async function fetchTableTypes(
   authHeaders: () => Record<string, string>,
 ): Promise<TableType[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<TableType>(
     "/api/table-types",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiTableTypeToTableType) : [];
 }
 
 export async function fetchLayouts(authHeaders: () => Record<string, string>): Promise<Layout[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<Layout>(
     "/api/layouts",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiLayoutToLayout) : [];
 }
 
 /** List one layout's saved revisions, newest first (#1021). */
@@ -375,11 +329,10 @@ export async function fetchLayoutRevisions(
   layoutId: string,
   signal?: AbortSignal,
 ): Promise<LayoutRevision[]> {
-  return fetchArrayOrThrow(
+  return fetchArrayOrThrow<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
     { headers: authHeaders(), signal },
     m.admin_error_load_layout_revisions(),
-    apiLayoutRevisionToLayoutRevision,
   );
 }
 
@@ -390,7 +343,7 @@ export async function saveLayoutRevision(
   label: string,
   changeNote?: string,
 ): Promise<LayoutRevision> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
     {
       method: "POST",
@@ -402,7 +355,6 @@ export async function saveLayoutRevision(
     },
     m.admin_error_save_layout_revision(),
   );
-  return apiLayoutRevisionToLayoutRevision(payload);
 }
 
 /** Compare two snapshots of one layout — each a revision number or the
@@ -415,12 +367,11 @@ export async function compareLayoutRevisions(
   signal?: AbortSignal,
 ): Promise<LayoutRevisionDiff> {
   const params = new URLSearchParams({ from: fromRef, to: toRef });
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRevisionDiff>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/compare?${params.toString()}`,
     { headers: authHeaders(), signal },
     m.admin_error_compare_layout_revisions(),
   );
-  return apiLayoutRevisionDiffToLayoutRevisionDiff(payload);
 }
 
 /** Preview what restoring a revision would change, including any live
@@ -430,12 +381,11 @@ export async function previewLayoutRestore(
   layoutId: string,
   revisionNumber: number,
 ): Promise<LayoutRestorePreview> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+  return fetchJsonOrThrowWithUnauthorized<LayoutRestorePreview>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore/preview`,
     { method: "POST", headers: authHeaders() },
     m.admin_error_preview_layout_restore(),
   );
-  return apiLayoutRestorePreviewToLayoutRestorePreview(payload);
 }
 
 /** Apply a saved revision's snapshot back onto the layout's tables/areas
@@ -446,8 +396,8 @@ export async function restoreLayoutRevision(
   layoutId: string,
   revisionNumber: number,
   resolveAllocations = false,
-): Promise<Record<string, unknown>> {
-  return fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+): Promise<LayoutWithTablesOut> {
+  return fetchJsonOrThrowWithUnauthorized<LayoutWithTablesOut>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore`,
     {
       method: "POST",
@@ -461,48 +411,32 @@ export async function restoreLayoutRevision(
 export async function fetchOrganizations(
   authHeaders: () => Record<string, string>,
 ): Promise<Organization[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchJsonOrThrowWithUnauthorized<Organization[]>(
     "/api/organizations",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload)
-    ? payload.map((organization: Record<string, unknown>) => ({
-        id: Number(organization.id),
-        name: String(organization.name ?? ""),
-        description_nl: (organization.description_nl as Organization["description_nl"]) ?? null,
-        description_fr: (organization.description_fr as Organization["description_fr"]) ?? null,
-        description_en: (organization.description_en as Organization["description_en"]) ?? null,
-
-        active: organization.active !== false,
-        contactPersonId:
-          typeof organization.contact_person_id === "string"
-            ? organization.contact_person_id
-            : null,
-      }))
-    : [];
 }
 
 export async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
+  return fetchArrayOrThrow<FloorArea>(
     "/api/areas",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
 }
 
 /** One volunteer with their help periods (`GET /api/volunteers/{id}`). */
 export async function fetchVolunteer(
   id: string,
   authHeaders: () => Record<string, string>,
-): Promise<Person> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+): Promise<VolunteerOut> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<VolunteerOut>(
     `/api/volunteers/${encodeURIComponent(id)}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
-  return apiToPerson(payload);
+  return payload;
 }
 
 export interface AuditEntryFilters {
@@ -521,7 +455,7 @@ export interface AuditEntryFilters {
 export async function fetchAuditEntries(
   authHeaders: () => Record<string, string>,
   filters: AuditEntryFilters = {},
-): Promise<AuditEntry[]> {
+): Promise<AuditEntryOut[]> {
   const params = new URLSearchParams();
   if (filters.resourceType) params.set("resource_type", filters.resourceType);
   if (filters.resourceId) params.set("resource_id", filters.resourceId);
@@ -536,7 +470,6 @@ export async function fetchAuditEntries(
     `/api/audit?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiAuditEntryToAuditEntry,
   );
 }
 
@@ -546,11 +479,10 @@ export async function fetchPaymentTransactions(
   authHeaders: () => Record<string, string>,
   registrationId: string,
 ): Promise<PaymentTransaction[]> {
-  return fetchArrayOrThrow(
+  return fetchArrayOrThrow<PaymentTransaction>(
     `/api/registrations/${encodeURIComponent(registrationId)}/transactions`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiToPaymentTransaction,
   );
 }
 
@@ -578,7 +510,6 @@ export async function fetchEventCheckInStats(
     `/api/events/checkin-stats${suffix}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiEventCheckInStatsToEventCheckInStats,
   );
 }
 
@@ -589,19 +520,13 @@ export async function fetchEditionStats(
     "/api/editions/stats",
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiEditionStatsToEditionAttendanceStats,
   );
 }
 
 export async function fetchFaqItemsAdmin(
   authHeaders: () => Record<string, string>,
-): Promise<FaqItem[]> {
-  return fetchArrayOrThrow(
-    "/api/faq",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    apiFaqItemToFaqItem,
-  );
+): Promise<FaqItemOut[]> {
+  return fetchArrayOrThrow("/api/faq", { headers: authHeaders() }, m.admin_error_load_data());
 }
 
 export async function downloadRegistrationsCsv(
@@ -631,19 +556,12 @@ export interface PaymentTransactionsLedgerFilters {
   page?: number;
 }
 
-export interface PaymentTransactionsLedgerPage {
+export type PaymentTransactionsLedgerPage = Omit<LedgerEnvelope, "items"> & {
   transactions: LedgerTransaction[];
-  total: number;
-  limit: number;
-  page: number;
-}
+};
 
-interface PaymentTransactionLedgerEnvelope {
-  items?: Record<string, unknown>[];
-  total?: number;
-  limit?: number;
-  page?: number;
-}
+// Partial on purpose: the check below rejects the pre-#1032 bare array instead of trusting the type.
+type LedgerEnvelope = Partial<PaymentTransactionLedgerEnvelope>;
 
 /**
  * Fetch one page of the payment ledger with booking context, filtered by
@@ -663,7 +581,7 @@ export async function fetchPaymentTransactionsLedger(
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   params.set("limit", String(filters.limit ?? LEDGER_PAGE_SIZE));
   params.set("page", String(filters.page ?? 1));
-  const payload = await fetchJsonOrThrowWithUnauthorized<PaymentTransactionLedgerEnvelope>(
+  const payload = await fetchJsonOrThrowWithUnauthorized<LedgerEnvelope>(
     `/api/registrations/transactions?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
@@ -681,7 +599,7 @@ export async function fetchPaymentTransactionsLedger(
     );
   }
   return {
-    transactions: payload.items.map(apiToLedgerTransaction),
+    transactions: payload.items,
     total: payload.total,
     limit: payload.limit,
     page: payload.page,

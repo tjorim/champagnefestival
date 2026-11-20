@@ -808,4 +808,4 @@ async def test_concurrent_revision_saves_do_not_reuse_a_revision_number(engine):
             )
 
     results = await asyncio.gather(attempt("a"), attempt("b"))
-    assert sorted(r["revision_number"] for r in results) == [1, 2]
+    assert sorted(r.revision_number for r in results) == [1, 2]

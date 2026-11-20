@@ -1,5 +1,18 @@
+import { jsonResponse } from "../response";
+import { venueOut } from "../data/builders";
+import type {
+  AreaOut,
+  EditionAttendanceStats,
+  EventCheckInStats,
+  LayoutOut,
+  RoomOut,
+  TableOut,
+  TableTypeOut,
+  VenueOut,
+} from "@/api-types";
 import type { StampCard, StampCardType } from "@/utils/stampCards";
 import { http, HttpResponse } from "msw/http";
+import { orderItemOut, registrationOut } from "../data/builders";
 import {
   editions,
   events,
@@ -20,7 +33,7 @@ import {
 } from "../data/adminContent";
 import { seedOrganizations } from "../data/organizations";
 import { localIsoDate } from "@/types/person";
-import { seedPeople } from "../data/people";
+import { seedPeople, type MockPerson } from "../data/people";
 import {
   type RegistrationScenario,
   sharedStore,
@@ -37,16 +50,16 @@ import {
 } from "../data/venue";
 
 /** Mutable in-memory stores — reset on page reload. */
-let people: Record<string, unknown>[] = structuredClone(seedPeople);
-let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
+let people: MockPerson[] = structuredClone(seedPeople);
+let organizations: import("@/api-types").OrganizationOut[] = structuredClone(seedOrganizations);
 const eventCategories = { items: structuredClone(seedEventCategories) };
 const productCategories = { items: structuredClone(seedProductCategories) };
-let venues: Record<string, unknown>[] = structuredClone(seedVenues);
-let rooms: Record<string, unknown>[] = structuredClone(seedRooms);
-let tableTypes: Record<string, unknown>[] = structuredClone(seedTableTypes);
-let tables: Record<string, unknown>[] = structuredClone(seedTables);
-let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
-let areas: Record<string, unknown>[] = structuredClone(seedAreas);
+let venues: VenueOut[] = structuredClone(seedVenues);
+let rooms: RoomOut[] = structuredClone(seedRooms);
+let tableTypes: TableTypeOut[] = structuredClone(seedTableTypes);
+let tables: TableOut[] = structuredClone(seedTables);
+let layouts: LayoutOut[] = structuredClone(seedLayouts);
+let areas: AreaOut[] = structuredClone(seedAreas);
 
 let stampTypes: StampCardType[] = [];
 let stampCards: StampCard[] = [];
@@ -132,7 +145,7 @@ function applyMockScenario(scenario: MockScenario): void {
   }
 }
 
-function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
+function tablesWithRegistrationAssignments(): import("@/api-types").TableOut[] {
   const byTableId = new Map<string, string[]>();
 
   for (const registration of sharedStore.registrations) {
@@ -151,7 +164,7 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
       typeof tableId === "string" && tableId.length > 0 ? (byTableId.get(tableId) ?? []) : [];
     return {
       ...table,
-      event_id: layouts.find((l) => l.id === table.layout_id)?.event_id,
+      event_id: layouts.find((l) => l.id === table.layout_id)?.event_id ?? "",
       registration_ids: registrationIds,
     };
   });
@@ -203,7 +216,7 @@ function categoryHandlers(
   const sort = () =>
     store.items.sort((a, b) => a.sort_order - b.sort_order || a.key.localeCompare(b.key));
   return [
-    http.get(path, () => HttpResponse.json(store.items)),
+    http.get(path, () => jsonResponse<SeedCategory[]>(store.items)),
     http.post(path, async ({ request }) => {
       const authError = requireAuth(request);
       if (authError) return authError;
@@ -227,7 +240,7 @@ function categoryHandlers(
       const category = { ...created, label: created.label_nl ?? key };
       store.items.push(category);
       sort();
-      return HttpResponse.json(category, { status: 201 });
+      return jsonResponse<SeedCategory>(category, { status: 201 });
     }),
     http.put(`${path}/:key`, async ({ request, params }) => {
       const authError = requireAuth(request);
@@ -240,7 +253,7 @@ function categoryHandlers(
         ...merged,
         label: merged.label_nl ?? merged.key,
       };
-      return HttpResponse.json(store.items[index]);
+      return jsonResponse<SeedCategory>(store.items[index]!);
     }),
     http.delete(`${path}/:key`, ({ request, params }) => {
       const authError = requireAuth(request);
@@ -267,15 +280,16 @@ function now(): string {
 }
 
 function registrationToCheckInResponse(
-  registration: Record<string, unknown>,
-): Record<string, unknown> {
-  const person = registration.person as Record<string, unknown> | undefined;
-  const event = registration.event as Record<string, unknown> | null | undefined;
+  registration: import("@/api-types").RegistrationOutWithToken,
+): import("@/api-types").CheckInGuestOut {
+  const person = registration.person;
+  const event = registration.event;
   const table = tables.find((item) => item.id === registration.table_id);
   return {
     id: registration.id,
     name: person?.name ?? "",
     event_id: registration.event_id,
+    edition_id: registration.event?.edition_id ?? null,
     event_title: event?.title ?? "",
     table_id: registration.table_id ?? null,
     table_name: table?.name ?? null,
@@ -291,7 +305,7 @@ function registrationToCheckInResponse(
 
 /** Mirrors the paged people contract for authenticated UI tests. */
 // Active in a role: not archived as a whole and not retired from that role (as the backend does).
-function isActiveIn(person: Record<string, unknown>, role: string | null | undefined): boolean {
+function isActiveIn(person: MockPerson, role: string | null | undefined): boolean {
   const retired = (person.retired_roles ?? {}) as Record<string, string>;
   return !person.anonymised && !(role && Object.hasOwn(retired, role));
 }
@@ -315,29 +329,31 @@ function filteredPeople(url: URL, role?: string) {
           "eid_document_number",
           "notes",
         ].some((field) =>
-          String(person[field] ?? "")
+          String(person[field as keyof MockPerson] ?? "")
             .toLowerCase()
             .includes(q),
         ) ||
         (person.roles as string[]).some((value) => value.includes(q))),
   );
 }
-function retireMockRole(person: Record<string, unknown>, role: string): Record<string, unknown> {
+function retireMockRole(person: MockPerson, role: string): MockPerson {
   const retired = (person.retired_roles ?? {}) as Record<string, string>;
   return Object.hasOwn(retired, role)
     ? person
     : { ...person, retired_roles: { ...retired, [role]: localIsoDate() } };
 }
-function reactivateMockRole(
-  person: Record<string, unknown>,
-  role: string,
-): Record<string, unknown> {
+function reactivateMockRole(person: MockPerson, role: string): MockPerson {
   const { [role]: _removed, ...retired } = (person.retired_roles ?? {}) as Record<string, string>;
   return { ...person, retired_roles: retired };
 }
-function peopleEnvelope(url: URL, role?: string) {
-  const rows: Record<string, unknown>[] = filteredPeople(url, role).map((person) => ({
+function peopleEnvelope(
+  url: URL,
+  role?: string,
+): import("@/api-types").PersonListEnvelope & import("@/api-types").VolunteerListEnvelope {
+  const rows = filteredPeople(url, role).map((person) => ({
     ...person,
+    last_attended: null,
+    inactivity_highlight: false,
     reward_due: hasRewardDue(person.id),
     registration_count: sharedStore.registrations.filter(
       (registration) => registration.person_id === person.id,
@@ -366,26 +382,29 @@ function peopleEnvelope(url: URL, role?: string) {
 export const adminHandlers = [
   http.get(
     "/api/stamp-cards/types",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(stampTypes),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").StampCardTypeOut[]>(stampTypes),
   ),
   http.post("/api/stamp-cards/types", async ({ request }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
     const type = { ...((await request.json()) as StampCardType), id: crypto.randomUUID() };
     stampTypes.push(type);
-    return HttpResponse.json(type, { status: 201 });
+    return jsonResponse<import("@/api-types").StampCardTypeOut>(type, { status: 201 });
   }),
   http.put("/api/stamp-cards/types/:id", async ({ request, params }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
     const type = { ...((await request.json()) as StampCardType), id: String(params.id) };
     stampTypes = stampTypes.map((current) => (current.id === params.id ? type : current));
-    return HttpResponse.json(type);
+    return jsonResponse<import("@/api-types").StampCardTypeOut>(type);
   }),
   http.get("/api/stamp-cards/people/:id", ({ request, params }) => {
     const denied = requireAuth(request);
     if (denied) return denied;
-    return HttpResponse.json(stampCards.filter((card) => card.person_id === params.id));
+    return jsonResponse<import("@/api-types").StampCardOut[]>(
+      stampCards.filter((card) => card.person_id === params.id),
+    );
   }),
   http.put("/api/stamp-cards/rewards/:id", async ({ request, params }) => {
     const denied = requireAuth(request);
@@ -394,7 +413,7 @@ export const adminHandlers = [
     const reward = stampCards.find((card) => card.reward?.id === params.id)?.reward;
     if (!reward) return HttpResponse.json({}, { status: 404 });
     reward.handed_out_at = body.handed_out ? new Date().toISOString() : null;
-    return HttpResponse.json(reward);
+    return jsonResponse<import("@/api-types").StampRewardOut>(reward);
   }),
   // Browser tests seed card history explicitly; normal mock lists remain unchanged.
   http.post("/api/mock/stamp-cards", async ({ request }) => {
@@ -406,7 +425,7 @@ export const adminHandlers = [
   // The announcements panel mounts before the signage editor tab is selected.
   http.get("/api/announcements", ({ request }) => {
     const authError = requireAuth(request);
-    return authError ?? HttpResponse.json([]);
+    return authError ?? jsonResponse<import("@/api-types").AnnouncementOut[]>([]);
   }),
 
   http.get("/api/mock/scenario", () => {
@@ -450,7 +469,7 @@ export const adminHandlers = [
     const filtered = sharedStore.registrations.filter((registration) => {
       if (status && registration.status !== status) return false;
       if (!query) return true;
-      const person = registration.person as Record<string, unknown> | undefined;
+      const person = registration.person as import("@/api-types").PersonSummaryOut | undefined;
       const event = registration.event as Record<string, unknown> | undefined;
       return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
         .filter((value): value is string => typeof value === "string")
@@ -460,7 +479,12 @@ export const adminHandlers = [
     const page = Number(url.searchParams.get("page") ?? 1) || 1;
     const start = (page - 1) * limit;
     const items = filtered.slice(start, start + limit);
-    return HttpResponse.json({ items, total: filtered.length, limit, page });
+    return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+      items,
+      total: filtered.length,
+      limit,
+      page,
+    });
   }),
 
   http.get("/api/volunteer/registrations", ({ request }) => {
@@ -473,14 +497,16 @@ export const adminHandlers = [
 
     const matches = sharedStore.registrations.filter((registration) => {
       if (!query) return true;
-      const person = registration.person as Record<string, unknown> | undefined;
+      const person = registration.person as import("@/api-types").PersonSummaryOut | undefined;
       const event = registration.event as Record<string, unknown> | undefined;
       return [person?.name, person?.email, registration.id, registration.event_id, event?.title]
         .filter((value): value is string => typeof value === "string")
         .some((value) => value.toLowerCase().includes(query));
     });
 
-    return HttpResponse.json(matches.slice(0, limit).map(registrationToCheckInResponse));
+    return jsonResponse<import("@/api-types").CheckInGuestOut[]>(
+      matches.slice(0, limit).map(registrationToCheckInResponse),
+    );
   }),
 
   http.post("/api/volunteer/registrations/:id/check-in", async ({ request, params }) => {
@@ -507,8 +533,9 @@ export const adminHandlers = [
       updated_at: now(),
     };
 
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").CheckInOut>({
       already_checked_in: alreadyCheckedIn,
+      stamp_progress: null,
       registration: registrationToCheckInResponse(sharedStore.registrations[idx]!),
     });
   }),
@@ -520,9 +547,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     const current = sharedStore.registrations[idx]!;
-    const currentOrderItems = Array.isArray(current.order_items)
-      ? (current.order_items as Array<Record<string, unknown>>)
-      : [];
+    const currentOrderItems = current.order_items;
     let deliveryUpdates: Map<unknown, number> | null = null;
     if (Array.isArray(body.order_items)) {
       deliveryUpdates = new Map();
@@ -572,7 +597,9 @@ export const adminHandlers = [
       ...(typeof body.strap_issued === "boolean" ? { strap_issued: body.strap_issued } : {}),
       updated_at: now(),
     };
-    return HttpResponse.json(registrationToCheckInResponse(sharedStore.registrations[idx]!));
+    return jsonResponse<import("@/api-types").CheckInGuestOut>(
+      registrationToCheckInResponse(sharedStore.registrations[idx]!),
+    );
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -583,7 +610,7 @@ export const adminHandlers = [
     if (authError) return authError;
     const reg = sharedStore.registrations.find((r) => r.id === params.id);
     if (!reg) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(reg);
+    return jsonResponse<import("@/api-types").RegistrationOutWithToken>(reg);
   }),
 
   http.put("/api/registrations/:id", async ({ request, params }) => {
@@ -601,7 +628,7 @@ export const adminHandlers = [
     if (registration.status === "cancelled") registration.allocations = [];
     const allocations = (registration.allocations ?? []) as { table_id: string }[];
     registration.table_id = allocations[0]?.table_id ?? null;
-    return HttpResponse.json(registration);
+    return jsonResponse<import("@/api-types").RegistrationOut>(registration);
   }),
 
   http.delete("/api/registrations/:id", ({ request, params }) => {
@@ -632,7 +659,7 @@ export const adminHandlers = [
             {
               product_id: product.id,
               name: product.name,
-              price: product.price,
+              price: Number(product.price),
               category: product.category,
               quantity,
               included_quantity: 0,
@@ -657,37 +684,35 @@ export const adminHandlers = [
         { status: 400 },
       );
     }
-    const newReg = {
+    if (!person || !event) {
+      return HttpResponse.json(
+        { detail: person ? "Event not found." : "Person not found." },
+        { status: 404 },
+      );
+    }
+    const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const newReg = registrationOut({
       id: uid(),
-      person_id: String(body.person_id ?? ""),
-      person: person
-        ? {
-            id: String(person.id ?? ""),
-            name: String(person.name ?? ""),
-            email: String(person.email ?? ""),
-            phone: String(person.phone ?? ""),
-          }
-        : { id: "", name: "", email: "", phone: "" },
-      event_id: String(body.event_id ?? ""),
-      event: event ?? null,
+      person_id: String(person.id),
+      person: {
+        id: String(person.id),
+        name: String(person.name ?? ""),
+        email: String(person.email ?? ""),
+        phone: String(person.phone ?? ""),
+        preferred_language: null,
+      },
+      event_id: String(event.id),
+      event,
       guest_count: Number(body.guest_count ?? 1),
-      order_items: orderItems,
-      amount_due: orderItems.length
-        ? orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-        : null,
+      order_items: orderItems.map((item) => orderItemOut(item)),
+      amount_due: orderItems.length ? total.toFixed(2) : null,
       notes: String(body.notes ?? ""),
-      table_id: null,
-      status: "confirmed",
-      payment_status: "unpaid",
-      checked_in: false,
-      checked_in_at: null,
-      strap_issued: false,
       check_in_token: `mock-token-${uid()}`,
       created_at: now(),
       updated_at: now(),
-    };
+    });
     sharedStore.registrations.push(newReg);
-    return HttpResponse.json(newReg, { status: 201 });
+    return jsonResponse<import("@/api-types").RegistrationOut>(newReg, { status: 201 });
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -706,7 +731,7 @@ export const adminHandlers = [
       total_outstanding: "0",
       total_refund_liability: "0",
     };
-    return HttpResponse.json([
+    const stats: EditionAttendanceStats[] = [
       {
         ...base,
         edition_id: "edition-2024",
@@ -737,7 +762,8 @@ export const adminHandlers = [
         total_guests: 0,
         total_checked_in: 0,
       },
-    ]);
+    ];
+    return jsonResponse<import("@/api-types").EditionAttendanceStats[]>(stats);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -753,7 +779,7 @@ export const adminHandlers = [
     const active = rows.filter((row) =>
       isActiveIn(row, new URL(request.url).searchParams.get("role")),
     ).length;
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").PeopleCountsOut>({
       total: rows.length,
       active,
       inactive: rows.length - active,
@@ -771,15 +797,18 @@ export const adminHandlers = [
     );
     const limit = Number(url.searchParams.get("limit") ?? 100);
     const page = Number(url.searchParams.get("page") ?? 1);
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").PersonListEnvelope>({
       items: matching.slice((page - 1) * limit, page * limit).map((row) => ({
         ...row,
+        reward_due: hasRewardDue(row.id),
+        last_attended: null,
+        inactivity_highlight: false,
         registration_count: sharedStore.registrations.filter((r) => r.person_id === row.id).length,
       })),
       total: matching.length,
       limit,
       page,
-    });
+    } satisfies import("@/api-types").PersonListEnvelope);
   }),
   http.get("/api/people/export", ({ request }) => {
     const authError = requireAuth(request);
@@ -793,14 +822,16 @@ export const adminHandlers = [
   http.get("/api/people", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(peopleEnvelope(new URL(request.url)));
+    return jsonResponse<import("@/api-types").PersonListEnvelope>(
+      peopleEnvelope(new URL(request.url)),
+    );
   }),
 
   http.post("/api/people", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newPerson = {
+    const newPerson: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
@@ -811,12 +842,19 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: null,
       notes: String(body.notes ?? ""),
+      role_history: {},
+      help_periods: [],
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       created_at: now(),
       updated_at: now(),
     };
     people.push(newPerson);
-    return HttpResponse.json(newPerson, { status: 201 });
+    return jsonResponse<import("@/api-types").PersonOut>(newPerson, { status: 201 });
   }),
 
   http.put("/api/people/:id", async ({ request, params }) => {
@@ -826,7 +864,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").PersonOut>(people[idx]);
   }),
 
   http.delete("/api/people/:id", ({ request, params }) => {
@@ -847,24 +885,14 @@ export const adminHandlers = [
       r.person_id === params.duplicateId ? { ...r, person_id: String(canonical.id) } : r,
     );
     people = people.filter((p) => p.id !== params.duplicateId);
-    return HttpResponse.json(canonical);
+    return jsonResponse<import("@/api-types").PersonOut>(canonical);
   }),
 
   http.get("/api/people/:id/registrations", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const personRegs = sharedStore.registrations
-      .filter((r) => r.person_id === params.id)
-      .map((r) => ({
-        id: r.id,
-        event_title: (r.event as Record<string, unknown> | null)?.title ?? "",
-        guest_count: r.guest_count,
-        status: r.status,
-        payment_status: r.payment_status,
-        checked_in: r.checked_in,
-        created_at: r.created_at,
-      }));
-    return HttpResponse.json(personRegs);
+    const personRegs = sharedStore.registrations.filter((r) => r.person_id === params.id);
+    return jsonResponse<import("@/api-types").RegistrationOut[]>(personRegs);
   }),
 
   // ──────────────────────────────────────────────────────────────
@@ -876,7 +904,7 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newMember = {
+    const newMember: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
@@ -887,7 +915,13 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: typeof body.visits_per_month === "number" ? body.visits_per_month : null,
       notes: String(body.notes ?? ""),
+      help_periods: [],
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       role_history: {
         member: [
           {
@@ -900,7 +934,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     people.push(newMember);
-    return HttpResponse.json(newMember, { status: 201 });
+    return jsonResponse<import("@/api-types").PersonOut>(newMember, { status: 201 });
   }),
 
   http.put("/api/members/:id", async ({ request, params }) => {
@@ -913,7 +947,7 @@ export const adminHandlers = [
       unknown
     >;
     const current = people[idx]!;
-    const history = (current.role_history ?? {}) as Record<string, Record<string, unknown>[]>;
+    const history = (current.role_history ?? {}) as MockPerson["role_history"];
     const stretches = history.member ?? [{ started_on: null, ended_on: null }];
     people[idx] = {
       ...current,
@@ -922,14 +956,17 @@ export const adminHandlers = [
         ? {
             role_history: {
               ...history,
-              member: [...stretches.slice(0, -1), { ...stretches.at(-1), started_on: memberSince }],
+              member: [
+                ...stretches.slice(0, -1),
+                { ended_on: stretches.at(-1)?.ended_on ?? null, started_on: memberSince },
+              ],
             },
           }
         : {}),
       id: String(params.id),
       updated_at: now(),
     };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").PersonOut>(people[idx]);
   }),
 
   // Ending a membership retires the member role; the role and the person stay.
@@ -971,33 +1008,50 @@ export const adminHandlers = [
   http.get("/api/volunteers", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(peopleEnvelope(new URL(request.url), "volunteer"));
+    return jsonResponse<import("@/api-types").VolunteerListEnvelope>(
+      peopleEnvelope(new URL(request.url), "volunteer"),
+    );
   }),
 
   http.post("/api/volunteers", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newVol = {
+    const newVol: MockPerson = {
       id: uid(),
       name: String(body.name ?? ""),
       email: String(body.email ?? ""),
       phone: String(body.phone ?? ""),
       address: String(body.address ?? ""),
       roles: ["volunteer"],
-      national_register_number: body.national_register_number ?? null,
-      eid_document_number: body.eid_document_number ?? null,
+      national_register_number:
+        typeof body.national_register_number === "string" ? body.national_register_number : null,
+      eid_document_number:
+        typeof body.eid_document_number === "string" ? body.eid_document_number : null,
       help_periods: Array.isArray(body.help_periods)
-        ? body.help_periods.map((period, index) => ({ ...period, id: index + 1 }))
+        ? (body.help_periods as import("@/api-types").VolunteerHelpPeriodIn[]).map(
+            (period, index) => ({
+              ...period,
+              last_help_day: period.last_help_day ?? null,
+              notes: period.notes ?? "",
+              id: index + 1,
+            }),
+          )
         : [],
       visits_per_month: null,
       notes: String(body.notes ?? ""),
+      role_history: {},
       anonymised: false,
+      preferred_language: null,
+      retired_roles: {},
+      inactivity_exempt: false,
+      inactivity_exempt_note: "",
+      oidc_subject: null,
       created_at: now(),
       updated_at: now(),
     };
     people.push(newVol);
-    return HttpResponse.json(newVol, { status: 201 });
+    return jsonResponse<import("@/api-types").VolunteerOut>(newVol, { status: 201 });
   }),
 
   http.put("/api/volunteers/:id", async ({ request, params }) => {
@@ -1007,7 +1061,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(people[idx]);
+    return jsonResponse<import("@/api-types").VolunteerOut>(people[idx]);
   }),
 
   // Ending volunteering retires the role and keeps every period; open periods are closed (today).
@@ -1017,10 +1071,11 @@ export const adminHandlers = [
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const today = localIsoDate();
-    const helpPeriods = (people[idx]!.help_periods ?? []) as Record<string, unknown>[];
+    const help_periods = (people[idx]!.help_periods ??
+      []) as import("@/api-types").VolunteerPeriodOut[];
     people[idx] = {
       ...retireMockRole(people[idx]!, "volunteer"),
-      help_periods: helpPeriods.map((period) =>
+      help_periods: help_periods.map((period) =>
         period.last_help_day === null
           ? {
               ...period,
@@ -1047,9 +1102,11 @@ export const adminHandlers = [
   http.get("/api/me/organizations", ({ request }) => {
     // Same verified contact as the changes handler below; other sessions manage nothing.
     if (forcedAuthScenario !== "default" || parseBearerToken(request) !== "mock-manager-token") {
-      return HttpResponse.json([]);
+      return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([]);
     }
-    return HttpResponse.json(organizations.filter((row) => row.contact_person_id === "person-01"));
+    return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>(
+      organizations.filter((row) => row.contact_person_id === "person-01"),
+    );
   }),
 
   http.get("/api/me/organizations/:id/changes", ({ request, params }) => {
@@ -1065,24 +1122,26 @@ export const adminHandlers = [
     ) {
       return authError(404, "Organization not found.");
     }
-    return HttpResponse.json([]);
+    return jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]);
   }),
 
   http.get("/api/organizations/translation", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json({ languages: [] });
+    return error ?? jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] });
   }),
-  http.get("/api/me/organizations/:id/translation", () => HttpResponse.json({ languages: [] })),
+  http.get("/api/me/organizations/:id/translation", () =>
+    jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] }),
+  ),
 
   http.get("/api/organizations/changes", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json([]);
+    return error ?? jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]);
   }),
 
   http.get("/api/organizations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(organizations);
+    return jsonResponse<import("@/api-types").OrganizationOut[]>(organizations);
   }),
 
   http.get("/api/organizations/:id", ({ request, params }) => {
@@ -1091,7 +1150,7 @@ export const adminHandlers = [
     const id = Number(params.id);
     const organization = organizations.find((e) => e.id === id);
     if (!organization) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(organization);
+    return jsonResponse<import("@/api-types").OrganizationOut>(organization);
   }),
 
   http.post("/api/organizations", async ({ request }) => {
@@ -1099,7 +1158,10 @@ export const adminHandlers = [
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
     const maxId = organizations.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
-    const newOrganization = {
+    const newOrganization: import("@/api-types").OrganizationOut = {
+      description_nl: typeof body.description_nl === "string" ? body.description_nl : null,
+      description_fr: typeof body.description_fr === "string" ? body.description_fr : null,
+      description_en: typeof body.description_en === "string" ? body.description_en : null,
       id: maxId + 1,
       name: String(body.name ?? ""),
       image: String(body.image ?? ""),
@@ -1112,7 +1174,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     organizations.push(newOrganization);
-    return HttpResponse.json(newOrganization, { status: 201 });
+    return jsonResponse<import("@/api-types").OrganizationOut>(newOrganization, { status: 201 });
   }),
 
   http.put("/api/organizations/:id", async ({ request, params }) => {
@@ -1123,7 +1185,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     organizations[idx] = { ...organizations[idx]!, ...body, id, updated_at: now() };
-    return HttpResponse.json(organizations[idx]);
+    return jsonResponse<import("@/api-types").OrganizationOut>(organizations[idx]);
   }),
 
   http.delete("/api/organizations/:id", ({ request, params }) => {
@@ -1144,20 +1206,28 @@ export const adminHandlers = [
     if (authError) return authError;
     const edition = editions.find((e) => e.id === params.id);
     if (!edition) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(edition);
+    return jsonResponse<import("@/api-types").EditionOut>(edition);
   }),
 
   http.post("/api/editions", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newEdition = {
+    const newEdition: SeedEdition = {
+      organizations: [],
+      co_organizer: null,
+      flyer_image: null,
+      hero_image: null,
+      share_image: null,
       id: uid(),
       year: Number(body.year ?? new Date().getFullYear()),
       month: String(body.month ?? "march"),
-      edition_type: String(body.edition_type ?? "festival"),
+      edition_type:
+        body.edition_type === "bourse" || body.edition_type === "capsule_exchange"
+          ? body.edition_type
+          : "festival",
       dates: Array.isArray(body.dates) ? (body.dates as string[]) : [],
-      venue: body.venue ?? null,
+      venue: venues.find((v) => v.id === body.venue_id) ?? venueOut(),
       events: [],
       producers: [],
       sponsors: [],
@@ -1166,8 +1236,8 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    editions.push(newEdition as SeedEdition);
-    return HttpResponse.json(newEdition, { status: 201 });
+    editions.push(newEdition);
+    return jsonResponse<import("@/api-types").EditionOut>(newEdition, { status: 201 });
   }),
 
   http.put("/api/editions/:id", async ({ request, params }) => {
@@ -1177,7 +1247,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     editions[idx] = { ...editions[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(editions[idx]);
+    return jsonResponse<import("@/api-types").EditionOut>(editions[idx]);
   }),
 
   http.delete("/api/editions/:id", ({ request, params }) => {
@@ -1215,13 +1285,12 @@ export const adminHandlers = [
       totals.set(eventId, entry);
     }
 
-    return HttpResponse.json(
-      [...totals.entries()].map(([event_id, entry]) => ({
-        event_id,
-        event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
-        ...entry,
-      })),
-    );
+    const stats: EventCheckInStats[] = [...totals.entries()].map(([event_id, entry]) => ({
+      event_id,
+      event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
+      ...entry,
+    }));
+    return jsonResponse<import("@/api-types").EventCheckInStats[]>(stats);
   }),
 
   ...categoryHandlers("event", "/api/event-categories", eventCategories, (key) =>
@@ -1233,14 +1302,14 @@ export const adminHandlers = [
 
   http.get("/api/events/translation", ({ request }) => {
     const error = requireAuth(request);
-    return error ?? HttpResponse.json({ languages: [] });
+    return error ?? jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: [] });
   }),
   http.get("/api/events/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const event = events.find((e) => e.id === params.id);
     if (!event) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(event);
+    return jsonResponse<import("@/api-types").EventOut>(event);
   }),
 
   http.post("/api/events", async ({ request }) => {
@@ -1248,7 +1317,12 @@ export const adminHandlers = [
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
     const edition = editions.find((e) => e.id === body.edition_id);
-    const newEvent = {
+    const newEvent: SeedEvent = {
+      volunteers_only: body.volunteers_only === true,
+      members_only: body.members_only === true,
+      registrations_close_at:
+        typeof body.registrations_close_at === "string" ? body.registrations_close_at : null,
+      order_questions: [],
       id: uid(),
       edition_id: String(body.edition_id ?? ""),
       ...eventTextFromBody(body),
@@ -1259,7 +1333,6 @@ export const adminHandlers = [
       registration_required: body.registration_required === true,
       registrations_open_from:
         typeof body.registrations_open_from === "string" ? body.registrations_open_from : null,
-      sort_order: typeof body.sort_order === "number" ? body.sort_order : 0,
       active: body.active !== false,
       edition: edition
         ? {
@@ -1274,8 +1347,8 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    events.push(newEvent as SeedEvent);
-    return HttpResponse.json(newEvent, { status: 201 });
+    events.push(newEvent);
+    return jsonResponse<import("@/api-types").EventOut>(newEvent, { status: 201 });
   }),
 
   http.put("/api/events/:id", async ({ request, params }) => {
@@ -1286,7 +1359,7 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const merged = { ...events[idx]!, ...body, id: String(params.id), updated_at: now() };
     events[idx] = { ...merged, ...eventTextFromBody(merged) };
-    return HttpResponse.json(events[idx]);
+    return jsonResponse<import("@/api-types").EventOut>(events[idx]);
   }),
 
   http.delete("/api/events/:id", ({ request, params }) => {
@@ -1307,7 +1380,9 @@ export const adminHandlers = [
     const url = new URL(request.url);
     const eventId = url.searchParams.get("event_id");
     const all = events.flatMap((e) => e.products);
-    return HttpResponse.json(eventId ? all.filter((p) => p.event_id === eventId) : all);
+    return jsonResponse<import("@/api-types").ProductOut[]>(
+      eventId ? all.filter((p) => p.event_id === eventId) : all,
+    );
   }),
 
   http.post("/api/products", async ({ request }) => {
@@ -1317,10 +1392,16 @@ export const adminHandlers = [
     const event = events.find((e) => e.id === body.event_id);
     if (!event) return HttpResponse.json({ detail: "Event not found." }, { status: 404 });
     const newProduct: SeedProduct = {
+      unit: body.unit === "table" || body.unit === "person" ? body.unit : "item",
+      stock: typeof body.stock === "number" ? body.stock : null,
+      reserved_quantity: 0,
+      available_quantity: null,
+      shortage: 0,
+      sold_out: false,
       id: uid(),
       event_id: String(body.event_id ?? ""),
       ...productTextFromBody(body),
-      price: Number(body.price ?? 0),
+      price: Number(body.price ?? 0).toFixed(2),
       category: String(body.category ?? "other"),
       purchasable: body.purchasable !== false,
       required: body.required === true,
@@ -1335,7 +1416,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     event.products.push(newProduct);
-    return HttpResponse.json(newProduct, { status: 201 });
+    return jsonResponse<import("@/api-types").ProductOut>(newProduct, { status: 201 });
   }),
 
   http.put("/api/products/:id", async ({ request, params }) => {
@@ -1351,9 +1432,11 @@ export const adminHandlers = [
           ...productTextFromBody({ ...event.products[idx]!, ...body }),
           id: String(params.id),
           event_id: event.id,
+          price:
+            body.price !== undefined ? Number(body.price).toFixed(2) : event.products[idx]!.price,
           updated_at: now(),
         };
-        return HttpResponse.json(event.products[idx]);
+        return jsonResponse<import("@/api-types").ProductOut>(event.products[idx]);
       }
     }
     return HttpResponse.json({ detail: "Product not found." }, { status: 404 });
@@ -1378,7 +1461,7 @@ export const adminHandlers = [
   http.get("/api/venues", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(venues);
+    return jsonResponse<import("@/api-types").VenueOut[]>(venues);
   }),
 
   http.post("/api/venues", async ({ request }) => {
@@ -1399,7 +1482,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     venues.push(newVenue);
-    return HttpResponse.json(newVenue, { status: 201 });
+    return jsonResponse<import("@/api-types").VenueOut>(newVenue, { status: 201 });
   }),
 
   http.put("/api/venues/:id", async ({ request, params }) => {
@@ -1409,7 +1492,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     venues[idx] = { ...venues[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(venues[idx]);
+    return jsonResponse<import("@/api-types").VenueOut>(venues[idx]);
   }),
 
   http.delete("/api/venues/:id", ({ request, params }) => {
@@ -1427,14 +1510,14 @@ export const adminHandlers = [
   http.get("/api/rooms", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(rooms);
+    return jsonResponse<import("@/api-types").RoomOut[]>(rooms);
   }),
 
   http.post("/api/rooms", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newRoom = {
+    const newRoom: RoomOut = {
       id: uid(),
       venue_id: String(body.venue_id ?? ""),
       name: String(body.name ?? ""),
@@ -1442,11 +1525,12 @@ export const adminHandlers = [
       length_m: Number(body.length_m ?? 10),
       color: String(body.color ?? "#4a90d9"),
       active: body.active !== false,
+      dimensions_placeholder: false,
       created_at: now(),
       updated_at: now(),
     };
     rooms.push(newRoom);
-    return HttpResponse.json(newRoom, { status: 201 });
+    return jsonResponse<import("@/api-types").RoomOut>(newRoom, { status: 201 });
   }),
 
   http.put("/api/rooms/:id", async ({ request, params }) => {
@@ -1456,7 +1540,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     rooms[idx] = { ...rooms[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(rooms[idx]);
+    return jsonResponse<import("@/api-types").RoomOut>(rooms[idx]);
   }),
 
   http.delete("/api/rooms/:id", ({ request, params }) => {
@@ -1474,7 +1558,7 @@ export const adminHandlers = [
   http.get("/api/table-types", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(tableTypes);
+    return jsonResponse<import("@/api-types").TableTypeOut[]>(tableTypes);
   }),
 
   http.post("/api/table-types", async ({ request }) => {
@@ -1484,21 +1568,21 @@ export const adminHandlers = [
     if (!body.venue_id) {
       return HttpResponse.json({ detail: "venue_id is required." }, { status: 400 });
     }
-    const newTT = {
+    const newTT: TableTypeOut = {
       id: uid(),
       name: String(body.name ?? ""),
       venue_id: String(body.venue_id),
-      shape: String(body.shape ?? "round"),
+      shape: body.shape === "rectangle" ? "rectangle" : "round",
       width_m: Number(body.width_m ?? 1),
       length_m: Number(body.length_m ?? 1),
-      height_type: String(body.height_type ?? "high"),
+      height_type: body.height_type === "low" ? "low" : "high",
       capacity: Number(body.capacity ?? 4),
       active: body.active !== false,
       created_at: now(),
       updated_at: now(),
     };
     tableTypes.push(newTT);
-    return HttpResponse.json(newTT, { status: 201 });
+    return jsonResponse<import("@/api-types").TableTypeOut>(newTT, { status: 201 });
   }),
 
   http.put("/api/table-types/:id", async ({ request, params }) => {
@@ -1508,7 +1592,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tableTypes[idx] = { ...tableTypes[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tableTypes[idx]);
+    return jsonResponse<import("@/api-types").TableTypeOut>(tableTypes[idx]);
   }),
 
   http.delete("/api/table-types/:id", ({ request, params }) => {
@@ -1526,7 +1610,7 @@ export const adminHandlers = [
   http.get("/api/tables", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(tablesWithRegistrationAssignments());
+    return jsonResponse<import("@/api-types").TableOut[]>(tablesWithRegistrationAssignments());
   }),
 
   http.get("/api/tables/:id", ({ request, params }) => {
@@ -1534,7 +1618,7 @@ export const adminHandlers = [
     if (authError) return authError;
     const table = tablesWithRegistrationAssignments().find((t) => t.id === params.id);
     if (!table) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(table);
+    return jsonResponse<import("@/api-types").TableOut>(table);
   }),
 
   http.post("/api/tables", async ({ request }) => {
@@ -1543,21 +1627,23 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const tableTypeId = String(body.table_type_id ?? "");
     const tableType = tableTypes.find((candidate) => candidate.id === tableTypeId);
-    const newTable = {
+    const layoutId = String(body.layout_id ?? "");
+    const newTable: TableOut = {
       id: uid(),
+      event_id: layouts.find((layout) => layout.id === layoutId)?.event_id ?? "",
       name: String(body.name ?? ""),
       capacity: Number(tableType?.capacity ?? 4),
       x: Number(body.x ?? 50),
       y: Number(body.y ?? 50),
       table_type_id: tableTypeId,
       rotation: Number(body.rotation ?? 0),
-      layout_id: String(body.layout_id ?? ""),
+      layout_id: layoutId,
       registration_ids: [],
       created_at: now(),
       updated_at: now(),
     };
     tables.push(newTable);
-    return HttpResponse.json(newTable, { status: 201 });
+    return jsonResponse<import("@/api-types").TableOut>(newTable, { status: 201 });
   }),
 
   http.put("/api/tables/:id", async ({ request, params }) => {
@@ -1567,7 +1653,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tables[idx] = { ...tables[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tables[idx]);
+    return jsonResponse<import("@/api-types").TableOut>(tables[idx]);
   }),
 
   http.patch("/api/tables/:id", async ({ request, params }) => {
@@ -1577,7 +1663,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     tables[idx] = { ...tables[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(tables[idx]);
+    return jsonResponse<import("@/api-types").TableOut>(tables[idx]!);
   }),
 
   http.delete("/api/tables/:id", ({ request, params }) => {
@@ -1602,8 +1688,9 @@ export const adminHandlers = [
     const edition = editions.find((candidate) => candidate.id === params.editionId);
     if (!edition?.active)
       return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
-    const stands = new Map<number, Record<string, unknown>[]>();
+    const stands = new Map<number, import("@/api-types").StandOut[]>();
     for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
+      if (!layout.date) continue;
       const room = rooms.find((candidate) => candidate.id === layout.room_id);
       for (const area of areas.filter((candidate) => candidate.layout_id === layout.id)) {
         const organizationId = Number(area.organization_id);
@@ -1620,7 +1707,7 @@ export const adminHandlers = [
         ]);
       }
     }
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").EditionStandsOut>({
       edition_id: edition.id,
       organizations: [...stands.entries()].map(([organizationId, organizationStands]) => ({
         organization_id: organizationId,
@@ -1639,12 +1726,12 @@ export const adminHandlers = [
     const edition = editions.find((candidate) => candidate.id === params.editionId);
     if (!edition?.active)
       return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
-    type PlanDay = { event_id: string; date: unknown; rooms: unknown[] };
+    type PlanDay = import("@/api-types").PlanDayOut;
     const days = new Map<string, PlanDay>();
     for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
       const room = rooms.find((candidate) => candidate.id === layout.room_id);
       const layoutAreas = areas.filter((candidate) => candidate.layout_id === layout.id);
-      if (!room || layoutAreas.length === 0) continue;
+      if (!room || !layout.date || layoutAreas.length === 0) continue;
       const eventId = String(layout.event_id);
       const day: PlanDay = days.get(eventId) ?? {
         event_id: eventId,
@@ -1671,7 +1758,10 @@ export const adminHandlers = [
       });
       days.set(eventId, day);
     }
-    return HttpResponse.json({ edition_id: edition.id, days: [...days.values()] });
+    return jsonResponse<import("@/api-types").EditionPlanOut>({
+      edition_id: edition.id,
+      days: [...days.values()],
+    });
   }),
 
   /** GET /api/venue-plan/:editionId — read-only plan assembled from the layout stores. */
@@ -1679,8 +1769,8 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const editionLayouts = layouts.filter((layout) => layout.edition_id === params.editionId);
-    return HttpResponse.json({
-      edition_id: params.editionId,
+    return jsonResponse<import("@/api-types").VenuePlanOut>({
+      edition_id: String(params.editionId),
       layouts: editionLayouts.map((layout) => {
         const room = rooms.find((candidate) => candidate.id === layout.room_id);
         const event = events.find((candidate) => candidate.id === layout.event_id);
@@ -1704,6 +1794,8 @@ export const adminHandlers = [
             .map((table) => ({
               id: table.id,
               name: table.name,
+              exclusive: false,
+              table_type_id: table.table_type_id,
               capacity: table.capacity,
               x: table.x,
               y: table.y,
@@ -1717,6 +1809,9 @@ export const adminHandlers = [
               id: area.id,
               label: area.label,
               icon: area.icon,
+              width_m: area.width_m,
+              length_m: area.length_m,
+              organization_id: area.organization_id,
               x: area.x,
               y: area.y,
               rotation: area.rotation,
@@ -1729,25 +1824,26 @@ export const adminHandlers = [
   http.get("/api/layouts", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(layouts);
+    return jsonResponse<import("@/api-types").LayoutOut[]>(layouts);
   }),
 
   http.post("/api/layouts", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const newLayout = {
+    const newLayout: LayoutOut = {
       id: uid(),
       edition_id: events.find((e) => e.id === body.event_id)?.edition_id ?? null,
       room_id: String(body.room_id ?? ""),
       event_id: String(body.event_id),
+      event_title: events.find((e) => e.id === body.event_id)?.title ?? "",
       date: events.find((e) => e.id === body.event_id)?.date ?? null,
       label: String(body.label ?? ""),
       created_at: now(),
       updated_at: now(),
     };
     layouts.push(newLayout);
-    return HttpResponse.json(newLayout, { status: 201 });
+    return jsonResponse<import("@/api-types").LayoutOut>(newLayout, { status: 201 });
   }),
 
   http.put("/api/layouts/:id", async ({ request, params }) => {
@@ -1757,7 +1853,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     layouts[idx] = { ...layouts[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(layouts[idx]);
+    return jsonResponse<import("@/api-types").LayoutOut>(layouts[idx]!);
   }),
 
   http.delete("/api/layouts/:id", ({ request, params }) => {
@@ -1778,7 +1874,7 @@ export const adminHandlers = [
   http.get("/api/areas", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(areas);
+    return jsonResponse<import("@/api-types").AreaOut[]>(areas);
   }),
 
   http.post("/api/areas", async ({ request }) => {
@@ -1800,7 +1896,7 @@ export const adminHandlers = [
       updated_at: now(),
     };
     areas.push(newArea);
-    return HttpResponse.json(newArea, { status: 201 });
+    return jsonResponse<import("@/api-types").AreaOut>(newArea, { status: 201 });
   }),
 
   http.put("/api/areas/:id", async ({ request, params }) => {
@@ -1810,7 +1906,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     areas[idx] = { ...areas[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(areas[idx]);
+    return jsonResponse<import("@/api-types").AreaOut>(areas[idx]);
   }),
 
   http.patch("/api/areas/:id", async ({ request, params }) => {
@@ -1820,7 +1916,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
     areas[idx] = { ...areas[idx]!, ...body, id: String(params.id), updated_at: now() };
-    return HttpResponse.json(areas[idx]);
+    return jsonResponse<import("@/api-types").AreaOut>(areas[idx]!);
   }),
 
   http.delete("/api/areas/:id", ({ request, params }) => {
@@ -1838,13 +1934,18 @@ export const adminHandlers = [
     "/api/waitlist",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({ items: seedWaitlistEntries, total: seedWaitlistEntries.length }),
+      jsonResponse<import("@/api-types").WaitlistEntryListEnvelope>({
+        items: seedWaitlistEntries,
+        total: seedWaitlistEntries.length,
+        limit: 50,
+        page: 1,
+      }),
   ),
   http.get(
     "/api/waitlist/scopes",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({
+      jsonResponse<import("@/api-types").WaitlistScopes>({
         events: [{ id: "event-1", title: "Champagne dinner", outstanding: 1, total: 1 }],
         products: [
           {
@@ -1862,34 +1963,52 @@ export const adminHandlers = [
     "/api/contact",
     ({ request }) =>
       requireAuth(request) ??
-      HttpResponse.json({ items: seedContactMessages, total: seedContactMessages.length }),
+      jsonResponse<import("@/api-types").ContactMessageListEnvelope>({
+        items: seedContactMessages,
+        total: seedContactMessages.length,
+        limit: 50,
+        page: 1,
+      }),
   ),
   http.get(
     "/api/editions/:id/scratchpad",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json({ content: "" }),
+    ({ request }) =>
+      requireAuth(request) ??
+      jsonResponse<import("@/api-types").EditionScratchpadOut>({
+        content: "",
+        updated_at: "2026-01-01T00:00:00Z",
+      }),
   ),
-  http.get("/api/faq", ({ request }) => requireAuth(request) ?? HttpResponse.json(seedFaqItems)),
+  http.get(
+    "/api/faq",
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").FaqItemOut[]>(seedFaqItems),
+  ),
   http.get(
     "/api/email-categories",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedEmailCategories),
+    ({ request }) =>
+      requireAuth(request) ??
+      jsonResponse<import("@/api-types").EmailCategoryOut[]>(seedEmailCategories),
   ),
   http.get(
     "/api/policies/:key",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedPrivacyPolicy),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").PolicyOut>(seedPrivacyPolicy),
   ),
   http.get(
     "/api/audit/resource-types",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(["event", "registration"]),
+    ({ request }) => requireAuth(request) ?? jsonResponse<string[]>(["event", "registration"]),
   ),
   http.get(
     "/api/audit",
-    ({ request }) => requireAuth(request) ?? HttpResponse.json(seedAuditEntries),
+    ({ request }) =>
+      requireAuth(request) ?? jsonResponse<import("@/api-types").AuditEntryOut[]>(seedAuditEntries),
   ),
   http.post("/api/push/test", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as { subscription_id: string };
-    return HttpResponse.json(
+    return jsonResponse<import("@/api-types").PushTestQueuedOut>(
       { queued: true, job_id: `mock-job-${body.subscription_id}` },
       { status: 202 },
     );

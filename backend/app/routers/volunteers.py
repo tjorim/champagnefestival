@@ -15,6 +15,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
+from app.openapi_responses import binary_response
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
 from app.services.people_exports import stream_people_csv
@@ -33,7 +34,7 @@ async def create_volunteer(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerOut:
     return await volunteers_service.create_volunteer(db, body=body, actor=actor, request_id=request_id)
 
 
@@ -64,7 +65,7 @@ async def list_volunteers(
     return list_query.envelope(items, total)
 
 
-@router.get("/export")
+@router.get("/export", **binary_response("text/csv", "Volunteers as CSV"))
 async def export_volunteers_csv(
     db: AsyncSession = Depends(get_db),
     active: bool | None = Query(None),
@@ -92,7 +93,7 @@ async def export_volunteers_csv(
 
 
 @router.get("/{volunteer_id}", response_model=VolunteerOut)
-async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_volunteer(volunteer_id: str, db: AsyncSession = Depends(get_db)) -> VolunteerOut:
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
     periods_map = await volunteers_service.load_periods_map(db, [volunteer.id])
     return volunteers_service.to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
@@ -105,7 +106,7 @@ async def update_volunteer(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> VolunteerOut:
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
     return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor, request_id=request_id)
 

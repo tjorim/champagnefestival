@@ -18,7 +18,7 @@ from app.services.errors import ServiceError
 async def list_announcements(session_factory: Any) -> dict:
     """Every announcement, active or not, in display order (admin shape)."""
     async with session_factory() as db:
-        return {"announcements": await service.list_all(db)}
+        return {"announcements": [item.model_dump() for item in await service.list_all(db)]}
 
 
 async def create_announcement(
@@ -53,7 +53,7 @@ async def create_announcement(
     )
     async with session_factory() as db:
         try:
-            return await service.create(db, actor=actor, body=body, request_id=None)
+            return (await service.create(db, actor=actor, body=body, request_id=None)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -108,7 +108,9 @@ async def update_announcement(
     body = validate_with_schema(AnnouncementUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await service.update(db, actor=actor, item_id=announcement_id, body=body, request_id=None)
+            return (
+                await service.update(db, actor=actor, item_id=announcement_id, body=body, request_id=None)
+            ).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -119,7 +121,10 @@ async def reorder_announcements(session_factory: Any, actor: str, *, ordered_ids
     async with session_factory() as db:
         try:
             return {
-                "announcements": await service.reorder(db, actor=actor, ordered_ids=body.ordered_ids, request_id=None)
+                "announcements": [
+                    item.model_dump()
+                    for item in await service.reorder(db, actor=actor, ordered_ids=body.ordered_ids, request_id=None)
+                ]
             }
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

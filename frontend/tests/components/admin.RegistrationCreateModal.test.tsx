@@ -1,3 +1,5 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, productOut, registrationOut } from "@/mocks/data/builders";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,7 +17,7 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const ticket = {
+const ticket = productOut({
   id: "prod-ticket",
   event_id: "evt-1",
   name: "Entry ticket",
@@ -24,8 +26,8 @@ const ticket = {
   unit: "person",
   required: true,
   purchasable: true,
-};
-const extra = {
+});
+const extra = productOut({
   id: "prod-extra",
   event_id: "evt-1",
   name: "Extra bottle",
@@ -34,19 +36,35 @@ const extra = {
   unit: "item",
   required: false,
   purchasable: true,
-};
-const event = (products: unknown[]) => ({
-  id: "evt-1",
-  edition_id: "ed-1",
-  title: "Friday gala",
-  date: "2026-11-20",
-  active: true,
-  registration_required: true,
-  products,
-  order_questions: [],
 });
+const event = (products: import("@/api-types").ProductOut[]) =>
+  eventOut({
+    id: "evt-1",
+    edition_id: "ed-1",
+    title: "Friday gala",
+    date: "2026-11-20",
+    active: true,
+    registration_required: true,
+    products,
+    order_questions: [],
+  });
 
 const alice = {
+  preferred_language: null,
+  address: "",
+  roles: [],
+  retired_roles: {},
+  role_history: {},
+  inactivity_exempt: false,
+  inactivity_exempt_note: "",
+  visits_per_month: null,
+  notes: "",
+  anonymised: false,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  reward_due: false,
+  last_attended: null,
+  inactivity_highlight: false,
   id: "person-1",
   name: "Alice Janssens",
   email: "alice@example.com",
@@ -54,31 +72,50 @@ const alice = {
   registration_count: 2,
 };
 
-const createdRegistration = (body: Record<string, unknown>, amountDue: string | null) => ({
-  id: "reg-1",
-  person_id: body.person_id,
-  person: { id: "person-1", name: "Alice Janssens", email: "alice@example.com", phone: "" },
-  event_id: body.event_id,
-  event: event([ticket]),
-  guest_count: body.guest_count,
-  order_items: [],
-  amount_due: amountDue,
-  notes: "",
-  status: "confirmed",
-  payment_status: "unpaid",
-  checked_in: false,
-  created_at: "2026-10-27T10:00:00Z",
-  updated_at: "2026-10-27T10:00:00Z",
-});
+const createdRegistration = (
+  body: import("@/api-types").RegistrationAdminCreate,
+  amountDue: string | null,
+) =>
+  registrationOut({
+    id: "reg-1",
+    person_id: body.person_id,
+    person: {
+      id: "person-1",
+      name: "Alice Janssens",
+      email: "alice@example.com",
+      phone: "",
+      preferred_language: null,
+    },
+    event_id: body.event_id,
+    event: event([ticket]),
+    guest_count: body.guest_count ?? 1,
+    order_items: [],
+    amount_due: amountDue,
+    notes: "",
+    status: "confirmed",
+    payment_status: "unpaid",
+    checked_in: false,
+    created_at: "2026-10-27T10:00:00Z",
+    updated_at: "2026-10-27T10:00:00Z",
+  });
 
-function useEvents(products: unknown[]) {
-  server.use(http.get("/api/events", () => HttpResponse.json([event(products)])));
+function useEvents(products: import("@/api-types").ProductOut[]) {
+  server.use(
+    http.get("/api/events", () =>
+      jsonResponse<import("@/api-types").EventOut[]>([event(products)]),
+    ),
+  );
 }
 
-function usePeople(items: unknown[]) {
+function usePeople(items: import("@/api-types").PersonListItemOut[]) {
   server.use(
     http.get("/api/people", () =>
-      HttpResponse.json({ items, total: items.length, limit: 200, page: 1 }),
+      jsonResponse<import("@/api-types").PersonListEnvelope>({
+        items,
+        total: items.length,
+        limit: 200,
+        page: 1,
+      }),
     ),
   );
 }
@@ -121,7 +158,7 @@ describe("RegistrationCreateModal", () => {
         capturedRegistrationRequired = new URL(request.url).searchParams.get(
           "registration_required",
         );
-        return HttpResponse.json([]);
+        return jsonResponse<import("@/api-types").EventOut[]>([]);
       }),
     );
     renderModal();
@@ -137,7 +174,12 @@ describe("RegistrationCreateModal", () => {
     server.use(
       http.get("/api/people", ({ request }) => {
         queries.push(new URL(request.url).searchParams.get("q") ?? "");
-        return HttpResponse.json({ items: [alice], total: 1, limit: 200, page: 1 });
+        return jsonResponse<import("@/api-types").PersonListEnvelope>({
+          items: [alice],
+          total: 1,
+          limit: 200,
+          page: 1,
+        });
       }),
     );
     renderModal();
@@ -163,7 +205,7 @@ describe("RegistrationCreateModal", () => {
         phone: "",
         registration_count: 0,
       },
-      { id: "person-3", name: "Pauwels", email: "", phone: "", registration_count: 1 },
+      { ...alice, id: "person-3", name: "Pauwels", email: "", phone: "", registration_count: 1 },
     ]);
     renderModal();
 
@@ -194,11 +236,14 @@ describe("RegistrationCreateModal", () => {
   it("books two required tickets and shows the total before creating", async () => {
     useEvents([ticket, extra]);
     usePeople([alice]);
-    let body: Record<string, unknown> | undefined;
+    let body: import("@/api-types").RegistrationAdminCreate | undefined;
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(createdRegistration(body, "30.00"), { status: 201 });
+        body = (await request.json()) as import("@/api-types").RegistrationAdminCreate;
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          createdRegistration(body, "30.00"),
+          { status: 201 },
+        );
       }),
     );
     const { onSaved } = renderModal();
@@ -228,11 +273,14 @@ describe("RegistrationCreateModal", () => {
   it("requires an explicit confirmation before creating an exempt booking with no products", async () => {
     useEvents([ticket]);
     usePeople([alice]);
-    let body: Record<string, unknown> | undefined;
+    let body: import("@/api-types").RegistrationAdminCreate | undefined;
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
-        body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(createdRegistration(body, null), { status: 201 });
+        body = (await request.json()) as import("@/api-types").RegistrationAdminCreate;
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          createdRegistration(body, null),
+          { status: 201 },
+        );
       }),
     );
     const { onSaved } = renderModal();
@@ -281,10 +329,30 @@ describe("RegistrationCreateModal", () => {
     const created: Record<string, unknown>[] = [];
     server.use(
       http.post("/api/people", async ({ request }) => {
-        const body = (await request.json()) as Record<string, unknown>;
+        const body = (await request.json()) as import("@/api-types").PersonCreate;
         created.push(body);
-        return HttpResponse.json(
-          { id: "person-new", ...body, email: body.email ?? "", registration_count: 0 },
+        return jsonResponse<import("@/api-types").PersonOut>(
+          {
+            preferred_language: null,
+            address: "",
+            roles: [],
+            retired_roles: {},
+            role_history: {},
+            national_register_number: null,
+            eid_document_number: null,
+            inactivity_exempt: false,
+            inactivity_exempt_note: "",
+            visits_per_month: null,
+            notes: "",
+            anonymised: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "person-new",
+            ...body,
+            name: body.name,
+            phone: body.phone ?? "",
+            email: "new@example.com",
+          },
           { status: 201 },
         );
       }),
@@ -351,7 +419,29 @@ describe("RegistrationCreateModal", () => {
     server.use(
       http.post("/api/people", () => {
         posted += 1;
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").PersonOut>(
+          {
+            id: "",
+            name: "",
+            email: "",
+            phone: "",
+            preferred_language: null,
+            address: "",
+            roles: [],
+            retired_roles: {},
+            role_history: {},
+            national_register_number: null,
+            eid_document_number: null,
+            inactivity_exempt: false,
+            inactivity_exempt_note: "",
+            visits_per_month: null,
+            notes: "",
+            anonymised: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
     renderModal();
@@ -384,11 +474,14 @@ describe("RegistrationCreateModal", () => {
     let attempts = 0;
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
-        const body = (await request.json()) as Record<string, unknown>;
+        const body = (await request.json()) as import("@/api-types").RegistrationAdminCreate;
         keys.push(body.idempotency_key);
         attempts += 1;
         if (attempts === 1) return HttpResponse.error();
-        return HttpResponse.json(createdRegistration(body, "15.00"), { status: 201 });
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          createdRegistration(body, "15.00"),
+          { status: 201 },
+        );
       }),
     );
     const { onSaved } = renderModal();
@@ -414,8 +507,11 @@ describe("RegistrationCreateModal", () => {
     usePeople([alice]);
     server.use(
       http.post("/api/registrations/admin", async ({ request }) => {
-        const body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(createdRegistration(body, "15.00"), { status: 201 });
+        const body = (await request.json()) as import("@/api-types").RegistrationAdminCreate;
+        return jsonResponse<import("@/api-types").RegistrationOut>(
+          createdRegistration(body, "15.00"),
+          { status: 201 },
+        );
       }),
     );
     const { onOpenBooking } = renderModal();

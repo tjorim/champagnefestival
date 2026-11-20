@@ -1,11 +1,14 @@
+import { productOut } from "@/mocks/data/builders";
+import { eventOut } from "@/mocks/data/builders";
 import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
-import type { FloorTable } from "@/types/admin";
+import type { FloorTable } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { Registration } from "@/types/registration";
+import { registrationRow } from "../utils/registrationFixtures";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { noEventTranslations } from "../utils/eventFixtures";
 
@@ -25,86 +28,96 @@ vi.mock("@/utils/adminFetch", () => ({ fetchPaymentTransactions }));
 
 const tables: FloorTable[] = [
   {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id: "table-1",
     name: "Table 10",
     capacity: 8,
     x: 10,
     y: 10,
-    tableTypeId: "type-1",
+    table_type_id: "type-1",
     rotation: 0,
-    layoutId: "layout-1",
-    registrationIds: [],
+    layout_id: "layout-1",
+    registration_ids: [],
   },
   {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id: "table-2",
     name: "Table 2",
     capacity: 6,
     x: 20,
     y: 20,
-    tableTypeId: "type-1",
+    table_type_id: "type-1",
     rotation: 0,
-    layoutId: "layout-1",
-    registrationIds: ["reg-1"],
+    layout_id: "layout-1",
+    registration_ids: ["reg-1"],
   },
 ];
 
 function buildRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
+    ...registrationRow(),
     id: "reg-1",
-    personId: "person-1",
+    person_id: "person-1",
     person: {
       id: "person-1",
       name: "Jane Doe",
       email: "jane@example.com",
       phone: "+32 470 00 00 00",
+      preferred_language: null,
     },
-    eventId: "event-1",
-    event: {
+    event_id: "event-1",
+    event: eventOut({
       id: "event-1",
-      editionId: "edition-1",
+      edition_id: "edition-1",
       ...noEventTranslations,
       title: "Grand Tasting",
       description: "",
       date: "2026-05-01",
-      startTime: "18:00",
+      start_time: "18:00",
       category: "tasting",
       products: [],
-      registrationRequired: true,
+      registration_required: true,
       active: true,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
       edition: {
         id: "edition-1",
         year: 2026,
         month: "may",
-        editionType: "festival",
+        edition_type: "festival",
         active: true,
       },
-    },
-    guestCount: 2,
-    orderItems: [
+    }),
+    guest_count: 2,
+    order_items: [
       {
-        productId: "prod-1",
+        product_id: "prod-1",
         name: "Brut Reserve",
+        name_nl: null,
+        name_fr: null,
+        name_en: null,
         quantity: 3,
-        deliveredQuantity: 1,
-        remainingQuantity: 2,
+        delivered_quantity: 1,
         price: 25,
         category: "champagne",
         delivered: false,
-        includedQuantity: 0,
+        included_quantity: 0,
         visible: true,
       },
     ],
     notes: "Please seat near the window. Wheelchair access needed.",
 
     status: "confirmed",
-    paymentStatus: "paid",
-    checkedIn: false,
-    strapIssued: false,
-    checkInToken: "token-abc",
-    createdAt: "2026-01-01T00:00:00.000Z",
-    updatedAt: "2026-01-01T00:00:00.000Z",
+    payment_status: "paid",
+    checked_in: false,
+    strap_issued: false,
+    check_in_token: "token-abc",
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -209,8 +222,7 @@ describe("RegistrationDetail", () => {
       "reg-1",
       expect.arrayContaining([
         expect.objectContaining({
-          deliveredQuantity: 3,
-          remainingQuantity: 0,
+          delivered_quantity: 3,
           delivered: true,
         }),
       ]),
@@ -222,8 +234,8 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking,
       registration: buildRegistration({
-        bookedTableQuantity: 3,
-        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+        booked_table_quantity: 3,
+        allocations: [{ table_id: "table-1", guest_count: 0, exclusive: true }],
       }),
     });
     expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
@@ -241,8 +253,8 @@ describe("RegistrationDetail", () => {
         "reg-1",
         expect.objectContaining({
           allocations: [
-            { tableId: "table-1", guestCount: 0, exclusive: true },
-            { tableId: "table-2", guestCount: 0, exclusive: true },
+            { table_id: "table-1", guest_count: 0, exclusive: true },
+            { table_id: "table-2", guest_count: 0, exclusive: true },
           ],
         }),
       ),
@@ -254,10 +266,10 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking,
       registration: buildRegistration({
-        guestCount: 6,
+        guest_count: 6,
         allocations: [
-          { tableId: "table-1", guestCount: 4, exclusive: false },
-          { tableId: "table-2", guestCount: 2, exclusive: false },
+          { table_id: "table-1", guest_count: 4, exclusive: false },
+          { table_id: "table-2", guest_count: 2, exclusive: false },
         ],
       }),
     });
@@ -276,8 +288,8 @@ describe("RegistrationDetail", () => {
         "reg-1",
         expect.objectContaining({
           allocations: [
-            { tableId: "table-1", guestCount: 4, exclusive: false },
-            { tableId: "table-2", guestCount: 1, exclusive: false },
+            { table_id: "table-1", guest_count: 4, exclusive: false },
+            { table_id: "table-2", guest_count: 1, exclusive: false },
           ],
         }),
       ),
@@ -289,7 +301,7 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking,
       registration: buildRegistration({
-        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+        allocations: [{ table_id: "table-2", guest_count: 2, exclusive: false }],
       }),
     });
 
@@ -309,7 +321,7 @@ describe("RegistrationDetail", () => {
       expect(onSaveBooking).toHaveBeenCalledWith(
         "reg-1",
         expect.objectContaining({
-          allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+          allocations: [{ table_id: "table-1", guest_count: 2, exclusive: false }],
         }),
       ),
     );
@@ -318,16 +330,16 @@ describe("RegistrationDetail", () => {
   it("shows remaining seats, not total capacity, when another booking already occupies a table", async () => {
     const otherRegistration = buildRegistration({
       id: "reg-2",
-      allocations: [{ tableId: "table-1", guestCount: 3, exclusive: false }],
+      allocations: [{ table_id: "table-1", guest_count: 3, exclusive: false }],
     });
     renderDetail({
       onSaveBooking: vi.fn().mockResolvedValue(undefined),
       registration: buildRegistration({
-        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+        allocations: [{ table_id: "table-2", guest_count: 2, exclusive: false }],
       }),
       registrations: [
         buildRegistration({
-          allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+          allocations: [{ table_id: "table-2", guest_count: 2, exclusive: false }],
         }),
         otherRegistration,
       ],
@@ -354,14 +366,16 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking: vi.fn().mockResolvedValue(undefined),
       registration: buildRegistration({
-        orderItems: [
+        order_items: [
           {
-            productId: "napkin",
+            product_id: "napkin",
             name: "Napkin",
+            name_nl: null,
+            name_fr: null,
+            name_en: null,
             quantity: 1,
-            includedQuantity: 1,
-            deliveredQuantity: 0,
-            remainingQuantity: 1,
+            included_quantity: 1,
+            delivered_quantity: 0,
             delivered: false,
             price: 0.5,
             category: "other",
@@ -379,14 +393,16 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking: vi.fn().mockResolvedValue(undefined),
       registration: buildRegistration({
-        orderItems: [
+        order_items: [
           {
-            productId: "snack",
+            product_id: "snack",
             name: "Snack",
+            name_nl: null,
+            name_fr: null,
+            name_en: null,
             quantity: 2,
-            includedQuantity: 0,
-            deliveredQuantity: 0,
-            remainingQuantity: 2,
+            included_quantity: 0,
+            delivered_quantity: 0,
             delivered: false,
             price: 2,
             category: "other",
@@ -403,43 +419,46 @@ describe("RegistrationDetail", () => {
   it("previews a table quantity reduction and saves the chosen release", async () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     const tableProduct = {
+      ...productOut(),
       id: "table-product",
-      eventId: "event-1",
+      event_id: "event-1",
       ...NO_PRODUCT_TRANSLATIONS,
       name: "Bourse table",
       description: "",
-      price: 50,
+      price: "50.00",
       category: "other" as const,
       unit: "table" as const,
       purchasable: true,
       required: false,
-      createdAt: "",
-      updatedAt: "",
+      created_at: "",
+      updated_at: "",
     };
     renderDetail({
       onSaveBooking,
       registration: buildRegistration({
-        amountPaid: 100,
-        orderItems: [
+        amount_paid: "100.00",
+        order_items: [
           {
-            productId: tableProduct.id,
+            product_id: tableProduct.id,
             name: tableProduct.name,
+            name_nl: null,
+            name_fr: null,
+            name_en: null,
             quantity: 2,
-            includedQuantity: 0,
-            deliveredQuantity: 0,
-            remainingQuantity: 2,
+            included_quantity: 0,
+            delivered_quantity: 0,
             delivered: false,
             price: 50,
             category: "other",
             visible: true,
           },
         ],
-        bookedTableQuantity: 2,
+        booked_table_quantity: 2,
         allocations: [
-          { tableId: "table-1", guestCount: 0, exclusive: true },
-          { tableId: "table-2", guestCount: 0, exclusive: true },
+          { table_id: "table-1", guest_count: 0, exclusive: true },
+          { table_id: "table-2", guest_count: 0, exclusive: true },
         ],
-        event: { ...buildRegistration().event!, products: [tableProduct] },
+        event: eventOut({ ...buildRegistration().event!, products: [tableProduct] }),
       }),
     });
     fireEvent.change(
@@ -458,7 +477,7 @@ describe("RegistrationDetail", () => {
         "reg-1",
         expect.objectContaining({
           quantities: { "table-product": 1 },
-          allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+          allocations: [{ table_id: "table-1", guest_count: 0, exclusive: true }],
         }),
       ),
     );
@@ -487,7 +506,7 @@ describe("RegistrationDetail", () => {
       "reg-1",
       expect.objectContaining({
         amount: 42,
-        idempotencyKey: expect.stringMatching(
+        idempotency_key: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
         ),
       }),
@@ -497,28 +516,28 @@ describe("RegistrationDetail", () => {
   it("hides table assignment for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
-        event: {
+        event: eventOut({
           id: "event-2",
-          editionId: "edition-2",
+          edition_id: "edition-2",
           ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",
-          startTime: "18:00",
+          start_time: "18:00",
           category: "bourse",
           products: [],
-          registrationRequired: true,
+          registration_required: true,
           active: true,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
           edition: {
             id: "edition-2",
             year: 2026,
             month: "may",
-            editionType: "bourse",
+            edition_type: "bourse",
             active: true,
           },
-        },
+        }),
       }),
     });
 
@@ -530,28 +549,28 @@ describe("RegistrationDetail", () => {
   it("hides order items and strap section for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
-        event: {
+        event: eventOut({
           id: "event-2",
-          editionId: "edition-2",
+          edition_id: "edition-2",
           ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",
-          startTime: "18:00",
+          start_time: "18:00",
           category: "bourse",
           products: [],
-          registrationRequired: true,
+          registration_required: true,
           active: true,
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
+          created_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-01T00:00:00.000Z",
           edition: {
             id: "edition-2",
             year: 2026,
             month: "may",
-            editionType: "bourse",
+            edition_type: "bourse",
             active: true,
           },
-        },
+        }),
       }),
     });
 
@@ -562,7 +581,7 @@ describe("RegistrationDetail", () => {
 
   it("shows the check-in button when not checked in and calls onCheckIn on click", async () => {
     const { onCheckIn } = renderDetail({
-      registration: buildRegistration({ checkedIn: false }),
+      registration: buildRegistration({ checked_in: false }),
     });
 
     const checkInButton = screen.getByRole("button", { name: /admin_mark_checked_in/ });
@@ -573,7 +592,7 @@ describe("RegistrationDetail", () => {
 
   it("hides the check-in button and shows the checked-in badge when already checked in", async () => {
     renderDetail({
-      registration: buildRegistration({ checkedIn: true }),
+      registration: buildRegistration({ checked_in: true }),
     });
 
     expect(screen.queryByRole("button", { name: /admin_mark_checked_in/ })).not.toBeInTheDocument();
@@ -582,7 +601,7 @@ describe("RegistrationDetail", () => {
 
   it("calls onIssueStrap with the registration id when the issue-strap button is clicked", async () => {
     const { onIssueStrap } = renderDetail({
-      registration: buildRegistration({ strapIssued: false }),
+      registration: buildRegistration({ strap_issued: false }),
     });
 
     const issueStrapButton = screen.getByRole("button", { name: /admin_issue_strap/ });
@@ -593,7 +612,7 @@ describe("RegistrationDetail", () => {
 
   it("does not show the issue-strap button once a strap has already been issued", async () => {
     renderDetail({
-      registration: buildRegistration({ strapIssued: true }),
+      registration: buildRegistration({ strap_issued: true }),
     });
 
     expect(screen.queryByRole("button", { name: /admin_issue_strap/ })).not.toBeInTheDocument();
@@ -662,7 +681,7 @@ it("offers all registration email templates and previews the selected registrati
 it("prefills and saves order answers alongside the booking", async () => {
   const onSaveBooking = vi.fn().mockResolvedValue(undefined);
   const registration = buildRegistration();
-  registration.event!.orderQuestions = [
+  registration.event!.order_questions = [
     {
       id: "question",
       kind: "free_text",
@@ -676,11 +695,13 @@ it("prefills and saves order answers alongside the booking", async () => {
       options: [],
     },
   ];
-  registration.orderAnswers = [
+  registration.order_answers = [
     {
       question_id: "question",
+      option_id: null,
       text: "Old answer",
-      question: registration.event!.orderQuestions[0],
+      rating: null,
+      question: registration.event!.order_questions![0]!,
     },
   ];
   renderDetail({ registration, onSaveBooking });

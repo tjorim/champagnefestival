@@ -88,25 +88,8 @@ const optionLabels = (): Record<string, string> => ({
   contain: m.signage_editor_contain(),
   cover: m.signage_editor_cover(),
 });
-interface Organization {
-  id: number;
-  name: string;
-  image: string;
-  type: string;
-  description_nl: string | null;
-  description_fr: string | null;
-  description_en: string | null;
-}
-interface Notice {
-  id: string;
-  kind: string;
-  content: {
-    title: string | null;
-    text: string | null;
-    icon: string | null;
-    image: string | null;
-  };
-}
+type Organization = import("@/api-types").OrganizationOut;
+type Notice = import("@/api-types").SlideOut;
 
 export default function SignageTemplates({
   authHeaders,
@@ -305,7 +288,7 @@ export function TemplateEditor({
     try {
       const headers = { ...authHeaders() };
       delete headers["Content-Type"];
-      const result = await fetchJsonOrThrowWithUnauthorized<{ url: string }>(
+      const result = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").SignageAssetOut>(
         "/api/signage/assets",
         { method: "POST", headers, body },
         m.signage_editor_error(),
@@ -345,6 +328,7 @@ export function TemplateEditor({
           name: org.name,
           logo: org.image,
           sponsor: org.type === "sponsor",
+          sponsor_tier: null,
           description: org[`description_${locale}`] || org.description_nl,
         }
       : kind === "organizations"
@@ -353,11 +337,12 @@ export function TemplateEditor({
             description: m.signage_sample_text(),
             logo: "/signage-sample.svg",
             sponsor: true,
+            sponsor_tier: null,
           }
         : null,
-    title: content ? content.title : m.signage_sample_title(),
-    text: content ? content.text : m.signage_sample_text(),
-    icon: content ? content.icon : "info",
+    title: content ? (content.title ?? null) : m.signage_sample_title(),
+    text: content ? (content.text ?? null) : m.signage_sample_text(),
+    icon: content ? (content.icon ?? null) : "info",
     image: kind === "image" ? (content?.image ?? "/signage-sample.svg") : null,
   };
   const missing = missingBindings(draft, kind);

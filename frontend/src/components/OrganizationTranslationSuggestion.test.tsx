@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
@@ -23,29 +24,33 @@ function mount(child: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={client}>{child}</QueryClientProvider>);
 }
-function capabilities(languages = ["nl", "en"]) {
-  server.use(http.get(url, () => HttpResponse.json({ languages })));
+function capabilities(
+  languages: import("@/api-types").TranslationCapabilities["languages"] = ["nl", "en"],
+) {
+  server.use(
+    http.get(url, () => jsonResponse<import("@/api-types").TranslationCapabilities>({ languages })),
+  );
 }
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
 
-it.each([{ languages: [] }, { languages: ["nl", "fr"] }])(
-  "hides unavailable language pairs: %j",
-  async ({ languages }) => {
-    let called = false;
-    server.use(
-      http.get(url, () => {
-        called = true;
-        return HttpResponse.json({ languages });
-      }),
-    );
-    mount(<OrganizationTranslationSuggestion {...props} />);
-    await waitFor(() => expect(called).toBe(true));
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  },
-);
+it.each<import("@/api-types").TranslationCapabilities>([
+  { languages: [] },
+  { languages: ["nl", "fr"] },
+])("hides unavailable language pairs: %j", async ({ languages }) => {
+  let called = false;
+  server.use(
+    http.get(url, () => {
+      called = true;
+      return jsonResponse<import("@/api-types").TranslationCapabilities>({ languages });
+    }),
+  );
+  mount(<OrganizationTranslationSuggestion {...props} />);
+  await waitFor(() => expect(called).toBe(true));
+  expect(screen.queryByRole("button")).not.toBeInTheDocument();
+});
 
 it("preserves an existing translation", async () => {
   capabilities();
@@ -64,7 +69,7 @@ it("shows a cold-start pending state and sends only a stateless draft request", 
     http.post(url, async ({ request }) => {
       requests.push(await request.json());
       await waiting;
-      return HttpResponse.json({ text: "Hello" });
+      return jsonResponse<import("@/api-types").TranslationDraft>({ text: "Hello" });
     }),
   );
   mount(<OrganizationTranslationSuggestion {...props} />);
@@ -80,7 +85,12 @@ it.each([503, 504, 429])(
   "explains HTTP %s without applying a draft or retrying",
   async (status) => {
     capabilities();
-    const requests = vi.fn(() => HttpResponse.json({}, { status }));
+    const requests = vi.fn(() =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status },
+      ),
+    );
     server.use(http.post(url, requests));
     mount(<OrganizationTranslationSuggestion {...props} />);
     fireEvent.click(await screen.findByRole("button", { name: "Suggest translation" }));
@@ -102,7 +112,7 @@ it("discards a result when the user edits during translation", async () => {
   server.use(
     http.post(url, async () => {
       await waiting;
-      return HttpResponse.json({ text: "Hello" });
+      return jsonResponse<import("@/api-types").TranslationDraft>({ text: "Hello" });
     }),
   );
   const client = new QueryClient();
@@ -123,20 +133,37 @@ it("discards a result when the user edits during translation", async () => {
 it("fills the manager form but submits only after review and editing", async () => {
   const submissions: Record<string, unknown>[] = [];
   server.use(
-    http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),
-    http.get("/api/me/organizations/42/translation", () =>
-      HttpResponse.json({ languages: ["nl", "en"] }),
+    http.get("/api/me/organizations/42/changes", () =>
+      jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
     ),
-    http.post("/api/me/organizations/42/translation", () => HttpResponse.json({ text: "Hello" })),
+    http.get("/api/me/organizations/42/translation", () =>
+      jsonResponse<import("@/api-types").TranslationCapabilities>({ languages: ["nl", "en"] }),
+    ),
+    http.post("/api/me/organizations/42/translation", () =>
+      jsonResponse<import("@/api-types").TranslationDraft>({ text: "Hello" }),
+    ),
     http.post("/api/me/organizations/42/changes", async ({ request }) => {
       submissions.push((await request.json()) as Record<string, unknown>);
-      return HttpResponse.json({});
+      return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+        id: "",
+        organization_id: 0,
+        organization_name: "",
+        status: "pending",
+        proposed: {},
+        current: {},
+        superseded_fields: [],
+        reason: null,
+        created_at: "2026-01-01T00:00:00Z",
+      });
     }),
   );
   mount(
     <MyOrganizationsSection
       organizations={[
         {
+          image: "",
+          description_fr: null,
+          description_en: null,
           id: 42,
           name: "House",
           type: "producer",
@@ -167,7 +194,9 @@ it("fills the manager form but submits only after review and editing", async () 
 
 it("fills the admin form and saves only after manual review", async () => {
   capabilities();
-  server.use(http.post(url, () => HttpResponse.json({ text: "Hello" })));
+  server.use(
+    http.post(url, () => jsonResponse<import("@/api-types").TranslationDraft>({ text: "Hello" })),
+  );
   const save = vi.fn();
   mount(
     <ItemModal

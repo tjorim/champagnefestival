@@ -1,18 +1,17 @@
-import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
+import type { PollOptionUpdate, PollQuestionUpdate, OrganizationOut } from "@/api-types";
+import type { PollOptionOut, PollQuestionOut } from "@/api-types";
+import type { EventCreate, ProductCreate, ProductUpdate } from "@/api-types";
+import type { Edition } from "@/api-types";
+
 import type { ItemDraft } from "@/components/admin/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 import type { DietaryTag } from "@/utils/dietaryTags";
-import { parsePollKind, type PollQuestionKind } from "@/utils/pollKinds";
-import {
-  apiToEvent,
-  apiToProduct,
-  type Event,
-  type EventFormData,
-  type Product,
-} from "@/types/event";
+import { type PollQuestionKind } from "@/utils/pollKinds";
+import type { Event, Product } from "@/api-types";
+import { type EventFormData } from "@/types/event";
 
 function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
@@ -43,47 +42,24 @@ async function safeFetch(
   }
 }
 
-function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
-  const cp = (d.contact_person ?? null) as {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-  } | null;
-  return {
-    id: d.id as number,
-    name: d.name as string,
-    image: d.image as string,
-    website: d.website as string | undefined,
-    description_nl: (d.description_nl as ItemDraft["description_nl"]) ?? null,
-    description_fr: (d.description_fr as ItemDraft["description_fr"]) ?? null,
-    description_en: (d.description_en as ItemDraft["description_en"]) ?? null,
-
-    active: d.active as boolean | undefined,
-    type: d.type as string | undefined,
-    contactPersonId: (d.contact_person_id as string | null) ?? null,
-    contactPerson: cp,
-  };
-}
-
 export async function fetchContentSectionItems(
   sectionKey: string,
   authHeaders: () => Record<string, string>,
-): Promise<ItemDraft[]> {
+): Promise<OrganizationOut[]> {
   const response = await safeFetch(
     `/api/${sectionKey}`,
     { headers: authHeaders() },
     m.admin_api_load_section({ section: sectionKey }),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToItemDraft) : [];
+  const data: OrganizationOut[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function saveContentSectionItem(
   sectionKey: string,
   draft: ItemDraft,
   authHeaders: () => Record<string, string>,
-): Promise<ItemDraft> {
+): Promise<OrganizationOut> {
   const isNew = draft.id <= 0;
   const payload = {
     name: draft.name,
@@ -94,7 +70,7 @@ export async function saveContentSectionItem(
     description_en: draft.description_en || null,
 
     type: draft.type ?? "vendor",
-    contact_person_id: draft.contactPersonId ?? null,
+    contact_person_id: draft.contact_person_id ?? null,
   };
 
   const response = isNew
@@ -117,7 +93,7 @@ export async function saveContentSectionItem(
         m.admin_api_update_section({ section: sectionKey }),
       );
 
-  return apiToItemDraft((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 export async function updateContentSectionItemActive(
@@ -125,7 +101,7 @@ export async function updateContentSectionItemActive(
   id: number,
   active: boolean,
   authHeaders: () => Record<string, string>,
-): Promise<ItemDraft> {
+): Promise<OrganizationOut> {
   const response = await safeFetch(
     `/api/${sectionKey}/${id}`,
     {
@@ -136,7 +112,7 @@ export async function updateContentSectionItemActive(
     m.admin_api_update_section_status({ section: sectionKey }),
   );
 
-  return apiToItemDraft((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 export async function deleteContentSectionItem(
@@ -159,36 +135,21 @@ export async function fetchEditions(authHeaders: () => Record<string, string>): 
     m.admin_api_load_editions(),
   );
 
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEdition) : [];
-}
-
-interface ApiOrganization {
-  id: number;
-  name: string;
-  active?: boolean;
-  type?: string;
+  const data = (await response.json()) as Edition[];
+  return Array.isArray(data) ? data : [];
 }
 
 export async function fetchEditionModalOrganizations(
   authHeaders: () => Record<string, string>,
-): Promise<ItemDraft[]> {
+): Promise<OrganizationOut[]> {
   const response = await safeFetch(
     "/api/organizations",
     { headers: authHeaders() },
     m.admin_api_load_organizations(),
   );
 
-  const data = (await response.json()) as ApiOrganization[];
-  return Array.isArray(data)
-    ? data.map((item) => ({
-        id: item.id,
-        name: item.name,
-        image: "",
-        active: item.active ?? true,
-        type: item.type,
-      }))
-    : [];
+  const data: OrganizationOut[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function saveEdition(
@@ -196,11 +157,11 @@ export async function saveEdition(
     id: string;
     year: number;
     month: string;
-    editionType: Edition["editionType"];
+    edition_type: Edition["edition_type"];
     venueId: string;
     active: boolean;
     /** The lineup, in display order. */
-    organizationIds: number[];
+    organizations: number[];
     /** Level per lineup sponsor (organization id); sponsors without an entry are untiered. */
     sponsorTiers?: Record<number, SponsorTier>;
     /**
@@ -223,13 +184,13 @@ export async function saveEdition(
         year: payload.year,
         month: payload.month,
         venue_id: payload.venueId,
-        edition_type: payload.editionType,
+        edition_type: payload.edition_type,
         active: payload.active,
         // Always send `organizations` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
-        organizations: payload.editionType === "festival" ? payload.organizationIds : [],
-        sponsor_tiers: payload.editionType === "festival" ? (payload.sponsorTiers ?? {}) : {},
+        organizations: payload.edition_type === "festival" ? payload.organizations : [],
+        sponsor_tiers: payload.edition_type === "festival" ? (payload.sponsorTiers ?? {}) : {},
         // Independent of the lineup: any edition type may name a co-organizer.
         ...(payload.coOrganizerOrganizationId === undefined
           ? {}
@@ -239,7 +200,7 @@ export async function saveEdition(
     isEdit ? m.admin_api_update_edition() : m.admin_api_create_edition(),
   );
 
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 export async function fetchEditionEvents(
@@ -251,8 +212,8 @@ export async function fetchEditionEvents(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEvent) : [];
+  const data = (await response.json()) as Event[];
+  return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -271,12 +232,12 @@ function localizedBody<Field extends string>(field: Field, text: LocalizedText) 
 export function eventTextBody(formData: EventFormData) {
   const text = (value: string) => value.trim() || null;
   return {
-    title_nl: text(formData.titleNl),
-    title_fr: text(formData.titleFr),
-    title_en: text(formData.titleEn),
-    description_nl: text(formData.descriptionNl),
-    description_fr: text(formData.descriptionFr),
-    description_en: text(formData.descriptionEn),
+    title_nl: text(formData.title_nl),
+    title_fr: text(formData.title_fr),
+    title_en: text(formData.title_en),
+    description_nl: text(formData.description_nl),
+    description_fr: text(formData.description_fr),
+    description_en: text(formData.description_en),
   };
 }
 
@@ -297,27 +258,27 @@ export async function saveEditionEvent(
         edition_id: payload.editionId,
         ...eventTextBody(payload.formData),
         date: payload.formData.date,
-        start_time: payload.formData.startTime,
-        end_time: payload.formData.endTime || null,
+        start_time: payload.formData.start_time,
+        end_time: payload.formData.end_time || null,
         category: payload.formData.category,
-        volunteers_only: payload.formData.volunteersOnly ?? false,
-        members_only: payload.formData.membersOnly ?? false,
-        registration_required: payload.formData.registrationRequired,
+        volunteers_only: payload.formData.volunteers_only ?? false,
+        members_only: payload.formData.members_only ?? false,
+        registration_required: payload.formData.registration_required,
         registrations_open_from:
-          payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
-            ? datetimeLocalToIso(payload.formData.registrationsOpenFrom)
+          payload.formData.registration_required && payload.formData.registrations_open_from
+            ? datetimeLocalToIso(payload.formData.registrations_open_from)
             : null,
         registrations_close_at:
-          payload.formData.registrationRequired && payload.formData.registrationsCloseAt
-            ? datetimeLocalToIso(payload.formData.registrationsCloseAt)
+          payload.formData.registration_required && payload.formData.registrations_close_at
+            ? datetimeLocalToIso(payload.formData.registrations_close_at)
             : null,
         active: payload.formData.active,
-      }),
+      } satisfies EventCreate),
     },
     m.admin_content_error_save(),
   );
 
-  return apiToEvent((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Event;
 }
 
 export async function deleteEditionEvent(
@@ -340,46 +301,37 @@ export async function fetchEventProducts(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToProduct) : [];
+  const data = (await response.json()) as Product[];
+  return Array.isArray(data) ? data : [];
 }
 
-export interface ProductWrite {
+/** UI command: generated product fields plus grouped translation controls and propagation choices. */
+export type ProductWrite = Pick<
+  ProductCreate,
+  | "price"
+  | "category"
+  | "purchasable"
+  | "required"
+  | "included_product_id"
+  | "included_per_guests"
+  | "unit"
+  | "stock"
+  | "inclusions"
+> & {
   id?: string;
-  eventId: string;
-  /** Per-language product name; a blank translation is cleared. */
+  eventId: ProductCreate["event_id"];
   name: LocalizedText;
   description: LocalizedText;
-  price: number;
-  category: string;
-  purchasable: boolean;
-  required: boolean;
-  includedProductId?: string;
-  includedPerGuests?: number;
-  unit?: "item" | "table" | "person";
-  stock?: number | null;
-  inclusions?: import("@/types/event").ProductInclusion[] | null;
-  updateExistingContents?: boolean;
-  updateExistingPrices?: boolean;
-  confirmShortage?: boolean;
-  previewToken?: string;
-}
-export interface ProductChangePreview {
-  preview_token: string;
-  price_changed: boolean;
-  contents_changed: boolean;
-  bookings: {
-    id: string;
-    before_total: string;
-    after_total: string;
-    amount_paid: string;
-    refund_due: string;
-    before_items: { name: string; quantity: number }[];
-    after_items: { name: string; quantity: number }[];
-  }[];
-  shortages: { name: string; stock: number; reserved: number; shortage: number }[];
-}
-function productWriteBody(payload: ProductWrite) {
+  updateExistingContents?: ProductUpdate["update_existing_contents"];
+  updateExistingPrices?: ProductUpdate["update_existing_prices"];
+  confirmShortage?: ProductUpdate["confirm_shortage"];
+  previewToken?: ProductUpdate["preview_token"];
+};
+export type { ProductChangePreviewOut as ProductChangePreview } from "@/api-types";
+import type { ProductChangePreviewOut as ProductChangePreview } from "@/api-types";
+function productWriteBody(
+  payload: ProductWrite,
+): ProductUpdate & Partial<Pick<ProductCreate, "event_id">> {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
     ...localizedBody("name", payload.name),
@@ -388,8 +340,8 @@ function productWriteBody(payload: ProductWrite) {
     category: payload.category,
     purchasable: payload.purchasable,
     required: payload.required,
-    included_product_id: payload.includedProductId ?? null,
-    included_per_guests: payload.includedPerGuests ?? null,
+    included_product_id: payload.included_product_id ?? null,
+    included_per_guests: payload.included_per_guests ?? null,
     ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
     ...(payload.stock !== undefined ? { stock: payload.stock } : {}),
     ...(payload.inclusions !== undefined ? { inclusions: payload.inclusions } : {}),
@@ -431,7 +383,7 @@ export async function saveEventProduct(
     },
     m.admin_content_error_save(),
   );
-  return apiToProduct((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Product;
 }
 
 export async function deleteEventProduct(
@@ -477,7 +429,7 @@ export async function uploadEditionArtwork(
     { method: "POST", headers: authHeaders(), body },
     m.admin_edition_artwork_error(),
   );
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 /** Empty an artwork slot so the site falls back to its static image. Clearing an empty slot is harmless. */
@@ -491,7 +443,7 @@ export async function clearEditionArtwork(
     { method: "DELETE", headers: authHeaders() },
     m.admin_edition_artwork_error(),
   );
-  return apiToEdition((await response.json()) as Record<string, unknown>);
+  return (await response.json()) as Edition;
 }
 
 export const DIETARY_TAGS: readonly DietaryTag[] = [
@@ -502,35 +454,11 @@ export const DIETARY_TAGS: readonly DietaryTag[] = [
   "contains_nuts",
 ];
 
-function dietaryTags(value: unknown): DietaryTag[] {
-  return Array.isArray(value)
-    ? value.filter((tag): tag is DietaryTag => DIETARY_TAGS.includes(tag as DietaryTag))
-    : [];
-}
-
-function nullableLabel(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 export type { PollQuestionKind };
 
-export interface PollOption {
-  id: string;
-  questionId: string;
-  /** The Dutch label (what the admin lists show); volunteers get their own language. */
-  label: string;
-  labelNl: string;
-  labelFr: string | null;
-  labelEn: string | null;
-  dietaryTags: DietaryTag[];
-  sortOrder: number;
-  /** Sum of every volunteer's quantity: what to order from the caterer. */
-  totalQuantity: number;
-  /** How many volunteers picked it. */
-  volunteerCount: number;
-}
+export type PollOption = PollOptionOut;
 
 /** The editable text of an option; a blank French or English label is cleared. */
 export interface PollOptionWrite {
@@ -540,32 +468,7 @@ export interface PollOptionWrite {
   dietaryTags: DietaryTag[];
 }
 
-export interface PollQuestion {
-  eventId?: string | null;
-  id: string;
-  editionId: string;
-  kind: PollQuestionKind;
-  /** The Dutch title; volunteers get their own language. */
-  title: string;
-  titleNl: string;
-  titleFr: string | null;
-  titleEn: string | null;
-  descriptionNl: string | null;
-  descriptionFr: string | null;
-  descriptionEn: string | null;
-  sortOrder: number;
-  /** ISO timestamp after which volunteers can no longer change their answer, or null while open. */
-  closesAt: string | null;
-  closed: boolean;
-  /** The options of a meals question, in display order. */
-  options: PollOption[];
-  /** Volunteers who answered. */
-  answeredCount: number;
-  yesCount: number;
-  noCount: number;
-  /** The number of people the yes answers stand for. */
-  peopleTotal: number;
-}
+export type PollQuestion = PollQuestionOut;
 
 /** The editable texts of a question; a blank French or English text is cleared. */
 export interface PollQuestionWrite {
@@ -578,47 +481,7 @@ export interface PollQuestionWrite {
   descriptionEn: string;
 }
 
-function apiToPollOption(data: Record<string, unknown>): PollOption {
-  return {
-    id: String(data.id ?? ""),
-    questionId: String(data.question_id ?? ""),
-    label: String(data.label ?? ""),
-    labelNl: String(data.label_nl ?? data.label ?? ""),
-    labelFr: nullableLabel(data.label_fr),
-    labelEn: nullableLabel(data.label_en),
-    dietaryTags: dietaryTags(data.dietary_tags),
-    sortOrder: Number(data.sort_order ?? 0),
-    totalQuantity: Number(data.total_quantity ?? 0),
-    volunteerCount: Number(data.volunteer_count ?? 0),
-  };
-}
-
-function apiToPollQuestion(data: Record<string, unknown>): PollQuestion {
-  const options = Array.isArray(data.options) ? (data.options as Record<string, unknown>[]) : [];
-  return {
-    id: String(data.id ?? ""),
-    editionId: String(data.edition_id ?? ""),
-    eventId: typeof data.event_id === "string" ? data.event_id : null,
-    kind: parsePollKind(data.kind),
-    title: String(data.title ?? ""),
-    titleNl: String(data.title_nl ?? data.title ?? ""),
-    titleFr: nullableLabel(data.title_fr),
-    titleEn: nullableLabel(data.title_en),
-    descriptionNl: nullableLabel(data.description_nl),
-    descriptionFr: nullableLabel(data.description_fr),
-    descriptionEn: nullableLabel(data.description_en),
-    sortOrder: Number(data.sort_order ?? 0),
-    closesAt: typeof data.closes_at === "string" ? data.closes_at : null,
-    closed: Boolean(data.closed),
-    options: options.map(apiToPollOption),
-    answeredCount: Number(data.answered_count ?? 0),
-    yesCount: Number(data.yes_count ?? 0),
-    noCount: Number(data.no_count ?? 0),
-    peopleTotal: Number(data.people_total ?? 0),
-  };
-}
-
-function pollOptionBody(write: PollOptionWrite) {
+function pollOptionBody(write: PollOptionWrite): PollOptionUpdate {
   return {
     label_nl: write.labelNl.trim(),
     label_fr: write.labelFr.trim() || null,
@@ -627,7 +490,7 @@ function pollOptionBody(write: PollOptionWrite) {
   };
 }
 
-function pollQuestionBody(write: PollQuestionWrite) {
+function pollQuestionBody(write: PollQuestionWrite): PollQuestionUpdate {
   return {
     ...(write.eventId === undefined ? {} : { event_id: write.eventId || null }),
     title_nl: write.titleNl.trim(),
@@ -656,8 +519,8 @@ export async function fetchPollQuestions(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToPollQuestion) : [];
+  const data: PollQuestion[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function createPollQuestion(
@@ -673,7 +536,7 @@ export async function createPollQuestion(
     ),
     m.admin_content_error_save(),
   );
-  return apiToPollQuestion((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 export async function updatePollQuestion(
@@ -686,7 +549,7 @@ export async function updatePollQuestion(
     jsonRequest("PUT", pollQuestionBody(write), authHeaders),
     m.admin_content_error_save(),
   );
-  return apiToPollQuestion((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 /** Set when a question closes (a past time closes it now); `null` reopens it. */
@@ -700,7 +563,7 @@ export async function setPollQuestionClosing(
     jsonRequest("PUT", { closes_at: closesAt }, authHeaders),
     m.admin_content_error_save(),
   );
-  return apiToPollQuestion((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 /** Delete a question; `confirmAnswers` is required when volunteers already answered it. */
@@ -727,8 +590,8 @@ export async function reorderPollQuestions(
     jsonRequest("POST", { edition_id: editionId, ordered_ids: orderedIds }, authHeaders),
     m.admin_content_error_save(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToPollQuestion) : [];
+  const data: PollQuestion[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 /** Copy the questions (with their options) of another edition; returns the questions created. */
@@ -746,8 +609,8 @@ export async function copyPollQuestions(
     ),
     m.admin_content_error_save(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToPollQuestion) : [];
+  const data: PollQuestion[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 export async function createPollOption(
@@ -763,7 +626,7 @@ export async function createPollOption(
     ),
     m.admin_content_error_save(),
   );
-  return apiToPollOption((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 export async function updatePollOption(
@@ -776,7 +639,7 @@ export async function updatePollOption(
     jsonRequest("PUT", pollOptionBody(write), authHeaders),
     m.admin_content_error_save(),
   );
-  return apiToPollOption((await response.json()) as Record<string, unknown>);
+  return response.json();
 }
 
 /** Delete an option; `confirmSelections` is required when volunteers already picked it. */
@@ -803,8 +666,8 @@ export async function reorderPollOptions(
     jsonRequest("POST", { question_id: questionId, ordered_ids: orderedIds }, authHeaders),
     m.admin_content_error_save(),
   );
-  const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToPollOption) : [];
+  const data: PollOption[] = await response.json();
+  return Array.isArray(data) ? data : [];
 }
 
 /** A volunteer's answer to a yes/no question; `attending` null means not answered. */
@@ -814,33 +677,7 @@ export interface PollAttendance {
   people: number;
 }
 
-export interface PollOrders {
-  questions: {
-    id: string;
-    kind: PollQuestionKind;
-    title: string;
-    closed: boolean;
-    options: { id: string; label: string; dietaryTags: DietaryTag[] }[];
-    answeredCount: number;
-    yesCount: number;
-    noCount: number;
-    peopleTotal: number;
-  }[];
-  volunteers: {
-    volunteerId: string;
-    name: string;
-    note: string | null;
-    answeredQuestionIds: string[];
-    /** Quantity per option id. */
-    quantities: Record<string, number>;
-    /** Yes/no answer per question id. */
-    attendance: Record<string, PollAttendance>;
-    choices: Record<string, string>;
-    texts: Record<string, string>;
-    ratings: Record<string, number>;
-  }[];
-  volunteerCount: number;
-}
+export type PollOrders = import("@/api-types").PollOrdersOut;
 
 /**
  * Enter or correct one volunteer's answers (for example from an email): `quantities` replaces all their meal
@@ -906,56 +743,7 @@ export async function fetchPollOrders(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const data = (await response.json()) as Record<string, unknown>;
-  const records = (value: unknown) =>
-    Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
-  return {
-    questions: records(data.questions).map((q) => ({
-      id: String(q.id ?? ""),
-      kind: parsePollKind(q.kind),
-      title: String(q.title ?? ""),
-      closed: Boolean(q.closed),
-      options: records(q.options).map((o) => ({
-        id: String(o.id ?? ""),
-        label: String(o.label ?? ""),
-        dietaryTags: dietaryTags(o.dietary_tags),
-      })),
-      answeredCount: Number(q.answered_count ?? 0),
-      yesCount: Number(q.yes_count ?? 0),
-      noCount: Number(q.no_count ?? 0),
-      peopleTotal: Number(q.people_total ?? 0),
-    })),
-    volunteers: records(data.volunteers).map((v) => ({
-      volunteerId: String(v.volunteer_id ?? ""),
-      name: String(v.name ?? ""),
-      note: nullableLabel(v.note),
-      answeredQuestionIds: Array.isArray(v.answered_question_ids)
-        ? v.answered_question_ids.map(String)
-        : [],
-      choices: Object.fromEntries(
-        records(v.choices).map((item) => [String(item.question_id), String(item.option_id)]),
-      ),
-      texts: Object.fromEntries(
-        records(v.texts).map((item) => [String(item.question_id), String(item.text)]),
-      ),
-      ratings: Object.fromEntries(
-        records(v.ratings).map((item) => [String(item.question_id), Number(item.rating)]),
-      ),
-      quantities: Object.fromEntries(
-        records(v.selections).map((selection) => [
-          String(selection.option_id ?? ""),
-          Number(selection.quantity ?? 0),
-        ]),
-      ),
-      attendance: Object.fromEntries(
-        records(v.attendance).map((item) => [
-          String(item.question_id ?? ""),
-          { attending: Boolean(item.attending), people: Number(item.people ?? 0) },
-        ]),
-      ),
-    })),
-    volunteerCount: Number(data.volunteer_count ?? 0),
-  };
+  return response.json();
 }
 
 export async function fetchVolunteerPollEvents(
@@ -966,6 +754,6 @@ export async function fetchVolunteerPollEvents(
     { headers: authHeaders() },
     m.admin_content_error_load(),
   );
-  const events = (await response.json()) as Record<string, unknown>[];
-  return events.map(apiToEvent).filter((event) => event.volunteersOnly);
+  const events = (await response.json()) as Event[];
+  return events.filter((event) => event.volunteers_only);
 }

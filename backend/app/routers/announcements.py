@@ -50,7 +50,7 @@ async def active(locale: FaqLocale = Query(default="nl"), db: AsyncSession = Dep
 
 
 @router.get("", response_model=list[AnnouncementOut], dependencies=[Depends(require_admin)])
-async def list_all(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_all(db: AsyncSession = Depends(get_db)) -> list[AnnouncementOut]:
     return await service.list_all(db)
 
 

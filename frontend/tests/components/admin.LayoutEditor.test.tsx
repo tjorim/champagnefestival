@@ -2,6 +2,7 @@ import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { registrationRow } from "../utils/registrationFixtures";
 import { createTestQueryClient } from "../utils/queryClient";
 import type { ReactElement } from "react";
 
@@ -12,7 +13,7 @@ import { fetchAllRegistrationPages } from "@/utils/adminFetch";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LayoutEditor, { getDayLabel } from "@/components/admin/LayoutEditor";
-import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/types/admin";
+import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -42,31 +43,35 @@ vi.mock("@/utils/adminFetch", () => ({
 
 function makeRoom(overrides: Partial<Room> = {}): Room {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id: "room-1",
-    venueId: "venue-1",
+    venue_id: "venue-1",
     name: "Main Hall",
-    widthM: 10,
-    lengthM: 8,
+    width_m: 10,
+    length_m: 8,
     color: "#ff0000",
     active: true,
-    dimensionsPlaceholder: false,
+    dimensions_placeholder: false,
     ...overrides,
   };
 }
 
 function makeRoom2(): Room {
-  return makeRoom({ id: "room-2", name: "Garden Room", widthM: 8, lengthM: 6, color: "#00ff00" });
+  return makeRoom({ id: "room-2", name: "Garden Room", width_m: 8, length_m: 6, color: "#00ff00" });
 }
 
 function makeTableType(overrides: Partial<TableType> = {}): TableType {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id: "tt-1",
     name: "Round 8",
-    venueId: "venue-1",
+    venue_id: "venue-1",
     shape: "round",
-    widthM: 1.5,
-    lengthM: 1.5,
-    heightType: "low",
+    width_m: 1.5,
+    length_m: 1.5,
+    height_type: "low",
     capacity: 8,
     active: true,
     ...overrides,
@@ -75,14 +80,15 @@ function makeTableType(overrides: Partial<TableType> = {}): TableType {
 
 function makeLayout(overrides: Partial<Layout> = {}): Layout {
   return {
+    updated_at: "2026-01-01T00:00:00Z",
     id: "layout-1",
-    eventId: "event-1",
-    eventTitle: "Saturday",
-    editionId: "edition-1",
-    roomId: "room-1",
+    event_id: "event-1",
+    event_title: "Saturday",
+    edition_id: "edition-1",
+    room_id: "room-1",
     date: "2026-08-01",
     label: "",
-    createdAt: "2026-01-01T00:00:00Z",
+    created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -90,57 +96,69 @@ function makeLayout(overrides: Partial<Layout> = {}): Layout {
 function makeLayout2(): Layout {
   return makeLayout({
     id: "layout-2",
-    roomId: "room-2",
+    room_id: "room-2",
     date: "2026-08-02",
   });
 }
 
 function makeTable(overrides: Partial<FloorTable> = {}): FloorTable {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: "event-1",
     id: "table-1",
     name: "Table A",
     capacity: 8,
     x: 10,
     y: 10,
-    tableTypeId: "tt-1",
+    table_type_id: "tt-1",
     rotation: 0,
-    layoutId: "layout-1",
-    registrationIds: [],
+    layout_id: "layout-1",
+    registration_ids: [],
     ...overrides,
   };
 }
 
 function makeArea(overrides: Partial<FloorArea> = {}): FloorArea {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id: "area-1",
-    layoutId: "layout-1",
+    layout_id: "layout-1",
     icon: "bi-shop",
-    organizationId: null,
+    organization_id: null,
     label: "Stand 1",
     x: 60,
     y: 60,
     rotation: 0,
-    widthM: 1.5,
-    lengthM: 1.0,
+    width_m: 1.5,
+    length_m: 1.0,
     ...overrides,
   };
 }
 
 function makeRegistration(overrides: Partial<Registration> = {}): Registration {
   return {
+    ...registrationRow(),
     id: "reg-1",
-    personId: "person-1",
-    person: { id: "person-1", name: "Jane Doe", email: "jane@example.com", phone: "+32000" },
-    eventId: "event-1",
-    guestCount: 2,
-    orderItems: [],
+    person_id: "person-1",
+    person: {
+      id: "person-1",
+      name: "Jane Doe",
+      email: "jane@example.com",
+      phone: "+32000",
+      preferred_language: null,
+    },
+    event_id: "event-1",
+    guest_count: 2,
+    order_items: [],
     notes: "",
     status: "confirmed",
-    paymentStatus: "paid",
-    checkedIn: false,
-    strapIssued: false,
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
+    payment_status: "paid",
+    checked_in: false,
+    strap_issued: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -177,19 +195,19 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
     authHeaders: vi.fn().mockReturnValue({}),
     onSaveRevision: vi.fn().mockResolvedValue({
       id: "layrev-1",
-      layoutId: "layout-1",
-      revisionNumber: 1,
+      layout_id: "layout-1",
+      revision_number: 1,
       label: "Revision",
-      changeNote: null,
-      createdBy: "admin",
-      createdAt: "2026-01-01T00:00:00Z",
+      change_note: null,
+      created_by: "admin",
+      created_at: "2026-01-01T00:00:00Z",
       snapshot: {
         tables: [],
         areas: [],
         room: {
           close: () => "Close",
-          widthM: 10,
-          lengthM: 8,
+          width_m: 10,
+          length_m: 8,
         },
       },
     }),
@@ -249,13 +267,13 @@ describe("getDayLabel", () => {
   const dayOptions = [{ eventId: "event-1", date: "2026-08-01", label: "Saturday — 08:00" }];
 
   it("prefers the active edition's day-option label when the event is found", async () => {
-    expect(getDayLabel(makeLayout({ eventId: "event-1" }), dayOptions)).toBe("Saturday — 08:00");
+    expect(getDayLabel(makeLayout({ event_id: "event-1" }), dayOptions)).toBe("Saturday — 08:00");
   });
 
   it("falls back to the layout's own event title and date when the event belongs to a different edition", async () => {
     const lastYear = makeLayout({
-      eventId: "event-old",
-      eventTitle: "Breakfast tasting",
+      event_id: "event-old",
+      event_title: "Breakfast tasting",
       date: "2025-08-01",
     });
     expect(getDayLabel(lastYear, dayOptions)).toBe(
@@ -265,8 +283,8 @@ describe("getDayLabel", () => {
 
   it("falls back to the layout's own label when neither the day option nor an event title is available", async () => {
     const noTitle = makeLayout({
-      eventId: "event-old",
-      eventTitle: "",
+      event_id: "event-old",
+      event_title: "",
       date: null,
       label: "pre-event",
     });
@@ -279,7 +297,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     fixture.registrations = [
       makeRegistration({
-        allocations: [{ tableId: fixture.tables[0]!.id, guestCount: 2, exclusive: false }],
+        allocations: [{ table_id: fixture.tables[0]!.id, guest_count: 2, exclusive: false }],
       }),
     ];
     vi.mocked(fetchAllRegistrationPages).mockResolvedValueOnce(fixture.registrations);
@@ -337,16 +355,16 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_assign_booking" }));
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-        { tableId: "table-1", guestCount: 2, exclusive: false },
+        { table_id: "table-1", guest_count: 2, exclusive: false },
       ]),
     );
   });
 
   it("moves or removes an existing allocation from the selected table", async () => {
     const fixture = realisticFixture();
-    fixture.tables[0] = makeTable({ registrationIds: ["reg-1"] });
+    fixture.tables[0] = makeTable({ registration_ids: ["reg-1"] });
     fixture.registrations[0] = makeRegistration({
-      allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+      allocations: [{ table_id: "table-1", guest_count: 2, exclusive: false }],
     });
     const { callbacks } = renderLayoutEditor(fixture);
     fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
@@ -356,7 +374,7 @@ describe("LayoutEditor", () => {
     );
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-        { tableId: "table-2", guestCount: 2, exclusive: false },
+        { table_id: "table-2", guest_count: 2, exclusive: false },
       ]),
     );
 
@@ -369,8 +387,8 @@ describe("LayoutEditor", () => {
     fixture.rooms = [makeRoom(), makeRoom2()];
     fixture.layouts = [makeLayout(), makeLayout2()];
     fixture.tables = [
-      makeTable({ id: "table-1", name: "Table A", layoutId: "layout-1" }),
-      makeTable({ id: "table-3", name: "Garden Table", layoutId: "layout-2" }),
+      makeTable({ id: "table-1", name: "Table A", layout_id: "layout-1" }),
+      makeTable({ id: "table-3", name: "Garden Table", layout_id: "layout-2" }),
     ];
     fixture.areas = [];
 
@@ -414,7 +432,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     fixture.tableTypes = [
       makeTableType({ id: "tt-1", name: "Round 8" }),
-      makeTableType({ id: "tt-2", name: "Other Venue Type", venueId: "venue-2" }),
+      makeTableType({ id: "tt-2", name: "Other Venue Type", venue_id: "venue-2" }),
     ];
     renderLayoutEditor(fixture);
 
@@ -431,7 +449,7 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     fixture.tableTypes = [
       makeTableType({ id: "tt-1", name: "Round 8" }),
-      makeTableType({ id: "tt-2", name: "Other Venue Type", venueId: "venue-2" }),
+      makeTableType({ id: "tt-2", name: "Other Venue Type", venue_id: "venue-2" }),
     ];
     renderLayoutEditor(fixture);
 
@@ -500,7 +518,7 @@ describe("LayoutEditor", () => {
 
   it("blocks deleting a table that still holds bookings", () => {
     const fixture = realisticFixture();
-    fixture.tables = [makeTable({ registrationIds: ["reg-1"] }), fixture.tables[1]!];
+    fixture.tables = [makeTable({ registration_ids: ["reg-1"] }), fixture.tables[1]!];
     const { callbacks } = renderLayoutEditor(fixture);
 
     fireEvent.click(screen.getByRole("button", { name: /^Table A \d+\/8$/ }));
@@ -655,38 +673,38 @@ describe("LayoutEditor", () => {
     it("lists saved revisions and compares one against the current draft", async () => {
       const revisionA = {
         id: "layrev-1",
-        layoutId: "layout-1",
-        revisionNumber: 1,
+        layout_id: "layout-1",
+        revision_number: 1,
         label: "Opening",
-        changeNote: null,
-        createdBy: "admin-a",
-        createdAt: "2026-01-01T00:00:00Z",
-        snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+        change_note: null,
+        created_by: "admin-a",
+        created_at: "2026-01-01T00:00:00Z",
+        snapshot: { tables: [], areas: [], room: { width_m: 10, length_m: 8 } },
       };
       fetchLayoutRevisions.mockResolvedValue([revisionA]);
       compareLayoutRevisions.mockResolvedValue({
-        layoutId: "layout-1",
-        fromRef: "1",
-        toRef: "current",
-        addedTables: [
+        layout_id: "layout-1",
+        from_ref: "1",
+        to_ref: "current",
+        added_tables: [
           {
             id: "table-2",
             name: "Table B",
             x: 40,
             y: 40,
             rotation: 0,
-            tableTypeId: "tt-1",
-            tableTypeName: "Round 8",
+            table_type_id: "tt-1",
+            table_type_name: "Round 8",
             capacity: 6,
-            widthM: 1.5,
-            lengthM: 1.5,
+            width_m: 1.5,
+            length_m: 1.5,
           },
         ],
-        removedTables: [],
-        changedTables: [],
-        addedAreas: [],
-        removedAreas: [],
-        changedAreas: [],
+        removed_tables: [],
+        changed_tables: [],
+        added_areas: [],
+        removed_areas: [],
+        changed_areas: [],
       });
 
       const fixture = realisticFixture();
@@ -720,48 +738,48 @@ describe("LayoutEditor", () => {
     it("blocks restoring a revision with live allocation conflicts until the override is checked", async () => {
       const revisionA = {
         id: "layrev-1",
-        layoutId: "layout-1",
-        revisionNumber: 1,
+        layout_id: "layout-1",
+        revision_number: 1,
         label: "Empty",
-        changeNote: null,
-        createdBy: "admin-a",
-        createdAt: "2026-01-01T00:00:00Z",
-        snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+        change_note: null,
+        created_by: "admin-a",
+        created_at: "2026-01-01T00:00:00Z",
+        snapshot: { tables: [], areas: [], room: { width_m: 10, length_m: 8 } },
       };
       fetchLayoutRevisions.mockResolvedValue([revisionA]);
       previewLayoutRestore.mockResolvedValue({
-        layoutId: "layout-1",
-        revisionNumber: 1,
-        tablesToAdd: [],
-        tablesToUpdate: [],
-        tablesToRemove: [
+        layout_id: "layout-1",
+        revision_number: 1,
+        tables_to_add: [],
+        tables_to_update: [],
+        tables_to_remove: [
           {
             id: "table-1",
             name: "Table A",
             x: 10,
             y: 10,
             rotation: 0,
-            tableTypeId: "tt-1",
-            tableTypeName: "Round 8",
+            table_type_id: "tt-1",
+            table_type_name: "Round 8",
             capacity: 8,
-            widthM: 1.5,
-            lengthM: 1.5,
+            width_m: 1.5,
+            length_m: 1.5,
           },
         ],
-        areasToAdd: [],
-        areasToUpdate: [],
-        areasToRemove: [],
-        allocationConflicts: [
+        areas_to_add: [],
+        areas_to_update: [],
+        areas_to_remove: [],
+        allocation_conflicts: [
           {
             kind: "table",
             id: "table-1",
             name: "Table A",
             reason: "deleted",
-            registrationIds: ["reg-1"],
-            organizationId: null,
+            registration_ids: ["reg-1"],
+            organization_id: null,
           },
         ],
-        hasConflicts: true,
+        has_conflicts: true,
       });
 
       const fixture = realisticFixture();

@@ -5,7 +5,12 @@
  * header, which the EventSource API does not support.
  */
 
-/** Invalidation envelope received from GET /api/live/stream. */
+/**
+ * Transport envelope received inside GET /api/live/stream's `invalidate` SSE event.
+ * This stream is declared as text/event-stream in OpenAPI, without a JSON payload
+ * schema. Keep this transport-only declaration until the backend exports one;
+ * ordinary JSON endpoint records come from @/api-types.
+ */
 export interface LiveEnvelope {
   topic: string;
   action: string;

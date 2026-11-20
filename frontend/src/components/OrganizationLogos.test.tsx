@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
@@ -26,7 +27,17 @@ it("posts multipart bytes with authentication and reports a successful upload", 
       expect(request.headers.get("authorization")).toBe("Bearer manager");
       expect(request.headers.get("content-type")).toContain("multipart/form-data");
       received = true;
-      return HttpResponse.json({ id: "proposal" });
+      return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+        organization_id: 0,
+        organization_name: "",
+        status: "pending",
+        proposed: {},
+        current: {},
+        superseded_fields: [],
+        reason: null,
+        created_at: "2026-01-01T00:00:00Z",
+        id: "proposal",
+      });
     }),
   );
   const saved = vi.fn();
@@ -44,7 +55,7 @@ it("posts multipart bytes with authentication and reports a successful upload", 
   fireEvent.click(screen.getByRole("button", { name: "Upload logo" }));
   expect(await screen.findByRole("status")).toHaveTextContent("Logo uploaded.");
   expect(received).toBe(true);
-  expect(saved).toHaveBeenCalledWith({ id: "proposal" });
+  expect(saved).toHaveBeenCalledWith(expect.objectContaining({ id: "proposal" }));
 });
 
 it("shows errors without retrying or claiming success", async () => {
@@ -52,7 +63,10 @@ it("shows errors without retrying or claiming success", async () => {
   server.use(
     http.post("/api/organizations/42/logo", () => {
       count++;
-      return HttpResponse.json({}, { status: 413 });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 413 },
+      );
     }),
   );
   const saved = vi.fn();
@@ -99,8 +113,9 @@ it("renders current and proposed logos together in the review", async () => {
   vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
   server.use(
     http.get("/api/organizations/changes", () =>
-      HttpResponse.json([
+      jsonResponse<import("@/api-types").OrganizationChangeOut[]>([
         {
+          created_at: "2026-01-01T00:00:00Z",
           id: "proposal",
           organization_id: 42,
           organization_name: "House",

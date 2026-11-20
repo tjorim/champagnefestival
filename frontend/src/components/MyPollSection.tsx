@@ -25,9 +25,9 @@ function Closing({ question }: { question: MyPollQuestion }) {
       </p>
     );
   }
-  return question.closesAt ? (
+  return question.closes_at ? (
     <p className="text-sm mb-2">
-      {m.my_poll_closes_at({ time: new Date(question.closesAt).toLocaleString(getLocale()) })}
+      {m.my_poll_closes_at({ time: new Date(question.closes_at).toLocaleString(getLocale()) })}
     </p>
   ) : null;
 }
@@ -71,10 +71,10 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
       </div>
     );
   }
-  if (!poll.editionId || poll.questions.length === 0) {
+  if (!poll.edition_id || poll.questions.length === 0) {
     return (
       <Alert variant="secondary" role="status">
-        {poll.editionId ? m.my_poll_empty() : m.my_poll_no_edition()}
+        {poll.edition_id ? m.my_poll_empty() : m.my_poll_no_edition()}
       </Alert>
     );
   }
@@ -143,7 +143,7 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
               {question.title}
             </h4>
             {question.description && <p className="text-sm mb-2">{question.description}</p>}
-            {question.eventId && (
+            {question.event_id && (
               <p className="text-sm text-subtle mb-2">{m.volunteer_poll_event_notice()}</p>
             )}
             <Closing question={question} />

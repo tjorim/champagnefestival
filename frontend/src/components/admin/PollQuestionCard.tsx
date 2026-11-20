@@ -9,7 +9,8 @@ import {
   AdminSelect,
   AdminOption,
 } from "@/components/admin/AdminFields";
-import type { Event } from "@/types/event";
+import type { Event } from "@/api-types";
+
 import { eventTitle } from "@/utils/eventText";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
@@ -37,13 +38,13 @@ const TEXT_FIELDS = [
 
 function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
   return {
-    eventId: question.eventId ?? null,
-    titleNl: question.titleNl,
-    titleFr: question.titleFr ?? "",
-    titleEn: question.titleEn ?? "",
-    descriptionNl: question.descriptionNl ?? "",
-    descriptionFr: question.descriptionFr ?? "",
-    descriptionEn: question.descriptionEn ?? "",
+    eventId: question.event_id ?? null,
+    titleNl: question.title_nl,
+    titleFr: question.title_fr ?? "",
+    titleEn: question.title_en ?? "",
+    descriptionNl: question.description_nl ?? "",
+    descriptionFr: question.description_fr ?? "",
+    descriptionEn: question.description_en ?? "",
   };
 }
 
@@ -195,15 +196,15 @@ export default function PollQuestionCard({
   }
 
   const closesAtInput =
-    closingDraft && closingDraft.saved === question.closesAt
+    closingDraft && closingDraft.saved === question.closes_at
       ? closingDraft.value
-      : localDate(question.closesAt);
+      : localDate(question.closes_at);
   const summary = pollCountsSummary(question.kind, question);
   const status = question.closed
     ? m.admin_poll_status_closed()
-    : question.closesAt
+    : question.closes_at
       ? m.admin_poll_status_open_until({
-          time: new Date(question.closesAt).toLocaleString(getLocale()),
+          time: new Date(question.closes_at).toLocaleString(getLocale()),
         })
       : m.admin_poll_status_open();
 
@@ -251,7 +252,7 @@ export default function PollQuestionCard({
                   id={`poll-event-${question.id}`}
                   events={events}
                   value={editing.eventId}
-                  disabled={question.answeredCount > 0}
+                  disabled={question.answered_count > 0}
                   onChange={(eventId) => setEditing({ ...editing, eventId })}
                 />
               )}
@@ -262,20 +263,20 @@ export default function PollQuestionCard({
                 {question.title} <Badge variant="info">{pollKindLabel(question.kind)}</Badge>{" "}
                 <Badge variant={question.closed ? "danger" : "success"}>{status}</Badge>
               </h3>
-              {(question.titleFr || question.titleEn) && (
+              {(question.title_fr || question.title_en) && (
                 <div className="text-sm text-subtle">
-                  {[question.titleFr, question.titleEn].filter(Boolean).join(" · ")}
+                  {[question.title_fr, question.title_en].filter(Boolean).join(" · ")}
                 </div>
               )}
-              {question.eventId && (
+              {question.event_id && (
                 <p className="text-sm text-subtle">
                   {m.admin_poll_event_label()}:{" "}
-                  {events.find((event) => event.id === question.eventId)?.titleNl ??
-                    question.eventId}
+                  {events.find((event) => event.id === question.event_id)?.title_nl ??
+                    question.event_id}
                 </p>
               )}
-              {question.descriptionNl && (
-                <p className="text-sm text-subtle mb-0">{question.descriptionNl}</p>
+              {question.description_nl && (
+                <p className="text-sm text-subtle mb-0">{question.description_nl}</p>
               )}
             </>
           )}
@@ -323,7 +324,7 @@ export default function PollQuestionCard({
             className={ADMIN_CONTROL_CLASS}
             value={closesAtInput}
             onChange={(event) =>
-              setClosingDraft({ saved: question.closesAt, value: event.target.value })
+              setClosingDraft({ saved: question.closes_at, value: event.target.value })
             }
           />
         </AdminField>
@@ -335,7 +336,7 @@ export default function PollQuestionCard({
         >
           {m.admin_poll_closing_save()}
         </Button>
-        {question.closed || question.closesAt ? (
+        {question.closed || question.closes_at ? (
           <Button
             size="sm"
             variant="outline"

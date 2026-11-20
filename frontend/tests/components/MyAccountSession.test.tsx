@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
 import userEvent from "@testing-library/user-event";
@@ -18,10 +19,28 @@ import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const organizations = [
-  { id: 1, name: "Managed business", type: "producer", active: true, website: "" },
-];
-const bookings = [
   {
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+    image: "",
+    id: 1,
+    name: "Managed business",
+    type: "producer",
+    active: true,
+    website: "",
+  },
+];
+const bookings: import("@/api-types").RegistrationGuestOut[] = [
+  {
+    order_answers: [],
+    name: "",
+    event_id: "",
+    event_date: null,
+    amount_due: null,
+    amount_paid: "0",
+    refund_due: "0",
+    checked_in_at: null,
     id: "reg-1",
     event_title: "Festival booking",
     check_in_token: "check-in",
@@ -52,8 +71,15 @@ beforeEach(() => {
     renewSession: vi.fn().mockResolvedValue(false),
   });
   server.use(
-    http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated: false })),
-    http.get("/api/me/organizations", () => HttpResponse.json([])),
+    http.get("/api/visitor-sessions/status", () =>
+      jsonResponse<import("@/api-types").VisitorSessionStatus>({
+        expires_at: null,
+        authenticated: false,
+      }),
+    ),
+    http.get("/api/me/organizations", () =>
+      jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([]),
+    ),
   );
 });
 
@@ -81,10 +107,21 @@ async function renderPage(initialEntry = "/me") {
 
 function signedIn(registrations = bookings, managed = organizations) {
   server.use(
-    http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated: true })),
-    http.get("/api/me/registrations", () => HttpResponse.json(registrations)),
-    http.get("/api/me/organizations", () => HttpResponse.json(managed)),
-    http.get("/api/me/organizations/1/changes", () => HttpResponse.json([])),
+    http.get("/api/visitor-sessions/status", () =>
+      jsonResponse<import("@/api-types").VisitorSessionStatus>({
+        expires_at: null,
+        authenticated: true,
+      }),
+    ),
+    http.get("/api/me/registrations", () =>
+      jsonResponse<import("@/api-types").RegistrationGuestOut[]>(registrations),
+    ),
+    http.get("/api/me/organizations", () =>
+      jsonResponse<import("@/api-types").ManagedOrganizationOut[]>(managed),
+    ),
+    http.get("/api/me/organizations/1/changes", () =>
+      jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+    ),
   );
 }
 
@@ -105,7 +142,7 @@ describe("one emailed account login", () => {
     server.use(
       http.post("/api/visitor-sessions/request", () => {
         requests += 1;
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").RegistrationLookupRequestAccepted>(
           { ok: true, delivery_mode: "email", expires_in_minutes: 30 },
           { status: 202 },
         );
@@ -130,12 +167,23 @@ describe("one emailed account login", () => {
     server.use(
       http.post("/api/visitor-sessions/redeem", () => {
         redemptions += 1;
-        return HttpResponse.json(bookings);
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>(bookings);
       }),
-      http.get("/api/me/organizations", () => HttpResponse.json(organizations)),
-      http.get("/api/me/organizations/1/changes", () => HttpResponse.json([])),
-      http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated })),
-      http.get("/api/me/registrations", () => HttpResponse.json(bookings)),
+      http.get("/api/me/organizations", () =>
+        jsonResponse<import("@/api-types").ManagedOrganizationOut[]>(organizations),
+      ),
+      http.get("/api/me/organizations/1/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
+      http.get("/api/visitor-sessions/status", () =>
+        jsonResponse<import("@/api-types").VisitorSessionStatus>({
+          expires_at: null,
+          authenticated,
+        }),
+      ),
+      http.get("/api/me/registrations", () =>
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>(bookings),
+      ),
       http.post("/api/visitor-sessions/sign-out", () => {
         authenticated = false;
         return new HttpResponse(null, { status: 204 });
@@ -199,11 +247,16 @@ describe("one emailed account login", () => {
       release = resolve;
     });
     server.use(
-      http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated })),
+      http.get("/api/visitor-sessions/status", () =>
+        jsonResponse<import("@/api-types").VisitorSessionStatus>({
+          expires_at: null,
+          authenticated,
+        }),
+      ),
       http.get("/api/me/organizations", async () => {
         await pending;
         delivered = true;
-        return HttpResponse.json(organizations);
+        return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>(organizations);
       }),
       http.post("/api/visitor-sessions/sign-out", () => {
         authenticated = false;

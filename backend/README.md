@@ -766,6 +766,104 @@ image storage/hosting and retry decisions. The player and editors remain separat
 work (#1262–#1264).
 
 
+## Response models (#1657)
+
+Every route says what it returns, so `/openapi.json` is the API contract the
+frontend generates its types from:
+
+- a JSON route declares `response_model=` (a Pydantic model, or a list of one;
+  never a bare `dict`, `list[dict]` or `Any`);
+- a route that answers 204 declares `status_code=204`;
+- a file, stream or image route spreads
+  `**binary_response("text/csv", "...")` from `app/openapi_responses.py` into its
+  decorator, so the document lists the media type instead of an empty JSON body.
+
+A model describes the body the route already sends; it never changes a wire shape.
+Where the real output has two sensible shapes (the volunteer table-orders lookup,
+an expired video export's playlist), declare a union rather than a model that
+hides one of them. `tests/test_response_models.py` fails when a route breaks
+these rules.
+
+A response model derives from `ResponseModel` (`app/schemas.py`), which sets
+`json_schema_serialization_defaults_required`: a response field with a default is
+always sent, so the document lists it as required and the generated TypeScript type
+has `field: T` rather than `field?: T`. Request bodies derive from `RequestModel`
+and keep their defaults optional. A schema used both as a request body and inside a
+response (`Layer`, `Background`, `TableAllocation` and `PollAttendanceItem`, listed in
+`tests/test_response_models.py`) keeps optional defaults, because the request side
+must.
+
+The document is committed as `frontend/openapi.json` (release version replaced by
+`snapshot`). After changing a route or schema run `uv run python -m app.openapi_export`
+from `backend/`; `tests/test_openapi_snapshot.py` fails while it is stale.
+
+### Service response construction
+
+Admin FAQ and integration-client services return the existing `FaqItemOut` and
+`IntegrationClientOut` models (#1657). REST returns those models directly;
+create/rotate credential routes construct `IntegrationClientCreatedOut` with the
+one-time key. MCP adapters use `model_dump()` in Python mode so their dictionaries
+retain datetime objects until the existing transport serializes them. Do not use
+JSON mode here: that would change the adapter's timestamp representation.
+
+The shared builders in `utils.py` and `to_volunteer_out` also return existing
+output models (#1657): events/products/editions (including localized public and
+admin variants), every registration projection, people/organizations, floor
+plans, application settings and public FAQ. Edition lineup organizations use
+`EditionItemOut`. Public HTML rendering explicitly dumps models in Python mode.
+MCP adapters dump at their boundary, including models inside list envelopes;
+`dump_response` retains Python date/datetime/Decimal values and omits unset
+schema defaults so the adapter payload keeps its existing fields.
+Fresh MCP write responses retain their historical `edition_id` projection;
+private replay metadata keeps cached registration responses JSON-valued, without
+that extra projection, exactly as before.
+Bulk floor-plan writes dump through their existing bulk output models before
+storing replay data; registration replays are validated back into `RegistrationOut`.
+
+The independent service families also construct existing output models: layout revisions,
+diffs and restore previews; payment transactions/ledger rows/totals; categories, policies,
+announcements and composed messages; waitlist pages/scopes; email preferences/consents;
+poll questions/options/orders and volunteer views; and stamp cards/rewards/progress.
+REST returns models directly. MCP dumps preserve native timestamps, decimal payment
+strings, sparse layout conflict fields and poll-order event links. Replay storage stays JSON.
+
+Internal lookup maps, persisted snapshots, audit data, worker protocols and delete
+acknowledgements retain their existing contracts. Edition scratchpads and inline route envelopes also construct their declared output models;
+stamp progress remains a model between services. The unused poll-option dictionary builder
+is removed. Audit MCP output uses `AuditEntryOut` while explicitly preserving its historical
+ISO timestamp formatting. Specialized projections are described below.
+
+Operational MCP discovery/seating/order/delivery summaries remain distinct transport
+projections, including the minimal role-filtered registration shape. They are not REST
+entity copies, and no full REST model is substituted where it would add private fields
+or defaults. SSE events, browser push messages, worker/storage contracts and internal maps
+remain separate from ordinary JSON route response models.
+
+### Specialized response construction (#1657)
+
+Organization proposals now construct `OrganizationChangeOut`; published stands and public
+floor plans construct `EditionStandsOut`/`EditionPlanOut` and their nested models. Product
+change previews construct `ProductChangePreviewOut`, booking and shortage models. Video
+export summaries construct `VideoExportOut`, including their effective expiry/cancellation
+state, and creation uses `VideoExportCreatedOut`. REST returns models; MCP adapters dump
+in Python mode to preserve date/datetime values until transport serialization.
+
+Order-question configuration returns `OrderQuestionOut`. ORM question/registration-answer
+`to_out` methods validate against `OrderQuestionOut`/`OrderAnswerOut`; `as_dict` remains a
+thin Python-mode compatibility wrapper for the separately migrated core event/registration
+builders and the immutable-used-definition comparison. It contains no parallel field list.
+
+Precise exclusions in this slice: proposal `proposed`/`current` are schema-declared sparse
+field maps, not entities; stand organization/day maps are internal grouping indexes. Product
+fingerprints, inventory snapshots, booking storage and audit details retain their internal
+contracts. Video manifests, worker protocol/status/artifact metadata and persisted snapshots
+remain worker/storage contracts. Delete acknowledgements remain dictionaries. MCP
+`registration_base_dict` remains an intentional minimal role-filtered projection: no existing
+output schema matches its exact field set and role-dependent person shape; `RegistrationOut`
+would add private/full-booking fields and defaults. No new public schema is introduced solely
+to type that MCP projection. Core `utils.py` builders and independent service families are
+outside this slice.
+
 ## Request schema conventions
 
 Create and update models declare their own defaults, required fields, and

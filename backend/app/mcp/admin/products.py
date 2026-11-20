@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import products_service
-from app.utils import product_to_dict
+from app.utils import product_to_out
 
 
 async def create_product(
@@ -64,7 +64,7 @@ async def create_product(
             product = await products_service.create_product(db, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return product_to_dict(product)
+        return product_to_out(product).model_dump(exclude_unset=True)
 
 
 async def get_product(session_factory: Any, product_id: str) -> dict:
@@ -73,13 +73,13 @@ async def get_product(session_factory: Any, product_id: str) -> dict:
             product = await products_service.get_product_or_404(db, product_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return product_to_dict(product)
+        return product_to_out(product).model_dump(exclude_unset=True)
 
 
 async def list_products(session_factory: Any, event_id: str | None = None) -> list[dict]:
     async with session_factory() as db:
         products = await products_service.list_products(db, event_id)
-        return [product_to_dict(p) for p in products]
+        return [product_to_out(p).model_dump(exclude_unset=True) for p in products]
 
 
 async def update_product(
@@ -169,7 +169,7 @@ async def update_product(
             product = await products_service.update_product(db, product_id, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return product_to_dict(product)
+        return product_to_out(product).model_dump(exclude_unset=True)
 
 
 async def delete_product(session_factory: Any, actor: str, product_id: str) -> dict:

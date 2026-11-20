@@ -1,10 +1,14 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, venueOut } from "@/mocks/data/builders";
+import { editionOut } from "@/mocks/data/builders";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import EditionPollModal from "@/components/admin/EditionPollModal";
-import type { Edition } from "@/components/admin/editionTypes";
+import type { Edition } from "@/api-types";
+
 import { server } from "@/mocks/server";
 import { exportToCsv } from "@/utils/csvExport";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -21,18 +25,18 @@ vi.mock("@/utils/csvExport", () => ({ exportToCsv: vi.fn() }));
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const edition: Edition = {
+const edition: Edition = editionOut({
   id: "2026-october",
   year: 2026,
   month: "october",
-  editionType: "festival",
+  edition_type: "festival",
   dates: [],
-  venue: { id: "venue-1", name: "MEC Staf Versluys", city: "Bredene", active: true },
+  venue: venueOut({ name: "MEC Staf Versluys" }),
   events: [],
   active: true,
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-};
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+});
 
 /** A stored option as the admin API returns it. */
 function option(
@@ -40,9 +44,11 @@ function option(
   label: string,
   totalQuantity = 0,
   volunteerCount = 0,
-  extra: Record<string, unknown> = {},
-) {
+  extra: Partial<import("@/api-types").PollOptionOut> = {},
+): import("@/api-types").PollOptionOut {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     id,
     question_id: "q-meals",
     edition_id: "2026-october",
@@ -63,9 +69,12 @@ function question(
   id: string,
   kind: "yes_no" | "meals" | "single_choice" | "free_text" | "rating",
   title: string,
-  extra: Record<string, unknown> = {},
-) {
+  extra: Partial<import("@/api-types").PollQuestionOut> = {},
+): import("@/api-types").PollQuestionOut {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    event_id: null,
     id,
     edition_id: "2026-october",
     kind,
@@ -90,23 +99,25 @@ function question(
 }
 
 const dinner = () => question("q-dinner", "yes_no", "Eten op zondag?");
-const meals = (options: Record<string, unknown>[] = []) =>
+const meals = (options: import("@/api-types").PollOptionOut[] = []) =>
   question("q-meals", "meals", "Maaltijden", { options });
 
 interface Backdrop {
-  events?: Record<string, unknown>[];
-  orders?: Record<string, unknown>;
-  editions?: Record<string, unknown>[];
+  events?: import("@/api-types").EventOut[];
+  orders?: import("@/api-types").PollOrdersOut;
+  editions?: import("@/api-types").EditionOut[];
 }
 
-function renderModal(questions: Record<string, unknown>[], backdrop: Backdrop = {}) {
+function renderModal(questions: import("@/api-types").PollQuestionOut[], backdrop: Backdrop = {}) {
   server.use(
     http.get("/api/poll-questions", ({ request }) => {
       const editionId = new URL(request.url).searchParams.get("edition_id");
-      return HttpResponse.json(questions.filter((q) => q.edition_id === editionId));
+      return jsonResponse<import("@/api-types").PollQuestionOut[]>(
+        questions.filter((q) => q.edition_id === editionId),
+      );
     }),
     http.get("/api/poll-questions/orders", () =>
-      HttpResponse.json(
+      jsonResponse<import("@/api-types").PollOrdersOut>(
         backdrop.orders ?? {
           edition_id: "2026-october",
           questions: [],
@@ -115,8 +126,12 @@ function renderModal(questions: Record<string, unknown>[], backdrop: Backdrop = 
         },
       ),
     ),
-    http.get("/api/events", () => HttpResponse.json(backdrop.events ?? [])),
-    http.get("/api/editions", () => HttpResponse.json(backdrop.editions ?? [])),
+    http.get("/api/events", () =>
+      jsonResponse<import("@/api-types").EventOut[]>(backdrop.events ?? []),
+    ),
+    http.get("/api/editions", () =>
+      jsonResponse<import("@/api-types").EditionOut[]>(backdrop.editions ?? []),
+    ),
   );
   const queryClient = createTestQueryClient();
   return render(
@@ -160,7 +175,7 @@ describe("EditionPollModal questions", () => {
       http.post("/api/poll-questions", async ({ request }) => {
         const body = (await request.json()) as Record<string, unknown>;
         created.push(body);
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
           question(
             `q-new-${created.length}`,
             body.kind as "yes_no" | "meals",
@@ -203,7 +218,33 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions", () => {
         post();
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
+          {
+            event_id: null,
+            id: "",
+            edition_id: "",
+            kind: "yes_no",
+            title: "",
+            title_nl: "",
+            title_fr: null,
+            title_en: null,
+            description: "",
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            sort_order: 0,
+            closes_at: null,
+            closed: false,
+            options: [],
+            answered_count: 0,
+            yes_count: 0,
+            no_count: 0,
+            people_total: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -222,7 +263,9 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.put("/api/poll-questions/q-dinner", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(question("q-dinner", "yes_no", String(body.title_nl)));
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
+          question("q-dinner", "yes_no", String(body.title_nl)),
+        );
       }),
     );
     const user = userEvent.setup();
@@ -245,7 +288,7 @@ describe("EditionPollModal questions", () => {
       http.put("/api/poll-questions/:id", async ({ request, params }) => {
         const body = (await request.json()) as { closes_at: string | null };
         sent.push({ url: String(params.id), body });
-        return HttpResponse.json(
+        return jsonResponse<import("@/api-types").PollQuestionOut>(
           question(String(params.id), "yes_no", "Eten op zondag?", {
             closes_at: body.closes_at,
             closed: body.closes_at !== null && new Date(body.closes_at) <= new Date(),
@@ -333,7 +376,13 @@ describe("EditionPollModal questions", () => {
   it("explains a refused deletion from the error code", async () => {
     server.use(
       http.delete("/api/poll-questions/q-dinner", () =>
-        HttpResponse.json({ detail: "closed", code: "poll_question_closed" }, { status: 409 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "closed",
+            code: "poll_question_closed",
+          },
+          { status: 409 },
+        ),
       ),
     );
     const user = userEvent.setup();
@@ -351,7 +400,7 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions/reorder", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([meals(), dinner()]);
+        return jsonResponse<import("@/api-types").PollQuestionOut[]>([meals(), dinner()]);
       }),
     );
     const user = userEvent.setup();
@@ -378,16 +427,19 @@ describe("EditionPollModal questions", () => {
     server.use(
       http.post("/api/poll-questions/copy", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([question("q-copied", "yes_no", "Gekopieerde vraag")], {
-          status: 201,
-        });
+        return jsonResponse<import("@/api-types").PollQuestionOut[]>(
+          [question("q-copied", "yes_no", "Gekopieerde vraag")],
+          {
+            status: 201,
+          },
+        );
       }),
     );
     const user = userEvent.setup();
     renderModal([], {
       editions: [
-        { id: "2026-october", year: 2026, month: "october", venue_id: "v", active: true },
-        { id: "2025-october", year: 2025, month: "october", venue_id: "v", active: false },
+        editionOut({ id: "2026-october", year: 2026, month: "october", active: true }),
+        editionOut({ id: "2025-october", year: 2025, month: "october", active: false }),
       ],
     });
 
@@ -425,7 +477,10 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options", async ({ request }) => {
         created = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(option("opt-new", String(created.label_nl)), { status: 201 });
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          option("opt-new", String(created.label_nl)),
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -459,7 +514,24 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options", () => {
         post();
-        return HttpResponse.json({}, { status: 201 });
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          {
+            id: "",
+            question_id: "",
+            edition_id: "",
+            label: "",
+            label_nl: "",
+            label_fr: null,
+            label_en: null,
+            dietary_tags: [],
+            sort_order: 0,
+            total_quantity: 0,
+            volunteer_count: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
       }),
     );
     const user = userEvent.setup();
@@ -482,7 +554,9 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.put("/api/poll-options/opt-1", async ({ request }) => {
         updated = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json(option("opt-1", String(updated.label_nl), 5, 3));
+        return jsonResponse<import("@/api-types").PollOptionOut>(
+          option("opt-1", String(updated.label_nl), 5, 3),
+        );
       }),
     );
     const user = userEvent.setup();
@@ -541,7 +615,10 @@ describe("EditionPollModal meal options", () => {
     server.use(
       http.post("/api/poll-options/reorder", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json([option("opt-2", "Tomatensoep"), option("opt-1", "Vol-au-vent")]);
+        return jsonResponse<import("@/api-types").PollOptionOut[]>([
+          option("opt-2", "Tomatensoep"),
+          option("opt-1", "Vol-au-vent"),
+        ]);
       }),
     );
     const user = userEvent.setup();
@@ -558,7 +635,7 @@ describe("EditionPollModal meal options", () => {
 });
 
 describe("EditionPollModal answers", () => {
-  const orders = {
+  const orders: import("@/api-types").PollOrdersOut = {
     edition_id: "2026-october",
     questions: [
       {
@@ -586,6 +663,9 @@ describe("EditionPollModal answers", () => {
     ],
     volunteers: [
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "a",
         name: "Rik Cooleman",
         note: null,
@@ -594,6 +674,9 @@ describe("EditionPollModal answers", () => {
         attendance: [{ question_id: "q-dinner", attending: false, people: 0 }],
       },
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "b",
         name: "Sofie De Smet",
         note: "Geen noten",
@@ -602,6 +685,9 @@ describe("EditionPollModal answers", () => {
         attendance: [{ question_id: "q-dinner", attending: true, people: 3 }],
       },
       {
+        choices: [],
+        texts: [],
+        ratings: [],
         volunteer_id: "c",
         name: "Nele Peeters",
         note: null,
@@ -655,7 +741,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         sent = { url: request.url, body: (await request.json()) as Record<string, unknown> };
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -703,7 +799,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const closedOrders = {
@@ -746,7 +852,17 @@ describe("EditionPollModal answers", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", () => {
         put();
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -770,7 +886,8 @@ describe("additional poll kinds", () => {
       question("text", "free_text", "Suggestie"),
       question("rating", "rating", "Score"),
     ];
-    const orders = {
+    const orders: import("@/api-types").PollOrdersOut = {
+      edition_id: edition.id,
       questions: qs,
       volunteers: [
         {
@@ -791,7 +908,17 @@ describe("additional poll kinds", () => {
     server.use(
       http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
         body = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json({});
+        return jsonResponse<import("@/api-types").PollVolunteerOrderOut>({
+          volunteer_id: "",
+          name: "",
+          note: null,
+          answered_question_ids: [],
+          selections: [],
+          attendance: [],
+          choices: [],
+          texts: [],
+          ratings: [],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -827,19 +954,19 @@ describe("additional poll kinds", () => {
 
 it("links attendance to a volunteer event and locks the event selector after answers", async () => {
   const user = userEvent.setup();
-  const event = {
+  const event = eventOut({
     id: "volunteer-dinner",
     edition_id: edition.id,
     title_nl: "Vrijwilligersdiner",
     date: "2026-10-25",
     volunteers_only: true,
     products: [],
-  };
+  });
   let submitted: Record<string, unknown> | null = null;
   server.use(
     http.post("/api/poll-questions", async ({ request }) => {
       submitted = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json(
+      return jsonResponse<import("@/api-types").PollQuestionOut>(
         question("q-linked", "yes_no", "Eet je mee?", {
           event_id: "volunteer-dinner",
           answered_count: 1,

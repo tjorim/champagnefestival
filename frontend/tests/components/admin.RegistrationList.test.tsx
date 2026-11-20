@@ -1,3 +1,4 @@
+import { editionOut, venueOut } from "@/mocks/data/builders";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -16,19 +17,13 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 const mockActiveEdition: ActiveEdition = {
+  ...editionOut(),
   id: "test-edition",
   year: 2025,
-  editionType: "festival",
+  edition_type: "festival",
   month: "march",
   dates: [],
-  venue: {
-    venueName: "Test Venue",
-    address: "123 Main St",
-    city: "Ghent",
-    postalCode: "9000",
-    country: "BE",
-    coordinates: { lat: 0, lng: 0 },
-  },
+  venue: venueOut(),
   events: [],
   producers: [],
   sponsors: [],

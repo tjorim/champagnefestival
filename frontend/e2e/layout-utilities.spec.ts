@@ -11,7 +11,7 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
+] as const) {
   for (const { width, colorScheme } of THEME_VARIANTS) {
     test(`${theme} layouts at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
@@ -73,7 +73,7 @@ test("login columns retain the 576/768/992px breakpoints", async ({ page }) => {
     [768, 1 / 2],
     [991, 1 / 2],
     [992, 1 / 3],
-  ]) {
+  ] as const) {
     await page.setViewportSize({ width, height: 900 });
     await expect
       .poll(() =>

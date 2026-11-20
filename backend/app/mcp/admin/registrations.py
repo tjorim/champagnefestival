@@ -18,7 +18,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.mcp.utils import MCPToolError, as_value_error, registration_base_dict, validate_with_schema
+from app.mcp.utils import MCPToolError, as_value_error, dump_response, registration_base_dict, validate_with_schema
 from app.models import Event, Registration
 from app.schemas import RegistrationAdminCreate, RegistrationUpdate
 from app.services import registrations_service
@@ -82,7 +82,7 @@ async def list_registrations(
         rows = list((await db.execute(stmt)).scalars().all())
         has_more = len(rows) > effective_limit
         rows = rows[:effective_limit]
-        person_map = await registrations_service.fetch_person_map(db, rows)
+        person_map = dump_response(await registrations_service.fetch_person_map(db, rows))
 
         registrations = []
         for row in rows:
@@ -130,7 +130,7 @@ async def create_registration(
     )
     async with session_factory() as db:
         try:
-            return await registrations_service.admin_create_registration(db, body=body, actor=actor)
+            return dump_response(await registrations_service.admin_create_registration(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -187,12 +187,14 @@ async def update_registration(
     async with session_factory() as db:
         try:
             registration = await registrations_service.get_registration_or_404(db, registration_id)
-            return await registrations_service.apply_registration_update(
-                db,
-                registration,
-                body,
-                actor=actor,
-                clear_amount_due=clear_amount_due,
+            return dump_response(
+                await registrations_service.apply_registration_update(
+                    db,
+                    registration,
+                    body,
+                    actor=actor,
+                    clear_amount_due=clear_amount_due,
+                )
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc

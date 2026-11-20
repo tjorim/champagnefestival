@@ -42,7 +42,7 @@ async def unsubscribe_category(
     token: str = Query(min_length=1, max_length=500),
     locale: str | None = Query(default=None, max_length=5),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> MemberMailUnsubscribeCategoryOut:
     """Which category the token unsubscribes from, for the confirmation page. Changes nothing."""
     if not check_rate_limit(get_client_ip(request), scope="member-mail-unsubscribe", max_requests=30):
         raise ApiHTTPException(
@@ -52,4 +52,4 @@ async def unsubscribe_category(
         category = await member_mail_unsubscribe.token_category(db, token)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
-    return {"category_key": category.key, "category_name": category.localized_name(locale)}
+    return MemberMailUnsubscribeCategoryOut(category_key=category.key, category_name=category.localized_name(locale))

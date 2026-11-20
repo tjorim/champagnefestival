@@ -1,105 +1,18 @@
 import { seedEditions, seedEvents } from "./editions";
 
-interface SeedVenue {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-  lat: number;
-  lng: number;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface SeedEventEditionSummary {
-  id: string;
-  year: number;
-  month: string;
-  edition_type: string;
-  active: boolean;
-}
-
-export interface SeedProductInclusion {
-  product_id: string;
-  quantity: number;
-  per_quantity: number;
-  rounding: "up" | "down";
-}
-
-export interface SeedProduct {
-  id: string;
-  event_id: string;
-  /** Dutch name and description; `name_*`/`description_*` hold every stored language. */
-  name: string;
-  name_nl: string | null;
-  name_fr: string | null;
-  name_en: string | null;
-  description: string;
-  description_nl: string | null;
-  description_fr: string | null;
-  description_en: string | null;
-  price: number;
-  category: string;
-  purchasable: boolean;
-  required: boolean;
-  unit?: "item" | "table" | "person";
-  inclusions?: SeedProductInclusion[] | null;
-  included_product_id: string | null;
-  included_per_guests: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SeedEvent {
-  id: string;
-  edition_id: string;
-  title: string;
-  description: string;
-  date: string;
-  start_time: string;
-  end_time: string | null;
-  category: string;
-  registration_required: boolean;
-  registrations_open_from: string | null;
-  sort_order: number;
-  active: boolean;
-  edition: SeedEventEditionSummary | null;
-  products: SeedProduct[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SeedEdition {
-  id: string;
-  year: number;
-  month: string;
-  edition_type: string;
-  dates: string[];
-  venue: SeedVenue | null;
-  events: SeedEvent[];
-  producers: { id: number; name: string; image: string; website: string; type: string }[];
-  sponsors: {
-    id: number;
-    name: string;
-    image: string;
-    website: string;
-    type: string;
-    sponsor_tier?: "main" | "partner" | "supporter" | null;
-  }[];
-  vendors: { id: number; name: string; image: string; website: string; type: string }[];
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import type { EditionOut, EventOut } from "@/api-types";
+export type {
+  EditionOut as SeedEdition,
+  EventOut as SeedEvent,
+  ProductOut as SeedProduct,
+  ProductInclusionOut as SeedProductInclusion,
+} from "@/api-types";
 
 /** Shared mutable in-memory stores for edition/event mocks. */
-export const editions: SeedEdition[] = structuredClone(seedEditions) as SeedEdition[];
-export const events: SeedEvent[] = structuredClone(seedEvents) as SeedEvent[];
+export const editions: EditionOut[] = structuredClone(seedEditions);
+export const events: EventOut[] = structuredClone(seedEvents);
 
 export function resetEditionStore(): void {
-  editions.splice(0, editions.length, ...(structuredClone(seedEditions) as SeedEdition[]));
-  events.splice(0, events.length, ...(structuredClone(seedEvents) as SeedEvent[]));
+  editions.splice(0, editions.length, ...structuredClone(seedEditions));
+  events.splice(0, events.length, ...structuredClone(seedEvents));
 }

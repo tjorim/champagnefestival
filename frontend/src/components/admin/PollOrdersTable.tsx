@@ -23,10 +23,10 @@ interface Column {
 }
 
 function answerText(volunteer: Volunteer, questionId: string): string {
-  const answer = volunteer.attendance[questionId];
+  const answer = volunteer.attendance.find((answer) => answer.question_id === questionId);
   if (!answer) return "";
   return answer.attending
-    ? `${m.poll_answer_yes()} (${m.admin_poll_orders_people({ count: answer.people })})`
+    ? `${m.poll_answer_yes()} (${m.admin_poll_orders_people({ count: answer.people ?? 0 })})`
     : m.poll_answer_no();
 }
 
@@ -45,22 +45,29 @@ const COLUMNS: Record<PollQuestionKind, (question: Question) => Column[]> = {
       key: question.id,
       header: question.title,
       cell: (volunteer) =>
-        question.options.find((option) => option.id === volunteer.choices[question.id])?.label ??
-        "",
+        question.options.find(
+          (option) =>
+            option.id ===
+            volunteer.choices.find((answer) => answer.question_id === question.id)?.option_id,
+        )?.label ?? "",
     },
   ],
   free_text: (question) => [
     {
       key: question.id,
       header: question.title,
-      cell: (volunteer) => volunteer.texts[question.id] ?? "",
+      cell: (volunteer) =>
+        volunteer.texts.find((answer) => answer.question_id === question.id)?.text ?? "",
     },
   ],
   rating: (question) => [
     {
       key: question.id,
       header: question.title,
-      cell: (volunteer) => String(volunteer.ratings[question.id] ?? ""),
+      cell: (volunteer) =>
+        String(
+          volunteer.ratings.find((answer) => answer.question_id === question.id)?.rating ?? "",
+        ),
     },
   ],
   meals: (question) =>
@@ -68,7 +75,9 @@ const COLUMNS: Record<PollQuestionKind, (question: Question) => Column[]> = {
       key: option.id,
       header: `${question.title}: ${option.label}`,
       cell: (volunteer) =>
-        volunteer.quantities[option.id] ? String(volunteer.quantities[option.id]) : "",
+        volunteer.selections.find((answer) => answer.option_id === option.id)?.quantity
+          ? String(volunteer.selections.find((answer) => answer.option_id === option.id)?.quantity)
+          : "",
     })),
 };
 
@@ -110,8 +119,8 @@ export default function PollOrdersTable({ editionId, orders, onEdit }: PollOrder
             <li key={question.id}>
               {question.title}:{" "}
               {m.admin_poll_orders_answered({
-                answered: question.answeredCount,
-                total: orders.volunteerCount,
+                answered: question.answered_count,
+                total: orders.volunteer_count,
               })}
               {pollCountsSummary(question.kind, question) &&
                 ` — ${pollCountsSummary(question.kind, question)}`}
@@ -135,10 +144,10 @@ export default function PollOrdersTable({ editionId, orders, onEdit }: PollOrder
         </TableHeader>
         <TableBody>
           {orders.volunteers.map((volunteer) => (
-            <TableRow key={volunteer.volunteerId}>
+            <TableRow key={volunteer.volunteer_id}>
               <TableCell>
                 {volunteer.name}
-                {volunteer.answeredQuestionIds.length === 0 && (
+                {volunteer.answered_question_ids.length === 0 && (
                   <Badge variant="secondary" className="ms-2">
                     {m.admin_poll_orders_none()}
                   </Badge>
@@ -149,8 +158,8 @@ export default function PollOrdersTable({ editionId, orders, onEdit }: PollOrder
               ))}
               <TableCell>{volunteer.note ?? ""}</TableCell>
               <TableCell>
-                <Button size="sm" variant="outline" onClick={() => onEdit(volunteer.volunteerId)}>
-                  {volunteer.answeredQuestionIds.length > 0
+                <Button size="sm" variant="outline" onClick={() => onEdit(volunteer.volunteer_id)}>
+                  {volunteer.answered_question_ids.length > 0
                     ? m.admin_poll_orders_edit()
                     : m.admin_poll_orders_enter()}
                 </Button>

@@ -18,7 +18,7 @@ import {
   type EditionArtworkSlot,
 } from "@/utils/adminContentApi";
 import { DEFAULT_FLYER, DEFAULT_HERO, DEFAULT_SHARE, managedArtwork } from "@/utils/editionArtwork";
-import type { Edition } from "./editionTypes";
+import type { Edition } from "@/api-types";
 
 interface SlotConfig {
   slot: EditionArtworkSlot;
@@ -35,7 +35,7 @@ const SLOTS: SlotConfig[] = [
     label: () => m.admin_edition_artwork_flyer(),
     hint: () => m.admin_edition_artwork_flyer_hint(),
     fallback: DEFAULT_FLYER,
-    current: (edition) => edition.flyerImage,
+    current: (edition) => edition.flyer_image,
     previewClass: "h-32 w-auto",
   },
   {
@@ -43,7 +43,7 @@ const SLOTS: SlotConfig[] = [
     label: () => m.admin_edition_artwork_hero(),
     hint: () => m.admin_edition_artwork_hero_hint(),
     fallback: DEFAULT_HERO,
-    current: (edition) => edition.heroImage,
+    current: (edition) => edition.hero_image,
     previewClass: "h-20 w-auto",
   },
   {
@@ -51,7 +51,7 @@ const SLOTS: SlotConfig[] = [
     label: () => m.admin_edition_artwork_share(),
     hint: () => m.admin_edition_artwork_share_hint(),
     fallback: DEFAULT_SHARE,
-    current: (edition) => edition.shareImage,
+    current: (edition) => edition.share_image,
     previewClass: "h-20 w-auto",
   },
 ];

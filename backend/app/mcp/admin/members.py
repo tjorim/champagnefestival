@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.dependencies import SortDirection
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import as_value_error, dump_response, validate_with_schema
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import members_service
 from app.services.people_listing import (
@@ -27,7 +27,7 @@ from app.services.people_listing import (
     order_people_stmt,
 )
 from app.services.settings_service import get_or_create_settings
-from app.utils import person_summary_dict
+from app.utils import person_admin_summary_out
 
 
 async def create_member(
@@ -62,7 +62,7 @@ async def create_member(
     )
     async with session_factory() as db:
         try:
-            return await members_service.create_member(db, body=body, actor=actor)
+            return dump_response(await members_service.create_member(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -73,7 +73,7 @@ async def get_member(session_factory: Any, person_id: str) -> dict:
             person = await members_service.get_member_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return person_summary_dict(person)
+        return person_admin_summary_out(person).model_dump(exclude_unset=True)
 
 
 async def list_members(
@@ -109,7 +109,7 @@ async def list_members(
         return {
             "members": [
                 {
-                    **person_summary_dict(p),
+                    **person_admin_summary_out(p).model_dump(exclude_unset=True),
                     "last_attended": attended.isoformat() if attended else None,
                     "inactivity_highlight": bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
                 }
@@ -157,7 +157,7 @@ async def update_member(
     async with session_factory() as db:
         try:
             person = await members_service.get_member_or_404(db, person_id)
-            return await members_service.apply_member_update(db, person, body, actor=actor)
+            return dump_response(await members_service.apply_member_update(db, person, body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -168,7 +168,7 @@ async def deactivate_member(session_factory: Any, actor: str, person_id: str) ->
             person = await members_service.get_member_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await members_service.deactivate_member(db, person, actor=actor)
+        return dump_response(await members_service.deactivate_member(db, person, actor=actor))
 
 
 async def reactivate_member(session_factory: Any, actor: str, person_id: str) -> dict:
@@ -176,6 +176,6 @@ async def reactivate_member(session_factory: Any, actor: str, person_id: str) ->
     async with session_factory() as db:
         try:
             person = await members_service.get_member_or_404(db, person_id)
-            return await members_service.reactivate_member(db, person, actor=actor)
+            return dump_response(await members_service.reactivate_member(db, person, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc

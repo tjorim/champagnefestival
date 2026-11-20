@@ -1,6 +1,15 @@
 import { useCallback } from "react";
 import { m } from "@/paraglide/messages";
-import type { FloorArea, FloorTableRecord, Room, TableType, Venue } from "@/types/admin";
+import type {
+  AreaUpdate,
+  FloorArea,
+  FloorTableRecord,
+  Layout,
+  RoomUpdate,
+  TableTypeCreate,
+  TableTypeUpdate,
+  VenueUpdate,
+} from "@/api-types";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import {
   addAdminTable,
@@ -24,14 +33,7 @@ import {
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { devError } from "@/utils/devLog";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
-import {
-  apiAreaToArea,
-  apiLayoutToLayout,
-  apiRoomToRoom,
-  apiTableToTable,
-  apiTableTypeToTableType,
-  apiVenueToVenue,
-} from "@/utils/adminApiMappers";
+import { toTableRecord } from "@/state/tableOccupancy";
 
 interface UseAdminVenueActionsOptions {
   authHeaders: () => Record<string, string>;
@@ -73,7 +75,11 @@ export function useAdminVenueActions({
 
   const handleAddTable = useCallback(
     async (name: string, layoutId: string, tableTypeId: string) => {
-      await addAdminTable(tablesCollection, authHeaders, { name, layoutId, tableTypeId });
+      await addAdminTable(tablesCollection, authHeaders, {
+        name,
+        layout_id: layoutId,
+        table_type_id: tableTypeId,
+      });
     },
     [authHeaders, tablesCollection],
   );
@@ -119,7 +125,7 @@ export function useAdminVenueActions({
   const handleChangeTableType = useCallback(
     (tableId: string, tableTypeId: string) =>
       updateTableRow(tableId, (table) => {
-        table.tableTypeId = tableTypeId;
+        table.table_type_id = tableTypeId;
       }),
     [updateTableRow],
   );
@@ -152,16 +158,16 @@ export function useAdminVenueActions({
         lat,
         lng,
       });
-      await applyAdminVenueRowCreated(venues, apiVenueToVenue(d), isCurrent);
+      await applyAdminVenueRowCreated(venues, d, isCurrent);
     },
     [createVenueMutation, venues],
   );
 
   const handleUpdateVenue = useCallback(
-    async (venueId: string, data: Partial<Omit<Venue, "id" | "active">>) => {
+    async (venueId: string, data: VenueUpdate) => {
       const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, ...data });
-      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
+      await applyAdminVenueRowUpdated(venues, d, isCurrent);
     },
     [updateVenueMutation, venues],
   );
@@ -170,7 +176,7 @@ export function useAdminVenueActions({
     async (venueId: string) => {
       const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, active: false });
-      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
+      await applyAdminVenueRowUpdated(venues, d, isCurrent);
     },
     [updateVenueMutation, venues],
   );
@@ -179,7 +185,7 @@ export function useAdminVenueActions({
     async (venueId: string) => {
       const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, active: true });
-      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
+      await applyAdminVenueRowUpdated(venues, d, isCurrent);
     },
     [updateVenueMutation, venues],
   );
@@ -201,16 +207,16 @@ export function useAdminVenueActions({
     async (venueId: string, name: string, widthM: number, lengthM: number, color: string) => {
       const isCurrent = captureAdminVenueFence();
       const data = await createRoomMutation.mutateAsync({ venueId, name, widthM, lengthM, color });
-      await applyAdminVenueRowCreated(rooms, apiRoomToRoom(data), isCurrent);
+      await applyAdminVenueRowCreated(rooms, data, isCurrent);
     },
     [createRoomMutation, rooms],
   );
 
   const handleUpdateRoom = useCallback(
-    async (roomId: string, data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>) => {
+    async (roomId: string, data: RoomUpdate) => {
       const isCurrent = captureAdminVenueFence();
       const d = await updateRoomMutation.mutateAsync({ id: roomId, data });
-      await applyAdminVenueRowUpdated(rooms, apiRoomToRoom(d), isCurrent);
+      await applyAdminVenueRowUpdated(rooms, d, isCurrent);
     },
     [rooms, updateRoomMutation],
   );
@@ -246,7 +252,7 @@ export function useAdminVenueActions({
       if (copyFromLayoutId) {
         const shouldCopyTables = copyOptions?.tables ?? true;
         const shouldCopyAreas = copyOptions?.areas ?? true;
-        const copied = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        const copied = await fetchJsonOrThrowWithUnauthorized<Layout>(
           `/api/layouts/${copyFromLayoutId}/copy`,
           {
             method: "POST",
@@ -261,7 +267,7 @@ export function useAdminVenueActions({
           },
           m.admin_error_add_layout(),
         );
-        await applyAdminVenueRowCreated(layouts, apiLayoutToLayout(copied), isCurrent);
+        await applyAdminVenueRowCreated(layouts, copied, isCurrent);
         // The copy also created areas and tables server-side, with fresh ids.
         await Promise.all([
           refetchAdminVenueCollections(venueCollections, ["layouts", "areas"], isCurrent),
@@ -271,7 +277,7 @@ export function useAdminVenueActions({
       }
 
       const d = await createLayoutMutation.mutateAsync({ roomId, eventId, label });
-      await applyAdminVenueRowCreated(layouts, apiLayoutToLayout(d), isCurrent);
+      await applyAdminVenueRowCreated(layouts, d, isCurrent);
     },
     [authHeaders, createLayoutMutation, layouts, tablesCollection, venueCollections],
   );
@@ -306,23 +312,18 @@ export function useAdminVenueActions({
         revisionNumber,
         resolveAllocations,
       });
-      const restoredTables = data.tables as Record<string, unknown>[] | undefined;
-      const restoredAreas = data.areas as Record<string, unknown>[] | undefined;
+      const restoredTables = data.tables;
+      const restoredAreas = data.areas;
       if (Array.isArray(restoredTables)) {
         await replaceAdminTablesForLayout(
           tablesCollection,
           layoutId,
-          restoredTables.map(apiTableToTable),
+          restoredTables.map(toTableRecord),
           tablesFenceIsCurrent,
         );
       }
       if (Array.isArray(restoredAreas)) {
-        await replaceAdminAreasForLayout(
-          areas,
-          layoutId,
-          restoredAreas.map(apiAreaToArea),
-          isCurrent,
-        );
+        await replaceAdminAreasForLayout(areas, layoutId, restoredAreas, isCurrent);
       }
     },
     [areas, restoreLayoutRevisionMutation, tablesCollection],
@@ -346,7 +347,7 @@ export function useAdminVenueActions({
         lengthM,
         organizationId,
       });
-      await applyAdminVenueRowCreated(areas, apiAreaToArea(data), isCurrent);
+      await applyAdminVenueRowCreated(areas, data, isCurrent);
     },
     [areas, createAreaMutation],
   );
@@ -392,12 +393,12 @@ export function useAdminVenueActions({
 
   const handleAssignAreaToItem = useCallback(
     async (areaId: string, organizationId: number | null, label?: string, icon?: string) => {
-      const body: Record<string, unknown> = { organization_id: organizationId };
+      const body: AreaUpdate = { organization_id: organizationId };
       if (label !== undefined) body.label = label;
       if (icon !== undefined) body.icon = icon;
       const isCurrent = captureAdminVenueFence();
       const d = await assignAreaMutation.mutateAsync({ areaId, body });
-      await applyAdminVenueRowUpdated(areas, apiAreaToArea(d), isCurrent);
+      await applyAdminVenueRowUpdated(areas, d, isCurrent);
     },
     [areas, assignAreaMutation],
   );
@@ -414,22 +415,22 @@ export function useAdminVenueActions({
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
       const area = areas.get(areaId);
-      const layout = area ? layouts.get(area.layoutId) : undefined;
-      const room = layout ? rooms.get(layout.roomId) : undefined;
+      const layout = area ? layouts.get(area.layout_id) : undefined;
+      const room = layout ? rooms.get(layout.room_id) : undefined;
 
       // Clamp the area's position so it stays within the canvas after resize.
       let x = area?.x ?? 0;
       let y = area?.y ?? 0;
       if (area && room) {
-        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.widthM, room.lengthM);
+        const { width: canvasW, height: canvasH } = getCanvasSizePx(room.width_m, room.length_m);
         const { width: areaW, height: areaH } = getAreaSizePx(widthM, lengthM);
         x = (Math.max(0, Math.min((area.x / 100) * canvasW, canvasW - areaW)) / canvasW) * 100;
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
 
       await updateAreaRow(areaId, (draft) => {
-        draft.widthM = widthM;
-        draft.lengthM = lengthM;
+        draft.width_m = widthM;
+        draft.length_m = lengthM;
         draft.x = x;
         draft.y = y;
       });
@@ -438,19 +439,19 @@ export function useAdminVenueActions({
   );
 
   const handleAddTableType = useCallback(
-    async (data: Omit<TableType, "id">) => {
+    async (data: TableTypeCreate) => {
       const isCurrent = captureAdminVenueFence();
       const d = await createTableTypeMutation.mutateAsync(data);
-      await applyAdminVenueRowCreated(tableTypes, apiTableTypeToTableType(d), isCurrent);
+      await applyAdminVenueRowCreated(tableTypes, d, isCurrent);
     },
     [createTableTypeMutation, tableTypes],
   );
 
   const handleUpdateTableType = useCallback(
-    async (id: string, data: Partial<Omit<TableType, "id">>) => {
+    async (id: string, data: TableTypeUpdate) => {
       const isCurrent = captureAdminVenueFence();
       const d = await updateTableTypeMutation.mutateAsync({ id, data });
-      await applyAdminVenueRowUpdated(tableTypes, apiTableTypeToTableType(d), isCurrent);
+      await applyAdminVenueRowUpdated(tableTypes, d, isCurrent);
     },
     [tableTypes, updateTableTypeMutation],
   );

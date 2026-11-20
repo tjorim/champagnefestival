@@ -1,4 +1,7 @@
-import { http, HttpResponse } from "msw/http";
+import { jsonResponse } from "@/mocks/response";
+import { registrationOut } from "@/mocks/data/builders";
+import type { RegistrationOut } from "@/api-types";
+import { http } from "msw/http";
 import { afterEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";
@@ -9,7 +12,6 @@ import {
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
-import { apiToRegistration } from "@/types/registrationMapper";
 import { createTestQueryClient } from "../utils/queryClient";
 
 const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
@@ -56,7 +58,12 @@ describe("admin registrations pilot collection", () => {
     server.use(
       http.get("/api/registrations", ({ request }) => {
         expect(new URL(request.url).searchParams.get("edition_id")).toBe("march-2026");
-        return HttpResponse.json({ items: [seedRegistrations[0]], total: 1, page: 1, limit: 1000 });
+        return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
+          items: [seedRegistrations[0]!],
+          total: 1,
+          page: 1,
+          limit: 1000,
+        });
       }),
     );
     await collection.preload();
@@ -64,7 +71,30 @@ describe("admin registrations pilot collection", () => {
     try {
       server.use(
         http.get("/api/registrations/historical", () =>
-          HttpResponse.json({
+          jsonResponse<import("@/api-types").RegistrationOutWithToken>({
+            poll_question_id: null,
+            stamp_progress: null,
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            check_in_token: "",
             ...seedRegistrations[0],
             id: "historical",
             event: { ...seedRegistrations[0]!.event, edition_id: "older" },
@@ -101,7 +131,7 @@ describe("admin registrations pilot collection", () => {
     await collection.preload();
 
     expect(collection.size).toBe(seedRegistrations.length);
-    expect(collection.get("reg-01")?.tableId).toBe("table-01");
+    expect(collection.get("reg-01")?.table_id).toBe("table-01");
   });
 
   it("applies mutation updates for check-in, table assignment and cancellation", async () => {
@@ -124,12 +154,12 @@ describe("admin registrations pilot collection", () => {
       }),
     });
     expect(response.ok).toBe(true);
-    const updated = apiToRegistration((await response.json()) as Record<string, unknown>);
+    const updated = (await response.json()) as RegistrationOut;
     collection.utils.writeUpsert(updated);
 
     const registration = collection.get("reg-01");
-    expect(registration?.checkedIn).toBe(true);
-    expect(registration?.tableId).toBeUndefined();
+    expect(registration?.checked_in).toBe(true);
+    expect(registration?.table_id).toBeNull();
     expect(registration?.allocations).toEqual([]);
     expect(registration?.status).toBe("cancelled");
   });
@@ -238,7 +268,9 @@ describe("admin registrations pilot collection", () => {
     server.use(
       http.get("/api/registrations/:id", async () => {
         await gate;
-        return HttpResponse.json({ id: "reg-01", notes: "Late response" });
+        return jsonResponse<import("@/api-types").RegistrationOutWithToken>(
+          registrationOut({ id: "reg-01", notes: "Late response" }),
+        );
       }),
     );
 

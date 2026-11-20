@@ -13,9 +13,16 @@ async function seedForms(page: Page, linked: boolean) {
     const browserPath = "/src/mocks/browser.ts";
     const httpPath = "/node_modules/msw/lib/http/index.js";
     const { worker } = await import(/* @vite-ignore */ browserPath);
-    const { http, HttpResponse } = await import(/* @vite-ignore */ httpPath);
-    const questions = [
+    const { http, HttpResponse }: typeof import("msw/http") = await import(
+      /* @vite-ignore */ httpPath
+    );
+    const questions: import("../src/api-types").VolunteerPollQuestionOut[] = [
       {
+        event_id: null,
+        selections: [],
+        option_id: null,
+        text: null,
+        rating: null,
         id: "attendance",
         kind: "yes_no",
         title: "Attendance — a long question title for the volunteer dinner",
@@ -27,6 +34,14 @@ async function seedForms(page: Page, linked: boolean) {
         options: [],
       },
       {
+        event_id: null,
+        selections: [],
+        option_id: null,
+        description: "",
+        closes_at: null,
+        attending: null,
+        people: 0,
+        rating: null,
         id: "text",
         kind: "free_text",
         title: "Suggestions for the volunteer team",
@@ -35,6 +50,14 @@ async function seedForms(page: Page, linked: boolean) {
         options: [],
       },
       {
+        event_id: null,
+        selections: [],
+        option_id: null,
+        description: "",
+        closes_at: null,
+        attending: null,
+        people: 0,
+        text: null,
         id: "closed",
         kind: "rating",
         title: "Closed question",
@@ -49,27 +72,36 @@ async function seedForms(page: Page, linked: boolean) {
       window.addEventListener("release-poll-write", () => resolve(), { once: true });
     });
     worker.use(
-      http.get("/api/me/organizations", () => HttpResponse.json([])),
+      http.get("/api/me/organizations", () =>
+        HttpResponse.json<import("@/api-types").ManagedOrganizationOut[]>([]),
+      ),
       http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
+        HttpResponse.json<import("@/api-types").VolunteerIdentityOut>({
           linked: isLinked,
           name: "Synthetic volunteer",
           national_register_number: null,
           eid_document_number: null,
         }),
       ),
-      http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll())),
+      http.get("/api/me/volunteer/poll", () =>
+        HttpResponse.json<import("@/api-types").VolunteerPollOut>(poll()),
+      ),
       http.put("/api/me/volunteer/poll/questions/:id", async ({ params, request }) => {
         const body = await request.json();
         if (params.id === "text") {
           await failedWrite;
-          return HttpResponse.json({ detail: "PRIVATE DIAGNOSTIC" }, { status: 500 });
+          return HttpResponse.json(
+            /* Fixture exception: error response; intentionally outside the success schema. */ {
+              detail: "PRIVATE DIAGNOSTIC",
+            },
+            { status: 500 },
+          );
         }
         Object.assign(
           questions.find((q) => q.id === params.id)!,
           body,
         );
-        return HttpResponse.json(poll());
+        return HttpResponse.json<import("@/api-types").VolunteerPollOut>(poll());
       }),
     );
     history.pushState(null, "", "/me");
@@ -102,7 +134,7 @@ for (const [width, height] of [
   [1366, 768],
   [1440, 900],
   [1280, 600],
-]) {
+] as const) {
   for (const locale of ["en", "nl", "fr"] as const) {
     test(`volunteer form layout ${width}x${height} ${locale}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height });
@@ -154,7 +186,7 @@ for (const [width, height] of [
   }
 }
 
-for (const zoom of [1.25, 1.5]) {
+for (const zoom of [1.25, 1.5] as const) {
   test(`volunteer forms at real browser zoom ${zoom * 100}%`, async ({ baseURL }, testInfo) => {
     const { chromium } = await import("@playwright/test");
     const { mkdtemp, mkdir, writeFile, readFile, rm } = await import("node:fs/promises");

@@ -3,7 +3,7 @@
  *
  * Products used to be a hardcoded catalog here; they are now real,
  * event-scoped `Product` records read from `event.products` (see
- * `@/types/event`) and managed per-event in the admin dashboard.
+ * `@/api-types`) and managed per-event in the admin dashboard.
  */
 
 export const MAX_GUESTS = 20;

@@ -46,13 +46,13 @@ export interface MemberFormData {
   name: string;
   email: string;
   phone: string;
-  preferredLanguage?: "nl" | "fr" | "en" | null;
+  preferred_language?: "nl" | "fr" | "en" | null;
   address: string;
   notes: string;
   /** ISO day membership started; empty when unknown. */
   memberSince: string;
-  inactivityExempt?: boolean;
-  inactivityExemptNote?: string;
+  inactivity_exempt?: boolean;
+  inactivity_exempt_note?: string;
 }
 
 export default function MemberFormModal({
@@ -79,23 +79,23 @@ export default function MemberFormModal({
             name: record.name,
             email: record.email ?? "",
             phone: record.phone ?? "",
-            preferredLanguage: record.preferredLanguage ?? null,
+            preferred_language: record.preferred_language ?? null,
             address: record.address ?? "",
             notes: record.notes ?? "",
-            inactivityExempt: record.inactivityExempt ?? false,
-            inactivityExemptNote: record.inactivityExemptNote ?? "",
+            inactivity_exempt: record.inactivity_exempt ?? false,
+            inactivity_exempt_note: record.inactivity_exempt_note ?? "",
             memberSince: roleSince(record, "member") ?? "",
           }
         : {
             name: "",
             email: "",
             phone: "",
-            preferredLanguage: null,
+            preferred_language: null,
             address: "",
             notes: "",
             memberSince: "",
-            inactivityExempt: false,
-            inactivityExemptNote: "",
+            inactivity_exempt: false,
+            inactivity_exempt_note: "",
           },
     [record],
   );
@@ -110,12 +110,12 @@ export default function MemberFormModal({
           name: value.name.trim(),
           email: value.email.trim(),
           phone: value.phone.trim(),
-          preferredLanguage: value.preferredLanguage,
+          preferred_language: value.preferred_language,
           address: value.address.trim(),
           notes: value.notes.trim(),
           memberSince: value.memberSince,
-          inactivityExempt: value.inactivityExempt,
-          inactivityExemptNote: value.inactivityExemptNote,
+          inactivity_exempt: value.inactivity_exempt,
+          inactivity_exempt_note: value.inactivity_exempt_note,
         });
         onHide();
       } catch (err) {
@@ -288,7 +288,7 @@ export default function MemberFormModal({
               </div>
             </div>
 
-            <form.Field name="preferredLanguage">
+            <form.Field name="preferred_language">
               {(field) => (
                 <AdminField className="mb-4" controlId="member-preferred-language">
                   <AdminLabel>{m.registration_preferred_language()}</AdminLabel>
@@ -346,7 +346,7 @@ export default function MemberFormModal({
               </form.Field>
             </AdminField>
 
-            <form.Field name="inactivityExempt">
+            <form.Field name="inactivity_exempt">
               {(field) => (
                 <AdminCheck
                   id="member-inactivity-exempt"
@@ -356,7 +356,7 @@ export default function MemberFormModal({
                 />
               )}
             </form.Field>
-            <form.Field name="inactivityExemptNote">
+            <form.Field name="inactivity_exempt_note">
               {(field) => (
                 <AdminField className="mb-4" controlId="member-exempt-note">
                   <AdminLabel>{m.admin_members_exempt_note()}</AdminLabel>

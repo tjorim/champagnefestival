@@ -23,11 +23,11 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.models import Edition, EditionPollQuestion, Event, Layout, Registration, Room
-from app.schemas import EventCreate, EventTextFields, EventUpdate
+from app.schemas import EventCreate, EventOut, EventTextFields, EventUpdate
 from app.services import event_categories_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import event_to_summary_dict, get_or_404, make_id
+from app.utils import event_to_summary_out, get_or_404, make_id
 
 TEXT_FIELDS = (
     "title_nl",
@@ -146,7 +146,7 @@ async def reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None
         )
 
 
-async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, request_id: str | None = None) -> dict:
+async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, request_id: str | None = None) -> EventOut:
     edition = await ensure_edition_exists(db, body.edition_id)
     await ensure_category_exists(db, body.category)
     await validate_standalone_event_date(db, edition, body.date)
@@ -183,12 +183,12 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
     await notify_render_cache_invalidate(db)
     await db.commit()
     event = await get_event_or_404(db, event.id)
-    return event_to_summary_dict(event, include_edition=True)
+    return event_to_summary_out(event, include_edition=True)
 
 
 async def apply_event_update(
     db: AsyncSession, event: Event, body: EventUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> EventOut:
     locked_event = (
         await db.execute(
             select(Event)
@@ -287,7 +287,7 @@ async def apply_event_update(
     await notify_render_cache_invalidate(db)
     await db.commit()
     event = await get_event_or_404(db, event.id)
-    return event_to_summary_dict(event, include_edition=True)
+    return event_to_summary_out(event, include_edition=True)
 
 
 async def delete_event(db: AsyncSession, event: Event, *, actor: str, request_id: str | None = None) -> dict:

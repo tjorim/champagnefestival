@@ -24,10 +24,12 @@ from app.schemas import (
     EmailPreferencesOut,
     EmailPreferencesUpdate,
     MyRegistrationOut,
+    OkOut,
     PaymentStatus,
     PebbleAccessTokenOut,
     RegistrationGuestOut,
     RegistrationStatus,
+    ResponseModel,
 )
 from app.services import email_consent_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
@@ -44,7 +46,7 @@ from app.services.users_service import (
     verified_email_from_claims,
 )
 from app.translations import Language
-from app.utils import registration_to_guest_dict, roles_contains
+from app.utils import registration_to_guest_out, roles_contains
 from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
 from app.visitor_session import get_current_user as get_current_portal_user
 
@@ -71,7 +73,7 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
     )
 
 
-class MembershipSummary(BaseModel):
+class MembershipSummary(ResponseModel):
     state: Literal["active", "inactive", "unavailable"]
 
 
@@ -153,7 +155,7 @@ async def get_email_preferences(
     locale: Language | None = Query(default=None),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EmailPreferencesOut:
     """The email categories available to the people behind the caller's *verified* address, with their state.
 
     Only the verified address counts: a booking linked to the account (``Registration.user_id``) does
@@ -174,7 +176,7 @@ async def update_email_preferences(
     locale: Language | None = Query(default=None),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EmailPreferencesOut:
     """Set consent for the listed categories; the others stay as they are.
 
     Consent is given only here, by the signed-in person for their own verified address, with no extra
@@ -243,7 +245,7 @@ async def list_my_registrations(
     response: Response,
     user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Return registrations owned by the authenticated portal user.
 
     ``user`` may be resolved from either an OIDC bearer token or a visitor
@@ -262,17 +264,17 @@ async def list_my_registrations(
             .order_by(Registration.created_at.desc())
         )
     ).all()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+    return [registration_to_guest_out(registration, person, event) for registration, person, event in rows]
 
 
-@router.post("/registrations/{registration_id}/request")
+@router.post("/registrations/{registration_id}/request", response_model=OkOut)
 async def request_registration_change(
     registration_id: str,
     body: BookingRequestCreate,
     request: Request,
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, bool]:
+) -> OkOut:
     user, claims = user_and_claims
     row = (
         await db.execute(
@@ -325,7 +327,7 @@ async def request_registration_change(
         # until it succeeds or exhausts its attempts. See docs/retry-safety.md.
         await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
     await db.commit()
-    return {"ok": True}
+    return OkOut(ok=True)
 
 
 @router.get("/registrations/claimable", response_model=list[RegistrationGuestOut])
@@ -333,7 +335,7 @@ async def list_claimable_registrations(
     response: Response,
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Preview unowned registrations under the caller's own verified email.
 
     Read-only — nothing is linked here (#1044). The frontend shows these as
@@ -353,7 +355,7 @@ async def list_claimable_registrations(
         return []
     rows = await _load_guest_registrations_by_email(db, email)
     return [
-        registration_to_guest_dict(registration, person, event)
+        registration_to_guest_out(registration, person, event)
         for registration, person, event in rows
         if registration.user_id is None
     ]
@@ -363,7 +365,7 @@ async def list_claimable_registrations(
 async def claim_verified_email_registrations(
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Link unowned registrations under the caller's own verified email,
     after they've explicitly confirmed it — see ``list_claimable_registrations``
     for the read-only preview this follows.
@@ -381,7 +383,7 @@ async def claim_verified_email_registrations(
     await claim_unowned_registrations_for_email(db, user, email, actor=actor, auth_source=auth_source)
     rows = await _load_guest_registrations_by_email(db, email)
     await db.commit()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+    return [registration_to_guest_out(registration, person, event) for registration, person, event in rows]
 
 
 @router.post("/pebble-token", response_model=PebbleAccessTokenOut)

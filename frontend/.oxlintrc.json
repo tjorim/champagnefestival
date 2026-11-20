@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["react"],
-  "ignorePatterns": ["dist/**", "build/**", "coverage/**", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "build/**", "coverage/**", "node_modules/**", "src/api-schema/**"],
   "jsPlugins": ["@shadcn/lint"],
   "rules": {
     "shadcn/no-arbitrary-values": "error",

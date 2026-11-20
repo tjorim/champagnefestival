@@ -18,6 +18,7 @@ function slide(binding: Layer["binding"]): PublicSlide {
       logo: "/images/logo.svg",
       description: "Description",
       sponsor: true,
+      sponsor_tier: null,
     },
     template: {
       background: { kind: "color", color: "#000000", end_color: "#000000", image: null },

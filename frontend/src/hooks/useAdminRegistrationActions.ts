@@ -4,14 +4,14 @@ import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage, hasApiErrorCode } from "@/utils/apiErrors";
 import type {
-  TableAllocation,
-  BookingUpdate,
-  OrderItem,
+  OrderItemOut,
   PaymentTransactionCreate,
-  Registration,
-  RegistrationStatus,
-} from "@/types/registration";
-import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
+  RegistrationOut,
+  RegistrationOutWithToken,
+  TableAllocation,
+} from "@/api-types";
+import { toAmount } from "@/utils/money";
+import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { fetchRegistration } from "@/utils/adminFetch";
@@ -49,8 +49,8 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
         }
       : {}),
     allocations: update.allocations.map((allocation) => ({
-      table_id: allocation.tableId,
-      guest_count: allocation.guestCount,
+      table_id: allocation.table_id,
+      guest_count: allocation.guest_count,
       exclusive: allocation.exclusive,
     })),
     notes: update.notes,
@@ -78,25 +78,23 @@ export function useAdminRegistrationActions({
   const handleUpdateStatus = useCallback(
     async (id: string, status: RegistrationStatus) => {
       try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id,
-            payload: { status },
-            fallbackMessage: m.admin_error_update_registration(),
-          }),
-        );
+        const updated = await updateRegistrationMutation.mutateAsync({
+          id,
+          payload: { status },
+          fallbackMessage: m.admin_error_update_registration(),
+        });
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev
             ? prev.map((registration) =>
                 registration.id === id
-                  ? { ...registration, status: updated.status, updatedAt: updated.updatedAt }
+                  ? { ...registration, status: updated.status, updatedAt: updated.updated_at }
                   : registration,
               )
             : prev,
         );
         setDetailRegistration((prev) =>
           prev?.id === id
-            ? { ...prev, status: updated.status, updatedAt: updated.updatedAt }
+            ? { ...prev, status: updated.status, updatedAt: updated.updated_at }
             : prev,
         );
       } catch (err) {
@@ -117,26 +115,22 @@ export function useAdminRegistrationActions({
   const handleUpdateGuestCount = useCallback(
     async (id: string, guestCount: number) => {
       try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id,
-            payload: { guest_count: guestCount },
-            fallbackMessage: m.admin_error_update_registration(),
-          }),
-        );
+        const updated = await updateRegistrationMutation.mutateAsync({
+          id,
+          payload: { guest_count: guestCount },
+          fallbackMessage: m.admin_error_update_registration(),
+        });
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev?.map((registration) => (registration.id === id ? updated : registration)),
         );
         setDetailRegistration((prev) => (prev?.id === id ? updated : prev));
       } catch (err) {
         if (isCapacityError(err) && (await confirmOverCapacity())) {
-          const updated = apiToRegistration(
-            await updateRegistrationMutation.mutateAsync({
-              id,
-              payload: { guest_count: guestCount, confirm_over_capacity: true },
-              fallbackMessage: m.admin_error_update_registration(),
-            }),
-          );
+          const updated = await updateRegistrationMutation.mutateAsync({
+            id,
+            payload: { guest_count: guestCount, confirm_over_capacity: true },
+            fallbackMessage: m.admin_error_update_registration(),
+          });
           queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
             prev?.map((registration) => (registration.id === id ? updated : registration)),
           );
@@ -161,22 +155,11 @@ export function useAdminRegistrationActions({
     async (registrationId: string, payload: PaymentTransactionCreate) => {
       let transaction;
       try {
-        transaction = apiToPaymentTransaction(
-          await createPaymentTransactionMutation.mutateAsync({
-            registrationId,
-            payload: {
-              amount: payload.amount,
-              effective_date: payload.effectiveDate,
-              ...(payload.reference ? { reference: payload.reference } : {}),
-              ...(payload.note ? { note: payload.note } : {}),
-              ...(payload.reversedTransactionId
-                ? { reversed_transaction_id: payload.reversedTransactionId }
-                : {}),
-              idempotency_key: payload.idempotencyKey,
-            },
-            fallbackMessage: m.admin_error_record_payment(),
-          }),
-        );
+        transaction = await createPaymentTransactionMutation.mutateAsync({
+          registrationId,
+          payload,
+          fallbackMessage: m.admin_error_record_payment(),
+        });
       } catch (err) {
         devError("Failed to record payment transaction", err);
         setRegistrationError(apiErrorMessage(err, m.admin_error_record_payment()));
@@ -189,12 +172,12 @@ export function useAdminRegistrationActions({
       // clean return, and a retry after a thrown error reuses a fresh
       // idempotency key, which would record this same payment a second time.
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
           `/api/registrations/${registrationId}`,
           { headers: authHeaders() },
           m.admin_error_load_data(),
         );
-        const updated = apiToRegistration(data);
+        const updated = data;
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev?.map((registration) =>
             registration.id === registrationId ? updated : registration,
@@ -224,13 +207,13 @@ export function useAdminRegistrationActions({
         (await fetchRegistration(id, authHeaders));
       const outstanding = Math.max(
         0,
-        (registration?.amountDue ?? 0) - (registration?.amountPaid ?? 0),
+        toAmount(registration?.amount_due) - toAmount(registration?.amount_paid),
       );
       if (outstanding <= 0) return;
       await handleAddTransaction(id, {
         amount: outstanding,
-        effectiveDate: toLocalDateKey(new Date()),
-        idempotencyKey: crypto.randomUUID(),
+        effective_date: toLocalDateKey(new Date()),
+        idempotency_key: crypto.randomUUID(),
       });
     },
     [handleAddTransaction, queryClient, registrationsQueryKey, authHeaders],
@@ -243,8 +226,8 @@ export function useAdminRegistrationActions({
           id: registrationId,
           payload: {
             allocations: allocations.map((a) => ({
-              table_id: a.tableId,
-              guest_count: a.guestCount,
+              table_id: a.table_id,
+              guest_count: a.guest_count,
               exclusive: a.exclusive,
             })),
             confirm_over_capacity: confirm,
@@ -252,14 +235,14 @@ export function useAdminRegistrationActions({
           fallbackMessage: m.admin_error_assign_table(),
         });
       try {
-        let response: Record<string, unknown>;
+        let response: RegistrationOut;
         try {
           response = await save();
         } catch (error) {
           if (!isCapacityError(error) || !(await confirmOverCapacity())) throw error;
           response = await save(true);
         }
-        const updated = apiToRegistration(response);
+        const updated = response;
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev?.map((r) => (r.id === registrationId ? updated : r)),
         );
@@ -288,14 +271,14 @@ export function useAdminRegistrationActions({
           fallbackMessage: m.admin_error_update_registration(),
         });
       try {
-        let response: Record<string, unknown>;
+        let response: RegistrationOut;
         try {
           response = await save();
         } catch (error) {
           if (!isCapacityError(error) || !(await confirmOverCapacity())) throw error;
           response = await save(true);
         }
-        const updated = apiToRegistration(response);
+        const updated = response;
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (previous) =>
           previous?.map((item) => (item.id === registrationId ? updated : item)),
         );
@@ -329,11 +312,11 @@ export function useAdminRegistrationActions({
           tableId
             ? [
                 {
-                  tableId,
-                  guestCount:
-                    registration.allocations?.[0]?.guestCount ??
-                    ((registration.bookedTableQuantity ?? 0) > 0 ? 0 : registration.guestCount),
-                  exclusive: (registration.bookedTableQuantity ?? 0) > 0,
+                  table_id: tableId,
+                  guest_count:
+                    registration.allocations?.[0]?.guest_count ??
+                    ((registration.booked_table_quantity ?? 0) > 0 ? 0 : registration.guest_count),
+                  exclusive: (registration.booked_table_quantity ?? 0) > 0,
                 },
               ]
             : [],
@@ -351,7 +334,7 @@ export function useAdminRegistrationActions({
       // one-booking list as loaded (and repopulate the collection after a
       // sign-out reset). The initial fetch returns the new booking itself.
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev && registration.event?.editionId === registrationsQueryKey[3]
+        prev && registration.event?.edition_id === registrationsQueryKey[3]
           ? [registration, ...prev.filter((row) => row.id !== registration.id)]
           : prev,
       );
@@ -362,12 +345,12 @@ export function useAdminRegistrationActions({
   const handleViewDetail = useCallback(
     async (registration: Registration) => {
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
           `/api/registrations/${registration.id}`,
           { headers: authHeaders() },
           m.admin_error_load_data(),
         );
-        setDetailRegistration(apiToRegistration(data));
+        setDetailRegistration(data);
       } catch (err) {
         devError("Failed to fetch registration detail, falling back to list data", err);
         setDetailRegistration(registration);
@@ -377,25 +360,23 @@ export function useAdminRegistrationActions({
   );
 
   const handleToggleDelivered = useCallback(
-    async (registrationId: string, updatedOrders: OrderItem[]) => {
+    async (registrationId: string, updatedOrders: OrderItemOut[]) => {
       try {
-        const updated = apiToRegistration(
-          await updateEntranceMutation.mutateAsync({
-            id: registrationId,
-            payload: {
-              order_items: updatedOrders.map((order) => ({
-                product_id: order.productId,
-                name: order.name,
-                quantity: order.quantity,
-                delivered_quantity: order.deliveredQuantity,
-                price: order.price,
-                category: order.category,
-                delivered: order.delivered,
-              })),
-            },
-            fallbackMessage: m.admin_error_bottle_delivery(),
-          }),
-        );
+        const updated = await updateEntranceMutation.mutateAsync({
+          id: registrationId,
+          payload: {
+            order_items: updatedOrders.map((order) => ({
+              product_id: order.product_id,
+              name: order.name,
+              quantity: order.quantity,
+              delivered_quantity: order.delivered_quantity,
+              price: order.price,
+              category: order.category,
+              delivered: order.delivered,
+            })),
+          },
+          fallbackMessage: m.admin_error_bottle_delivery(),
+        });
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev
             ? prev.map((registration) =>
@@ -421,13 +402,11 @@ export function useAdminRegistrationActions({
   const handleCheckIn = useCallback(
     async (registrationId: string, checkedIn = true) => {
       try {
-        const updated = apiToRegistration(
-          await updateEntranceMutation.mutateAsync({
-            id: registrationId,
-            payload: { checked_in: checkedIn },
-            fallbackMessage: checkedIn ? m.admin_error_check_in() : m.admin_error_undo_check_in(),
-          }),
-        );
+        const updated = await updateEntranceMutation.mutateAsync({
+          id: registrationId,
+          payload: { checked_in: checkedIn },
+          fallbackMessage: checkedIn ? m.admin_error_check_in() : m.admin_error_undo_check_in(),
+        });
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev
             ? prev.map((registration) =>
@@ -460,13 +439,11 @@ export function useAdminRegistrationActions({
   const handleIssueStrap = useCallback(
     async (registrationId: string) => {
       try {
-        const updated = apiToRegistration(
-          await updateEntranceMutation.mutateAsync({
-            id: registrationId,
-            payload: { strap_issued: true },
-            fallbackMessage: m.admin_error_issue_strap(),
-          }),
-        );
+        const updated = await updateEntranceMutation.mutateAsync({
+          id: registrationId,
+          payload: { strap_issued: true },
+          fallbackMessage: m.admin_error_issue_strap(),
+        });
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
           prev
             ? prev.map((registration) =>

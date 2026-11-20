@@ -10,7 +10,7 @@ for (const theme of [
   "rose",
   "affiche",
   "billet",
-]) {
+] as const) {
   test(`SVG icons inherit ${theme} colours without loading the icon font`, async ({ page }) => {
     const fontRequests: string[] = [];
     page.on("request", (request) => {

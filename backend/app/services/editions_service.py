@@ -34,10 +34,21 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.database import violated_constraint_name
 from app.models import Edition, Event, Organization, Venue
-from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate, SponsorTier
+from app.schemas import (
+    EditionCreate,
+    EditionItemOut,
+    EditionOut,
+    EditionPublicOut,
+    EditionScratchpadOut,
+    EditionScratchpadUpdate,
+    EditionType,
+    EditionUpdate,
+    SponsorTier,
+    VenueOut,
+)
 from app.services import edition_artwork
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
+from app.utils import edition_to_out, event_to_summary_out, get_or_404, venue_to_out
 
 logger = logging.getLogger(__name__)
 
@@ -65,14 +76,14 @@ async def get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
     )
 
 
-async def get_edition_scratchpad(db: AsyncSession, edition_id: str) -> dict:
+async def get_edition_scratchpad(db: AsyncSession, edition_id: str) -> EditionScratchpadOut:
     edition = await get_edition_or_404(db, edition_id)
-    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
+    return EditionScratchpadOut(content=edition.scratchpad, updated_at=edition.updated_at)
 
 
 async def update_edition_scratchpad(
     db: AsyncSession, edition: Edition, *, body: EditionScratchpadUpdate, actor: str, request_id: str | None = None
-) -> dict:
+) -> EditionScratchpadOut:
     edition.scratchpad = body.content
     await write_audit_entry(
         db,
@@ -85,7 +96,7 @@ async def update_edition_scratchpad(
     )
     await db.commit()
     await db.refresh(edition)
-    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
+    return EditionScratchpadOut(content=edition.scratchpad, updated_at=edition.updated_at)
 
 
 async def deactivate_conflicting_editions(
@@ -156,38 +167,26 @@ async def commit_or_conflict(db: AsyncSession) -> None:
         ) from exc
 
 
-async def load_venue(db: AsyncSession, venue_id: str) -> dict:
+async def load_venue(db: AsyncSession, venue_id: str) -> VenueOut:
     result = await db.execute(select(Venue).where(Venue.id == venue_id))
     venue = result.scalar_one_or_none()
     if venue is None:
         raise HTTPException(status_code=404, detail=f"Venue '{venue_id}' not found.")
-    return venue_to_dict(venue)
+    return venue_to_out(venue)
 
 
-async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict]:
+async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, VenueOut]:
     if not ids:
         return {}
     result = await db.execute(select(Venue).where(Venue.id.in_(ids)))
-    return {venue.id: venue_to_dict(venue) for venue in result.scalars().all()}
+    return {venue.id: venue_to_out(venue) for venue in result.scalars().all()}
 
 
-async def _load_organizations_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
+async def _load_organizations_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, EditionItemOut]:
     if not ids:
         return {}
     result = await db.execute(select(Organization).where(Organization.id.in_(ids), Organization.active.is_(True)))
-    return {
-        organization.id: {
-            "id": organization.id,
-            "name": organization.name,
-            "image": organization.image,
-            "website": organization.website,
-            "description_nl": organization.description_nl,
-            "description_fr": organization.description_fr,
-            "description_en": organization.description_en,
-            "type": organization.type,
-        }
-        for organization in result.scalars().all()
-    }
+    return {organization.id: EditionItemOut.model_validate(organization) for organization in result.scalars().all()}
 
 
 async def validate_organization_ids(db: AsyncSession, organization_ids: list[int]) -> None:
@@ -205,7 +204,7 @@ async def validate_organization_ids(db: AsyncSession, organization_ids: list[int
     invalid = [eid for eid in organization_ids if eid not in organization_map]
     if invalid:
         raise HTTPException(status_code=400, detail=f"Invalid or inactive organization IDs: {invalid}")
-    vendor_ids = [eid for eid in organization_ids if organization_map[eid]["type"] == "vendor"]
+    vendor_ids = [eid for eid in organization_ids if organization_map[eid].type == "vendor"]
     if vendor_ids:
         raise HTTPException(
             status_code=400, detail=f"Vendor-type organizations may not be linked to editions: {vendor_ids}"
@@ -251,7 +250,9 @@ async def validate_sponsor_tiers(db: AsyncSession, organizations: list[int], tie
             status_code=400, detail=f"Sponsor tiers set for organizations not in the lineup: {outside_lineup}"
         )
     organization_map = await _load_organizations_by_ids(db, set(tiers))
-    not_sponsors = sorted(oid for oid in tiers if organization_map.get(oid, {}).get("type") != "sponsor")
+    not_sponsors = sorted(
+        oid for oid in tiers if oid not in organization_map or organization_map[oid].type != "sponsor"
+    )
     if not_sponsors:
         raise HTTPException(status_code=400, detail=f"Sponsor tiers can only be set for sponsors: {not_sponsors}")
 
@@ -317,34 +318,38 @@ SPONSOR_TIER_ORDER = {tier: rank for rank, tier in enumerate(get_args(SponsorTie
 
 
 def _resolve_organizations(
-    edition: Edition, organization_map: dict[int, dict]
-) -> tuple[list[dict], list[dict], list[dict]]:
+    edition: Edition, organization_map: dict[int, EditionItemOut]
+) -> tuple[list[EditionItemOut], list[EditionItemOut], list[EditionItemOut]]:
     """Split the lineup by type, keeping the admin-defined order.
 
     Sponsors are then ordered by tier (main, partner, supporter, untiered); within a tier
     the lineup order stands. The organization items are shared between editions, so the
     tier goes on a copy.
     """
-    producers: list[dict] = []
-    sponsors: list[dict] = []
-    vendors: list[dict] = []
+    producers: list[EditionItemOut] = []
+    sponsors: list[EditionItemOut] = []
+    vendors: list[EditionItemOut] = []
     for organization_id in edition.organizations:
         item = organization_map.get(organization_id)
         if item is None:
             continue
-        if item["type"] == "producer":
+        if item.type == "producer":
             producers.append(item)
-        elif item["type"] == "sponsor":
-            sponsors.append({**item, "sponsor_tier": edition.sponsor_tiers.get(str(organization_id))})
-        elif item["type"] == "vendor":
+        elif item.type == "sponsor":
+            sponsors.append(
+                EditionItemOut.model_validate(
+                    {**item.model_dump(), "sponsor_tier": edition.sponsor_tiers.get(str(organization_id))}
+                )
+            )
+        elif item.type == "vendor":
             vendors.append(item)
-    sponsors.sort(key=lambda sponsor: SPONSOR_TIER_ORDER.get(sponsor["sponsor_tier"], len(SPONSOR_TIER_ORDER)))
+    sponsors.sort(key=lambda sponsor: SPONSOR_TIER_ORDER.get(sponsor.sponsor_tier, len(SPONSOR_TIER_ORDER)))
     return producers, sponsors, vendors
 
 
 async def edition_payloads(
     db: AsyncSession, editions: list[Edition], *, active_only: bool, public: bool = False, locale: str | None = None
-) -> list[dict]:
+) -> list[EditionOut | EditionPublicOut]:
     """Build edition response payloads.
 
     `active_only` controls whether inactive events are dropped from the serialized
@@ -352,13 +357,13 @@ async def edition_payloads(
     inactive (draft/cancelled) events never appear in unauthenticated responses;
     admin endpoints pass `False` so event management keeps seeing everything.
 
-    `public` controls each event's `products` — see `event_to_summary_dict`.
+    `public` controls each event's `products` — see `event_to_summary_out`.
     Public endpoints pass `True`; the caller must also use a response_model
     built from `ProductPublicOut` (see `app.schemas.EditionPublicOut`), since
     the two shapes are incompatible.
 
     `locale` resolves each event's `title`/`description` for that language
-    (Dutch when `None`); see `event_to_summary_dict`.
+    (Dutch when `None`); see `event_to_summary_out`.
     """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     organization_map = await _load_organizations_by_ids(
@@ -380,11 +385,12 @@ async def edition_payloads(
         # to active events preserves that order, so no re-sort is needed here.
         events = active_events(edition) if active_only else edition.events
         payloads.append(
-            edition_to_dict(
+            edition_to_out(
                 edition,
                 venue=venues[edition.venue_id],
+                public=public,
                 dates=_edition_dates(events),
-                events=[event_to_summary_dict(event, public=public, locale=locale) for event in events],
+                events=[event_to_summary_out(event, public=public, locale=locale) for event in events],
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
@@ -398,14 +404,16 @@ async def edition_payloads(
 
 async def edition_payload(
     db: AsyncSession, edition: Edition, *, active_only: bool, public: bool = False, locale: str | None = None
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     payloads = await edition_payloads(db, [edition], active_only=active_only, public=public, locale=locale)
     if not payloads:
         raise HTTPException(status_code=404, detail="Edition not found.")
     return payloads[0]
 
 
-async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, request_id: str | None = None) -> dict:
+async def create_edition(
+    db: AsyncSession, *, body: EditionCreate, actor: str, request_id: str | None = None
+) -> EditionOut | EditionPublicOut:
     if (await db.execute(select(Edition).where(Edition.id == body.id))).scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -455,7 +463,7 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
 
 async def apply_edition_update(
     db: AsyncSession, edition: Edition, body: EditionUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     if "co_organizer_organization_id" in body.model_fields_set:
         await validate_co_organizer(db, body.co_organizer_organization_id)
         edition.co_organizer_organization_id = body.co_organizer_organization_id
@@ -558,7 +566,7 @@ async def _commit_artwork_change(
     operation: str,
     actor: str,
     request_id: str | None,
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     await write_audit_entry(
         db,
         actor=actor,
@@ -582,7 +590,7 @@ async def upload_edition_artwork(
     *,
     actor: str,
     request_id: str | None = None,
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     """Publish *data* (already validated by ``edition_artwork.encode``) in one slot immediately.
 
     The previous file is deleted after commit; the new one is removed again if the
@@ -599,7 +607,7 @@ async def upload_edition_artwork(
 
 async def clear_edition_artwork(
     db: AsyncSession, edition_id: str, slot: edition_artwork.Slot, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> EditionOut | EditionPublicOut:
     """Empty a slot so the site falls back to its static image. Clearing an empty slot is a no-op."""
     await edition_artwork.lock(db)
     edition = await _lock_edition(db, edition_id)

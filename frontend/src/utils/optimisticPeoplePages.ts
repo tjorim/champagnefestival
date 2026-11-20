@@ -28,7 +28,7 @@ export function patchPeoplePage(
   if (!person) return page;
   const matches = (row: Person | null) =>
     !!row &&
-    (!params.role || row.roles.includes(params.role)) &&
+    (!params.role || (row.roles ?? []).includes(params.role)) &&
     (params.active === undefined ||
       (params.role ? isRoleActive(row, params.role) : !row.anonymised) === params.active);
   const updated = write.update(person);

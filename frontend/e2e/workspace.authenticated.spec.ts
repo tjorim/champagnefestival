@@ -9,7 +9,7 @@ for (const locale of ["nl", "fr", "en"] as const) {
   for (const viewport of [
     { width: 1280, height: 800 },
     { width: 390, height: 700 },
-  ]) {
+  ] as const) {
     test(`workspace tasks in ${locale} at ${viewport.width}`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.addInitScript(
@@ -54,7 +54,7 @@ for (const locale of ["nl", "fr", "en"] as const) {
 for (const [width, zoom] of [
   [1280, 1.5],
   [1440, 1.25],
-]) {
+] as const) {
   test(`workspace at ${width} reduced height and native zoom ${zoom}`, async ({ baseURL }) => {
     test.setTimeout(90000);
     const { chromium } = await import("@playwright/test");
@@ -142,7 +142,7 @@ test("pending count opens the matching unscoped registration query", async ({ pa
   });
   await queue.click();
   const url = new URL((await response).url());
-  for (const unwanted of ["edition_id", "event_date", "edition_category", "q"])
+  for (const unwanted of ["edition_id", "event_date", "edition_category", "q"] as const)
     expect(url.searchParams.has(unwanted)).toBe(false);
   await expect(page).toHaveURL(/registrationStatus=pending/);
 });

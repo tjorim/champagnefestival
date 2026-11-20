@@ -1,7 +1,7 @@
 import { m } from "@/paraglide/messages";
 
 /** What a meal suits or contains (mirrors `DietaryTag` in the backend schemas). */
-export type DietaryTag = "vegetarian" | "vegan" | "gluten_free" | "lactose_free" | "contains_nuts";
+export type DietaryTag = import("@/api-types").PollOptionOut["dietary_tags"][number];
 
 const LABELS: Record<DietaryTag, () => string> = {
   vegetarian: () => m.poll_dietary_vegetarian(),

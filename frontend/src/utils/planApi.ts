@@ -1,42 +1,17 @@
+import type { PlanAreaOut, PlanRoomOut, PlanDayOut, EditionPlanOut } from "@/api-types";
 import { queryOptions } from "@tanstack/react-query";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Stand } from "@/utils/standsApi";
 
 /** One area (stand, stage, entrance, catering, ...) of the public floor plan. */
-export interface PlanArea {
-  id: string;
-  label: string;
-  icon: string;
-  /** Canvas-relative percentages and clockwise degrees, see docs/floor-plan-coordinates.md. */
-  x: number;
-  y: number;
-  rotation: number;
-  width_m: number;
-  length_m: number;
-  organization_id: number | null;
-}
+export type PlanArea = PlanAreaOut;
 
-export interface PlanRoom {
-  id: string;
-  name: string;
-  width_m: number;
-  length_m: number;
-  color: string;
-  areas: PlanArea[];
-}
+export type PlanRoom = PlanRoomOut;
 
-export interface PlanDay {
-  event_id: string;
-  /** `YYYY-MM-DD`. */
-  date: string;
-  rooms: PlanRoom[];
-}
+export type PlanDay = PlanDayOut;
 
-export interface EditionPlan {
-  edition_id: string;
-  days: PlanDay[];
-}
+export type EditionPlan = EditionPlanOut;
 
 /** Public `GET /api/editions/{id}/plan`: rooms and areas only, never tables or registrations. */
 export async function fetchEditionPlan(editionId: string): Promise<EditionPlan> {

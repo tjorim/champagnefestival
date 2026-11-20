@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/product-categories", tags=["product-categories"]
 @router.get("", response_model=list[CategoryOut])
 async def list_product_categories(
     db: AsyncSession = Depends(get_db), locale: Language | None = Query(default=None)
-) -> list[dict]:
+) -> list[CategoryOut]:
     """Every category in display order. `label` is resolved for `locale`; all stored labels are included."""
     return await product_categories_service.list_categories(db, locale=locale)
 
@@ -32,7 +32,7 @@ async def create_product_category(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CategoryOut:
     try:
         return await product_categories_service.create_category(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -48,7 +48,7 @@ async def update_product_category(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> CategoryOut:
     try:
         return await product_categories_service.update_category(
             db, actor=actor, key=key, body=body, request_id=getattr(request.state, "request_id", None)

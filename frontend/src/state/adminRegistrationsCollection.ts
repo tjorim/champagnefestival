@@ -105,7 +105,7 @@ export async function patchAdminRegistrationLiveEvent(
 
   await lifecycle.writeToActive(async (collection) => {
     const editionId = collectionEditions.get(collection);
-    if (editionId === undefined || (editionId && registration.event?.editionId === editionId)) {
+    if (editionId === undefined || (editionId && registration.event?.edition_id === editionId)) {
       await collection.utils.writeUpsert(registration);
     } else {
       await lifecycle.deleteIfPresent(collection, registrationId);

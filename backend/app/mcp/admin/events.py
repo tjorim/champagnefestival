@@ -19,10 +19,10 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.mcp.utils import as_value_error, validate_with_schema
+from app.mcp.utils import as_value_error, dump_response, validate_with_schema
 from app.schemas import EventCreate, EventUpdate
 from app.services import events_service
-from app.utils import event_to_summary_dict
+from app.utils import event_to_summary_out
 
 
 async def create_event(
@@ -69,7 +69,7 @@ async def create_event(
     )
     async with session_factory() as db:
         try:
-            return await events_service.create_event(db, body=body, actor=actor)
+            return dump_response(await events_service.create_event(db, body=body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 
@@ -80,7 +80,7 @@ async def get_event(session_factory: Any, event_id: str) -> dict:
             event = await events_service.get_event_or_404(db, event_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return event_to_summary_dict(event, include_edition=True)
+        return event_to_summary_out(event, include_edition=True).model_dump(exclude_unset=True)
 
 
 async def update_event(
@@ -156,7 +156,7 @@ async def update_event(
     async with session_factory() as db:
         try:
             event = await events_service.get_event_or_404(db, event_id)
-            return await events_service.apply_event_update(db, event, body, actor=actor)
+            return dump_response(await events_service.apply_event_update(db, event, body, actor=actor))
         except HTTPException as exc:
             raise as_value_error(exc) from exc
 

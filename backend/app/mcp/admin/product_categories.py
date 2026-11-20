@@ -16,7 +16,11 @@ from app.services.errors import ServiceError
 
 async def list_product_categories(session_factory: Any, locale: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"product_categories": await product_categories_service.list_categories(db, locale=locale)}
+        return {
+            "product_categories": [
+                item.model_dump() for item in await product_categories_service.list_categories(db, locale=locale)
+            ]
+        }
 
 
 async def create_product_category(
@@ -39,7 +43,7 @@ async def create_product_category(
     )
     async with session_factory() as db:
         try:
-            return await product_categories_service.create_category(db, actor=actor, body=body)
+            return (await product_categories_service.create_category(db, actor=actor, body=body)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -69,7 +73,7 @@ async def update_product_category(
     body = validate_with_schema(CategoryUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await product_categories_service.update_category(db, actor=actor, key=key, body=body)
+            return (await product_categories_service.update_category(db, actor=actor, key=key, body=body)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 

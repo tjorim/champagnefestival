@@ -150,7 +150,7 @@ async def test_update_rejects_credential_bearing_link(client):
 async def test_concurrent_creates_allocate_distinct_sequential_positions(engine):
     sessions = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def create_one(text: str) -> dict:
+    async def create_one(text: str):
         async with sessions() as session:
             return await create(
                 session,
@@ -160,7 +160,7 @@ async def test_concurrent_creates_allocate_distinct_sequential_positions(engine)
             )
 
     created = await asyncio.gather(create_one("Eerste"), create_one("Tweede"))
-    assert sorted(item["sort_order"] for item in created) == [0, 1]
+    assert sorted(item.sort_order for item in created) == [0, 1]
     async with sessions() as session:
         positions = (await session.execute(select(Announcement.sort_order))).scalars().all()
     assert sorted(positions) == [0, 1]

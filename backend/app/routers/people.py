@@ -18,15 +18,19 @@ from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
 from app.dialect_functions import json_array_elements_text
 from app.models import Event, Person, Registration
+from app.openapi_responses import binary_response
 from app.schemas import (
     EmailConsentOut,
     PeopleCountsOut,
     PersonAdminSummaryOut,
     PersonCreate,
     PersonListEnvelope,
+    PersonListItemOut,
     PersonOut,
     PersonPaymentSummary,
     PersonUpdate,
+    RegistrationListOut,
+    RegistrationOut,
 )
 from app.services import email_consent_service, payments_service, people_service, settings_service
 from app.services.errors import ServiceError, to_http_exception
@@ -41,7 +45,7 @@ from app.services.people_listing import (
     reward_due,
     role_active,
 )
-from app.utils import person_to_dict, registration_to_list_dict
+from app.utils import person_to_out, registration_to_list_out
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
 # 7 years after a person's most recent registration's event date. 365.25 days/year
@@ -62,7 +66,7 @@ async def create_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     return await people_service.create_person(db, body=body, actor=actor, request_id=request_id)
 
 
@@ -116,13 +120,13 @@ async def list_people(
     )
     return list_query.envelope(
         [
-            {
-                **person_to_dict(p),
-                "registration_count": count,
-                "last_attended": attended,
-                "reward_due": due,
-                "inactivity_highlight": bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
-            }
+            PersonListItemOut(
+                **person_to_out(p).model_dump(),
+                registration_count=count,
+                last_attended=attended,
+                reward_due=due,
+                inactivity_highlight=bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
+            )
             for p, count, attended, due in rows
         ],
         total,
@@ -136,7 +140,7 @@ async def people_counts(
     role: str | None = Query(None),
     active: bool | None = Query(None),
     reward_due_filter: bool | None = Query(None, alias="reward_due"),
-) -> dict:
+) -> PeopleCountsOut:
     """Counts within the full intersection of q, role and active filters."""
     matching = filtered_people_stmt(q=q, role=role, active=active, reward_due_filter=reward_due_filter).subquery()
     active_expr = (
@@ -156,7 +160,7 @@ async def people_counts(
     roles = (
         await db.execute(select(expanded.c.role, func.count(func.distinct(expanded.c.id))).group_by(expanded.c.role))
     ).all()
-    return {"total": total, "active": active_count, "inactive": total - active_count, "by_role": dict(roles)}
+    return PeopleCountsOut(total=total, active=active_count, inactive=total - active_count, by_role=dict(roles))
 
 
 @router.get("/by-email", response_model=PersonListEnvelope)
@@ -172,10 +176,12 @@ async def people_by_email(
         stmt = stmt.where(Person.id != exclude_person_id)
     total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     rows = (await db.execute(list_query.apply(stmt.add_columns(registration_count).order_by(Person.id)))).all()
-    return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
+    return list_query.envelope(
+        [PersonListItemOut(**person_to_out(p).model_dump(), registration_count=count) for p, count in rows], total
+    )
 
 
-@router.get("/export")
+@router.get("/export", **binary_response("text/csv", "People as CSV"))
 async def export_people_csv(
     db: AsyncSession = Depends(get_db),
     role: str | None = Query(None),
@@ -198,7 +204,7 @@ async def export_people_csv(
 
 
 @router.get("/due-for-anonymisation", response_model=list[PersonAdminSummaryOut])
-async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) -> list[PersonOut]:
     """People whose identity fields are due for anonymisation.
 
     "Due" means: no NISS/eID on file (a current or former volunteer is never
@@ -231,13 +237,13 @@ async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) 
         .order_by(last_event_date.asc())
     )
     rows = (await db.execute(stmt)).scalars().all()
-    return [person_to_dict(p) for p in rows]
+    return [person_to_out(p) for p in rows]
 
 
 @router.get("/{person_id}", response_model=PersonAdminSummaryOut)
-async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> PersonOut:
     person = await people_service.get_person_or_404(db, person_id)
-    return person_to_dict(person)
+    return person_to_out(person)
 
 
 @router.put("/{person_id}", response_model=PersonOut)
@@ -247,16 +253,16 @@ async def update_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     person = await people_service.get_person_or_404(db, person_id)
     return await people_service.apply_person_update(db, person, body, actor=actor, request_id=request_id)
 
 
-@router.get("/{person_id}/registrations")
+@router.get("/{person_id}/registrations", response_model=list[RegistrationOut])
 async def list_person_registrations(
     person_id: str,
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationListOut]:
     person = await people_service.get_person_or_404(db, person_id)
 
     result = await db.execute(
@@ -269,11 +275,11 @@ async def list_person_registrations(
         .order_by(Registration.created_at.desc())
     )
     rows = result.scalars().all()
-    return [registration_to_list_dict(r, person, r.event) for r in rows]
+    return [registration_to_list_out(r, person, r.event) for r in rows]
 
 
 @router.get("/{person_id}/payment-summary", response_model=PersonPaymentSummary)
-async def get_person_payment_summary(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_person_payment_summary(person_id: str, db: AsyncSession = Depends(get_db)) -> PersonPaymentSummary:
     """Received/refunded/net paid/due/outstanding/refund-liability across one
     person's non-cancelled bookings. See ``payments_service.person_payment_summary``."""
     await people_service.get_person_or_404(db, person_id)
@@ -287,7 +293,7 @@ async def merge_people(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     """Merge duplicate_id into person_id (admin-only). See
     ``app.services.people_service.merge_people`` for the exact semantics."""
     if person_id == duplicate_id:
@@ -315,7 +321,7 @@ async def anonymise_person(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> dict:
+) -> PersonOut:
     """Blank a person's identity fields, keeping their registrations intact.
 
     See ``app.services.people_service.anonymise_person``. Admin-triggered
@@ -326,7 +332,7 @@ async def anonymise_person(
 
 
 @router.get("/{person_id}/email-consents", response_model=list[EmailConsentOut])
-async def list_person_email_consents(person_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def list_person_email_consents(person_id: str, db: AsyncSession = Depends(get_db)) -> list[EmailConsentOut]:
     """Every grant and withdrawal of email consent for this person, newest first (read-only)."""
     person = await people_service.get_person_or_404(db, person_id)
     return await email_consent_service.list_person_consents(db, person.id)
@@ -339,7 +345,7 @@ async def record_email_opt_out(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
-) -> list[dict]:
+) -> list[EmailConsentOut]:
     """Record that this person no longer wants a category (for example after asking by phone).
 
     Administrators can only withdraw consent, never grant it; repeating the call changes nothing.

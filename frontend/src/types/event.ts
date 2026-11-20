@@ -1,238 +1,33 @@
-import { parseOrderQuestions, type OrderQuestion } from "@/utils/orderQuestions";
-export interface EventEditionSummary {
-  id: string;
-  year: number;
-  month: string;
-  editionType: "festival" | "bourse" | "capsule_exchange";
-  active: boolean;
-}
-
-/**
- * Something guests can order when registering for this event (a bottle of
- * champagne, a cheese platter, ...). Scoped to one event — there is no global
- * catalog, since what a VIP tasting sells has nothing to do with what a
- * different tasting or a bourse would.
- */
-export interface ProductInclusion {
-  product_id: string;
-  quantity: number;
-  per_quantity: number;
-  rounding: "up" | "down";
-}
-
-/** A product's stored name/description in every language (see `EventTranslations`). */
-export interface ProductTranslations {
-  nameNl: string | null;
-  nameFr: string | null;
-  nameEn: string | null;
-  descriptionNl: string | null;
-  descriptionFr: string | null;
-  descriptionEn: string | null;
-}
-
-/** Translation fields of a product whose text exists only in Dutch. */
+import type { EventOut, ProductOut } from "@/api-types";
+export type EventLanguage = "nl" | "fr" | "en";
+export type EventTranslations = Pick<
+  EventOut,
+  "title_nl" | "title_fr" | "title_en" | "description_nl" | "description_fr" | "description_en"
+>;
+export type ProductTranslations = Pick<
+  ProductOut,
+  "name_nl" | "name_fr" | "name_en" | "description_nl" | "description_fr" | "description_en"
+>;
 export const NO_PRODUCT_TRANSLATIONS: ProductTranslations = {
-  nameNl: null,
-  nameFr: null,
-  nameEn: null,
-  descriptionNl: null,
-  descriptionFr: null,
-  descriptionEn: null,
+  name_nl: null,
+  name_fr: null,
+  name_en: null,
+  description_nl: null,
+  description_fr: null,
+  description_en: null,
 };
 
-export interface Product extends ProductTranslations {
-  unit?: "item" | "table" | "person";
-  stock?: number | null;
-  reservedQuantity?: number;
-  availableQuantity?: number | null;
-  shortage?: number;
-  /** A purchasable product with no remaining stock — distinct from `purchasable`. */
-  soldOut?: boolean;
-  inclusions?: ProductInclusion[] | null;
-  id: string;
-  eventId: string;
-  /** Dutch name (what the admin lists show). Visitors use `productName`. */
-  name: string;
-  /** Short, optional blurb in Dutch, or "". Visitors use `productDescription`. */
-  description: string;
-  price: number;
-  /** Key of a product category (see `useProductCategories`). */
-  category: string;
-  /**
-   * Whether this product can be ordered standalone and is ever named to a
-   * visitor — see #1020. A `purchasable: false` ("hidden") product can still
-   * be an inclusion target of another product (bundled quantity, stock and
-   * preparation totals are unaffected either way), but it is never orderable
-   * directly and never named to a visitor, standalone or bundled.
-   */
-  purchasable: boolean;
-  /**
-   * A prerequisite product for this event (e.g. an entry ticket). An order
-   * that includes any non-required product for an event with required
-   * products must also include at least one required one. A required
-   * product must be purchasable.
-   */
-  required: boolean;
-  /**
-   * Together, these bundle a free quantity of another product on this event
-   * into this one — e.g. one champagne bottle per two guests with a VIP
-   * table. Only meaningful as a pair.
-   */
-  includedProductId?: string;
-  includedPerGuests?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type EventLanguage = "nl" | "fr" | "en";
-
-/** Stored text in every language; mirrors the organisation description fields. */
-export interface EventTranslations {
-  titleNl: string | null;
-  titleFr: string | null;
-  titleEn: string | null;
-  descriptionNl: string | null;
-  descriptionFr: string | null;
-  descriptionEn: string | null;
-}
-
-export interface Event extends EventTranslations {
-  orderQuestions?: OrderQuestion[];
-  id: string;
-  editionId: string;
-  /** Dutch title (what the admin lists show). Visitors use `eventTitle`. */
-  title: string;
-  /** Dutch description, or "". Visitors use `eventDescription`. */
-  description: string;
-  date: string;
-  startTime: string;
-  endTime?: string;
-  category: string;
-  volunteersOnly?: boolean;
-  membersOnly?: boolean;
-  registrationRequired: boolean;
-  registrationsOpenFrom?: string;
-  registrationsCloseAt?: string;
-  sortOrder?: number;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-  edition?: EventEditionSummary | null;
-  /**
-   * Purchasable products only — a hidden (`purchasable: false`) product
-   * never appears here, even as a bundle target (see `Product.purchasable`).
-   * Whether guests can order anything for this event is answered by whether
-   * any entry exists at all, not by a separate flag.
-   */
-  products: Product[];
-}
-
-export interface EventFormData {
-  editionId: string;
-  titleNl: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionNl: string;
-  descriptionFr: string;
-  descriptionEn: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  category: string;
-  volunteersOnly?: boolean;
-  membersOnly?: boolean;
-  registrationRequired: boolean;
-  registrationsOpenFrom: string;
-  registrationsCloseAt: string;
-  sortOrder: string;
-  active: boolean;
-}
-
-function nullableText(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-export function apiToProduct(data: Record<string, unknown>): Product {
-  return {
-    id: String(data.id ?? ""),
-    eventId: String(data.event_id ?? ""),
-    name: String(data.name ?? ""),
-    description: String(data.description ?? ""),
-    nameNl: nullableText(data.name_nl),
-    nameFr: nullableText(data.name_fr),
-    nameEn: nullableText(data.name_en),
-    descriptionNl: nullableText(data.description_nl),
-    descriptionFr: nullableText(data.description_fr),
-    descriptionEn: nullableText(data.description_en),
-    price: Number(data.price ?? 0),
-    category: String(data.category ?? ""),
-    purchasable: Boolean(data.purchasable),
-    soldOut: Boolean(data.sold_out),
-    required: Boolean(data.required),
-    unit: data.unit === "table" || data.unit === "person" ? data.unit : "item",
-    stock: typeof data.stock === "number" ? data.stock : null,
-    reservedQuantity: Number(data.reserved_quantity ?? 0),
-    availableQuantity: typeof data.available_quantity === "number" ? data.available_quantity : null,
-    shortage: Number(data.shortage ?? 0),
-    inclusions: Array.isArray(data.inclusions) ? (data.inclusions as ProductInclusion[]) : null,
-    includedProductId:
-      typeof data.included_product_id === "string" ? data.included_product_id : undefined,
-    includedPerGuests:
-      typeof data.included_per_guests === "number" ? data.included_per_guests : undefined,
-    createdAt: String(data.created_at ?? ""),
-    updatedAt: String(data.updated_at ?? ""),
-  };
-}
-
-export function apiToEvent(data: Record<string, unknown>): Event {
-  const rawEdition =
-    typeof data.edition === "object" && data.edition !== null
-      ? (data.edition as Record<string, unknown>)
-      : null;
-  const rawProducts = Array.isArray(data.products) ? data.products : [];
-
-  return {
-    id: String(data.id ?? ""),
-    editionId: String(data.edition_id ?? ""),
-    orderQuestions: parseOrderQuestions(data.order_questions),
-    title: String(data.title ?? ""),
-    description: String(data.description ?? ""),
-    // Responses always carry the stored languages; `title` is the resolved text.
-    titleNl: nullableText(data.title_nl),
-    titleFr: nullableText(data.title_fr),
-    titleEn: nullableText(data.title_en),
-    descriptionNl: nullableText(data.description_nl),
-    descriptionFr: nullableText(data.description_fr),
-    descriptionEn: nullableText(data.description_en),
-    date: String(data.date ?? ""),
-    startTime: String(data.start_time ?? ""),
-    endTime: typeof data.end_time === "string" ? data.end_time : undefined,
-    category: String(data.category ?? ""),
-    volunteersOnly: Boolean(data.volunteers_only),
-    membersOnly: Boolean(data.members_only),
-    registrationRequired: Boolean(data.registration_required),
-    registrationsOpenFrom:
-      typeof data.registrations_open_from === "string" ? data.registrations_open_from : undefined,
-    registrationsCloseAt:
-      typeof data.registrations_close_at === "string" ? data.registrations_close_at : undefined,
-    sortOrder: typeof data.sort_order === "number" ? data.sort_order : undefined,
-    active: Boolean(data.active),
-    createdAt: String(data.created_at ?? ""),
-    updatedAt: String(data.updated_at ?? ""),
-    products: rawProducts
-      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
-      .map(apiToProduct),
-    edition: rawEdition
-      ? {
-          id: String(rawEdition.id ?? ""),
-          year: Number(rawEdition.year ?? 0),
-          month: String(rawEdition.month ?? ""),
-          editionType:
-            rawEdition.edition_type === "bourse" || rawEdition.edition_type === "capsule_exchange"
-              ? rawEdition.edition_type
-              : "festival",
-          active: Boolean(rawEdition.active),
-        }
-      : null,
-  };
-}
+/** Form controls use empty strings for nullable text and local datetime inputs. */
+type EventTextInput =
+  | "title_nl"
+  | "title_fr"
+  | "title_en"
+  | "description_nl"
+  | "description_fr"
+  | "description_en"
+  | "end_time"
+  | "registrations_open_from"
+  | "registrations_close_at";
+export type EventFormData = Omit<import("@/api-types").EventCreate, EventTextInput> & {
+  [K in EventTextInput]: string;
+};

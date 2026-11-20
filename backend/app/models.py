@@ -5,6 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from datetime import date as dt_date
 from decimal import Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas import OrderAnswerOut, OrderQuestionOut
 
 from sqlalchemy import (
     JSON,
@@ -215,7 +219,7 @@ class PaymentTransaction(Base):
     every append recomputes and stores them (see
     ``app.services.payments_service.sync_registration_payment_fields``) so
     every existing reader — SQL filters/sorts on ``payment_status``,
-    ``registration_to_dict``, CSV exports, edition stats — keeps working
+    ``registration_to_out``, CSV exports, edition stats — keeps working
     unchanged; only the write path moves off direct mutation.
     """
 
@@ -1848,20 +1852,13 @@ class EventOrderQuestion(Base):
         cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderOption.sort_order, EventOrderOption.id"
     )
 
+    def to_out(self) -> OrderQuestionOut:
+        from app.schemas import OrderQuestionOut
+
+        return OrderQuestionOut.model_validate(self, from_attributes=True)
+
     def as_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "kind": self.kind,
-            "active": self.active,
-            **{
-                key: getattr(self, key)
-                for key in ("title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en")
-            },
-            "options": [
-                {"id": o.id, "label_nl": o.label_nl, "label_fr": o.label_fr, "label_en": o.label_en}
-                for o in self.options
-            ],
-        }
+        return self.to_out().model_dump()
 
 
 class EventOrderOption(Base):
@@ -1906,14 +1903,13 @@ class RegistrationOrderAnswer(Base):
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     question: Mapped[EventOrderQuestion] = relationship(foreign_keys=[question_id, kind], lazy="joined")
 
+    def to_out(self) -> OrderAnswerOut:
+        from app.schemas import OrderAnswerOut
+
+        return OrderAnswerOut.model_validate(self, from_attributes=True)
+
     def as_dict(self) -> dict:
-        return {
-            "question_id": self.question_id,
-            "option_id": self.option_id,
-            "text": self.text,
-            "rating": self.rating,
-            "question": self.question.as_dict(),
-        }
+        return self.to_out().model_dump()
 
 
 class PollDeletionNotification(Base):

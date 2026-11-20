@@ -14,25 +14,12 @@ import { m } from "@/paraglide/messages";
 import type { Channel } from "@/signage/playlistModel";
 import type { Playlist } from "@/signage/types";
 
-type State =
-  | "preparing"
-  | "submitted"
-  | "queued"
-  | "running"
-  | "ready"
-  | "failed"
-  | "cancelled"
-  | "expired";
-interface Job {
-  id: string;
-  channel_name: string;
-  locale: string;
-  state: State;
-  retrying?: boolean;
-  expires_at: string;
-  slide_count: number;
-  duration_seconds: number;
-}
+type Job = import("@/api-types").VideoExportOut;
+type State = Job["state"];
+/** Rendering uses the same materialized defaults as the signage editor. */
+type CreatedJob = Omit<import("@/api-types").VideoExportCreatedOut, "playlist"> & {
+  playlist: Playlist | import("@/api-types").ExpiredPlaylist;
+};
 const queryKey = ["admin", "signage", "video-exports"];
 const active = (state: State) => ["preparing", "submitted", "queued", "running"].includes(state);
 
@@ -54,7 +41,7 @@ export default function SignageVideoExports({
   const capability = useQuery({
     queryKey: [...queryKey, "capability"],
     queryFn: ({ signal }) =>
-      signageRequest<{ available: boolean; max_slides: number; max_seconds: number }>(
+      signageRequest<import("@/api-types").VideoExportCapabilityOut>(
         "video-exports/capability",
         authHeaders(),
         "GET",
@@ -95,7 +82,7 @@ export default function SignageVideoExports({
     setError("");
     setPhase(m.signage_video_preparing());
     try {
-      const job = await fetchJsonOrThrowWithUnauthorized<Job & { playlist: Playlist }>(
+      const job = await fetchJsonOrThrowWithUnauthorized<CreatedJob>(
         "/api/signage/video-exports",
         {
           method: "POST",
@@ -111,7 +98,7 @@ export default function SignageVideoExports({
       );
       currentJob.current = job.id;
       await refresh();
-      if (job.state === "preparing") {
+      if (job.state === "preparing" && "epoch" in job.playlist) {
         const { renderSlideImages } = await import("@/signage/export");
         let totalBytes = 0;
         await renderSlideImages(job.playlist, {

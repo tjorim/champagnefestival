@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw/http";
@@ -10,6 +11,8 @@ const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 function category(key: string, nl: string, roles: string[], automatic = false) {
   return {
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     key,
     name: nl,
     description: null,
@@ -35,7 +38,7 @@ beforeEach(() => {
   setLocale("en", { reload: false });
   server.use(
     http.get("/api/email-categories", () =>
-      HttpResponse.json([
+      jsonResponse<import("@/api-types").EmailCategoryOut[]>([
         category("club_news", "Clubnieuws", ["member"]),
         category("new_editions", "Nieuwe editie", []),
         category("reward_ready", "Beloning klaar", ["member"], true),
@@ -62,9 +65,12 @@ describe("EmailCategoryManagement", () => {
     server.use(
       http.post("/api/email-categories", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json(category("tastings", "Proeverijen", ["volunteer"]), {
-          status: 201,
-        });
+        return jsonResponse<import("@/api-types").EmailCategoryOut>(
+          category("tastings", "Proeverijen", ["volunteer"]),
+          {
+            status: 201,
+          },
+        );
       }),
     );
     mount();
@@ -112,7 +118,9 @@ describe("EmailCategoryManagement", () => {
     server.use(
       http.put("/api/email-categories/:key", async ({ request, params }) => {
         sent = { key: String(params.key), body: await request.json() };
-        return HttpResponse.json(category("club_news", "Clubnieuws", []));
+        return jsonResponse<import("@/api-types").EmailCategoryOut>(
+          category("club_news", "Clubnieuws", []),
+        );
       }),
     );
     mount();
@@ -133,7 +141,10 @@ describe("EmailCategoryManagement", () => {
     server.use(
       http.delete("/api/email-categories/new_editions", () =>
         HttpResponse.json(
-          { detail: "Cannot delete", code: "email_category_protected" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Cannot delete",
+            code: "email_category_protected",
+          },
           { status: 409 },
         ),
       ),

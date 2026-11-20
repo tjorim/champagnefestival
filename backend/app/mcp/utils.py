@@ -227,3 +227,29 @@ def registration_base_dict(reg: Registration, person: Person, *, role: str) -> d
         "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
         "strap_issued": reg.strap_issued,
     }
+
+
+def dump_response(value: Any) -> Any:
+    """Keep MCP's Python dictionaries at the model/service boundary.
+
+    Python mode deliberately retains Decimal/date/datetime values for the
+    existing transport. Envelopes can contain both models and metadata.
+    """
+    from pydantic import BaseModel
+
+    if isinstance(value, BaseModel):
+        from app.schemas import RegistrationOut
+
+        if isinstance(value, RegistrationOut) and value._from_idempotency_replay:
+            # Stored registration replays historically returned JSON values and
+            # omitted the extra edition_id of a freshly constructed MCP result.
+            return value.model_dump(mode="json")
+        data = value.model_dump(exclude_unset=True)
+        if isinstance(value, RegistrationOut):
+            data["edition_id"] = value.event.edition_id
+        return data
+    if isinstance(value, list):
+        return [dump_response(item) for item in value]
+    if isinstance(value, dict):
+        return {key: dump_response(item) for key, item in value.items()}
+    return value

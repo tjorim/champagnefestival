@@ -25,8 +25,8 @@ describe("managedArtwork", () => {
 
 describe("editionShareImage", () => {
   it("prefers the sharing image, then the hero, else null", () => {
-    expect(editionShareImage({ shareImage: path("a"), heroImage: path("b") })).toBe(path("a"));
-    expect(editionShareImage({ shareImage: null, heroImage: path("b") })).toBe(path("b"));
+    expect(editionShareImage({ share_image: path("a"), hero_image: path("b") })).toBe(path("a"));
+    expect(editionShareImage({ share_image: null, hero_image: path("b") })).toBe(path("b"));
     expect(editionShareImage({})).toBeNull();
   });
 });

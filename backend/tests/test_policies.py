@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Policy, PolicyVersion
-from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
+from app.schemas import PolicyDraftCreate, PolicyDraftUpdate, PolicyVersionOut
 from app.services.errors import ServiceError
 from app.services.policies_service import create_draft, publish_draft, update_draft
 from app.services.policy_markdown import render_markdown
@@ -322,7 +322,7 @@ async def test_concurrent_publish_attempts_do_not_double_publish(engine):
                 return exc
 
     results = await asyncio.gather(attempt("admin-a"), attempt("admin-b"))
-    succeeded = [r for r in results if isinstance(r, dict)]
+    succeeded = [r for r in results if isinstance(r, PolicyVersionOut)]
     failed = [r for r in results if isinstance(r, ServiceError)]
     assert len(succeeded) == 1
     assert len(failed) == 1

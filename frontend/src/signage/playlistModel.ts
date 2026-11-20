@@ -1,36 +1,15 @@
-import type { TemplateKind } from "./editorModel";
-export interface ChannelDraft {
-  name: string;
-  slug: string;
-  edition_id: string;
-  active: boolean;
-}
-export interface Channel extends ChannelDraft {
-  id: string;
-  epoch: string;
-  revision: number;
-}
-export interface SlideContent {
-  title: string | null;
-  text: string | null;
-  icon: string | null;
-  image: string | null;
-  organization_type?: "producer" | "vendor" | "sponsor" | null;
-}
-export interface SlideDraft {
-  channel_id: string;
-  template_id: string;
-  kind: TemplateKind;
-  duration: number;
-  active: boolean;
-  starts_at: string | null;
-  ends_at: string | null;
-  sort_order: number;
+import type { ChannelOut, SlideOut } from "@/api-types";
+export type ChannelDraft = Required<import("@/api-types").ChannelWrite>;
+export type Channel = ChannelOut;
+/** Form controls materialize the API defaults. */
+export type SlideContent = Required<
+  Pick<import("@/api-types").Content, "title" | "text" | "icon" | "image">
+> &
+  Pick<import("@/api-types").Content, "organization_type">;
+export type SlideDraft = Omit<Required<import("@/api-types").SlideWrite>, "content"> & {
   content: SlideContent;
-}
-export interface Slide extends SlideDraft {
-  id: string;
-}
+};
+export type Slide = Omit<SlideOut, "content"> & Pick<SlideDraft, "content">;
 export function emptySlide(channel_id: string, sort_order: number): SlideDraft {
   return {
     channel_id,

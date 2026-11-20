@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
@@ -39,7 +40,7 @@ function serve(
 describe("getMyVolunteerIdentity", () => {
   it("sends the bearer token and parses a linked identity", async () => {
     const received = serve("get", VOLUNTEER, () =>
-      HttpResponse.json({
+      jsonResponse<import("@/api-types").VolunteerIdentityOut>({
         linked: true,
         name: "Sofie De Smet",
         national_register_number: "91010112345",
@@ -54,26 +55,38 @@ describe("getMyVolunteerIdentity", () => {
     expect(identity).toEqual({
       linked: true,
       name: "Sofie De Smet",
-      nationalRegisterNumber: "91010112345",
-      eidDocumentNumber: "BEX123456",
+      national_register_number: "91010112345",
+      eid_document_number: "BEX123456",
     });
   });
 
   it("parses an unlinked identity as all-null", async () => {
-    serve("get", VOLUNTEER, () => HttpResponse.json({ linked: false }));
+    serve("get", VOLUNTEER, () =>
+      jsonResponse<import("@/api-types").VolunteerIdentityOut>({
+        linked: false,
+        name: null,
+        national_register_number: null,
+        eid_document_number: null,
+      }),
+    );
 
     const identity = await getMyVolunteerIdentity("token-1");
 
     expect(identity).toEqual({
       linked: false,
       name: null,
-      nationalRegisterNumber: null,
-      eidDocumentNumber: null,
+      national_register_number: null,
+      eid_document_number: null,
     });
   });
 
   it("throws on a failed response", async () => {
-    serve("get", VOLUNTEER, () => HttpResponse.json({}, { status: 500 }));
+    serve("get", VOLUNTEER, () =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 500 },
+      ),
+    );
 
     await expect(getMyVolunteerIdentity("token-1")).rejects.toThrow();
   });
@@ -82,7 +95,7 @@ describe("getMyVolunteerIdentity", () => {
 describe("registerMyVolunteerIdentity", () => {
   it("posts name/NISS/eID and returns the linked identity", async () => {
     const received = serve("post", REGISTER, () =>
-      HttpResponse.json({
+      jsonResponse<import("@/api-types").VolunteerIdentityOut>({
         linked: true,
         name: "Sofie De Smet",
         national_register_number: "91010112319",
@@ -110,7 +123,9 @@ describe("registerMyVolunteerIdentity", () => {
   it("surfaces the server's detail message on conflict", async () => {
     serve("post", REGISTER, () =>
       HttpResponse.json(
-        { detail: "This identity is already linked to another account." },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "This identity is already linked to another account.",
+        },
         { status: 409 },
       ),
     );
@@ -125,7 +140,12 @@ describe("registerMyVolunteerIdentity", () => {
   });
 
   it("falls back to a generic error when the response has no detail", async () => {
-    serve("post", REGISTER, () => HttpResponse.json({}, { status: 422 }));
+    serve("post", REGISTER, () =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 422 },
+      ),
+    );
 
     await expect(
       registerMyVolunteerIdentity("token-1", {
@@ -140,7 +160,7 @@ describe("registerMyVolunteerIdentity", () => {
 describe("updateMyEidDocumentNumber", () => {
   it("posts the new eID number and returns the updated identity", async () => {
     const received = serve("post", EID_CORRECTION, () =>
-      HttpResponse.json({
+      jsonResponse<import("@/api-types").VolunteerIdentityOut>({
         linked: true,
         name: "Sofie De Smet",
         national_register_number: "91010112319",
@@ -154,13 +174,15 @@ describe("updateMyEidDocumentNumber", () => {
     expect(received[0]!.request.headers.get("authorization")).toBe("Bearer token-1");
     expect(received[0]!.request.headers.get("content-type")).toBe("application/json");
     expect(received[0]!.body).toEqual({ eid_document_number: "123456789103" });
-    expect(identity.eidDocumentNumber).toBe("123456789103");
+    expect(identity.eid_document_number).toBe("123456789103");
   });
 
   it("throws when the volunteer isn't linked yet", async () => {
     serve("post", EID_CORRECTION, () =>
       HttpResponse.json(
-        { detail: "Your account isn't linked to a volunteer record yet." },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "Your account isn't linked to a volunteer record yet.",
+        },
         { status: 404 },
       ),
     );
@@ -173,7 +195,9 @@ describe("updateMyEidDocumentNumber", () => {
   it("throws when the checksum is rejected", async () => {
     serve("post", EID_CORRECTION, () =>
       HttpResponse.json(
-        { detail: "That eID document number doesn't look valid. Please check it and try again." },
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "That eID document number doesn't look valid. Please check it and try again.",
+        },
         { status: 422 },
       ),
     );

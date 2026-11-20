@@ -70,9 +70,9 @@ function calendarDateRange(date: string): string {
 export function buildCheckInQrUrl(
   origin: string,
   registrationId: string,
-  checkInToken: string,
+  check_in_token: string,
 ): string {
-  return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(checkInToken)}`;
+  return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(check_in_token)}`;
 }
 
 interface MyRegistrationsPageProps {
@@ -163,7 +163,7 @@ export default function MyRegistrationsPage({
         return;
       }
       onEmailSessionChange?.([]);
-      setSessionExpiresAt(status.expiresAt);
+      setSessionExpiresAt(status.expires_at);
       void fetchOwnedRegistrationsViaSession()
         .then((regs) => {
           if (!cancelled) {
@@ -563,10 +563,10 @@ export default function MyRegistrationsPage({
                       <CardHeader className="flex items-center justify-between">
                         <span className="font-semibold">
                           <Icon icon={CalendarDaysIcon} className="me-2" />
-                          {registration.eventTitle}
+                          {registration.event_title}
                         </span>
                         <span className="text-subtle text-sm">
-                          {new Date(registration.createdAt).toLocaleDateString()}
+                          {new Date(registration.created_at).toLocaleDateString()}
                         </span>
                       </CardHeader>
                       <CardContent className="pb-2">
@@ -576,7 +576,7 @@ export default function MyRegistrationsPage({
                               value={buildCheckInQrUrl(
                                 window.location.origin,
                                 registration.id,
-                                registration.checkInToken,
+                                registration.check_in_token,
                               )}
                               size={160}
                               level="M"
@@ -606,20 +606,20 @@ export default function MyRegistrationsPage({
                           </Badge>
                           <Badge
                             variant={
-                              registration.paymentStatus === "paid"
+                              registration.payment_status === "paid"
                                 ? "success"
-                                : registration.paymentStatus === "partial"
+                                : registration.payment_status === "partial"
                                   ? "warning"
                                   : "secondary"
                             }
                           >
-                            {registration.paymentStatus === "paid"
+                            {registration.payment_status === "paid"
                               ? m.admin_payment_paid()
-                              : registration.paymentStatus === "partial"
+                              : registration.payment_status === "partial"
                                 ? m.admin_payment_partial()
                                 : m.admin_payment_unpaid()}
                           </Badge>
-                          {registration.checkedIn && (
+                          {registration.checked_in && (
                             <Badge variant="success">
                               <Icon icon={CircleCheckIcon} className="me-1" />
                               {m.admin_checked_in()}
@@ -628,14 +628,14 @@ export default function MyRegistrationsPage({
                         </div>
                         <div className="text-subtle text-sm">
                           <Icon icon={UsersIcon} className="me-1" />
-                          {registration.guestCount} {m.my_registrations_guests_label()}
+                          {registration.guest_count} {m.my_registrations_guests_label()}
                         </div>
-                        {registration.eventDate && (
+                        {registration.event_date && (
                           <ButtonLink
                             size="sm"
                             variant="outline-warning"
                             className="mt-2"
-                            href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
+                            href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.event_title)}&dates=${calendarDateRange(registration.event_date)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -659,14 +659,14 @@ export default function MyRegistrationsPage({
                             {m.my_registrations_request_change()}
                           </Button>
                         )}
-                        <OrderAnswerSummary answers={registration.orderAnswers} />
-                        {registration.orderItems.some((item) => item.visible) && (
+                        <OrderAnswerSummary answers={registration.order_answers} />
+                        {registration.order_items.some((item) => item.visible) && (
                           <PresentationList flush className="mt-2">
-                            {registration.orderItems
+                            {registration.order_items
                               .filter((item) => item.visible)
                               .map((item, idx) => (
                                 <PresentationListItem
-                                  key={`${item.productId}-${idx}`}
+                                  key={`${item.product_id}-${idx}`}
                                   className="flex justify-between items-center px-0 py-1"
                                 >
                                   <span className="text-sm">

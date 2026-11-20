@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Organization, OrganizationChange, Person, User
+from app.openapi_responses import binary_response
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
@@ -105,7 +106,7 @@ async def my_changes(
     response: Response,
     email: str | None = Depends(get_organization_contact_email),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[OrganizationChangeOut]:
     """Private proposal history, authorized against the current contact email."""
     response.headers["Cache-Control"] = "no-store"
     row = await owned(db, organization_id, email)
@@ -127,7 +128,7 @@ async def propose_change(
     email: str | None = Depends(get_organization_contact_email),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> OrganizationChangeOut:
     """Submit private website/description fields; reuse submission_id for retries."""
     response.headers["Cache-Control"] = "no-store"
     row = await owned(db, organization_id, email)
@@ -146,7 +147,7 @@ async def upload_logo(
     email: str | None = Depends(get_organization_contact_email),
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> OrganizationChangeOut:
     """Upload a private proposal. Repeating an upload replaces the pending proposal."""
     response.headers["Cache-Control"] = "no-store"
     await owned(db, organization_id, email, lock=False)
@@ -161,7 +162,7 @@ async def upload_logo(
         raise to_http_exception(exc) from exc
 
 
-@router.get("/{organization_id}/changes/{change_id}/logo")
+@router.get("/{organization_id}/changes/{change_id}/logo", **binary_response("image/png", "Proposed logo"))
 async def preview_logo(
     organization_id: int,
     change_id: str,

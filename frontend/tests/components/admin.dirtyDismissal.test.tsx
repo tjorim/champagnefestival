@@ -1,3 +1,4 @@
+import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
 /**
  * Shared dismissal policy for the admin create/edit modals (#1428): a pristine
  * form closes at once, a dirty one asks "Discard changes?" whichever way it is
@@ -16,8 +17,7 @@ import MemberFormModal from "@/components/admin/MemberFormModal";
 import PersonFormModal from "@/components/admin/PersonFormModal";
 import RegistrationCreateModal from "@/components/admin/RegistrationCreateModal";
 import VolunteerFormModal from "@/components/admin/VolunteerFormModal";
-import type { Edition } from "@/components/admin/editionTypes";
-import type { Event } from "@/types/event";
+
 import type { Person } from "@/types/person";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -32,38 +32,38 @@ vi.mock("@/paraglide/messages", () => ({
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
 
-const edition = {
+const edition = editionOut({
   id: "ux-2026",
   year: 2026,
   month: "october",
-  editionType: "festival",
+  edition_type: "festival",
   active: true,
   dates: ["2026-10-24"],
-  venue: { id: "venue-01", name: "Hall", city: "Brussels", active: true },
+  venue: venueOut({ id: "venue-01", name: "Hall", city: "Brussels" }),
   events: [],
   producers: [],
   sponsors: [],
   vendors: [],
-} as unknown as Edition;
+});
 
-const event = {
+const event = eventOut({
   id: "event-01",
-  editionId: "ux-2026",
+  edition_id: "ux-2026",
   title: "Herfstproeverij",
-  titleNl: "Herfstproeverij",
-  titleFr: null,
-  titleEn: null,
-  descriptionNl: null,
-  descriptionFr: null,
-  descriptionEn: null,
+  title_nl: "Herfstproeverij",
+  title_fr: null,
+  title_en: null,
+  description_nl: null,
+  description_fr: null,
+  description_en: null,
   date: "2026-10-24",
-  startTime: "18:00",
-  endTime: "22:00",
+  start_time: "18:00",
+  end_time: "22:00",
   category: "tasting",
-  registrationRequired: false,
+  registration_required: false,
   active: true,
   products: [],
-} as unknown as Event;
+});
 
 const person = {
   id: "person-01",
@@ -73,8 +73,8 @@ const person = {
   address: null,
   roles: ["member"],
   notes: null,
-  roleHistory: {},
-  helpPeriods: [],
+  role_history: {},
+  help_periods: [],
 } as unknown as Person;
 
 interface Case {

@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 /**
  * The public site and the admin dashboard resolve different "active" editions.
  *
@@ -7,19 +8,31 @@
  * floor plans and the event-day views work for a bourse too.
  */
 
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { activeEditionQueryOptions, fetchActiveEdition } from "@/hooks/useActiveEdition";
 import { server } from "@/mocks/server";
 import { queryKeys } from "@/utils/queryKeys";
 
-const EDITION = {
+const EDITION: import("@/api-types").EditionPublicOut = {
+  vendors: [],
+  co_organizer: null,
+  flyer_image: null,
+  hero_image: null,
+  share_image: null,
+  active: false,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "bourse-2026",
   year: 2026,
   edition_type: "bourse",
   month: "november",
   dates: ["2026-11-21"],
   venue: {
+    id: "",
+    active: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
     name: "MEC Staf Versluys",
     address: "Kapelstraat 76",
     city: "Bredene",
@@ -40,7 +53,7 @@ function serveActiveEdition() {
     http.get("/api/editions/active", ({ request }) => {
       const url = new URL(request.url);
       requested.push(url.pathname + url.search);
-      return HttpResponse.json(EDITION);
+      return jsonResponse<import("@/api-types").EditionPublicOut>(EDITION);
     }),
   );
   return requested;
@@ -68,7 +81,7 @@ describe("fetchActiveEdition", () => {
 
     const edition = await fetchActiveEdition("any");
 
-    expect(edition.editionType).toBe("bourse");
+    expect(edition.edition_type).toBe("bourse");
     expect(edition.id).toBe("bourse-2026");
   });
 });

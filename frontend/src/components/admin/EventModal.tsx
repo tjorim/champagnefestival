@@ -28,9 +28,10 @@ import {
 } from "@/components/ui/dialog";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { type Event, type EventFormData } from "@/types/event";
+import type { Event } from "@/api-types";
+import { type EventFormData } from "@/types/event";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
-import type { Edition } from "./editionTypes";
+import type { Edition } from "@/api-types";
 
 /** Longest event text the draft endpoint translates; mirrors `EVENT_TEXT_LIMIT` in the backend. */
 const EVENT_TRANSLATION_LIMIT = 2000;
@@ -38,20 +39,20 @@ const EVENT_TRANSLATION_LIMIT = 2000;
 const TEXT_LANGUAGES = [
   {
     language: "nl",
-    title: "titleNl",
-    description: "descriptionNl",
+    title: "title_nl",
+    description: "description_nl",
     label: m.admin_language_nl,
   },
   {
     language: "fr",
-    title: "titleFr",
-    description: "descriptionFr",
+    title: "title_fr",
+    description: "description_fr",
     label: m.admin_language_fr,
   },
   {
     language: "en",
-    title: "titleEn",
-    description: "descriptionEn",
+    title: "title_en",
+    description: "description_en",
     label: m.admin_language_en,
   },
 ] as const;
@@ -67,23 +68,23 @@ interface EventModalProps {
 }
 
 const EMPTY_FORM: EventFormData = {
-  editionId: "",
-  titleNl: "",
-  titleFr: "",
-  titleEn: "",
-  descriptionNl: "",
-  descriptionFr: "",
-  descriptionEn: "",
+  edition_id: "",
+  title_nl: "",
+  title_fr: "",
+  title_en: "",
+  description_nl: "",
+  description_fr: "",
+  description_en: "",
   date: "",
-  startTime: "",
-  endTime: "",
+  start_time: "",
+  end_time: "",
   category: "",
-  volunteersOnly: false,
-  membersOnly: false,
-  registrationRequired: false,
-  registrationsOpenFrom: "",
-  registrationsCloseAt: "",
-  sortOrder: "",
+  volunteers_only: false,
+  members_only: false,
+  registration_required: false,
+  registrations_open_from: "",
+  registrations_close_at: "",
+
   active: true,
 };
 
@@ -96,7 +97,7 @@ export default function EventModal({
   onSave,
   onHide,
 }: EventModalProps) {
-  const isFestival = edition.editionType === "festival";
+  const isFestival = edition.edition_type === "festival";
   // The event as it was when the editor opened, so a background refresh neither
   // rewrites untouched fields nor moves the baseline for the discard prompt.
   const { record, sessionId } = useEditorSession(
@@ -122,29 +123,29 @@ export default function EventModal({
     (): EventFormData =>
       record
         ? {
-            editionId: record.editionId,
-            titleNl: record.titleNl ?? "",
-            titleFr: record.titleFr ?? "",
-            titleEn: record.titleEn ?? "",
-            descriptionNl: record.descriptionNl ?? "",
-            descriptionFr: record.descriptionFr ?? "",
-            descriptionEn: record.descriptionEn ?? "",
+            edition_id: record.edition_id,
+            title_nl: record.title_nl ?? "",
+            title_fr: record.title_fr ?? "",
+            title_en: record.title_en ?? "",
+            description_nl: record.description_nl ?? "",
+            description_fr: record.description_fr ?? "",
+            description_en: record.description_en ?? "",
             date: record.date,
-            startTime: record.startTime,
-            endTime: record.endTime ?? "",
+            start_time: record.start_time,
+            end_time: record.end_time ?? "",
             category: record.category,
-            volunteersOnly: record.volunteersOnly ?? false,
-            membersOnly: record.membersOnly ?? false,
-            registrationRequired: record.registrationRequired,
-            registrationsOpenFrom: record.registrationsOpenFrom ?? "",
-            registrationsCloseAt: record.registrationsCloseAt ?? "",
-            sortOrder: record.sortOrder != null ? String(record.sortOrder) : "",
+            volunteers_only: record.volunteers_only ?? false,
+            members_only: record.members_only ?? false,
+            registration_required: record.registration_required,
+            registrations_open_from: record.registrations_open_from ?? "",
+            registrations_close_at: record.registrations_close_at ?? "",
+
             active: record.active,
           }
         : {
             ...EMPTY_FORM,
             category: firstCategory,
-            editionId: edition.id,
+            edition_id: edition.id,
             date: isFestival ? (edition.dates[0] ?? "") : derivedStandaloneDate,
           },
     [derivedStandaloneDate, edition.id, edition.dates, firstCategory, record, isFestival],
@@ -161,16 +162,16 @@ export default function EventModal({
   const form = useForm({
     defaultValues,
     onSubmit: ({ value }) => {
-      if (!value.titleNl.trim()) {
+      if (!value.title_nl.trim()) {
         setTextLanguage("nl");
         setTextErrorAttempt((attempt) => attempt + 1);
         setTextError("title");
         return;
       }
       const hasTranslatedDescription = Boolean(
-        value.descriptionFr.trim() || value.descriptionEn.trim(),
+        value.description_fr.trim() || value.description_en.trim(),
       );
-      if (hasTranslatedDescription && !value.descriptionNl.trim()) {
+      if (hasTranslatedDescription && !value.description_nl.trim()) {
         setTextLanguage("nl");
         setTextErrorAttempt((attempt) => attempt + 1);
         setTextError("description");
@@ -206,7 +207,7 @@ export default function EventModal({
   }, [derivedStandaloneDate, isFestival, form]);
 
   const dateValue = useSelector(form.atom, (s) => s.values.date);
-  const registrationRequired = useSelector(form.atom, (s) => s.values.registrationRequired);
+  const registration_required = useSelector(form.atom, (s) => s.values.registration_required);
 
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
@@ -323,7 +324,7 @@ export default function EventModal({
                   {m.admin_content_event_start_time()}
                 </AdminLabel>
                 <form.Field
-                  name="startTime"
+                  name="start_time"
                   validators={[
                     {
                       run: ({ value }) =>
@@ -355,7 +356,7 @@ export default function EventModal({
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_end_time()}
                 </AdminLabel>
-                <form.Field name="endTime">
+                <form.Field name="end_time">
                   {(field) => (
                     <AdminInput
                       type="time"
@@ -371,7 +372,7 @@ export default function EventModal({
             </div>
 
             <h3 className="text-base font-medium mb-2">{m.admin_editor_access()}</h3>
-            <form.Field name="volunteersOnly">
+            <form.Field name="volunteers_only">
               {(field) => (
                 <AdminCheck
                   type="checkbox"
@@ -383,7 +384,7 @@ export default function EventModal({
                 />
               )}
             </form.Field>
-            <form.Field name="membersOnly">
+            <form.Field name="members_only">
               {(field) => (
                 <AdminCheck
                   type="checkbox"
@@ -395,7 +396,7 @@ export default function EventModal({
                 />
               )}
             </form.Field>
-            <form.Field name="registrationRequired">
+            <form.Field name="registration_required">
               {(field) => (
                 <AdminCheck
                   type="checkbox"
@@ -407,13 +408,13 @@ export default function EventModal({
                 />
               )}
             </form.Field>
-            {registrationRequired && (
+            {registration_required && (
               <div className="flex gap-2 flex-wrap mb-2">
                 <AdminField className="max-w-70" controlId="event-registrations-open-from">
                   <AdminLabel className="text-subtle text-sm mb-1">
                     {m.admin_content_edition_registration_opens()}
                   </AdminLabel>
-                  <form.Field name="registrationsOpenFrom">
+                  <form.Field name="registrations_open_from">
                     {(field) => (
                       <AdminInput
                         type="datetime-local"
@@ -430,7 +431,7 @@ export default function EventModal({
                   <AdminLabel className="text-subtle text-sm mb-1">
                     {m.admin_content_edition_registration_closes()}
                   </AdminLabel>
-                  <form.Field name="registrationsCloseAt">
+                  <form.Field name="registrations_close_at">
                     {(field) => (
                       <AdminInput
                         type="datetime-local"
@@ -489,7 +490,7 @@ export default function EventModal({
                           maxLength={EVENT_TRANSLATION_LIMIT}
                           source="nl"
                           target={language}
-                          text={values.titleNl}
+                          text={values.title_nl}
                           targetText={values[title]}
                           onDraft={(text) => form.setFieldValue(title, text.slice(0, 200))}
                         />
@@ -522,7 +523,7 @@ export default function EventModal({
                           maxLength={EVENT_TRANSLATION_LIMIT}
                           source="nl"
                           target={language}
-                          text={values.descriptionNl}
+                          text={values.description_nl}
                           targetText={values[description]}
                           onDraft={(text) => form.setFieldValue(description, text)}
                         />

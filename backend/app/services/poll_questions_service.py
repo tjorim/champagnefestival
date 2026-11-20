@@ -10,9 +10,9 @@ into ``MCPToolError`` at its own boundary (``app.mcp.utils.as_value_error``).
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
-from pydantic import ValidationError
+from pydantic import SerializeAsAny, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,12 +20,23 @@ from app.audit import write_audit_entry
 from app.models import EditionPollOption, EditionPollQuestion, Person, Registration, VolunteerMealNote
 from app.schemas import (
     AdminPollOrderIn,
+    DietaryTag,
+    PollOptionOut,
+    PollOrderOptionOut,
+    PollOrderQuestionOut,
+    PollOrdersOut,
     PollQuestionCopy,
     PollQuestionCreate,
+    PollQuestionKind,
+    PollQuestionOut,
     PollQuestionReorder,
     PollQuestionTexts,
     PollQuestionUpdate,
+    PollVolunteerOrderOut,
     VolunteerPollAnswerIn,
+    VolunteerPollOptionOut,
+    VolunteerPollOut,
+    VolunteerPollQuestionOut,
 )
 from app.services import poll_event_registrations, poll_options_service
 from app.services.editions_service import find_active_edition
@@ -50,6 +61,15 @@ TEXT_FIELDS = ("title_nl", "title_fr", "title_en", "description_nl", "descriptio
 # --- Admin: questions ----------------------------------------------------------------------------
 
 
+class PollOrderQuestionServiceOut(PollOrderQuestionOut):
+    # MCP historically includes the event link; REST's declared projection omits it.
+    event_id: str | None
+
+
+class PollOrdersServiceOut(PollOrdersOut):
+    questions: list[SerializeAsAny[PollOrderQuestionOut]]
+
+
 async def _stats(db: AsyncSession, edition_id: str) -> dict[str, dict[str, int]]:
     """Per question: how many volunteers answered, plus the counts its kind adds (yes/no: yes, no, people)."""
     stats: dict[str, dict[str, int]] = {}
@@ -58,33 +78,33 @@ async def _stats(db: AsyncSession, edition_id: str) -> dict[str, dict[str, int]]
     return stats
 
 
-def _question_dict(
-    question: EditionPollQuestion, locale: str | None, options: list[dict], stats: dict[str, int] | None
-) -> dict:
-    return {
-        "id": question.id,
-        "edition_id": question.edition_id,
-        "event_id": question.event_id,
-        "kind": question.kind,
-        "title": question.localized_title(locale),
-        "title_nl": question.title_nl,
-        "title_fr": question.title_fr,
-        "title_en": question.title_en,
-        "description": question.localized_description(locale),
-        "description_nl": question.description_nl,
-        "description_fr": question.description_fr,
-        "description_en": question.description_en,
-        "sort_order": question.sort_order,
-        "closes_at": question.closes_at,
-        "closed": is_closed(question),
-        "options": options,
-        "answered_count": (stats or {}).get("answered_count", 0),
-        "yes_count": (stats or {}).get("yes_count", 0),
-        "no_count": (stats or {}).get("no_count", 0),
-        "people_total": (stats or {}).get("people_total", 0),
-        "created_at": question.created_at,
-        "updated_at": question.updated_at,
-    }
+def _question_out(
+    question: EditionPollQuestion, locale: str | None, options: list[PollOptionOut], stats: dict[str, int] | None
+) -> PollQuestionOut:
+    return PollQuestionOut(
+        id=question.id,
+        edition_id=question.edition_id,
+        event_id=question.event_id,
+        kind=cast(PollQuestionKind, question.kind),
+        title=question.localized_title(locale),
+        title_nl=question.title_nl,
+        title_fr=question.title_fr,
+        title_en=question.title_en,
+        description=question.localized_description(locale),
+        description_nl=question.description_nl,
+        description_fr=question.description_fr,
+        description_en=question.description_en,
+        sort_order=question.sort_order,
+        closes_at=question.closes_at,
+        closed=is_closed(question),
+        options=options,
+        answered_count=(stats or {}).get("answered_count", 0),
+        yes_count=(stats or {}).get("yes_count", 0),
+        no_count=(stats or {}).get("no_count", 0),
+        people_total=(stats or {}).get("people_total", 0),
+        created_at=question.created_at,
+        updated_at=question.updated_at,
+    )
 
 
 async def _questions(db: AsyncSession, edition_id: str) -> list[EditionPollQuestion]:
@@ -101,24 +121,24 @@ async def _questions(db: AsyncSession, edition_id: str) -> list[EditionPollQuest
     )
 
 
-async def list_poll_questions(db: AsyncSession, edition_id: str, locale: str | None = None) -> list[dict]:
+async def list_poll_questions(db: AsyncSession, edition_id: str, locale: str | None = None) -> list[PollQuestionOut]:
     """The edition's questions in display order, each with its options (meals) and what volunteers answered."""
     await ensure_edition_exists(db, edition_id)
     options = await poll_options_service.list_poll_options(db, edition_id=edition_id, locale=locale)
-    by_question: dict[str, list[dict]] = {}
+    by_question: dict[str, list[PollOptionOut]] = {}
     for option in options:
-        by_question.setdefault(option["question_id"], []).append(option)
+        by_question.setdefault(option.question_id, []).append(option)
     stats = await _stats(db, edition_id)
     return [
-        _question_dict(question, locale, by_question.get(question.id, []), stats.get(question.id))
+        _question_out(question, locale, by_question.get(question.id, []), stats.get(question.id))
         for question in await _questions(db, edition_id)
     ]
 
 
-async def _one(db: AsyncSession, question_id: str, locale: str | None = None) -> dict:
+async def _one(db: AsyncSession, question_id: str, locale: str | None = None) -> PollQuestionOut:
     question = await get_question_or_404(db, question_id)
     return next(
-        entry for entry in await list_poll_questions(db, question.edition_id, locale) if entry["id"] == question_id
+        entry for entry in await list_poll_questions(db, question.edition_id, locale) if entry.id == question_id
     )
 
 
@@ -133,7 +153,7 @@ async def _next_sort_order(db: AsyncSession, edition_id: str) -> int:
 
 async def create_poll_question(
     db: AsyncSession, body: PollQuestionCreate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PollQuestionOut:
     await lock_edition(db, body.edition_id)
     question = EditionPollQuestion(
         id=make_id("pollq"),
@@ -161,7 +181,7 @@ async def create_poll_question(
 
 async def update_poll_question(
     db: AsyncSession, question_id: str, body: PollQuestionUpdate, *, actor: str, request_id: str | None = None
-) -> dict:
+) -> PollQuestionOut:
     question = await get_question_or_404(db, question_id, lock=True)
     if "event_id" in body.model_fields_set and body.event_id != question.event_id:
         if await kind_of(question).answered_count(db, question) or await db.scalar(
@@ -259,7 +279,7 @@ async def delete_poll_question(
 
 async def reorder_poll_questions(
     db: AsyncSession, body: PollQuestionReorder, *, actor: str, request_id: str | None = None
-) -> list[dict]:
+) -> list[PollQuestionOut]:
     """Assign every question of the edition its position; ``ordered_ids`` names each exactly once."""
     await lock_edition(db, body.edition_id)
     questions = await _questions(db, body.edition_id)
@@ -285,7 +305,7 @@ async def reorder_poll_questions(
 
 async def copy_poll_questions(
     db: AsyncSession, body: PollQuestionCopy, *, actor: str, request_id: str | None = None
-) -> list[dict]:
+) -> list[PollQuestionOut]:
     """Copy the questions of one edition into another, with their options (never answers or closing times),
     after the ones already there. A question whose kind and Dutch title exist in the target is skipped, so
     repeating a copy adds nothing. Returns the questions created."""
@@ -345,7 +365,7 @@ async def copy_poll_questions(
     )
     await db.commit()
     created_ids = {question.id for question in created}
-    return [entry for entry in await list_poll_questions(db, body.to_edition_id) if entry["id"] in created_ids]
+    return [entry for entry in await list_poll_questions(db, body.to_edition_id) if entry.id in created_ids]
 
 
 # --- Admin: who answered what ----------------------------------------------------------------------
@@ -364,7 +384,7 @@ async def _current_answers(
 
 async def _orders(
     db: AsyncSession, edition_id: str, locale: str | None, only_volunteer: str | None = None
-) -> dict[str, Any]:
+) -> PollOrdersServiceOut:
     await ensure_edition_exists(db, edition_id)
     questions = await _questions(db, edition_id)
     options = list(
@@ -413,34 +433,38 @@ async def _orders(
             if question.id in own:
                 kind_of(question).add_to_row(row, question, own[question.id], option_position)
         rows.append(row)
-    options_by_question: dict[str, list[dict]] = {}
+    options_by_question: dict[str, list[PollOrderOptionOut]] = {}
     for option in options:
         options_by_question.setdefault(option.question_id, []).append(
-            {"id": option.id, "label": option.localized_label(locale), "dietary_tags": list(option.dietary_tags or [])}
+            PollOrderOptionOut(
+                id=option.id,
+                label=option.localized_label(locale),
+                dietary_tags=cast(list[DietaryTag], list(option.dietary_tags or [])),
+            )
         )
-    return {
-        "edition_id": edition_id,
-        "questions": [
-            {
-                "id": q.id,
-                "kind": q.kind,
-                "event_id": q.event_id,
-                "title": q.localized_title(locale),
-                "closed": is_closed(q),
-                "options": options_by_question.get(q.id, []),
-                "answered_count": stats.get(q.id, {}).get("answered_count", 0),
-                "yes_count": stats.get(q.id, {}).get("yes_count", 0),
-                "no_count": stats.get(q.id, {}).get("no_count", 0),
-                "people_total": stats.get(q.id, {}).get("people_total", 0),
-            }
+    return PollOrdersServiceOut(
+        edition_id=edition_id,
+        questions=[
+            PollOrderQuestionServiceOut(
+                id=q.id,
+                kind=cast(PollQuestionKind, q.kind),
+                event_id=q.event_id,
+                title=q.localized_title(locale),
+                closed=is_closed(q),
+                options=options_by_question.get(q.id, []),
+                answered_count=stats.get(q.id, {}).get("answered_count", 0),
+                yes_count=stats.get(q.id, {}).get("yes_count", 0),
+                no_count=stats.get(q.id, {}).get("no_count", 0),
+                people_total=stats.get(q.id, {}).get("people_total", 0),
+            )
             for q in questions
         ],
-        "volunteers": rows,
-        "volunteer_count": len(rows),
-    }
+        volunteers=[PollVolunteerOrderOut.model_validate(row) for row in rows],
+        volunteer_count=len(rows),
+    )
 
 
-async def list_poll_orders(db: AsyncSession, edition_id: str, locale: str | None = None) -> dict[str, Any]:
+async def list_poll_orders(db: AsyncSession, edition_id: str, locale: str | None = None) -> PollOrdersServiceOut:
     """Who answered what in an edition: every active volunteer (also those who have not answered) and
     anyone else holding an answer, with their dietary note."""
     return await _orders(db, edition_id, locale)
@@ -469,7 +493,7 @@ async def set_volunteer_poll_order(
     *,
     actor: str,
     request_id: str | None = None,
-) -> dict:
+) -> PollVolunteerOrderOut:
     """An admin enters or corrects a volunteer's answers for an edition, also after questions closed: a
     change to a closed question needs ``confirm_closed``, so a closed question is never changed by accident.
     Replaces the volunteer's picks and yes/no answers for the edition like their own saves do, and is audited
@@ -544,17 +568,17 @@ async def set_volunteer_poll_order(
     )
     await db.commit()
     orders = await _orders(db, edition_id, None, only_volunteer=volunteer_id)
-    return orders["volunteers"][0]
+    return orders.volunteers[0]
 
 
 # --- The volunteer's own side ----------------------------------------------------------------------
 
 
-async def volunteer_poll_view(db: AsyncSession, volunteer_id: str | None, locale: str) -> dict:
+async def volunteer_poll_view(db: AsyncSession, volunteer_id: str | None, locale: str) -> VolunteerPollOut:
     """The active festival edition's questions in `locale` with this volunteer's own answers and note."""
     edition = await find_active_edition(db, edition_type="festival")
     if edition is None:
-        return {"edition_id": None, "questions": [], "note": None}
+        return VolunteerPollOut(edition_id=None, questions=[], note=None)
     questions = await _questions(db, edition.id)
     options = (
         (
@@ -580,26 +604,26 @@ async def volunteer_poll_view(db: AsyncSession, volunteer_id: str | None, locale
     for question in questions:
         own_options = [o for o in options if o.question_id == question.id]
         views.append(
-            {
-                "id": question.id,
-                "kind": question.kind,
-                "event_id": question.event_id,
-                "title": question.localized_title(locale),
-                "description": question.localized_description(locale),
-                "closes_at": question.closes_at,
-                "closed": is_closed(question),
-                "options": [
-                    {
-                        "id": o.id,
-                        "label": o.localized_label(locale),
-                        "dietary_tags": list(o.dietary_tags or []),
-                    }
+            VolunteerPollQuestionOut(
+                id=question.id,
+                kind=cast(PollQuestionKind, question.kind),
+                event_id=question.event_id,
+                title=question.localized_title(locale),
+                description=question.localized_description(locale),
+                closes_at=question.closes_at,
+                closed=is_closed(question),
+                options=[
+                    VolunteerPollOptionOut(
+                        id=o.id,
+                        label=o.localized_label(locale),
+                        dietary_tags=cast(list[DietaryTag], list(o.dietary_tags or [])),
+                    )
                     for o in own_options
                 ],
                 **kind_of(question).view_fields(answers.get(question.id), own_options),
-            }
+            )
         )
-    return {"edition_id": edition.id, "questions": views, "note": note}
+    return VolunteerPollOut(edition_id=edition.id, questions=views, note=note)
 
 
 async def answer_poll_question(
@@ -611,7 +635,7 @@ async def answer_poll_question(
     locale: str,
     actor: str,
     request_id: str | None = None,
-) -> dict:
+) -> VolunteerPollOut:
     """Save the volunteer's own answer to one question of the active festival edition. Safe to repeat: it
     replaces only rows keyed by this volunteer and question, so it never touches another volunteer's answers.
     Locks the question, linked event/registration, then person so a double-submit serializes."""
@@ -650,7 +674,7 @@ async def save_poll_note(
     locale: str,
     actor: str,
     request_id: str | None = None,
-) -> dict:
+) -> VolunteerPollOut:
     """Save the volunteer's dietary note for the active festival edition's meals (empty clears it). It stays
     editable while at least one meals question is open."""
     await db.execute(select(Person.id).where(Person.id == volunteer_id).with_for_update())

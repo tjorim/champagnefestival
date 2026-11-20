@@ -1,31 +1,13 @@
+import type {
+  VolunteerIdentityOut,
+  VolunteerPollOptionOut,
+  VolunteerPollQuestionOut,
+  VolunteerPollOut,
+} from "@/api-types";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
-import type { DietaryTag } from "@/utils/dietaryTags";
-import { parsePollKind, type PollQuestionKind } from "@/utils/pollKinds";
 
-export interface MyVolunteerIdentity {
-  linked: boolean;
-  name: string | null;
-  nationalRegisterNumber: string | null;
-  eidDocumentNumber: string | null;
-}
-
-function parseIdentity(data: unknown): MyVolunteerIdentity {
-  const record = data as {
-    linked?: unknown;
-    name?: unknown;
-    national_register_number?: unknown;
-    eid_document_number?: unknown;
-  };
-  return {
-    linked: record.linked === true,
-    name: typeof record.name === "string" ? record.name : null,
-    nationalRegisterNumber:
-      typeof record.national_register_number === "string" ? record.national_register_number : null,
-    eidDocumentNumber:
-      typeof record.eid_document_number === "string" ? record.eid_document_number : null,
-  };
-}
+export type MyVolunteerIdentity = VolunteerIdentityOut;
 
 /** Fetch the signed-in volunteer's own linked identity (GET /api/me/volunteer). */
 export async function getMyVolunteerIdentity(accessToken: string): Promise<MyVolunteerIdentity> {
@@ -33,7 +15,7 @@ export async function getMyVolunteerIdentity(accessToken: string): Promise<MyVol
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error(m.my_eid_load_error());
-  return parseIdentity(await response.json());
+  return response.json();
 }
 
 /**
@@ -54,7 +36,7 @@ export async function registerMyVolunteerIdentity(
     }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.my_eid_register_error());
-  return parseIdentity(await response.json());
+  return response.json();
 }
 
 /**
@@ -72,15 +54,10 @@ export async function updateMyEidDocumentNumber(
     body: JSON.stringify({ eid_document_number: eidDocumentNumber }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.my_eid_correction_error());
-  return parseIdentity(await response.json());
+  return response.json();
 }
 
-export interface PollOption {
-  id: string;
-  /** In the language asked for (Dutch when that language has no label). */
-  label: string;
-  dietaryTags: DietaryTag[];
-}
+export type PollOption = VolunteerPollOptionOut;
 
 /** The most of one option a volunteer can ask for (the server enforces the same limit). */
 export const MAX_POLL_QUANTITY = 20;
@@ -91,85 +68,9 @@ export const MAX_POLL_PEOPLE = 10;
 /** Quantity per option id; an option with none is absent. */
 type MyPollSelections = Record<string, number>;
 
-export interface MyPollQuestion {
-  eventId?: string;
-  id: string;
-  kind: PollQuestionKind;
-  title: string;
-  description: string;
-  /** When answers can no longer be changed, or null while the question has no deadline. */
-  closesAt: string | null;
-  closed: boolean;
-  options: PollOption[];
-  selections: MyPollSelections;
-  /** The answer to a yes/no question; null while unanswered. */
-  attending: boolean | null;
-  people: number;
-  optionId: string | null;
-  text: string | null;
-  rating: number | null;
-}
+export type MyPollQuestion = VolunteerPollQuestionOut;
 
-export interface MyPoll {
-  editionId: string | null;
-  questions: MyPollQuestion[];
-  /** The volunteer's own dietary note, if they left one. */
-  note: string | null;
-}
-
-const DIETARY_TAGS: readonly string[] = [
-  "vegetarian",
-  "vegan",
-  "gluten_free",
-  "lactose_free",
-  "contains_nuts",
-];
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-function parseQuestion(raw: Record<string, unknown>): MyPollQuestion {
-  const selections: MyPollSelections = {};
-  for (const selection of (Array.isArray(raw.selections) ? raw.selections : []).filter(isRecord)) {
-    const quantity = Number(selection.quantity);
-    if (typeof selection.option_id === "string" && quantity > 0) {
-      selections[selection.option_id] = quantity;
-    }
-  }
-  return {
-    ...(typeof raw.event_id === "string" ? { eventId: raw.event_id } : {}),
-    id: String(raw.id ?? ""),
-    kind: parsePollKind(raw.kind),
-    title: String(raw.title ?? ""),
-    description: String(raw.description ?? ""),
-    closesAt: typeof raw.closes_at === "string" ? raw.closes_at : null,
-    closed: raw.closed === true,
-    options: (Array.isArray(raw.options) ? raw.options : []).filter(isRecord).map((o) => ({
-      id: String(o.id ?? ""),
-      label: String(o.label ?? ""),
-      dietaryTags: Array.isArray(o.dietary_tags)
-        ? o.dietary_tags.filter((tag): tag is DietaryTag => DIETARY_TAGS.includes(String(tag)))
-        : [],
-    })),
-    selections,
-    attending: typeof raw.attending === "boolean" ? raw.attending : null,
-    people: Number(raw.people ?? 0),
-    optionId: typeof raw.option_id === "string" ? raw.option_id : null,
-    text: typeof raw.text === "string" ? raw.text : null,
-    rating: typeof raw.rating === "number" ? raw.rating : null,
-  };
-}
-
-function parsePoll(data: unknown): MyPoll {
-  const record = isRecord(data) ? data : {};
-  return {
-    editionId: typeof record.edition_id === "string" ? record.edition_id : null,
-    questions: (Array.isArray(record.questions) ? record.questions : [])
-      .filter(isRecord)
-      .map(parseQuestion),
-    note: typeof record.note === "string" && record.note ? record.note : null,
-  };
-}
+export type MyPoll = VolunteerPollOut;
 
 const POLL_URL = "/api/me/volunteer/poll";
 
@@ -188,7 +89,7 @@ async function pollRequest(
     ...(body === undefined ? {} : { method: "PUT", body: JSON.stringify(body) }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, fallback);
-  return parsePoll(await response.json());
+  return response.json();
 }
 
 /** Fetch the active edition's poll questions (in `locale`) and what this volunteer answered. */

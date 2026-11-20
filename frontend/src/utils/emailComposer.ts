@@ -1,4 +1,5 @@
 import type { Registration } from "@/types/registration";
+import { toAmount } from "@/utils/money";
 import { m } from "@/paraglide/messages";
 export const MAILTO_MAX_LENGTH = 1800;
 export type EmailLanguage = "nl" | "fr" | "en";
@@ -57,17 +58,18 @@ export function buildMemberEmailDraft(
 export function buildRegistrationEmailDraft(
   registration: Registration,
   template: RegistrationEmailTemplate,
-  language: EmailLanguage = registration.person.preferredLanguage ?? "nl",
+  language: EmailLanguage = registration.person.preferred_language ?? "nl",
 ): EmailDraft {
   const t = emailCopy(language),
-    eventName = registration.event?.title ?? registration.eventId,
+    eventName = registration.event?.title ?? registration.event_id,
     eventDate = registration.event?.date ?? "",
     greeting = `${t.dear} ${registration.person.name},`,
     reference = `${t.registration}: ${registration.id}`,
     event = eventDate ? `${eventName} — ${eventDate}` : eventName,
     closing = `\n\n${t.regards},\nChampagnefestival`,
-    payment = `${t.status}: ${t[registration.paymentStatus]}${registration.amountDue != null ? `\n${t.due}: €${registration.amountDue.toFixed(2)}` : ""}`,
-    orders = registration.orderItems.map((i) => `- ${i.name} × ${i.quantity}`).join("\n") || t.none;
+    payment = `${t.status}: ${t[registration.payment_status]}${registration.amount_due != null ? `\n${t.due}: €${toAmount(registration.amount_due).toFixed(2)}` : ""}`,
+    orders =
+      registration.order_items.map((i) => `- ${i.name} × ${i.quantity}`).join("\n") || t.none;
   const content = {
     general: {
       subject: `${eventName} — ${t.registration} ${registration.id}`,
@@ -83,7 +85,7 @@ export function buildRegistrationEmailDraft(
     },
     event: {
       subject: `${eventName} — ${t.eventInfo}`,
-      body: `${greeting}\n\n${t.event}: ${eventName}${eventDate ? `\n${t.date}: ${eventDate}` : ""}${registration.event?.startTime ? `\n${t.start}: ${registration.event.startTime}` : ""}\n${reference}`,
+      body: `${greeting}\n\n${t.event}: ${eventName}${eventDate ? `\n${t.date}: ${eventDate}` : ""}${registration.event?.start_time ? `\n${t.start}: ${registration.event.start_time}` : ""}\n${reference}`,
     },
   };
   return {

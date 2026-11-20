@@ -37,22 +37,8 @@ import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
-interface Announcement {
-  id: string;
-  text_nl: string | null;
-  text_en: string | null;
-  text_fr: string | null;
-  level: "info" | "warning" | "urgent";
-  active: boolean;
-  sort_order: number;
-  starts_at: string | null;
-  ends_at: string | null;
-  link_url: string | null;
-  link_label_nl: string | null;
-  link_label_en: string | null;
-  link_label_fr: string | null;
-}
-type Draft = Omit<Announcement, "id" | "sort_order">;
+type Announcement = import("@/api-types").AnnouncementOut;
+type Draft = Required<Omit<import("@/api-types").AnnouncementCreate, "sort_order">>;
 const empty: Draft = {
   text_nl: "",
   text_en: "",

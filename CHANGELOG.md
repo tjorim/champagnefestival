@@ -24,6 +24,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Generate the frontend's API types from the backend's response models (#1657): every JSON route declares a response model, `frontend/openapi.json` is a committed snapshot (`uv run python -m app.openapi_export`, checked by `tests/test_openapi_snapshot.py`), Orval turns it into `frontend/src/api-schema/` (`pnpm api:generate`; `pnpm typecheck` fails when it is stale) and screens import the generated types from `@/api-types`. The hand-written API types, field mappers and camelCase copies are gone, response fields with a default are required, and successful MSW, fetch-double and Playwright fixtures are checked against the generated types by a source guard. Wire payloads are unchanged.
 - Reword the docs and comments that still described Dependabot (`AGENTS.md`, the UI maintenance notes, the uv comment in `backend/Dockerfile`); Renovate is the only dependency updater.
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.

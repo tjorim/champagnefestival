@@ -15,7 +15,7 @@ rather than becoming computed properties — ``sync_registration_payment_fields`
 recomputes and stores them after every ledger append (and whenever
 ``amount_due`` changes, see ``registrations_service.apply_registration_update``)
 so every existing reader (SQL filters/sorts on ``payment_status``,
-``registration_to_dict``, CSV exports, edition stats, the ``RegistrationOut``
+``registration_to_out``, CSV exports, edition stats, the ``RegistrationOut``
 schema) keeps working unchanged; only the write path moves off direct
 mutation and onto ledger entries.
 """
@@ -35,6 +35,7 @@ from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, PaymentTransaction, Person, Registration
+from app.schemas import PaymentTransactionLedgerRow, PaymentTransactionOut, PersonPaymentSummary
 from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
 from app.services.idempotency import (
     check_idempotency_key,
@@ -173,19 +174,21 @@ def count_ledger_entries(
     return stmt
 
 
-def ledger_row_to_dict(txn: PaymentTransaction, registration: Registration, person: Person, event: Event) -> dict:
+def ledger_row_to_out(
+    txn: PaymentTransaction, registration: Registration, person: Person, event: Event
+) -> PaymentTransactionLedgerRow:
     """One joined ledger row as returned by ``build_ledger_query``, shaped for
     ``PaymentTransactionLedgerRow`` (#1019)."""
     edition = event.edition
-    return {
-        **payment_transaction_to_dict(txn),
-        "person_name": person.name,
-        "event_title": event.title,
-        "edition_label": edition_display_name(edition) if edition else "",
-    }
+    return PaymentTransactionLedgerRow(
+        **payment_transaction_to_out(txn).model_dump(),
+        person_name=person.name,
+        event_title=event.title,
+        edition_label=edition_display_name(edition) if edition else "",
+    )
 
 
-async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
+async def person_payment_summary(db: AsyncSession, person_id: str) -> PersonPaymentSummary:
     """Received/refunded/net paid/due/outstanding/refund-liability across one
     person's non-cancelled bookings — the person-level counterpart to the
     edition stats endpoint's aggregation (#1019). Every figure is traceable
@@ -232,32 +235,28 @@ async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
     )
     txn_totals = (await db.execute(txn_stmt)).one()
 
-    return {
-        "received": txn_totals.received,
-        "refunded": txn_totals.refunded,
-        "net_paid": totals.net_paid,
-        "due": totals.due,
-        "outstanding": totals.outstanding,
-        "refund_liability": totals.refund_liability,
-    }
+    return PersonPaymentSummary(
+        received=txn_totals.received,
+        refunded=txn_totals.refunded,
+        net_paid=totals.net_paid,
+        due=totals.due,
+        outstanding=totals.outstanding,
+        refund_liability=totals.refund_liability,
+    )
 
 
-def payment_transaction_to_dict(t: PaymentTransaction) -> dict:
-    return {
-        "id": t.id,
-        "registration_id": t.registration_id,
-        # Stored as a string (not the raw Decimal) because this dict is also
-        # what gets cached as an idempotency replay response, and the
-        # IdempotencyKey.response_body JSON column can't serialise a Decimal
-        # directly — PaymentTransactionOut parses the string back to Decimal.
-        "amount": str(t.amount),
-        "effective_date": t.effective_date,
-        "recorded_at": t.recorded_at,
-        "recorded_by": t.recorded_by,
-        "reference": t.reference,
-        "note": t.note,
-        "reversed_transaction_id": t.reversed_transaction_id,
-    }
+def payment_transaction_to_out(t: PaymentTransaction) -> PaymentTransactionOut:
+    return PaymentTransactionOut(
+        id=t.id,
+        registration_id=t.registration_id,
+        amount=t.amount,
+        effective_date=t.effective_date,
+        recorded_at=t.recorded_at,
+        recorded_by=t.recorded_by,
+        reference=t.reference,
+        note=t.note,
+        reversed_transaction_id=t.reversed_transaction_id,
+    )
 
 
 async def record_payment_transaction(
@@ -272,7 +271,7 @@ async def record_payment_transaction(
     actor: str,
     idempotency_key: str | None = None,
     request_id: str | None = None,
-) -> dict:
+) -> PaymentTransactionOut:
     """Append one immutable ledger entry and resync the booking's derived totals.
 
     There is no ``kind``: a positive ``amount`` is a payment, a negative one
@@ -307,7 +306,7 @@ async def record_payment_transaction(
             raise to_http_exception(exc) from exc
 
     if (cached := await replay()) is not None:
-        return cached
+        return PaymentTransactionOut.model_validate(cached)
 
     if reversed_transaction_id is not None:
         reversed_row = await db.get(PaymentTransaction, reversed_transaction_id)
@@ -333,7 +332,7 @@ async def record_payment_transaction(
     # A concurrent request with the same key may have committed while we waited for the lock; replay
     # its result rather than judging this retry against the balance it already changed.
     if (cached := await replay()) is not None:
-        return cached
+        return PaymentTransactionOut.model_validate(cached)
 
     if reversed_transaction_id is not None:
         # Checked under the booking lock so two concurrent refunds cannot both
@@ -397,7 +396,7 @@ async def record_payment_transaction(
         ),
     )
 
-    response = payment_transaction_to_dict(transaction)
+    response = payment_transaction_to_out(transaction)
     if idempotency_key:
         record_idempotency_key(
             db,
@@ -405,7 +404,9 @@ async def record_payment_transaction(
             key=idempotency_key,
             actor=actor,
             request_hash=request_hash,
-            response_body=response,
+            # Keep the existing replay encoder responsible for dates/timestamps;
+            # only the Decimal needs the historical string representation here.
+            response_body=response.model_dump() | {"amount": str(response.amount)},
         )
     try:
         await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)

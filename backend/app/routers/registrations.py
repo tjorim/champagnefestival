@@ -19,7 +19,7 @@ import re
 import secrets
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
@@ -34,6 +34,7 @@ from app.email import send_email_consent_confirmation
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, Table
+from app.openapi_responses import binary_response
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
@@ -61,9 +62,9 @@ from app.utils import (
     edition_display_name,
     make_id,
     order_answer_text,
-    registration_to_dict,
-    registration_to_dict_with_token,
-    registration_to_list_dict,
+    registration_to_list_out,
+    registration_to_out,
+    registration_to_out_with_token,
 )
 from app.visitor_session import actor_for_user
 
@@ -87,7 +88,7 @@ async def create_registration(
     request: Request,
     claims: dict[str, Any] | None = Depends(get_optional_claims),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> RegistrationPublicOut:
     client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip, scope="registration-create"):
         raise ApiHTTPException(
@@ -221,7 +222,7 @@ async def create_registration(
         )
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)
-    return registration_to_dict(registration, person, event, public=True)
+    return registration_to_out(registration, person, event, public=True)
 
 
 @router.post(
@@ -235,7 +236,7 @@ async def admin_create_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     return await registrations_service.admin_create_registration(
         db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
@@ -270,7 +271,7 @@ async def list_registrations(
     ),
     sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> dict:
+) -> RegistrationListEnvelope:
     q_stripped = q.strip() if q and q.strip() else None
 
     person_needed = bool(q_stripped) or sort == "name"
@@ -331,11 +332,11 @@ async def list_registrations(
 
     rows = (await db.execute(stmt)).scalars().all()
     person_map = await registrations_service.fetch_person_map(db, list(rows))
-    items = [registration_to_list_dict(row, person_map[row.person_id], row.event) for row in rows]
-    return {"items": items, "total": total, "limit": limit, "page": page}
+    items = [registration_to_list_out(row, person_map[row.person_id], row.event) for row in rows]
+    return RegistrationListEnvelope(items=items, total=total, limit=limit, page=page)
 
 
-@router.get("/export", dependencies=[Depends(require_admin)])
+@router.get("/export", dependencies=[Depends(require_admin)], **binary_response("text/csv", "Registrations as CSV"))
 async def export_registrations_csv(
     event_id: str,
     db: AsyncSession = Depends(get_db),
@@ -424,7 +425,7 @@ async def list_payment_transactions_filtered(
     ),
     sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> dict:
+) -> PaymentTransactionLedgerEnvelope:
     """List ledger entries with booking context, filtered by edition and/or
     person (#1019) — the in-app drill-down behind the edition/person payment
     summaries; ``/transactions/export`` covers the CSV download of the same
@@ -447,15 +448,12 @@ async def list_payment_transactions_filtered(
     stmt = apply_pagination(stmt, effective_pagination)
     rows = (await db.execute(stmt)).all()
     items = [
-        payments_service.ledger_row_to_dict(txn, registration, person, event)
+        payments_service.ledger_row_to_out(txn, registration, person, event)
         for txn, registration, person, event in rows
     ]
-    return {
-        "items": items,
-        "total": total,
-        "limit": effective_pagination.limit,
-        "page": effective_pagination.page,
-    }
+    return PaymentTransactionLedgerEnvelope(
+        items=items, total=total, limit=cast(int, effective_pagination.limit), page=effective_pagination.page
+    )
 
 
 _LEDGER_CSV_BATCH_SIZE = 500
@@ -537,7 +535,11 @@ async def _stream_ledger_csv(
         offset += _LEDGER_CSV_BATCH_SIZE
 
 
-@router.get("/transactions/export", dependencies=[Depends(require_admin)])
+@router.get(
+    "/transactions/export",
+    dependencies=[Depends(require_admin)],
+    **binary_response("text/csv", "Payment transactions as CSV"),
+)
 async def export_payment_transactions_csv(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
@@ -579,10 +581,10 @@ async def export_payment_transactions_csv(
 async def get_registration(
     registration_id: str,
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> RegistrationOutWithToken:
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     person_map = await registrations_service.fetch_person_map(db, [registration])
-    return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
+    return registration_to_out_with_token(registration, person_map[registration.person_id], registration.event)
 
 
 @router.post(
@@ -597,7 +599,7 @@ async def create_payment_transaction(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PaymentTransactionOut:
     """Append one ledger entry (#1019). Never edits or deletes a prior entry —
     a refund is always a separate, new row."""
     registration = await registrations_service.get_registration_or_404(db, registration_id)
@@ -623,12 +625,12 @@ async def create_payment_transaction(
 async def list_payment_transactions(
     registration_id: str,
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[PaymentTransactionOut]:
     """The booking's chronological ledger — the accounting source of truth
     behind its `amount_paid`/`payment_status`/`refund_due` fields."""
     await registrations_service.get_registration_or_404(db, registration_id)
     rows = await payments_service.list_transactions(db, registration_id)
-    return [payments_service.payment_transaction_to_dict(t) for t in rows]
+    return [payments_service.payment_transaction_to_out(t) for t in rows]
 
 
 @router.put(
@@ -642,7 +644,7 @@ async def update_registration(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     return await registrations_service.apply_registration_update(
         db, registration, body, actor=actor, request_id=getattr(request.state, "request_id", None)
@@ -660,7 +662,7 @@ async def assign_registration_to_volunteer(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RegistrationOut:
     """Attach an unowned registration to a volunteer's own portal account
     (#1044) — an admin override alongside the volunteer's own self-service
     claim flow, for a booking they never confirmed themselves."""

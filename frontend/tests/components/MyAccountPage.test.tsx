@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { renderLocation } from "../utils/locationRouter";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -134,8 +135,16 @@ async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
 describe("MyAccountPage", () => {
   beforeEach(() => {
     discovery.reports = true;
-    server.use(http.get("/api/me/membership", () => HttpResponse.json({ state: "inactive" })));
-    server.use(http.get("/api/me/organizations", () => HttpResponse.json([])));
+    server.use(
+      http.get("/api/me/membership", () =>
+        jsonResponse<import("@/api-types").MembershipSummary>({ state: "inactive" }),
+      ),
+    );
+    server.use(
+      http.get("/api/me/organizations", () =>
+        jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([]),
+      ),
+    );
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -193,8 +202,18 @@ describe("MyAccountPage", () => {
     server.use(
       http.get("/api/me/organizations", ({ request }) => {
         authorization = request.headers.get("Authorization");
-        return HttpResponse.json([
-          { id: 1, name: "Shared account house", type: "producer", website: "", active: true },
+        return jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([
+          {
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            image: "",
+            id: 1,
+            name: "Shared account house",
+            type: "producer",
+            website: "",
+            active: true,
+          },
         ]);
       }),
     );
@@ -264,7 +283,12 @@ describe("MyAccountPage", () => {
   it("shows an error and re-enables the button when deletion fails", async () => {
     server.use(
       http.delete("/api/me", () =>
-        HttpResponse.json({ detail: "Something went wrong" }, { status: 500 }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Something went wrong",
+          },
+          { status: 500 },
+        ),
       ),
     );
 
@@ -318,7 +342,19 @@ describe("MyAccountPage", () => {
         attempts += 1;
         return attempts === 1
           ? new HttpResponse(null, { status: 503 })
-          : HttpResponse.json([{ id: 1, name: "Cave Dupont", can_edit: true }]);
+          : jsonResponse<import("@/api-types").ManagedOrganizationOut[]>([
+              {
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                image: "",
+                type: "",
+                website: "",
+                active: false,
+                id: 1,
+                name: "Cave Dupont",
+              },
+            ]);
       }),
     );
     const user = userEvent.setup();
@@ -359,7 +395,7 @@ describe("MyAccountPage", () => {
     });
     server.use(
       http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").VolunteerIdentityOut>({
           linked: false,
           name: null,
           national_register_number: null,
@@ -394,7 +430,7 @@ describe("MyAccountPage", () => {
     });
     server.use(
       http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").VolunteerIdentityOut>({
           linked: true,
           name: "Sofie De Smet",
           national_register_number: "91010112319",
@@ -403,7 +439,7 @@ describe("MyAccountPage", () => {
       ),
       http.post("/api/me/volunteer/eid-correction", async ({ request }) => {
         const body = (await request.json()) as { eid_document_number: string };
-        return HttpResponse.json({
+        return jsonResponse<import("@/api-types").VolunteerIdentityOut>({
           linked: true,
           name: "Sofie De Smet",
           national_register_number: "91010112319",
@@ -447,7 +483,7 @@ describe("MyAccountPage", () => {
     let correctionCalls = 0;
     server.use(
       http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").VolunteerIdentityOut>({
           linked: true,
           name: "Sofie De Smet",
           national_register_number: "91010112319",
@@ -456,7 +492,12 @@ describe("MyAccountPage", () => {
       ),
       http.post("/api/me/volunteer/eid-correction", () => {
         correctionCalls += 1;
-        return HttpResponse.json({ detail: "invalid" }, { status: 422 });
+        return HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "invalid",
+          },
+          { status: 422 },
+        );
       }),
     );
 
@@ -505,7 +546,7 @@ describe("MyAccountPage", () => {
     });
     server.use(
       http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").VolunteerIdentityOut>({
           linked: false,
           name: null,
           national_register_number: null,
@@ -547,7 +588,7 @@ describe("MyAccountPage", () => {
       });
       server.use(
         http.get("/api/me/volunteer", () =>
-          HttpResponse.json({
+          jsonResponse<import("@/api-types").VolunteerIdentityOut>({
             linked: true,
             name: "Sofie De Smet",
             national_register_number: "91010112319",
@@ -557,7 +598,13 @@ describe("MyAccountPage", () => {
       );
     }
 
-    const dinner = (extra: Record<string, unknown> = {}) => ({
+    const dinner = (
+      extra: Partial<import("@/api-types").VolunteerPollQuestionOut> = {},
+    ): import("@/api-types").VolunteerPollQuestionOut => ({
+      event_id: null,
+      option_id: null,
+      text: null,
+      rating: null,
       id: "q-dinner",
       kind: "yes_no",
       title: "Dinner on Sunday?",
@@ -570,7 +617,13 @@ describe("MyAccountPage", () => {
       people: 0,
       ...extra,
     });
-    const meals = (extra: Record<string, unknown> = {}) => ({
+    const meals = (
+      extra: Partial<import("@/api-types").VolunteerPollQuestionOut> = {},
+    ): import("@/api-types").VolunteerPollQuestionOut => ({
+      event_id: null,
+      option_id: null,
+      text: null,
+      rating: null,
       id: "q-meals",
       kind: "meals",
       title: "Meals",
@@ -586,7 +639,10 @@ describe("MyAccountPage", () => {
       people: 0,
       ...extra,
     });
-    const poll = (questions: Record<string, unknown>[], note: string | null = null) => ({
+    const poll = (
+      questions: import("@/api-types").VolunteerPollQuestionOut[],
+      note: string | null = null,
+    ): import("@/api-types").VolunteerPollOut => ({
       edition_id: "2026-october",
       questions,
       note,
@@ -607,14 +663,16 @@ describe("MyAccountPage", () => {
           attempts += 1;
           return attempts === 1
             ? new HttpResponse(null, { status: 503 })
-            : HttpResponse.json({
+            : jsonResponse<import("@/api-types").VolunteerIdentityOut>({
                 linked: true,
                 name: "Sofie De Smet",
                 national_register_number: "91010112319",
                 eid_document_number: "123456789002",
               });
         }),
-        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([dinner()]))),
+        http.get("/api/me/volunteer/poll", () =>
+          jsonResponse<import("@/api-types").VolunteerPollOut>(poll([dinner()])),
+        ),
       );
 
       const user = await openPoll();
@@ -632,7 +690,7 @@ describe("MyAccountPage", () => {
           attempts += 1;
           return attempts === 1
             ? new HttpResponse(null, { status: 503 })
-            : HttpResponse.json(poll([dinner()]));
+            : jsonResponse<import("@/api-types").VolunteerPollOut>(poll([dinner()]));
         }),
       );
 
@@ -653,7 +711,7 @@ describe("MyAccountPage", () => {
       server.use(
         http.get("/api/me/volunteer/poll", async () => {
           await ready;
-          return HttpResponse.json(poll([dinner()]));
+          return jsonResponse<import("@/api-types").VolunteerPollOut>(poll([dinner()]));
         }),
       );
 
@@ -667,7 +725,11 @@ describe("MyAccountPage", () => {
       mockVolunteer();
       server.use(
         http.get("/api/me/volunteer/poll", () =>
-          HttpResponse.json({ edition_id: null, questions: [], note: null }),
+          jsonResponse<import("@/api-types").VolunteerPollOut>({
+            edition_id: null,
+            questions: [],
+            note: null,
+          }),
         ),
       );
       await openPoll();
@@ -677,7 +739,11 @@ describe("MyAccountPage", () => {
 
     it("says there are no questions when the edition has none", async () => {
       mockVolunteer();
-      server.use(http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([]))));
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          jsonResponse<import("@/api-types").VolunteerPollOut>(poll([])),
+        ),
+      );
 
       await openPoll();
       expect(await screen.findByText("No questions to answer.")).toBeInTheDocument();
@@ -691,14 +757,17 @@ describe("MyAccountPage", () => {
       server.use(
         http.get("/api/me/volunteer/poll", ({ request }) => {
           requestedLocales.push(new URL(request.url).searchParams.get("locale"));
-          return HttpResponse.json(poll([current]));
+          return jsonResponse<import("@/api-types").VolunteerPollOut>(poll([current]));
         }),
         http.put("/api/me/volunteer/poll/questions/q-meals", async ({ request }) => {
           requestedLocales.push(new URL(request.url).searchParams.get("locale"));
-          const body = (await request.json()) as { selections: unknown[] };
+          const body = (await request.json()) as Pick<
+            import("@/api-types").VolunteerPollQuestionOut,
+            "selections"
+          >;
           saved.push(body);
           current = meals({ selections: body.selections });
-          return HttpResponse.json(poll([current]));
+          return jsonResponse<import("@/api-types").VolunteerPollOut>(poll([current]));
         }),
       );
 
@@ -738,12 +807,14 @@ describe("MyAccountPage", () => {
       const saved: Record<string, unknown>[] = [];
       let current = dinner();
       server.use(
-        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([current]))),
+        http.get("/api/me/volunteer/poll", () =>
+          jsonResponse<import("@/api-types").VolunteerPollOut>(poll([current])),
+        ),
         http.put("/api/me/volunteer/poll/questions/q-dinner", async ({ request }) => {
           const body = (await request.json()) as { attending: boolean; people?: number };
           saved.push(body);
           current = dinner({ attending: body.attending, people: body.people ?? 0 });
-          return HttpResponse.json(poll([current]));
+          return jsonResponse<import("@/api-types").VolunteerPollOut>(poll([current]));
         }),
       );
 
@@ -784,7 +855,7 @@ describe("MyAccountPage", () => {
       const saved: Record<string, unknown>[] = [];
       server.use(
         http.get("/api/me/volunteer/poll", () =>
-          HttpResponse.json(
+          jsonResponse<import("@/api-types").VolunteerPollOut>(
             poll(
               [meals({ selections: [{ option_id: "poll-soup-1", quantity: 1 }] })],
               "Geen noten",
@@ -794,7 +865,9 @@ describe("MyAccountPage", () => {
         http.put("/api/me/volunteer/poll/note", async ({ request }) => {
           const body = (await request.json()) as { note: string };
           saved.push(body);
-          return HttpResponse.json(poll([meals()], body.note || null));
+          return jsonResponse<import("@/api-types").VolunteerPollOut>(
+            poll([meals()], body.note || null),
+          );
         }),
       );
 
@@ -821,7 +894,7 @@ describe("MyAccountPage", () => {
       mockVolunteer();
       server.use(
         http.get("/api/me/volunteer/poll", () =>
-          HttpResponse.json(
+          jsonResponse<import("@/api-types").VolunteerPollOut>(
             poll([
               dinner({
                 closed: true,
@@ -851,7 +924,9 @@ describe("MyAccountPage", () => {
       mockVolunteer();
       server.use(
         http.get("/api/me/volunteer/poll", () =>
-          HttpResponse.json(poll([meals({ closed: true, closes_at: "2026-10-01T10:00:00Z" })])),
+          jsonResponse<import("@/api-types").VolunteerPollOut>(
+            poll([meals({ closed: true, closes_at: "2026-10-01T10:00:00Z" })]),
+          ),
         ),
       );
 
@@ -862,7 +937,11 @@ describe("MyAccountPage", () => {
 
     it("shows nothing when the edition has no questions", async () => {
       mockVolunteer();
-      server.use(http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([]))));
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          jsonResponse<import("@/api-types").VolunteerPollOut>(poll([])),
+        ),
+      );
 
       await openPoll();
       await screen.findByText("Your identity on file");
@@ -872,10 +951,15 @@ describe("MyAccountPage", () => {
     it("explains a rejected save from its error code", async () => {
       mockVolunteer();
       server.use(
-        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([meals()]))),
+        http.get("/api/me/volunteer/poll", () =>
+          jsonResponse<import("@/api-types").VolunteerPollOut>(poll([meals()])),
+        ),
         http.put("/api/me/volunteer/poll/questions/q-meals", () =>
           HttpResponse.json(
-            { detail: "This question has closed.", code: "poll_question_closed" },
+            /* Fixture exception: error response; intentionally outside the success schema. */ {
+              detail: "This question has closed.",
+              code: "poll_question_closed",
+            },
             { status: 409 },
           ),
         ),

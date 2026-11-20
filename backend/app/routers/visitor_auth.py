@@ -31,7 +31,7 @@ from app.schemas import (
 )
 from app.services.errors import ApiHTTPException
 from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user_by_email
-from app.utils import make_id, registration_to_guest_dict
+from app.utils import make_id, registration_to_guest_out
 from app.visitor_session import (
     COOKIE_NAME,
     VISITOR_AUTH_SOURCE,
@@ -177,7 +177,7 @@ async def redeem_visitor_magic_link(
     body: RegistrationAccessLookupRequest,
     response: Response,
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RegistrationGuestOut]:
     """Redeem a magic link: establish a visitor session and return its orders.
 
     Single-use (the `with_for_update` lock on the link row serializes a
@@ -207,7 +207,7 @@ async def redeem_visitor_magic_link(
     await claim_unowned_registrations_for_email(db, user, email_norm, actor=user.id, auth_source=VISITOR_AUTH_SOURCE)
     rows = await _load_guest_registrations_by_email(db, email_norm)
     await db.commit()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+    return [registration_to_guest_out(registration, person, event) for registration, person, event in rows]
 
 
 @router.get("/status", response_model=VisitorSessionStatus)

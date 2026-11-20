@@ -28,7 +28,7 @@ describe("poll question kinds", () => {
   });
 
   it("summarises a yes/no question only", () => {
-    const counts = { yesCount: 2, noCount: 1, peopleTotal: 5 };
+    const counts = { yes_count: 2, no_count: 1, people_total: 5 };
     expect(pollCountsSummary("yes_no", counts)).toBe('summary({"yes":2,"people":5,"no":1})');
     expect(pollCountsSummary("meals", counts)).toBeNull();
   });

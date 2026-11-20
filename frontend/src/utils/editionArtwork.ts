@@ -20,8 +20,8 @@ export function managedArtwork(path: string | null | undefined): string | null {
 
 /** Mirrors the backend: the sharing image, else the hero photo, else `null` (keep the static default). */
 export function editionShareImage(edition: {
-  shareImage?: string | null;
-  heroImage?: string | null;
+  share_image?: string | null;
+  hero_image?: string | null;
 }): string | null {
-  return managedArtwork(edition.shareImage) ?? managedArtwork(edition.heroImage);
+  return managedArtwork(edition.share_image) ?? managedArtwork(edition.hero_image);
 }

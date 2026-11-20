@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type { AppSettingsOut, EditionPublicOut, FaqItemPublicOut } from "../src/api-types";
 import { activeEdition, seedEvents } from "../src/mocks/data/editions";
 
 test("one online visit makes public information available after an offline reload", async ({
@@ -9,22 +10,33 @@ test("one online visit makes public information available after an offline reloa
     const path = new URL(route.request().url()).pathname;
     const json =
       path === "/api/settings"
-        ? { maintenance_mode: false, public_email: "offline@example.com" }
+        ? ({
+            member_limit: null,
+            member_inactivity_months: null,
+            stamp_card_type_id: null,
+            maintenance_mode: false,
+            public_email: "offline@example.com",
+            public_phone: "+32 400 00 00 00",
+            facebook_url: "https://www.facebook.com/offline",
+            updated_at: "2026-01-01T00:00:00Z",
+          } satisfies AppSettingsOut)
         : path === "/api/editions/active"
-          ? {
-              ...activeEdition,
-              events: seedEvents.filter((event) => event.edition_id === activeEdition.id),
-            }
+          ? ({
+              ...activeEdition!,
+              events: seedEvents.filter((event) => event.edition_id === activeEdition!.id),
+            } satisfies EditionPublicOut)
           : path === "/api/faq/active"
-            ? [
+            ? ([
                 {
                   id: "offline-faq",
                   question: "Offline test question",
                   answer: "Saved festival information",
                 },
-              ]
+              ] satisfies FaqItemPublicOut[])
             : [];
-    await route.fulfill({ json });
+    await route.fulfill({
+      json: json satisfies AppSettingsOut | EditionPublicOut | FaqItemPublicOut[],
+    });
   });
   await page.goto("/en");
   await page.evaluate(async () => {

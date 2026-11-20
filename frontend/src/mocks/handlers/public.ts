@@ -1,3 +1,6 @@
+import { jsonResponse } from "../response";
+import { registrationOut, orderItemOut } from "../data/builders";
+import type { EditionPublicOut, EventOut, EventPublicOut, ProductPublicOut } from "@/api-types";
 import { http, HttpResponse } from "msw/http";
 import { editions, events, type SeedEdition } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
@@ -17,7 +20,37 @@ function seededState<T>(key: string, fallback: T): T {
   }
 }
 
-function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
+/** Public fixtures mirror the API projection: no stock or hidden inclusion targets. */
+function publicEvent(event: EventOut): EventPublicOut {
+  const { edition: _edition, products, ...fields } = event;
+  const visible = new Set(
+    products.filter((product) => product.purchasable).map((product) => product.id),
+  );
+  const publicProducts: ProductPublicOut[] = products
+    .filter((product) => product.purchasable)
+    .map((product) => {
+      const {
+        event_id: _eventId,
+        stock: _stock,
+        reserved_quantity: _reserved,
+        shortage: _shortage,
+        created_at: _created,
+        updated_at: _updated,
+        ...fields
+      } = product;
+      const included =
+        product.included_product_id !== null && visible.has(product.included_product_id);
+      return {
+        ...fields,
+        inclusions: product.inclusions?.filter((edge) => visible.has(edge.product_id)) ?? null,
+        included_product_id: included ? product.included_product_id : null,
+        included_per_guests: included ? product.included_per_guests : null,
+      };
+    });
+  return { ...fields, products: publicProducts, members_only: seededState("members-only", false) };
+}
+
+function hydrateEditionEvents(edition: SeedEdition): EditionPublicOut {
   const editionEvents = [...events.filter((event) => event.edition_id === edition.id)].sort(
     (left, right) =>
       left.date.localeCompare(right.date) ||
@@ -26,17 +59,15 @@ function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
   );
   const dates = [...new Set(editionEvents.map((event) => event.date))].sort();
 
+  const { organizations: _organizations, ...publicFields } = edition;
   return {
-    ...edition,
+    ...publicFields,
     dates,
-    events: editionEvents.map((event) => ({
-      ...event,
-      members_only: seededState("members-only", false),
-    })),
+    events: editionEvents.map(publicEvent),
   };
 }
 
-function isUpcomingEdition(edition: SeedEdition): boolean {
+function isUpcomingEdition(edition: EditionPublicOut): boolean {
   const today = new Date().toISOString().slice(0, 10);
   const endDate = edition.dates.at(-1);
   return Boolean(endDate && endDate >= today);
@@ -66,16 +97,32 @@ const publicFaqItemsByLocale = {
   ],
 } as const;
 
+function mockSettings(): import("@/api-types").AppSettingsOut {
+  return {
+    member_limit: null,
+    member_inactivity_months: null,
+    updated_at: "2026-01-01T00:00:00Z",
+    stamp_card_type_id: seededState("stamp-card-type", null),
+    maintenance_mode: seededState("maintenance", false),
+    public_email: "nancy.cattrysse@telenet.be",
+    public_phone: "+32 478 48 01 77",
+    facebook_url: "https://www.facebook.com/champagnefestival.kust",
+  };
+}
+
 export const publicHandlers = [
   http.put("/api/settings", async ({ request }) => {
     const body = (await request.json()) as { stamp_card_type_id?: string | null };
     if (body.stamp_card_type_id !== undefined)
       localStorage.setItem("msw:stamp-card-type", JSON.stringify(body.stamp_card_type_id));
-    return HttpResponse.json(body);
+    return jsonResponse<import("@/api-types").AppSettingsOut>({ ...mockSettings(), ...body });
   }),
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
   http.get("/api/settings", () =>
-    HttpResponse.json({
+    jsonResponse<import("@/api-types").AppSettingsOut>({
+      member_limit: null,
+      member_inactivity_months: null,
+      updated_at: "2026-01-01T00:00:00Z",
       stamp_card_type_id: seededState("stamp-card-type", null),
       maintenance_mode: seededState("maintenance", false),
       public_email: "nancy.cattrysse@telenet.be",
@@ -88,15 +135,17 @@ export const publicHandlers = [
    * GET /api/announcements/active — no announcements by default. Without a handler the
    * banner's one-minute poll falls through to the dev proxy and logs ECONNREFUSED.
    */
-  http.get("/api/announcements/active", () => HttpResponse.json(seededState("announcements", []))),
+  http.get("/api/announcements/active", () =>
+    jsonResponse<import("@/api-types").AnnouncementPublicOut[]>(seededState("announcements", [])),
+  ),
 
   /** GET /api/policies/:key/current — deterministic published policy for the visitor pages. */
   http.get("/api/policies/:key/current", ({ params, request }) => {
     const locale = new URL(request.url).searchParams.get("locale") ?? "nl";
-    return HttpResponse.json({
-      key: params.key,
+    return jsonResponse<import("@/api-types").PolicyPublicOut>({
+      key: String(params.key),
       title: "Privacy Policy",
-      locale,
+      locale: locale === "fr" || locale === "en" ? locale : "nl",
       html: "<p>Your privacy matters.</p>",
       version_number: 1,
       published_at: "2026-09-30T00:00:00Z",
@@ -122,26 +171,31 @@ export const publicHandlers = [
         { status: 422 },
       );
     }
-    return HttpResponse.json(publicFaqItemsByLocale[locale as keyof typeof publicFaqItemsByLocale]);
+    return jsonResponse<import("@/api-types").FaqItemPublicOut[]>([
+      ...publicFaqItemsByLocale[locale as keyof typeof publicFaqItemsByLocale],
+    ]);
   }),
 
   /** GET /api/editions/active — returns the active edition. */
   http.get("/api/editions/active", ({ request }) => {
-    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const edition_type = new URL(request.url).searchParams.get("edition_type");
     const matching = editions.filter(
-      (e) => e.active && (!editionType || e.edition_type === editionType),
+      (e) => e.active && (!edition_type || e.edition_type === edition_type),
     );
-    return HttpResponse.json(matching[0] ? hydrateEditionEvents(matching[0]) : null);
+    if (!matching[0]) return HttpResponse.json(null, { status: 404 });
+    return jsonResponse<import("@/api-types").EditionPublicOut>(hydrateEditionEvents(matching[0]));
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
   http.get("/api/editions/upcoming", ({ request }) => {
-    const editionType = new URL(request.url).searchParams.get("edition_type");
+    const edition_type = new URL(request.url).searchParams.get("edition_type");
     const result = editions
-      .filter((edition) => edition.active && (!editionType || edition.edition_type === editionType))
+      .filter(
+        (edition) => edition.active && (!edition_type || edition.edition_type === edition_type),
+      )
       .map(hydrateEditionEvents)
       .filter(isUpcomingEdition);
-    return HttpResponse.json(result);
+    return jsonResponse<import("@/api-types").EditionPublicOut[]>(result);
   }),
 
   /** GET /api/editions — returns all editions (also used by admin with include_inactive). */
@@ -149,26 +203,26 @@ export const publicHandlers = [
     const url = new URL(request.url);
     const includeInactive = url.searchParams.get("include_inactive") === "true";
     const result = includeInactive ? editions : editions.filter((e) => e.active);
-    return HttpResponse.json(result);
+    return jsonResponse<import("@/api-types").EditionOut[]>(result);
   }),
 
   /** GET /api/events — supports ?registration_required and ?edition_id filters. */
   http.get("/api/events", ({ request }) => {
     const url = new URL(request.url);
-    const registrationRequired = url.searchParams.get("registration_required");
+    const registration_required = url.searchParams.get("registration_required");
     const editionId = url.searchParams.get("edition_id");
 
     let result = events.map((event) => ({
       ...event,
       members_only: seededState("members-only", false),
     }));
-    if (registrationRequired === "true") {
+    if (registration_required === "true") {
       result = result.filter((e) => e.registration_required);
     }
     if (editionId) {
       result = result.filter((e) => e.edition_id === editionId);
     }
-    return HttpResponse.json(result);
+    return jsonResponse<import("@/api-types").EventOut[]>(result);
   }),
 
   /** POST /api/registrations — public registration submission. */
@@ -186,19 +240,22 @@ export const publicHandlers = [
     }
 
     const ts = Date.now();
-    const newReg = {
+    const newReg = registrationOut({
       id: `reg-${ts}`,
       person_id: `person-new-${ts}`,
       person: {
+        preferred_language: null,
         id: `person-new-${ts}`,
         name: String(body.name ?? ""),
         email: String(body.email ?? ""),
         phone: String(body.phone ?? ""),
       },
       event_id: String(body.event_id ?? ""),
-      event: events.find((e) => e.id === body.event_id) ?? null,
+      event: events.find((e) => e.id === body.event_id),
       guest_count: Number(body.guest_count ?? 1),
-      order_items: Array.isArray(body.order_items) ? body.order_items : [],
+      order_items: Array.isArray(body.order_items)
+        ? body.order_items.map((item) => orderItemOut(item))
+        : [],
       notes: String(body.notes ?? ""),
       table_id: null,
       status: "pending",
@@ -209,9 +266,9 @@ export const publicHandlers = [
       check_in_token: `mock-token-${Date.now()}`,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    };
+    });
     sharedStore.registrations.push(newReg);
-    return HttpResponse.json(newReg, { status: 201 });
+    return jsonResponse<import("@/api-types").RegistrationPublicOut>(newReg, { status: 201 });
   }),
 
   /** POST /api/visitor-sessions/request — request a passwordless magic link (#953). */
@@ -228,7 +285,7 @@ export const publicHandlers = [
       return HttpResponse.json({ detail: "Invalid email address." }, { status: 422 });
     }
 
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").RegistrationLookupRequestAccepted>({
       ok: true,
       delivery_mode: "email",
       expires_in_minutes: 30,
@@ -249,59 +306,88 @@ export const publicHandlers = [
       return HttpResponse.json(null, { status: 401 });
     }
 
-    const myRegs = sharedStore.registrations.map((r) => ({
-      id: r.id,
-      event_title: (r.event as Record<string, unknown> | null | undefined)?.title ?? "",
-      event_date: (r.event as Record<string, unknown> | null | undefined)?.date ?? null,
-      check_in_token: r.check_in_token ?? `mock-token-${r.id}`,
-      guest_count: r.guest_count,
-      status: r.status,
-      payment_status: r.payment_status,
-      checked_in: r.checked_in,
-      checked_in_at: r.checked_in_at ?? null,
-      strap_issued: r.strap_issued,
-      created_at: r.created_at,
-      order_items: r.order_items,
-    }));
+    const myRegs = sharedStore.registrations.map(
+      (r): import("@/api-types").RegistrationGuestOut => ({
+        name: r.person.name,
+        event_id: r.event_id,
+        amount_due: "0.00",
+        amount_paid: r.amount_paid,
+        refund_due: r.refund_due,
+        order_answers: r.order_answers,
+        id: r.id,
+        event_title: r.event?.title ?? "",
+        event_date: r.event?.date ?? null,
+        check_in_token: r.check_in_token ?? `mock-token-${r.id}`,
+        guest_count: r.guest_count,
+        status: r.status,
+        payment_status: r.payment_status,
+        checked_in: r.checked_in,
+        checked_in_at: r.checked_in_at ?? null,
+        strap_issued: r.strap_issued,
+        created_at: r.created_at,
+        order_items: r.order_items,
+      }),
+    );
 
-    return HttpResponse.json(myRegs);
+    return jsonResponse<import("@/api-types").RegistrationGuestOut[]>(myRegs);
   }),
 
   /** GET /api/visitor-sessions/status — no session by default in tests (#953). */
   http.get("/api/visitor-sessions/status", () =>
-    HttpResponse.json({ authenticated: false, expires_at: null }),
+    jsonResponse<import("@/api-types").VisitorSessionStatus>({
+      authenticated: false,
+      expires_at: null,
+    }),
   ),
 
   /** GET /api/me/registrations — no owned registrations by default in
    * tests; override with server.use for tests that exercise a signed-in
    * member/volunteer's direct-fetch path. */
-  http.get("/api/me/registrations", () => HttpResponse.json([])),
+  http.get("/api/me/registrations", () =>
+    jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]),
+  ),
 
   /** GET /api/me/registrations/claimable — no claimable candidates by
    * default in tests (#1044); override with server.use for tests that
    * exercise the confirm-first claim card. */
-  http.get("/api/me/registrations/claimable", () => HttpResponse.json([])),
+  http.get("/api/me/registrations/claimable", () =>
+    jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]),
+  ),
 
   /** GET /api/me/communication-preference — no saved preference by default;
    * override with server.use to exercise a stored language. */
   http.get("/api/me/communication-preference", () =>
-    HttpResponse.json({ preferred_language: null }),
+    jsonResponse<import("@/api-types").CommunicationPreferenceOut>({ preferred_language: null }),
   ),
 
   /** GET /api/me/email-preferences — no categories by default; override with
    * server.use to exercise the per-category consent screen (#1408). */
   http.get("/api/me/email-preferences", () =>
-    HttpResponse.json({ email: "visitor@example.com", categories: [] }),
+    jsonResponse<import("@/api-types").EmailPreferencesOut>({
+      email: "visitor@example.com",
+      categories: [],
+    }),
   ),
 
   /** GET /api/me/volunteer — no linked volunteer record by default; override
    * with server.use for tests that exercise the signed-in identity. */
-  http.get("/api/me/volunteer", () => HttpResponse.json({ linked: false })),
+  http.get("/api/me/volunteer", () =>
+    jsonResponse<import("@/api-types").VolunteerIdentityOut>({
+      linked: false,
+      name: null,
+      national_register_number: null,
+      eid_document_number: null,
+    }),
+  ),
 
   /** GET /api/me/volunteer/poll — an edition with no poll questions by
    * default; override with server.use for tests that exercise the poll. */
   http.get("/api/me/volunteer/poll", () =>
-    HttpResponse.json({ edition_id: null, questions: [], note: null }),
+    jsonResponse<import("@/api-types").VolunteerPollOut>({
+      edition_id: null,
+      questions: [],
+      note: null,
+    }),
   ),
 
   /** POST /api/visitor-sessions/sign-out — always succeeds (#953). */
@@ -327,11 +413,13 @@ export const publicHandlers = [
       return HttpResponse.json(null, { status: 401 });
     }
 
-    const regPerson = reg.person as Record<string, unknown>;
-    const regEvent = reg.event as Record<string, unknown> | null | undefined;
+    const regPerson = reg.person;
+    const regEvent = reg.event;
     const regTable = seedTables.find((table) => table.id === reg.table_id);
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").CheckInGuestOut>({
       id: reg.id,
+      edition_id: reg.event.edition_id,
+      table_id: reg.table_id,
       name: regPerson?.name ?? "",
       event_id: reg.event_id,
       event_title: regEvent?.title ?? "",
@@ -379,13 +467,16 @@ export const publicHandlers = [
     }
 
     const updatedReg = sharedStore.registrations[idx]!;
-    const regPerson2 = updatedReg.person as Record<string, unknown>;
-    const regEvent2 = updatedReg.event as Record<string, unknown> | null | undefined;
+    const regPerson2 = updatedReg.person;
+    const regEvent2 = updatedReg.event;
     const regTable2 = seedTables.find((table) => table.id === updatedReg.table_id);
-    return HttpResponse.json({
+    return jsonResponse<import("@/api-types").CheckInOut>({
+      stamp_progress: null,
       already_checked_in: alreadyCheckedIn,
       registration: {
         id: updatedReg.id,
+        edition_id: updatedReg.event.edition_id,
+        table_id: updatedReg.table_id,
         name: regPerson2?.name ?? "",
         event_id: updatedReg.event_id,
         event_title: regEvent2?.title ?? "",
@@ -406,7 +497,7 @@ export const publicHandlers = [
    * own override; tests for the disabled/unsupported states use
    * `server.use(...)` to shadow this. */
   http.get("/api/push/vapid-public-key", () =>
-    HttpResponse.json({
+    jsonResponse<import("@/api-types").VapidPublicKeyOut>({
       public_key: "BNJxw-mock-vapid-public-key-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       enabled: true,
     }),
@@ -418,7 +509,7 @@ export const publicHandlers = [
       categories?: string[];
       event_ids?: string[];
     };
-    return HttpResponse.json(
+    return jsonResponse<import("@/api-types").PushSubscriptionOut>(
       {
         id: "mock-push-subscription-id",
         categories: body.categories ?? ["system_test"],

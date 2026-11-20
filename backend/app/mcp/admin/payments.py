@@ -11,8 +11,12 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.mcp.utils import as_value_error, validate_with_schema
-from app.schemas import PaymentTransactionCreate
+from app.schemas import PaymentTransactionCreate, PaymentTransactionOut
 from app.services import payments_service, registrations_service
+
+
+def _payload(transaction: PaymentTransactionOut) -> dict:
+    return {**transaction.model_dump(exclude={"amount"}), "amount": str(transaction.amount)}
 
 
 async def create_payment_transaction(
@@ -48,16 +52,18 @@ async def create_payment_transaction(
     async with session_factory() as db:
         try:
             registration = await registrations_service.get_registration_or_404(db, registration_id)
-            return await payments_service.record_payment_transaction(
-                db,
-                registration,
-                amount=body.amount,
-                effective_date=body.effective_date,
-                reference=body.reference,
-                note=body.note,
-                reversed_transaction_id=body.reversed_transaction_id,
-                actor=actor,
-                idempotency_key=body.idempotency_key,
+            return _payload(
+                await payments_service.record_payment_transaction(
+                    db,
+                    registration,
+                    amount=body.amount,
+                    effective_date=body.effective_date,
+                    reference=body.reference,
+                    note=body.note,
+                    reversed_transaction_id=body.reversed_transaction_id,
+                    actor=actor,
+                    idempotency_key=body.idempotency_key,
+                )
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc
@@ -76,6 +82,6 @@ async def list_payment_transactions(session_factory: Any, registration_id: str) 
             raise as_value_error(exc) from exc
         rows = await payments_service.list_transactions(db, registration_id)
         return {
-            "transactions": [payments_service.payment_transaction_to_dict(t) for t in rows],
+            "transactions": [_payload(payments_service.payment_transaction_to_out(t)) for t in rows],
             "count": len(rows),
         }

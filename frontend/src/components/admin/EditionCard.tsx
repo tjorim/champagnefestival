@@ -36,9 +36,11 @@ import EditionModal from "./EditionModal";
 import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
-import { parseEditionDate, type Edition } from "./editionTypes";
-import type { Venue } from "@/types/admin";
-import type { Event, EventFormData } from "@/types/event";
+import { parseEditionDate } from "./editionTypes";
+import type { Edition } from "@/api-types";
+import type { Venue } from "@/api-types";
+import type { Event } from "@/api-types";
+import type { EventFormData } from "@/types/event";
 
 interface EditionCardProps {
   edition: Edition;
@@ -49,7 +51,7 @@ interface EditionCardProps {
   onEventMutation?: () => void;
 }
 
-function editionTypeBadge(type: Edition["editionType"]): { label: string; bg: BadgeVariant } {
+function editionTypeBadge(type: Edition["edition_type"]): { label: string; bg: BadgeVariant } {
   switch (type) {
     case "bourse":
       return { label: m.admin_edition_type_bourse(), bg: "info" };
@@ -111,7 +113,7 @@ export default function EditionCard({
   const sortedEvents = useMemo(
     () =>
       [...(eventsQuery.data ?? edition.events ?? [])].sort((a, b) =>
-        `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`),
+        `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`),
       ),
     [eventsQuery.data, edition.events],
   );
@@ -119,7 +121,7 @@ export default function EditionCard({
   const startDate = dates[0] ? parseEditionDate(dates[0]) : null;
   const endDateIso = dates.length > 0 ? dates[dates.length - 1] : undefined;
   const endDate = endDateIso ? parseEditionDate(endDateIso) : null;
-  const typeDisplay = editionTypeBadge(edition.editionType);
+  const typeDisplay = editionTypeBadge(edition.edition_type);
   const displayName = editionDisplayName(edition);
 
   function openAddEvent() {
@@ -286,14 +288,14 @@ export default function EditionCard({
                       {event.date}
                     </Badge>
                     <span className="text-subtle text-sm">
-                      {event.startTime}
-                      {event.endTime ? `–${event.endTime}` : ""}
+                      {event.start_time}
+                      {event.end_time ? `–${event.end_time}` : ""}
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
                       {categoryLabel(categories, event.category) ?? event.category}
                     </Badge>
-                    {event.registrationRequired && (
+                    {event.registration_required && (
                       <Badge variant="warning" className="text-micro">
                         {m.schedule_registration()}
                       </Badge>

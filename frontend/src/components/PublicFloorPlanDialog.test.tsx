@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
@@ -72,7 +73,11 @@ function mount(overrides: Partial<Parameters<typeof PublicFloorPlanDialog>[0]> =
 afterEach(cleanup);
 
 it("opens the stand's day and room with the stand highlighted", async () => {
-  server.use(http.get("/api/editions/2099/plan", () => HttpResponse.json(plan)));
+  server.use(
+    http.get("/api/editions/2099/plan", () =>
+      jsonResponse<import("@/api-types").EditionPlanOut>(plan),
+    ),
+  );
   mount();
 
   const canvas = await screen.findByRole("region", { name: "Floor plan of Cellar" });
@@ -84,7 +89,11 @@ it("opens the stand's day and room with the stand highlighted", async () => {
 });
 
 it("switches day and room, and says when the organization is not in the room", async () => {
-  server.use(http.get("/api/editions/2099/plan", () => HttpResponse.json(plan)));
+  server.use(
+    http.get("/api/editions/2099/plan", () =>
+      jsonResponse<import("@/api-types").EditionPlanOut>(plan),
+    ),
+  );
   mount();
   await screen.findByRole("region", { name: "Floor plan of Cellar" });
 
@@ -99,7 +108,11 @@ it("switches day and room, and says when the organization is not in the room", a
 });
 
 it("supports room keyboard navigation and keeps a room selected", async () => {
-  server.use(http.get("/api/editions/2099/plan", () => HttpResponse.json(plan)));
+  server.use(
+    http.get("/api/editions/2099/plan", () =>
+      jsonResponse<import("@/api-types").EditionPlanOut>(plan),
+    ),
+  );
   const user = userEvent.setup();
   mount();
   await screen.findByRole("region", { name: "Floor plan of Cellar" });
@@ -115,7 +128,14 @@ it("supports room keyboard navigation and keeps a room selected", async () => {
 });
 
 it("falls back to a message when the plan cannot be loaded", async () => {
-  server.use(http.get("/api/editions/2099/plan", () => HttpResponse.json({}, { status: 500 })));
+  server.use(
+    http.get("/api/editions/2099/plan", () =>
+      HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {},
+        { status: 500 },
+      ),
+    ),
+  );
   mount();
 
   expect(await screen.findByText(/floor plan could not be loaded/i)).toBeInTheDocument();
@@ -123,7 +143,9 @@ it("falls back to a message when the plan cannot be loaded", async () => {
 
 it("says the plan is unavailable when it is empty", async () => {
   server.use(
-    http.get("/api/editions/2099/plan", () => HttpResponse.json({ edition_id: "2099", days: [] })),
+    http.get("/api/editions/2099/plan", () =>
+      jsonResponse<import("@/api-types").EditionPlanOut>({ edition_id: "2099", days: [] }),
+    ),
   );
   mount();
 
@@ -135,7 +157,7 @@ it("does not fetch while closed", () => {
   server.use(
     http.get("/api/editions/2099/plan", () => {
       requested = true;
-      return HttpResponse.json(plan);
+      return jsonResponse<import("@/api-types").EditionPlanOut>(plan);
     }),
   );
   mount({ target: null });

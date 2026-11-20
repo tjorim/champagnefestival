@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw/http";
@@ -77,9 +78,16 @@ describe("PebblePairPage", () => {
         attempts += 1;
         expect(request.headers.get("Authorization")).toBe("Bearer oidc-access-token");
         if (attempts === 1) {
-          return HttpResponse.json({ detail: "Unavailable" }, { status: 503 });
+          return HttpResponse.json(
+            /* Fixture exception: error response; intentionally outside the success schema. */ {
+              detail: "Unavailable",
+            },
+            { status: 503 },
+          );
         }
-        return HttpResponse.json({ token: "cfpat_retry-token" });
+        return jsonResponse<import("@/api-types").PebbleAccessTokenOut>({
+          token: "cfpat_retry-token",
+        });
       }),
     );
 

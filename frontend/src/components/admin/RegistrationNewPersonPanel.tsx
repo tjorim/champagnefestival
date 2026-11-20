@@ -215,11 +215,16 @@ export default function RegistrationNewPersonPanel({
           <p className="mb-2">{m.admin_registration_duplicates_found()}</p>
           <ul className="flex flex-col gap-1 list-none p-0 m-0">
             {duplicates.map((person) => (
-              <li key={person.value} className="flex flex-wrap items-center gap-2">
+              <li key={person.id} className="flex flex-wrap items-center gap-2">
                 <span>
-                  {person.label}
-                  {person.sub ? ` · ${person.sub}` : ""} ·{" "}
-                  {m.admin_registration_person_bookings({ count: person.registrationCount })}
+                  {person.name}
+                  {[person.email, person.phone].filter(Boolean).join(" · ")
+                    ? ` · ${[person.email, person.phone].filter(Boolean).join(" · ")}`
+                    : ""}{" "}
+                  ·{" "}
+                  {m.admin_registration_person_bookings({
+                    count: "registration_count" in person ? person.registration_count : 0,
+                  })}
                 </span>
                 <Button
                   type="button"
@@ -227,7 +232,7 @@ export default function RegistrationNewPersonPanel({
                   size="sm"
                   onClick={() => onUseExisting(person)}
                 >
-                  {m.admin_registration_use_person({ name: person.label })}
+                  {m.admin_registration_use_person({ name: person.name })}
                 </Button>
               </li>
             ))}

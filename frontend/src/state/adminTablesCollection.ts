@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import type { FloorTableRecord } from "@/types/admin";
+import type { FloorTableRecord } from "@/api-types";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -94,7 +94,7 @@ export async function removeAdminTablesForLayouts(
   if (!isCurrent()) return;
   const ids = new Set(layoutIds);
   const keys = Array.from(collection.values())
-    .filter((table) => ids.has(table.layoutId))
+    .filter((table) => ids.has(table.layout_id))
     .map((table) => table.id);
   if (keys.length === 0) return;
   await collection.utils.writeDelete(keys);
@@ -110,7 +110,7 @@ export async function replaceAdminTablesForLayout(
   if (!isCurrent()) return;
   const keep = new Set(tables.map((table) => table.id));
   const stale = Array.from(collection.values())
-    .filter((table) => table.layoutId === layoutId && !keep.has(table.id))
+    .filter((table) => table.layout_id === layoutId && !keep.has(table.id))
     .map((table) => table.id);
   await collection.utils.writeBatch(() => {
     if (stale.length > 0) void collection.utils.writeDelete(stale);

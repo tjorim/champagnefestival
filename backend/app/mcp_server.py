@@ -79,6 +79,7 @@ from app.mcp.capabilities import (
     tool_auth,
 )
 from app.mcp.middleware import ToolFailureMiddleware, without_body_validation_payload
+from app.mcp.utils import dump_response
 from app.schemas import (
     ROTATION_DESCRIPTION,
     X_POSITION_DESCRIPTION,
@@ -2341,7 +2342,7 @@ class ChampagneFestivalMcpBackend:
         from app.services import stamp_cards_service as service
 
         async with self.session_factory() as db:
-            return await service.list_types(db)
+            return [item.model_dump() for item in await service.list_types(db)]
 
     async def save_stamp_card_type(
         self,
@@ -2371,7 +2372,7 @@ class ChampagneFestivalMcpBackend:
             active=active,
         )
         async with self.session_factory() as db:
-            return await service.save_type(db, actor=self._actor(), body=body, type_id=type_id)
+            return (await service.save_type(db, actor=self._actor(), body=body, type_id=type_id)).model_dump()
 
     async def get_person_stamp_cards(self, person_id: str) -> list[dict]:
         """Return a person's stamp cards and rewards. Requires admin."""
@@ -2379,7 +2380,7 @@ class ChampagneFestivalMcpBackend:
         from app.services import stamp_cards_service as service
 
         async with self.session_factory() as db:
-            return await service.list_cards(db, person_id)
+            return [item.model_dump() for item in await service.list_cards(db, person_id)]
 
     async def set_stamp_reward_handed_out(self, reward_id: str, handed_out: bool) -> dict:
         """Record or undo reward hand-out. Requires admin."""
@@ -2387,7 +2388,9 @@ class ChampagneFestivalMcpBackend:
         from app.services import stamp_cards_service as service
 
         async with self.session_factory() as db:
-            return await service.set_reward(db, reward_id=reward_id, handed_out=handed_out, actor=self._actor())
+            return (
+                await service.set_reward(db, reward_id=reward_id, handed_out=handed_out, actor=self._actor())
+            ).model_dump()
 
     async def select_stamp_card_type(self, type_id: str | None = None) -> dict:
         """Select the active type used for new cards, or clear the selection. Requires admin."""
@@ -2396,7 +2399,9 @@ class ChampagneFestivalMcpBackend:
         from app.services.settings_service import update_settings
 
         async with self.session_factory() as db:
-            return await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+            return dump_response(
+                await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+            )
 
     # -- Settings ------------------------------------------------------
 
@@ -2431,7 +2436,7 @@ class ChampagneFestivalMcpBackend:
         from app.services.organization_changes import list_pending
 
         async with self.session_factory() as db:
-            return {"changes": await list_pending(db)}
+            return {"changes": [item.model_dump() for item in await list_pending(db)]}
 
     async def decide_organization_change(self, change_id: str, decision: str, reason: str | None = None) -> dict:
         """Accept or reject a proposal; repeated identical decisions converge. Requires admin."""
@@ -2443,7 +2448,7 @@ class ChampagneFestivalMcpBackend:
         body = OrganizationChangeDecision.model_validate({"decision": decision, "reason": reason})
         async with self.session_factory() as db:
             try:
-                return await decide(db, change_id, body.decision, body.reason, actor=self._actor())
+                return (await decide(db, change_id, body.decision, body.reason, actor=self._actor())).model_dump()
             except ServiceError as exc:
                 raise ValueError(str(exc)) from exc
 

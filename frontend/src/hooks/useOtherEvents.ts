@@ -1,15 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Event } from "@/types/event";
-import { apiToEvent } from "@/types/event";
+import type { EditionPublicOut, EventPublicOut as Event } from "@/api-types";
 
-export interface ApiUpcomingEdition {
-  id: string;
-  edition_type: "festival" | "bourse" | "capsule_exchange";
-  venue: { name: string };
-  co_organizer?: { name: string; website?: string } | null;
-  events: Record<string, unknown>[];
-}
+export type ApiUpcomingEdition = EditionPublicOut;
 
 const OTHER_EDITION_TYPES = ["bourse", "capsule_exchange"] as const;
 type OtherEditionType = (typeof OTHER_EDITION_TYPES)[number];
@@ -21,7 +14,7 @@ const EDITION_TYPES = new Set<ApiUpcomingEdition["edition_type"]>([
 
 export interface OtherEventCardData {
   id: string;
-  editionType: ApiUpcomingEdition["edition_type"];
+  edition_type: ApiUpcomingEdition["edition_type"];
   event: Event;
   venueName: string;
   /** The organization who ran this edition with the vzw, credited on the card. */
@@ -91,41 +84,20 @@ function parseUpcomingEditions(payload: unknown): ApiUpcomingEdition[] {
     if (!isRecord(value.venue) || typeof value.venue.name !== "string") {
       throw new Error(`${context}.venue must be an object with a name.`);
     }
-    const venue = { name: value.venue.name };
-
-    // Optional and non-critical: a malformed co-organizer is dropped rather than
-    // thrown, so one bad record can't hide every upcoming edition.
-    const rawCoOrganizer = value.co_organizer;
-    const coOrganizer =
-      isRecord(rawCoOrganizer) && typeof rawCoOrganizer.name === "string"
-        ? {
-            name: rawCoOrganizer.name,
-            website:
-              typeof rawCoOrganizer.website === "string" &&
-              /^https?:\/\//.test(rawCoOrganizer.website)
-                ? rawCoOrganizer.website
-                : undefined,
-          }
-        : null;
-
-    return {
-      id: value.id,
-      edition_type: value.edition_type as ApiUpcomingEdition["edition_type"],
-      venue,
-      co_organizer: coOrganizer,
-      events: rawEvents,
-    };
+    return value as unknown as EditionPublicOut;
   });
 }
 
-async function fetchOtherEditionType(editionType: OtherEditionType): Promise<ApiUpcomingEdition[]> {
-  const response = await fetch(`/api/editions/upcoming?edition_type=${editionType}`);
+async function fetchOtherEditionType(
+  edition_type: OtherEditionType,
+): Promise<ApiUpcomingEdition[]> {
+  const response = await fetch(`/api/editions/upcoming?edition_type=${edition_type}`);
   if (!response.ok) {
-    throw new Error(`Failed to load ${editionType} other events: ${response.status}`);
+    throw new Error(`Failed to load ${edition_type} other events: ${response.status}`);
   }
 
   const editions = parseUpcomingEditions(await response.json());
-  return editions.filter((edition) => edition.edition_type === editionType);
+  return editions.filter((edition) => edition.edition_type === edition_type);
 }
 
 async function fetchOtherEditions(): Promise<ApiUpcomingEdition[]> {
@@ -154,22 +126,26 @@ export function useOtherEventItems() {
     // Every active event is rendered as its own card; inactive (draft) events stay hidden.
     const cards = data.flatMap((edition): OtherEventCardData[] =>
       (edition.events ?? [])
-        .map(apiToEvent)
         .filter((event) => event.active)
         .map((event) => ({
           id: event.id,
-          editionType: edition.edition_type,
+          edition_type: edition.edition_type,
           event,
           venueName: edition.venue?.name ?? "",
-          coOrganizerName: edition.co_organizer?.name || undefined,
-          coOrganizerWebsite: edition.co_organizer?.website || undefined,
+          coOrganizerName:
+            typeof edition.co_organizer?.name === "string"
+              ? edition.co_organizer.name || undefined
+              : undefined,
+          coOrganizerWebsite: /^https?:\/\//.test(edition.co_organizer?.website ?? "")
+            ? edition.co_organizer?.website
+            : undefined,
         })),
     );
 
     return cards.sort(
       (left, right) =>
         left.event.date.localeCompare(right.event.date) ||
-        left.event.startTime.localeCompare(right.event.startTime),
+        left.event.start_time.localeCompare(right.event.start_time),
     );
   }, [data]);
 

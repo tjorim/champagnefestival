@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw/http";
@@ -6,6 +7,8 @@ import OtherEvents from "@/components/OtherEvents";
 import { server } from "@/mocks/server";
 
 const BASE_EVENT = {
+  order_questions: [],
+  products: [],
   edition_id: "edition-bourse",
   description: "Meet collectors from across Belgium.",
   date: "2027-11-21",
@@ -34,16 +37,51 @@ describe("OtherEvents", () => {
   it("renders validated off-festival editions and ignores unexpected festival results", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
 
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-festival",
             edition_type: "festival",
-            venue: { name: "Festival Hall" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Festival Hall",
+            },
             events: [
               {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
                 ...BASE_EVENT,
                 id: "event-festival",
                 edition_id: "edition-festival",
@@ -52,10 +90,50 @@ describe("OtherEvents", () => {
             ],
           },
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
+            events: [
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Bourse tasting",
+              },
+            ],
           },
         ]);
       }),
@@ -71,15 +149,49 @@ describe("OtherEvents", () => {
   it("orders merged edition types chronologically", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        const isBourse = editionType === "bourse";
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        const isBourse = edition_type === "bourse";
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: isBourse ? "edition-bourse" : "edition-capsule",
             edition_type: isBourse ? "bourse" : "capsule_exchange",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
               {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
                 ...BASE_EVENT,
                 id: isBourse ? "event-bourse" : "event-capsule",
                 edition_id: isBourse ? "edition-bourse" : "edition-capsule",
@@ -101,17 +213,71 @@ describe("OtherEvents", () => {
   it("renders every active event for an edition, ordered by date and start time", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
 
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
-              { ...BASE_EVENT, id: "event-auction", title: "Bourse Auction", start_time: "15:00" },
-              { ...BASE_EVENT, id: "event-opening", title: "Bourse Opening", start_time: "10:00" },
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-auction",
+                title: "Bourse Auction",
+                start_time: "15:00",
+              },
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-opening",
+                title: "Bourse Opening",
+                start_time: "10:00",
+              },
             ],
           },
         ]);
@@ -127,17 +293,71 @@ describe("OtherEvents", () => {
   it("omits inactive events from the public list", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
 
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
-              { ...BASE_EVENT, id: "event-opening", title: "Bourse Opening", active: true },
-              { ...BASE_EVENT, id: "event-draft", title: "Draft Tasting", active: false },
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-opening",
+                title: "Bourse Opening",
+                active: true,
+              },
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-draft",
+                title: "Draft Tasting",
+                active: false,
+              },
             ],
           },
         ]);
@@ -153,7 +373,12 @@ describe("OtherEvents", () => {
   it("shows an error for malformed successful API responses", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json({ edition_type: "bourse", events: "not-an-array" }),
+        HttpResponse.json(
+          /* Deliberately malformed response: exercises runtime rejection. */ {
+            edition_type: "bourse",
+            events: "not-an-array",
+          },
+        ),
       ),
     );
 
@@ -165,13 +390,47 @@ describe("OtherEvents", () => {
   it("rejects events that do not belong to their containing edition", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
               {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
                 ...BASE_EVENT,
                 id: "event-other-edition",
                 edition_id: "edition-other",
@@ -191,13 +450,15 @@ describe("OtherEvents", () => {
   it("rejects editions without an events array", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
-          },
-        ]),
+        HttpResponse.json(
+          /* Fixture exception: deliberately missing events tests malformed-response rejection. */ [
+            {
+              id: "edition-bourse",
+              edition_type: "bourse",
+              venue: { name: "Staf Versluys" },
+            },
+          ],
+        ),
       ),
     );
 
@@ -209,14 +470,16 @@ describe("OtherEvents", () => {
   it("rejects editions without a valid venue", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            venue: null,
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
-          },
-        ]),
+        HttpResponse.json(
+          /* Deliberately malformed response: exercises runtime rejection. */ [
+            {
+              id: "edition-bourse",
+              edition_type: "bourse",
+              venue: null,
+              events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse tasting" }],
+            },
+          ],
+        ),
       ),
     );
 
@@ -228,21 +491,23 @@ describe("OtherEvents", () => {
   it("rejects malformed optional event fields", async () => {
     server.use(
       http.get("/api/editions/upcoming", () =>
-        HttpResponse.json([
-          {
-            id: "edition-bourse",
-            edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
-            events: [
-              {
-                ...BASE_EVENT,
-                id: "event-bourse",
-                title: "Bourse tasting",
-                registrations_open_from: 123,
-              },
-            ],
-          },
-        ]),
+        HttpResponse.json(
+          /* Deliberately malformed response: exercises runtime rejection. */ [
+            {
+              id: "edition-bourse",
+              edition_type: "bourse",
+              venue: { name: "Staf Versluys" },
+              events: [
+                {
+                  ...BASE_EVENT,
+                  id: "event-bourse",
+                  title: "Bourse tasting",
+                  registrations_open_from: 123,
+                },
+              ],
+            },
+          ],
+        ),
       ),
     );
 
@@ -277,15 +542,50 @@ describe("OtherEvents", () => {
     // Bookings run through the app; there is no partner inbox to fall back to.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
               {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
                 ...BASE_EVENT,
                 id: "event-bourse",
                 title: "Bourse De la Comtesse",
@@ -307,14 +607,55 @@ describe("OtherEvents", () => {
   it("hides the reservation button for a walk-in event with nothing to order", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Free walk-in tasting" }],
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
+            events: [
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Free walk-in tasting",
+              },
+            ],
           },
         ]);
       }),
@@ -331,28 +672,74 @@ describe("OtherEvents", () => {
     // registration is optional there, offered rather than mandatory.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            co_organizer: null,
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            venue: { name: "Staf Versluys" },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
             events: [
               {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
                 ...BASE_EVENT,
                 id: "event-bourse",
                 title: "Free walk-in tasting",
                 products: [
                   {
+                    description: "",
+                    name_nl: null,
+                    name_fr: null,
+                    name_en: null,
+                    description_nl: null,
+                    description_fr: null,
+                    description_en: null,
+                    unit: "item",
+                    required: false,
+                    purchasable: false,
+                    available_quantity: null,
+                    sold_out: false,
+                    inclusions: null,
+                    included_product_id: null,
+                    included_per_guests: null,
                     id: "product-1",
-                    event_id: "event-bourse",
                     name: "VIP Package",
-                    price: 50,
+                    price: "50",
                     category: "other",
-                    active: true,
-                    created_at: "2026-01-01T00:00:00Z",
-                    updated_at: "2026-01-01T00:00:00Z",
                   },
                 ],
               },
@@ -370,15 +757,65 @@ describe("OtherEvents", () => {
   it("credits the co-organizing producer, linking to them when a website is known", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            co_organizer: { name: "Champagne Comtesse", website: "https://comtesse.example" },
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+            co_organizer: {
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: 0,
+              image: "",
+              type: "",
+              sponsor_tier: null,
+              name: "Champagne Comtesse",
+              website: "https://comtesse.example",
+            },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
+            events: [
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Bourse De la Comtesse",
+              },
+            ],
           },
         ]);
       }),
@@ -397,15 +834,55 @@ describe("OtherEvents", () => {
   it("omits the credit when an edition has no co-organizer", async () => {
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
             co_organizer: null,
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Solo bourse" }],
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
+            events: [
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Solo bourse",
+              },
+            ],
           },
         ]);
       }),
@@ -422,15 +899,65 @@ describe("OtherEvents", () => {
     // a link — and one bad record must not hide the edition.
     server.use(
       http.get("/api/editions/upcoming", ({ request }) => {
-        const editionType = new URL(request.url).searchParams.get("edition_type");
-        if (editionType !== "bourse") return HttpResponse.json([]);
-        return HttpResponse.json([
+        const edition_type = new URL(request.url).searchParams.get("edition_type");
+        if (edition_type !== "bourse")
+          return jsonResponse<import("@/api-types").EditionPublicOut[]>([]);
+        return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
+            year: 0,
+            month: "",
+            dates: [],
+            producers: [],
+            sponsors: [],
+            vendors: [],
+            flyer_image: null,
+            hero_image: null,
+            share_image: null,
+            active: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
             id: "edition-bourse",
             edition_type: "bourse",
-            co_organizer: { name: "Champagne Comtesse", website: "javascript:alert(1)" },
-            venue: { name: "Staf Versluys" },
-            events: [{ ...BASE_EVENT, id: "event-bourse", title: "Bourse De la Comtesse" }],
+            co_organizer: {
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: 0,
+              image: "",
+              type: "",
+              sponsor_tier: null,
+              name: "Champagne Comtesse",
+              website: "javascript:alert(1)",
+            },
+            venue: {
+              id: "",
+              address: "",
+              city: "",
+              postal_code: "",
+              country: "",
+              lat: 0,
+              lng: 0,
+              active: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              name: "Staf Versluys",
+            },
+            events: [
+              {
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                volunteers_only: false,
+                members_only: false,
+                registrations_close_at: null,
+                ...BASE_EVENT,
+                id: "event-bourse",
+                title: "Bourse De la Comtesse",
+              },
+            ],
           },
         ]);
       }),

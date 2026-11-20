@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,7 +30,10 @@ describe("PebblePairPage errors", () => {
     server.use(
       http.post("/api/me/pebble-token", () =>
         HttpResponse.json(
-          { detail: "Invalid or revoked Pebble token", code: "pebble_token_invalid" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Invalid or revoked Pebble token",
+            code: "pebble_token_invalid",
+          },
           { status: 401 },
         ),
       ),
@@ -46,7 +50,10 @@ describe("PebblePairPage errors", () => {
     server.use(
       http.post("/api/me/pebble-token", () =>
         HttpResponse.json(
-          { detail: "A brand new English rule.", code: "not_yet_translated" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "A brand new English rule.",
+            code: "not_yet_translated",
+          },
           { status: 400 },
         ),
       ),
@@ -59,7 +66,11 @@ describe("PebblePairPage errors", () => {
   });
 
   it("falls back to the translated pairing message when the response has no token", async () => {
-    server.use(http.post("/api/me/pebble-token", () => HttpResponse.json({})));
+    server.use(
+      http.post("/api/me/pebble-token", () =>
+        jsonResponse<import("@/api-types").PebbleAccessTokenOut>({ token: "" }),
+      ),
+    );
 
     render(<PebblePairPage />);
 

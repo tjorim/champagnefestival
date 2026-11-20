@@ -1,3 +1,4 @@
+import type { OrganizationChangeOut } from "@/api-types";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 
@@ -9,16 +10,7 @@ export const organizationTextFields = [
 ] as const;
 export type OrganizationTextField = (typeof organizationTextFields)[number];
 export type OrganizationTexts = Record<OrganizationTextField, string | null>;
-export interface OrganizationChange {
-  id: string;
-  organization_id: number;
-  organization_name: string;
-  status: "pending" | "accepted" | "rejected" | "superseded" | "replaced";
-  proposed: Partial<OrganizationTexts> & { image?: string };
-  current: OrganizationTexts & { image?: string };
-  superseded_fields: string[];
-  reason: string | null;
-}
+export type OrganizationChange = OrganizationChangeOut;
 
 export async function organizationChangesRequest<T>(
   url: string,

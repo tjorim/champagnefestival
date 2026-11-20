@@ -1,5 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
 import { act, renderHook } from "@testing-library/react";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import { expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import type { AdminOrganizationsCollection } from "@/state/adminOrganizationsCollection";
@@ -19,7 +21,7 @@ function harness() {
   } as unknown as AdminRegistrationsCollection;
   const organizationsCollection = {
     utils: { refetch: refetchOrganizations, writeUpsert },
-    values: () => [{ id: 1, name: "House", active: true, contactPersonId: "duplicate" }],
+    values: () => [{ id: 1, name: "House", active: true, contact_person_id: "duplicate" }],
   } as unknown as AdminOrganizationsCollection;
   const view = renderHook(
     () =>
@@ -44,7 +46,10 @@ it.each([200, 409])(
     const h = harness();
     server.use(
       http.post("/api/people/:id/merge/:duplicateId", () =>
-        HttpResponse.json({ id: "canonical", roles: ["volunteer"] }, { status }),
+        jsonResponse<import("@/api-types").PersonOut>(
+          { ...seedPeople[0]!, id: "canonical", roles: ["volunteer"] },
+          { status },
+        ),
       ),
     );
     await act(async () => {
@@ -54,7 +59,7 @@ it.each([200, 409])(
     expect(h.refetchOrganizations).toHaveBeenCalled();
     if (status === 200)
       expect(h.writeUpsert).toHaveBeenCalledWith([
-        { id: 1, name: "House", active: true, contactPersonId: "canonical" },
+        { id: 1, name: "House", active: true, contact_person_id: "canonical" },
       ]);
     // No merge response is inserted into a people cache with invented help periods.
     expect(h.queryClient.getQueryData(["admin", "people"])).toBeUndefined();
@@ -74,7 +79,26 @@ it("drops a late merge response after sign-out", async () => {
     http.post("/api/people/:id/merge/:duplicateId", async () => {
       started();
       await gate;
-      return HttpResponse.json({ id: "canonical" });
+      return jsonResponse<import("@/api-types").PersonOut>({
+        name: "",
+        email: "",
+        phone: "",
+        preferred_language: null,
+        address: "",
+        roles: [],
+        retired_roles: {},
+        role_history: {},
+        national_register_number: null,
+        eid_document_number: null,
+        inactivity_exempt: false,
+        inactivity_exempt_note: "",
+        visits_per_month: null,
+        notes: "",
+        anonymised: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        id: "canonical",
+      });
     }),
   );
   let promise!: Promise<void>;

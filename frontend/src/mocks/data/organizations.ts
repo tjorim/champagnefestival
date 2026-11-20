@@ -1,6 +1,8 @@
 /** Seed data for organizations (producers, sponsors, vendors). */
 
-export const seedOrganizations = [
+import type { OrganizationOut } from "@/api-types";
+
+export const seedOrganizations: OrganizationOut[] = [
   {
     id: 1,
     name: "Maison Moët & Chandon",
@@ -15,6 +17,7 @@ export const seedOrganizations = [
     contact_person: {
       id: "person-01",
       name: "Alice Dupont",
+      preferred_language: "nl",
       email: "alice@moet.com",
       phone: "+32471000001",
     },
@@ -26,12 +29,16 @@ export const seedOrganizations = [
     name: "Champagne Bollinger",
     image: "/images/bollinger.png",
     website: "https://www.champagne-bollinger.com",
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
     active: true,
     type: "producer",
     contact_person_id: "person-02",
     contact_person: {
       id: "person-02",
       name: "Bernard Martin",
+      preferred_language: "nl",
       email: "b.martin@bollinger.fr",
       phone: "+32471000002",
     },
@@ -43,6 +50,9 @@ export const seedOrganizations = [
     name: "Nicolas Feuillatte",
     image: "/images/feuillatte.png",
     website: "https://www.feuillatte.com",
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
     active: true,
     type: "producer",
     contact_person_id: null,
@@ -55,6 +65,9 @@ export const seedOrganizations = [
     name: "Belga Spirits",
     image: "/images/belga.png",
     website: "https://www.belga-spirits.be",
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
     active: true,
     type: "sponsor",
     contact_person_id: null,
@@ -67,6 +80,9 @@ export const seedOrganizations = [
     name: "Gourmet Foods BVBA",
     image: "/images/gourmet.png",
     website: "https://www.gourmetfoods.be",
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
     active: true,
     type: "vendor",
     contact_person_id: null,

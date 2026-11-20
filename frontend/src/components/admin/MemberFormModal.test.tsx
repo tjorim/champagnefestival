@@ -21,8 +21,8 @@ it("saves the inactivity exemption and reason with a new member", async () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "Alice",
-        inactivityExempt: true,
-        inactivityExemptNote: "Reason",
+        inactivity_exempt: true,
+        inactivity_exempt_note: "Reason",
       }),
     ),
   );

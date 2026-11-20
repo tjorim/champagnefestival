@@ -32,14 +32,7 @@ interface SettingsManagementProps {
   section?: "all" | "maintenance" | "contact";
 }
 
-interface ApiAppSettings {
-  maintenance_mode: boolean;
-  member_limit: number | null;
-  member_inactivity_months: number | null;
-  public_email: string;
-  public_phone: string;
-  facebook_url: string;
-}
+type ApiAppSettings = import("@/api-types").AppSettingsOut;
 
 export default function SettingsManagement({
   authHeaders,

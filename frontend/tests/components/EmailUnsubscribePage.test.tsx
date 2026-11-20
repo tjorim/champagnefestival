@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -41,7 +42,10 @@ describe("EmailUnsubscribePage", () => {
     let unsubscribedWith: string | null = null;
     server.use(
       http.get("/api/mail/unsubscribe/category", () =>
-        HttpResponse.json({ category_key: "club_news", category_name: "Club news" }),
+        jsonResponse<import("@/api-types").MemberMailUnsubscribeCategoryOut>({
+          category_key: "club_news",
+          category_name: "Club news",
+        }),
       ),
       http.post("/api/mail/unsubscribe", ({ request }) => {
         unsubscribedWith = new URL(request.url).searchParams.get("token");
@@ -67,7 +71,10 @@ describe("EmailUnsubscribePage", () => {
     server.use(
       http.get("/api/mail/unsubscribe/category", () =>
         HttpResponse.json(
-          { detail: "This unsubscribe link is not valid.", code: "unsubscribe_token_invalid" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "This unsubscribe link is not valid.",
+            code: "unsubscribe_token_invalid",
+          },
           { status: 404 },
         ),
       ),

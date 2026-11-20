@@ -26,13 +26,13 @@ from app.services.errors import ServiceError
 async def list_composed_messages(session_factory: Any) -> dict:
     """Every composed message, newest first, with its state and push delivery counts."""
     async with session_factory() as db:
-        return {"messages": await service.list_messages(db)}
+        return {"messages": [item.model_dump() for item in await service.list_messages(db)]}
 
 
 async def get_composed_message(session_factory: Any, message_id: str) -> dict:
     async with session_factory() as db:
         try:
-            return await service.to_dict(db, await service.get_message(db, message_id))
+            return (await service.to_out(db, await service.get_message(db, message_id))).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -65,7 +65,7 @@ async def create_composed_message(
     )
     async with session_factory() as db:
         try:
-            return await service.create_draft(db, actor=actor, body=body, request_id=None)
+            return (await service.create_draft(db, actor=actor, body=body, request_id=None)).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -111,7 +111,9 @@ async def update_composed_message(
     body = validate_with_schema(ComposedMessageUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await service.update_draft(db, actor=actor, message_id=message_id, body=body, request_id=None)
+            return (
+                await service.update_draft(db, actor=actor, message_id=message_id, body=body, request_id=None)
+            ).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -126,8 +128,10 @@ async def schedule_composed_message(
         raise MCPToolError("Too many requests. Please try again later.")
     async with session_factory() as db:
         try:
-            return await service.schedule_send(
-                db, actor=actor, message_id=message_id, scheduled_at=body.scheduled_at, request_id=None
-            )
+            return (
+                await service.schedule_send(
+                    db, actor=actor, message_id=message_id, scheduled_at=body.scheduled_at, request_id=None
+                )
+            ).model_dump()
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

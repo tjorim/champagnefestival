@@ -35,7 +35,7 @@ test("downloads secondary tools only on selection and keeps navigation usable wh
       "LayoutEditor",
       "ContentManagement",
       "SignageChannels",
-    ]) {
+    ] as const) {
       expect(requested.some((url) => url.includes(`/admin/${module}.tsx`))).toBe(false);
     }
     await page.getByRole("button", { name: "Analytics", exact: true }).click();

@@ -27,7 +27,7 @@ async def create_room(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RoomOut:
     try:
         return await rooms_service.create_room(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -59,12 +59,12 @@ async def bulk_create_rooms(
 async def list_rooms(
     venue_id: str | None = Query(default=None, description="Filter by venue ID"),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[RoomOut]:
     return await rooms_service.list_rooms(db, venue_id)
 
 
 @router.get("/{room_id}", response_model=RoomOut)
-async def get_room(room_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+async def get_room(room_id: str, db: AsyncSession = Depends(get_db)) -> RoomOut:
     try:
         return await rooms_service.get_room(db, room_id)
     except ServiceError as exc:
@@ -78,7 +78,7 @@ async def update_room(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> RoomOut:
     try:
         return await rooms_service.update_room(
             db, actor=actor, room_id=room_id, body=body, request_id=getattr(request.state, "request_id", None)

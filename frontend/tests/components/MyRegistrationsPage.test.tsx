@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { beforeEach, describe, it, expect, vi } from "vitest";
@@ -171,7 +172,7 @@ describe("MyRegistrationsPage", () => {
     server.use(
       http.post("/api/visitor-sessions/redeem", () => {
         accessCalls += 1;
-        return HttpResponse.json([]);
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]);
       }),
     );
 
@@ -199,7 +200,7 @@ describe("MyRegistrationsPage", () => {
       http.post("/api/visitor-sessions/redeem", async () => {
         accessCalls += 1;
         await exchangePending;
-        return HttpResponse.json([]);
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]);
       }),
     );
 
@@ -215,7 +216,12 @@ describe("MyRegistrationsPage", () => {
 
   it("shows an invalid-link message when the token is rejected", async () => {
     server.use(
-      http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
+      http.post("/api/visitor-sessions/redeem", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
     );
 
     const expiredView = await renderPage("/me?token=expired-token&tab=organizations");
@@ -247,7 +253,12 @@ describe("MyRegistrationsPage", () => {
 
   it("shows an invalid email error when the API rejects the address", async () => {
     server.use(
-      http.post("/api/visitor-sessions/request", () => HttpResponse.json(null, { status: 422 })),
+      http.post("/api/visitor-sessions/request", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 422 },
+        ),
+      ),
     );
 
     await renderPage();
@@ -298,7 +309,12 @@ describe("MyRegistrationsPage", () => {
 
   it("has no axe violations when showing a token error", async () => {
     server.use(
-      http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
+      http.post("/api/visitor-sessions/redeem", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
     );
 
     const { container } = await renderPage("/me?token=expired-token");
@@ -316,8 +332,15 @@ describe("MyRegistrationsPage", () => {
     let savedBody: unknown;
     server.use(
       http.get("/api/me/registrations", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-owned",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -333,11 +356,15 @@ describe("MyRegistrationsPage", () => {
         ]),
       ),
       http.get("/api/me/communication-preference", () =>
-        HttpResponse.json({ preferred_language: "fr" }),
+        jsonResponse<import("@/api-types").CommunicationPreferenceOut>({
+          preferred_language: "fr",
+        }),
       ),
       http.put("/api/me/communication-preference", async ({ request }) => {
         savedBody = await request.json();
-        return HttpResponse.json({ preferred_language: "en" });
+        return jsonResponse<import("@/api-types").CommunicationPreferenceOut>({
+          preferred_language: "en",
+        });
       }),
     );
     await renderPage();
@@ -358,8 +385,15 @@ describe("MyRegistrationsPage", () => {
     });
     server.use(
       http.get("/api/me/registrations", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-owned",
             event_title: "Grand Opening",
             event_date: null,
@@ -376,7 +410,9 @@ describe("MyRegistrationsPage", () => {
       ),
       http.get("/api/me/communication-preference", async () => {
         await preferenceGate;
-        return HttpResponse.json({ preferred_language: "fr" });
+        return jsonResponse<import("@/api-types").CommunicationPreferenceOut>({
+          preferred_language: "fr",
+        });
       }),
     );
     await renderPage();
@@ -391,11 +427,21 @@ describe("MyRegistrationsPage", () => {
   it("shows a returning visitor's orders from an existing session, with no token and no email form", async () => {
     server.use(
       http.get("/api/visitor-sessions/status", () =>
-        HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
+        jsonResponse<import("@/api-types").VisitorSessionStatus>({
+          authenticated: true,
+          expires_at: "2026-09-14T00:00:00Z",
+        }),
       ),
       http.get("/api/me/registrations", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-returning",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -432,8 +478,15 @@ describe("MyRegistrationsPage", () => {
     server.use(
       http.get("/api/me/registrations", ({ request }) => {
         authorization = request.headers.get("Authorization") ?? "";
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-member",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -469,10 +522,19 @@ describe("MyRegistrationsPage", () => {
     authState.isAuthenticated = true;
     let claimCalled = false;
     server.use(
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations", () =>
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]),
+      ),
       http.get("/api/me/registrations/claimable", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-claimable",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -489,8 +551,15 @@ describe("MyRegistrationsPage", () => {
       ),
       http.post("/api/me/registrations/claim-verified-email", () => {
         claimCalled = true;
-        return HttpResponse.json([
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-claimable",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -527,10 +596,19 @@ describe("MyRegistrationsPage", () => {
     authState.isAuthenticated = true;
     let claimCalled = false;
     server.use(
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations", () =>
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]),
+      ),
       http.get("/api/me/registrations/claimable", () =>
-        HttpResponse.json([
+        jsonResponse<import("@/api-types").RegistrationGuestOut[]>([
           {
+            order_answers: [],
+            name: "",
+            event_id: "",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in_at: null,
             id: "reg-dismiss",
             event_title: "Grand Opening",
             event_date: "2026-05-01",
@@ -547,7 +625,7 @@ describe("MyRegistrationsPage", () => {
       ),
       http.post("/api/me/registrations/claim-verified-email", () => {
         claimCalled = true;
-        return HttpResponse.json([]);
+        return jsonResponse<import("@/api-types").RegistrationGuestOut[]>([]);
       }),
     );
 

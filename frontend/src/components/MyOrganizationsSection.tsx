@@ -20,17 +20,7 @@ import {
   type OrganizationTexts,
 } from "@/utils/organizationChangesApi";
 
-export interface ManagedOrganization {
-  id: number;
-  name: string;
-  type: string;
-  website: string;
-  image?: string;
-  active: boolean;
-  description_nl?: string | null;
-  description_fr?: string | null;
-  description_en?: string | null;
-}
+export type ManagedOrganization = import("@/api-types").ManagedOrganizationOut;
 
 function ProposalForm({
   row,

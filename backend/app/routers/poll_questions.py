@@ -39,7 +39,7 @@ async def list_poll_questions(
     edition_id: str = Query(),
     locale: FaqLocale | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-) -> list[dict]:
+) -> list[PollQuestionOut]:
     return await poll_questions_service.list_poll_questions(db, edition_id, locale)
 
 
@@ -49,7 +49,7 @@ async def create_poll_question(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PollQuestionOut:
     return await poll_questions_service.create_poll_question(db, body, actor=actor, request_id=_request_id(request))
 
 
@@ -58,7 +58,7 @@ async def list_poll_orders(
     edition_id: str = Query(),
     locale: FaqLocale | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> PollOrdersOut:
     return await poll_questions_service.list_poll_orders(db, edition_id, locale)
 
 
@@ -70,7 +70,7 @@ async def set_volunteer_poll_order(
     edition_id: str = Query(),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PollVolunteerOrderOut:
     """Enter or correct a volunteer's answers and dietary note (replacing their picks and yes/no answers for
     the edition), also for closed questions (then `confirm_closed` must be true)."""
     return await poll_questions_service.set_volunteer_poll_order(
@@ -84,7 +84,7 @@ async def reorder_poll_questions(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[PollQuestionOut]:
     return await poll_questions_service.reorder_poll_questions(db, body, actor=actor, request_id=_request_id(request))
 
 
@@ -94,7 +94,7 @@ async def copy_poll_questions(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> list[dict]:
+) -> list[PollQuestionOut]:
     return await poll_questions_service.copy_poll_questions(db, body, actor=actor, request_id=_request_id(request))
 
 
@@ -105,7 +105,7 @@ async def update_poll_question(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> PollQuestionOut:
     return await poll_questions_service.update_poll_question(
         db, question_id, body, actor=actor, request_id=_request_id(request)
     )

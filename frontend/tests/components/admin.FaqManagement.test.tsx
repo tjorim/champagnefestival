@@ -1,6 +1,7 @@
+import { jsonResponse } from "@/mocks/response";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw/http";
+import { http } from "msw/http";
 import FaqManagement from "@/components/admin/FaqManagement";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -9,6 +10,8 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 const item = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
   id: "faq-1",
   question_nl: "Wanneer?",
   question_fr: null,
@@ -26,7 +29,7 @@ function mount() {
 
 beforeEach(() => {
   setLocale("en", { reload: false });
-  server.use(http.get("/api/faq", () => HttpResponse.json([item])));
+  server.use(http.get("/api/faq", () => jsonResponse<import("@/api-types").FaqItemOut[]>([item])));
 });
 
 afterEach(() => {
@@ -49,7 +52,7 @@ describe("FaqManagement", () => {
     server.use(
       http.post("/api/faq", () => {
         post();
-        return HttpResponse.json(item, { status: 201 });
+        return jsonResponse<import("@/api-types").FaqItemOut>(item, { status: 201 });
       }),
     );
     mount();
@@ -72,7 +75,7 @@ describe("FaqManagement", () => {
     server.use(
       http.put("/api/faq/:id", async ({ request }) => {
         sent = await request.json();
-        return HttpResponse.json(item);
+        return jsonResponse<import("@/api-types").FaqItemOut>(item);
       }),
     );
     mount();

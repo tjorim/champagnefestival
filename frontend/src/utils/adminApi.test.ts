@@ -42,7 +42,9 @@ describe("adminApi", () => {
     server.use(
       http.get("/api/admin/registrations/missing", () =>
         HttpResponse.json(
-          { detail: "Registration not found" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Registration not found",
+          },
           { status: 404, statusText: "Not Found", headers: { "X-Request-ID": "req-123" } },
         ),
       ),
@@ -69,7 +71,12 @@ describe("adminApi", () => {
   it("logs failed API responses even when no request ID is present", async () => {
     server.use(
       http.get("/api/admin/registrations", () =>
-        HttpResponse.json({ detail: "Bad request" }, { status: 400, statusText: "Bad Request" }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Bad request",
+          },
+          { status: 400, statusText: "Bad Request" },
+        ),
       ),
     );
 
@@ -88,7 +95,10 @@ describe("adminApi", () => {
     server.use(
       http.get("/api/registrations/x", () =>
         HttpResponse.json(
-          { detail: "Registration not found.", code: "registration_not_found" },
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Registration not found.",
+            code: "registration_not_found",
+          },
           { status: 404 },
         ),
       ),

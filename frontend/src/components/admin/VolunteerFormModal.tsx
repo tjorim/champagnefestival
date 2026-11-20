@@ -38,27 +38,27 @@ interface VolunteerFormModalProps {
 }
 
 export interface VolunteerHelpPeriodFormData {
-  firstHelpDay: string;
-  lastHelpDay: string | null;
+  first_help_day: string;
+  last_help_day: string | null;
   notes: string;
 }
 
 export interface VolunteerFormData {
   name: string;
   address: string;
-  nationalRegisterNumber: string;
-  eidDocumentNumber: string;
-  helpPeriods: VolunteerHelpPeriodFormData[];
+  national_register_number: string;
+  eid_document_number: string;
+  help_periods: VolunteerHelpPeriodFormData[];
 }
 
 function emptyPeriod(): VolunteerHelpPeriodFormData {
-  return { firstHelpDay: "", lastHelpDay: null, notes: "" };
+  return { first_help_day: "", last_help_day: null, notes: "" };
 }
 
 function mapPeriod(period: VolunteerHelpPeriod): VolunteerHelpPeriodFormData {
   return {
-    firstHelpDay: period.firstHelpDay,
-    lastHelpDay: period.lastHelpDay,
+    first_help_day: period.first_help_day,
+    last_help_day: period.last_help_day,
     notes: period.notes,
   };
 }
@@ -85,16 +85,16 @@ export default function VolunteerFormModal({
         ? {
             name: record.name,
             address: record.address ?? "",
-            nationalRegisterNumber: record.nationalRegisterNumber ?? "",
-            eidDocumentNumber: record.eidDocumentNumber ?? "",
-            helpPeriods: record.helpPeriods.map(mapPeriod),
+            national_register_number: record.national_register_number ?? "",
+            eid_document_number: record.eid_document_number ?? "",
+            help_periods: (record.help_periods ?? []).map(mapPeriod),
           }
         : {
             name: "",
             address: "",
-            nationalRegisterNumber: "",
-            eidDocumentNumber: "",
-            helpPeriods: [],
+            national_register_number: "",
+            eid_document_number: "",
+            help_periods: [],
           },
     [record],
   );
@@ -102,20 +102,20 @@ export default function VolunteerFormModal({
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      const normalized = value.helpPeriods.map((period) => ({
-        firstHelpDay: period.firstHelpDay,
-        lastHelpDay: period.lastHelpDay?.trim() ? period.lastHelpDay : null,
+      const normalized = value.help_periods.map((period) => ({
+        first_help_day: period.first_help_day,
+        last_help_day: period.last_help_day?.trim() ? period.last_help_day : null,
         notes: period.notes.trim(),
       }));
 
-      if (normalized.some((period) => !period.firstHelpDay)) {
+      if (normalized.some((period) => !period.first_help_day)) {
         setError(m.admin_volunteers_validation_help_period_required());
         return;
       }
 
       if (
         normalized.some(
-          (period) => period.lastHelpDay != null && period.firstHelpDay > period.lastHelpDay,
+          (period) => period.last_help_day != null && period.first_help_day > period.last_help_day,
         )
       ) {
         setError(m.admin_volunteers_validation_help_period_range());
@@ -128,9 +128,9 @@ export default function VolunteerFormModal({
         await onSave({
           name: value.name.trim(),
           address: value.address.trim(),
-          nationalRegisterNumber: value.nationalRegisterNumber.trim(),
-          eidDocumentNumber: value.eidDocumentNumber.trim(),
-          helpPeriods: normalized,
+          national_register_number: value.national_register_number.trim(),
+          eid_document_number: value.eid_document_number.trim(),
+          help_periods: normalized,
         });
         onHide();
       } catch (err) {
@@ -162,7 +162,7 @@ export default function VolunteerFormModal({
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
-  const helpPeriods = useSelector(form.atom, (s) => s.values.helpPeriods);
+  const help_periods = useSelector(form.atom, (s) => s.values.help_periods);
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
   const values = useSelector(form.atom, (s) => s.values);
   const { requestClose, confirmDialog } = useDirtyDismiss({
@@ -251,7 +251,7 @@ export default function VolunteerFormModal({
 
             <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
               <div className="w-full site-md:w-6/12">
-                <form.Field name="nationalRegisterNumber">
+                <form.Field name="national_register_number">
                   {(field) => (
                     <AdminField
                       controlId="volunteer-national-register-number"
@@ -276,7 +276,7 @@ export default function VolunteerFormModal({
                 </form.Field>
               </div>
               <div className="w-full site-md:w-6/12">
-                <form.Field name="eidDocumentNumber">
+                <form.Field name="eid_document_number">
                   {(field) => (
                     <AdminField
                       controlId="volunteer-eid-document-number"
@@ -307,16 +307,16 @@ export default function VolunteerFormModal({
                 <AdminLabel className="text-subtle text-sm mb-0">
                   {m.admin_volunteers_help_periods_label()}
                 </AdminLabel>
-                <AdminAddButton onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}>
+                <AdminAddButton onClick={() => form.pushFieldValue("help_periods", emptyPeriod())}>
                   {m.admin_volunteers_add_help_period()}
                 </AdminAddButton>
               </div>
 
-              {helpPeriods.length === 0 ? (
+              {help_periods.length === 0 ? (
                 <AdminEmptyState>{m.admin_volunteers_no_help_periods()}</AdminEmptyState>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {helpPeriods.map((period, index) => (
+                  {help_periods.map((period, index) => (
                     <div key={index} className="rounded-md border border-subtle p-4">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-subtle text-sm">#{index + 1}</span>
@@ -324,7 +324,7 @@ export default function VolunteerFormModal({
                           type="button"
                           variant="outline-danger"
                           size="sm"
-                          onClick={() => void form.removeFieldValue("helpPeriods", index)}
+                          onClick={() => void form.removeFieldValue("help_periods", index)}
                         >
                           <Icon icon={TrashIcon} />
                           {m.admin_volunteers_remove_help_period()}
@@ -338,11 +338,11 @@ export default function VolunteerFormModal({
                             </AdminLabel>
                             <AdminInput
                               type="date"
-                              value={period.firstHelpDay}
+                              value={period.first_help_day}
                               onChange={(e) =>
-                                form.setFieldValue(`helpPeriods[${index}]`, {
+                                form.setFieldValue(`help_periods[${index}]`, {
                                   ...period,
-                                  firstHelpDay: e.target.value,
+                                  first_help_day: e.target.value,
                                 })
                               }
                               className={ADMIN_CONTROL_CLASS}
@@ -357,14 +357,14 @@ export default function VolunteerFormModal({
                             </AdminLabel>
                             <AdminInput
                               type="date"
-                              value={period.lastHelpDay ?? ""}
+                              value={period.last_help_day ?? ""}
                               onChange={(e) =>
-                                form.setFieldValue(`helpPeriods[${index}]`, {
+                                form.setFieldValue(`help_periods[${index}]`, {
                                   ...period,
-                                  lastHelpDay: e.target.value || null,
+                                  last_help_day: e.target.value || null,
                                 })
                               }
-                              min={period.firstHelpDay || undefined}
+                              min={period.first_help_day || undefined}
                               className={ADMIN_CONTROL_CLASS}
                             />
                           </AdminField>
@@ -378,7 +378,7 @@ export default function VolunteerFormModal({
                           rows={2}
                           value={period.notes}
                           onChange={(e) =>
-                            form.setFieldValue(`helpPeriods[${index}]`, {
+                            form.setFieldValue(`help_periods[${index}]`, {
                               ...period,
                               notes: e.target.value,
                             })

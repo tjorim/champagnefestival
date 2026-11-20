@@ -1,3 +1,4 @@
+import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
 /**
  * Regression coverage for the admin edit modals hydrating from the record being
  * edited.
@@ -18,10 +19,10 @@ import ItemModal from "@/components/admin/ItemModal";
 import MemberFormModal from "@/components/admin/MemberFormModal";
 import PersonFormModal from "@/components/admin/PersonFormModal";
 import VolunteerFormModal from "@/components/admin/VolunteerFormModal";
-import type { Edition } from "@/components/admin/editionTypes";
+
 import type { ItemDraft } from "@/components/admin/itemTypes";
-import type { Venue } from "@/types/admin";
-import type { Event } from "@/types/event";
+import type { Venue } from "@/api-types";
+
 import type { Person } from "@/types/person";
 import { createTestQueryClient } from "../utils/queryClient";
 
@@ -44,41 +45,41 @@ const venues = [
   { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },
 ] as unknown as Venue[];
 
-const edition = {
+const edition = editionOut({
   id: "march-2027",
   year: 2027,
   month: "march",
-  editionType: "festival",
+  edition_type: "festival",
   active: true,
   dates: ["2027-03-06", "2027-03-07", "2027-03-08"],
-  venue: { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },
+  venue: venueOut({ id: "venue-01", name: "Brussels Expo", city: "Brussels" }),
   events: [],
   producers: [],
   sponsors: [],
   vendors: [],
-} as unknown as Edition;
+});
 
-const existingEvent = {
+const existingEvent = eventOut({
   id: "event-01",
-  editionId: "march-2027",
+  edition_id: "march-2027",
   title: "Grand Opening",
-  titleLanguage: "en",
-  titleNl: "Grote opening",
-  titleFr: null,
-  titleEn: "Grand Opening",
-  descriptionLanguage: "en",
-  descriptionNl: null,
-  descriptionFr: null,
-  descriptionEn: "Join us for the grand opening.",
+
+  title_nl: "Grote opening",
+  title_fr: null,
+  title_en: "Grand Opening",
+
+  description_nl: null,
+  description_fr: null,
+  description_en: "Join us for the grand opening.",
   description: "Join us for the grand opening.",
   date: "2027-03-07",
-  startTime: "18:00",
-  endTime: "22:00",
+  start_time: "18:00",
+  end_time: "22:00",
   category: "ceremony",
-  registrationRequired: false,
+  registration_required: false,
   active: true,
   products: [],
-} as unknown as Event;
+});
 
 const existingPerson = {
   id: "person-01",
@@ -89,9 +90,9 @@ const existingPerson = {
   roles: ["member"],
   notes: "VIP",
   anonymised: false,
-  retiredRoles: {},
-  roleHistory: { member: [{ startedOn: "2021-04-02", endedOn: null }] },
-  helpPeriods: [{ id: "hp-1", firstHelpDay: "2027-03-06", lastHelpDay: "2027-03-08" }],
+  retired_roles: {},
+  role_history: { member: [{ started_on: "2021-04-02", ended_on: null }] },
+  help_periods: [{ id: "hp-1", first_help_day: "2027-03-06", last_help_day: "2027-03-08" }],
 } as unknown as Person;
 
 const existingItem = {
@@ -101,8 +102,8 @@ const existingItem = {
   website: "https://example.com",
   type: "producer",
   active: true,
-  contactPersonId: "person-01",
-  contactPerson: {
+  contact_person_id: "person-01",
+  contact_person: {
     id: "person-01",
     name: "Alice Dupont",
     email: "alice@example.com",
@@ -206,7 +207,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     rerender(
       <EventModal
         {...props}
-        initial={{ ...existingEvent, id: "event-02", titleEn: "Second event" }}
+        initial={{ ...existingEvent, id: "event-02", title_en: "Second event" }}
       />,
     );
     expect(screen.getByLabelText(TITLE_EN)).toHaveValue("Second event");

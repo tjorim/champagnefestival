@@ -16,10 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Edition, Organization, Person
-from app.schemas import OrganizationCreate, OrganizationDescription, OrganizationUpdate
+from app.schemas import OrganizationCreate, OrganizationDescription, OrganizationOut, OrganizationUpdate
 from app.services import organization_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.utils import organization_to_dict
+from app.utils import organization_to_out
 
 DESCRIPTION_FIELDS = ("description_nl", "description_fr", "description_en")
 
@@ -46,7 +46,7 @@ async def load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, Pe
 
 async def create_organization(
     db: AsyncSession, *, body: OrganizationCreate, actor: str, request_id: str | None = None
-) -> dict:
+) -> OrganizationOut:
     if body.image.startswith(organization_logos.PREFIX):
         raise ValidationFailedError("Upload managed logos after creating the organization.")
     contact = await load_contact(db, body.contact_person_id)
@@ -74,7 +74,7 @@ async def create_organization(
     )
     await db.commit()
     await db.refresh(e)
-    return organization_to_dict(e, contact)
+    return organization_to_out(e, contact)
 
 
 async def apply_organization_update(
@@ -86,7 +86,7 @@ async def apply_organization_update(
     request_id: str | None = None,
     clear_contact_person: bool = False,
     logo: bytes | None = None,
-) -> dict:
+) -> OrganizationOut:
     """Apply a partial organization update and return the refreshed payload.
 
     ``clear_contact_person`` exists for the MCP adapter, whose kwargs can't
@@ -168,7 +168,7 @@ async def apply_organization_update(
     await db.commit()
     await db.refresh(e)
     contact = await load_contact(db, e.contact_person_id)
-    return organization_to_dict(e, contact)
+    return organization_to_out(e, contact)
 
 
 async def delete_organization(db: AsyncSession, e: Organization, *, actor: str, request_id: str | None = None) -> dict:

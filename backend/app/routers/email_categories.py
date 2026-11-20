@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/email-categories", tags=["email-categories"], de
 @router.get("", response_model=list[EmailCategoryOut])
 async def list_email_categories(
     db: AsyncSession = Depends(get_db), locale: Language | None = Query(default=None)
-) -> list[dict]:
+) -> list[EmailCategoryOut]:
     """Every category in display order. `name`/`description` are resolved for `locale`; all stored texts are included."""
     return await email_categories_service.list_categories(db, locale=locale)
 
@@ -31,7 +31,7 @@ async def create_email_category(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EmailCategoryOut:
     try:
         return await email_categories_service.create_category(
             db, actor=actor, body=body, request_id=getattr(request.state, "request_id", None)
@@ -47,7 +47,7 @@ async def update_email_category(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> dict:
+) -> EmailCategoryOut:
     try:
         return await email_categories_service.update_category(
             db, actor=actor, key=key, body=body, request_id=getattr(request.state, "request_id", None)

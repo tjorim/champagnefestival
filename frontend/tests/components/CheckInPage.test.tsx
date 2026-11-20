@@ -1,3 +1,4 @@
+import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +30,7 @@ vi.mock("@/paraglide/messages", () => ({
     stamp_progress: ({ count, total }: { count: number; total: number }) =>
       `Stamps: ${count}/${total}`,
     stamp_reward_earned: () => "Reward earned!",
+    venue_plan_show_table: () => "Show table",
     checkin_title: () => "Check-in",
     checkin_lookup_method: () => "Find a guest",
     checkin_scan_method: () => "Scan a QR code",
@@ -132,8 +134,19 @@ describe("CheckInPage", () => {
   it("keeps reward feedback after the lookup refresh", async () => {
     server.use(
       http.post(`/api/check-in/${SEED_REG_ID}`, () =>
-        HttpResponse.json({
+        jsonResponse<import("@/api-types").CheckInOut>({
+          already_checked_in: false,
           registration: {
+            event_id: "event-1",
+            edition_id: null,
+            event_title: SEED_EVENT_TITLE,
+            table_id: null,
+            table_name: null,
+            guest_count: 1,
+            order_items: [],
+            notes: "",
+            checked_in_at: null,
+            strap_issued: false,
             id: SEED_REG_ID,
             name: SEED_REG_NAME,
             checked_in: true,
@@ -399,7 +412,12 @@ describe("CheckInPage", () => {
 
   it("shows an error when the token is invalid", async () => {
     server.use(
-      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 401 })),
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
     );
 
     await renderPage();
@@ -411,7 +429,12 @@ describe("CheckInPage", () => {
 
   it("shows an error when the registration is not found", async () => {
     server.use(
-      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 404 })),
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        ),
+      ),
     );
 
     await renderPage();
@@ -423,7 +446,12 @@ describe("CheckInPage", () => {
 
   it("shows an expired-session message when volunteer search returns 401", async () => {
     server.use(
-      http.get("/api/volunteer/registrations", () => HttpResponse.json(null, { status: 401 })),
+      http.get("/api/volunteer/registrations", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
     );
 
     await renderPage("/check-in");
@@ -443,7 +471,10 @@ describe("CheckInPage", () => {
   ])("shows the action error when volunteer check-in returns %s", async (status, message) => {
     server.use(
       http.post("/api/volunteer/registrations/:id/check-in", () =>
-        HttpResponse.json(null, { status }),
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status },
+        ),
       ),
     );
 
@@ -467,7 +498,12 @@ describe("CheckInPage", () => {
 
   it("shows an expired-session message when entrance action returns 401", async () => {
     server.use(
-      http.put("/api/volunteer/registrations/:id", () => HttpResponse.json(null, { status: 401 })),
+      http.put("/api/volunteer/registrations/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
     );
 
     await renderPage();
@@ -505,7 +541,12 @@ describe("CheckInPage", () => {
 
   it("has no axe violations when showing an error", async () => {
     server.use(
-      http.post("/api/check-in/:id/lookup", () => HttpResponse.json(null, { status: 404 })),
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        ),
+      ),
     );
 
     const { container } = await renderPage();
@@ -524,7 +565,12 @@ describe("CheckInPage", () => {
     });
 
     it("does not queue a check-in while offline or replay it on reconnect", async () => {
-      const submit = vi.fn(() => HttpResponse.json({}, { status: 500 }));
+      const submit = vi.fn(() =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      );
       server.use(http.post(`/api/check-in/${SEED_REG_ID}`, submit));
       await renderPage();
       const button = await screen.findByRole("button", { name: /check in now/i });
