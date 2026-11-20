@@ -36,7 +36,7 @@ ratios and validated saved colours use narrow, explained lint exceptions.
 Generate primitives only as needed with `pnpm dlx shadcn@latest add <component>`
 from `frontend/`, using the checked-in `components.json` (`base-vega`, Lucide,
 Tailwind v4). Own and restyle the source; do not reinitialise the theme.
-Use `@/lib/utils` for `cn`. See [AGENTS.md](../AGENTS.md#styling) for contributor
+Use `@/lib/utils` for `cn`. See [AGENTS.md](../AGENTS.md#styling-and-ui) for contributor
 commands and styling conventions.
 
 ## Runtime themes and portals
