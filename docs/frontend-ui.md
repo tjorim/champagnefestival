@@ -28,7 +28,7 @@ the appended theme link and specificity decides ties.
 
 Use semantic colours from `tailwind.css`. The four shadcn Oxlint rules enforce
 known classes, semantic colours and the absence of arbitrary values/inline styles.
-Owned class namespaces are explicitly allowed in `.oxlintrc.json`; there is no
+Owned class namespaces are explicitly allowed in `oxlint.config.ts`; there is no
 generated allow-list or frozen exception baseline. Dynamic geometry, image
 ratios and validated saved colours use narrow, explained lint exceptions.
 `safeRoomColor()` validates saved hex colours and provides a neutral fallback.

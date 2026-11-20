@@ -219,7 +219,7 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
   Lucide for icons.
 - `pnpm lint` runs Oxlint with all four shadcn rules (`no-arbitrary-values`,
   `no-inline-styles`, `no-unknown-classes`, `no-raw-colors`) configured directly
-  in `frontend/.oxlintrc.json`. The only allowance is the list of owned
+  in `frontend/oxlint.config.ts`. The only allowance is the list of owned
   class-name namespaces (`admin-*`, `site-*`, `riviera-*` and so on) whose rules
   live in the owned stylesheets above; add a namespace only when you add owned CSS
   for it. There is no generated allow-list and no exception baseline.
