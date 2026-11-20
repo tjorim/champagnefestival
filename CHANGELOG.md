@@ -29,6 +29,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - Check the formatting of workflows, scripts and the root JSON files in CI (`pnpm format:repo:check`), as the other apps do; `renovate.json` was reformatted to match.
 - Rename the release workflow to `release.yml` and give it the shared job graph used by every app (`validate`, the backend and frontend checks, `draft`), with a read-only default token that only the draft job can write with.
 - Report the built source commit alongside the app version in the health response; VPS builds receive the full commit from the shared deployment tooling (tjorim/apps#345).
+- Align tooling, CI and docs with the other apps: `oxlint.config.ts`, a fuller `tsconfig.node.json`, the CodeQL workflows named by language (`codeql-javascript.yml`, `codeql-python.yml`), one `Frontend` and one `Backend` CI job with the shared step order (now including `check-message-parity` and `uv sync --locked`), a `ty` environment block, and the shared `AGENTS.md`, `README.md` and `backend/README.md` section skeletons.
 
 ## [2026.11.1] - 2026-11-10
 
