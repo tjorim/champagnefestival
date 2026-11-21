@@ -12,8 +12,6 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
-from app.live import mapping, notify_live_event
 from app.models import Product, Registration
 from app.schemas import (
     ProductChangeBookingOut,
@@ -24,7 +22,9 @@ from app.schemas import (
 )
 from app.services import product_categories_service
 from app.services import product_inventory as inventory
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ServiceError, to_http_exception
+from app.services.live import mapping, notify_live_event
 
 TEXT_FIELDS = (
     "name_nl",

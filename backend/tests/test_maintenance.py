@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from app import maintenance
+from app.services import maintenance
 
 
 @asynccontextmanager
@@ -37,7 +37,7 @@ async def test_housekeeping_runs_every_sweep_and_reports_no_failures(monkeypatch
         return run
 
     monkeypatch.setattr(maintenance, "SWEEPS", (("a", sweep("a", 3)), ("b", sweep("b", 0))))
-    with caplog.at_level("INFO", logger="app.maintenance"):
+    with caplog.at_level("INFO", logger="app.services.maintenance"):
         failed = await maintenance.housekeeping()
 
     assert failed == 0

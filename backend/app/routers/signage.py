@@ -64,7 +64,7 @@ def asset_root() -> Path:
 async def upload_asset(
     file: UploadFile, request: Request, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)
 ):
-    from app.audit import write_audit_entry
+    from app.services.audit_service import write_audit_entry
 
     try:
         data = await edition_artwork.read_upload(file, "hero")

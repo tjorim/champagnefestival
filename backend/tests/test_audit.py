@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.audit import write_audit_entry
 from app.models import AuditEntry
+from app.services.audit_service import write_audit_entry
 from tests.helpers import (
     ADMIN_HEADERS,
     TABLE_TYPE_PAYLOAD,

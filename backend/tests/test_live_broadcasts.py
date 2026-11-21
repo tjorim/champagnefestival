@@ -4,7 +4,7 @@ Each test subscribes to live_bus directly (no HTTP streaming), performs a
 mutation via the HTTP test client, then awaits the event on the queue. Since
 #932, mutation routes only send a transactional Postgres NOTIFY
 (notify_live_event) — delivery into live_bus goes through the real
-cross-worker LISTEN relay (app.live.listener, started for the whole test
+cross-worker LISTEN relay (app.services.live.listener, started for the whole test
 session by the pg_live_listener fixture in conftest.py), which is genuinely
 asynchronous even within one process, so these await with a timeout rather
 than assuming the event is already queued the instant the HTTP call returns.
@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import asyncio
 
-from app.live import live_bus
+from app.services.live import live_bus
 from tests.helpers import (
     ADMIN_HEADERS,
     TABLE_TYPE_PAYLOAD,

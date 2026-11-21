@@ -7,10 +7,10 @@ from typing import Literal
 
 from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
-from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
 from app.schemas.announcements import AnnouncementLevel, _validate_safe_announcement_url
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import ResourceKey, Text500, Text1000
+from app.services.composer_content import LOCALES, build_composer_payload, pick_locale_text
 
 ComposedMessageChannel = Literal["announcement", "push", "email"]
 

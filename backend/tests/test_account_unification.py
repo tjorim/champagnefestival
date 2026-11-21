@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Registration, User, VisitorMagicLink, VisitorSession
 from app.services.users_service import resolve_oidc_user
-from app.visitor_session import actor_for_user
+from app.services.visitor_session import actor_for_user
 from tests.helpers import _create_event, _post_registration
 
 BEARER = {"Authorization": "Bearer oidc-token"}
@@ -44,7 +44,7 @@ def token_for(monkeypatch, *, sub="kc-1", email="visitor@example.com", verified=
             claims["email"] = email
         return claims
 
-    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    monkeypatch.setattr("app.services.visitor_session.decode_token", decode)
 
 
 async def email_login(client, emails, email="visitor@example.com"):

@@ -15,10 +15,10 @@ from app.core.ratelimit import check_rate_limit, get_client_ip
 from app.core.spam import check_form_timing, check_honeypot
 from app.db.dialect_functions import dialect_insert
 from app.db.session import get_db
-from app.email import send_contact_notification
 from app.models import ContactMessage
 from app.schemas import OkOut, RequestModel, ResponseModel
 from app.schemas.types import NonEmptyText200
+from app.services.email_service import send_contact_notification
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 

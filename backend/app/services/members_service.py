@@ -23,11 +23,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.db.queries import get_or_404
 from app.models import Person
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone

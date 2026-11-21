@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from app.live.mapping import (
+from app.services.live.mapping import (
     _K_ADMIN_PEOPLE,
     _K_ADMIN_REGISTRATIONS,
     _K_ADMIN_TABLES,

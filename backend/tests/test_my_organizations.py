@@ -120,7 +120,7 @@ async def test_shared_email_session_never_grants_staff_access(client, manager):
 async def test_oidc_user_in_a_cookie_has_no_contact_access(client, db_session):
     from starlette.responses import Response
 
-    from app.visitor_session import create_session
+    from app.services.visitor_session import create_session
 
     user = User(id="usr-staff", oidc_subject="staff")
     db_session.add(user)
@@ -143,7 +143,7 @@ async def test_oidc_verified_email_unlocks_contacts_regardless_of_role(client, d
             "realm_access": {"roles": roles},
         }
 
-    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    monkeypatch.setattr("app.services.visitor_session.decode_token", decode)
     response = await client.get("/api/me/organizations", headers={"Authorization": "Bearer oidc-token"})
     assert response.status_code == 200
     assert [row["name"] for row in response.json()] == ["One", "Two"]
@@ -163,7 +163,7 @@ async def test_oidc_unverified_email_cannot_unlock_contacts(client, manager, mon
             "realm_access": {"roles": ["admin"]},
         }
 
-    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    monkeypatch.setattr("app.services.visitor_session.decode_token", decode)
     response = await client.get("/api/me/organizations", headers={"Authorization": "Bearer oidc-token"})
     assert response.status_code == 200
     assert response.json() == []
@@ -175,7 +175,7 @@ async def test_oidc_identity_does_not_borrow_a_different_cookie_email(client, ma
     async def decode(_token):
         return {"sub": "other-user", "email": "other@example.com", "email_verified": True}
 
-    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    monkeypatch.setattr("app.services.visitor_session.decode_token", decode)
     response = await client.get("/api/me/organizations", headers={"Authorization": "Bearer oidc-token"})
     assert [row["name"] for row in response.json()] == ["Other"]
 
@@ -189,6 +189,6 @@ async def test_service_account_email_does_not_grant_contact_access(client, manag
             "email_verified": True,
         }
 
-    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    monkeypatch.setattr("app.services.visitor_session.decode_token", decode)
     response = await client.get("/api/me/organizations", headers={"Authorization": "Bearer service-token"})
     assert response.json() == []

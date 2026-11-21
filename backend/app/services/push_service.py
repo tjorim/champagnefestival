@@ -1,8 +1,8 @@
 """Web Push subscription lifecycle (#941): subscribe, unsubscribe, cleanup.
 
 Subscriptions are anonymous and device-scoped, not linked to ``User`` — see
-``app.models.PushSubscription``. Delivery itself lives in ``app.push``, kept
-separate from this CRUD/validation layer the same way ``app.email`` and the
+``app.models.PushSubscription``. Delivery itself lives in ``app.services.push_delivery``, kept
+separate from this CRUD/validation layer the same way ``app.services.email_service`` and the
 registration/contact services are already split in this codebase.
 """
 
@@ -130,7 +130,7 @@ async def cleanup_expired_subscriptions(db: AsyncSession) -> int:
     """Delete subscriptions with no successful delivery in
     ``settings.push_subscription_expiry_days``; run daily by ``python -m app.maintenance housekeeping``.
 
-    On top of explicit unsubscribe and 404/410 retirement (see ``app.push``),
+    On top of explicit unsubscribe and 404/410 retirement (see ``app.services.push_delivery``),
     this catches subscriptions the push service never reports dead — e.g. the
     visitor cleared browser data without the endpoint itself expiring.
     """

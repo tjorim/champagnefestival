@@ -25,9 +25,9 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.models import Person
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from app.live import live_bus
 from app.mcp.admin import tables as mcp_tables
 from app.models import Layout, Room, TableType, Venue
+from app.services.live import live_bus
 from tests.helpers import mcp_session_factory, seed_layout_event
 
 

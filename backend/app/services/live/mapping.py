@@ -8,7 +8,7 @@ must stay in sync with ``frontend/src/lib/query/queryKeys.ts``.
 from __future__ import annotations
 
 from app.core.ids import make_id
-from app.live.events import LiveEvent, LiveScope
+from app.services.live.events import LiveEvent, LiveScope
 
 # ---------------------------------------------------------------------------
 # TanStack Query key constants — must match frontend/src/lib/query/queryKeys.ts
@@ -41,7 +41,7 @@ def _event(
 
 # ---------------------------------------------------------------------------
 # Public mapping functions (called by mutation routes, then passed to
-# notify_live_event before db.commit() — see app/live/__init__.py)
+# notify_live_event before db.commit() — see app/services/live/__init__.py)
 # ---------------------------------------------------------------------------
 
 

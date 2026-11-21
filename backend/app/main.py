@@ -15,8 +15,6 @@ from app.core.config import settings
 from app.core.observability import request_metrics_middleware
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
-from app.live.listener import pg_live_listener
-from app.live.render_cache_listener import pg_render_cache_listener
 from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware.request_timing import RequestTimingMiddleware
@@ -80,6 +78,8 @@ from app.routers import (
 )
 from app.schemas import McpCapabilitiesOut
 from app.services.errors import ApiHTTPException
+from app.services.live.listener import pg_live_listener
+from app.services.live.render_cache_listener import pg_render_cache_listener
 from app.version import APP_VERSION
 
 # Configure logging before any other module uses a logger.

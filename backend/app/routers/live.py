@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends
 from starlette.responses import StreamingResponse
 
 from app.core.auth import require_volunteer
-from app.live import live_bus
-from app.live.events import LiveEvent
 from app.schemas.openapi_responses import binary_response
+from app.services.live import live_bus
+from app.services.live.events import LiveEvent
 
 logger = logging.getLogger(__name__)
 

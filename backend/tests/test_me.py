@@ -11,8 +11,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import email as email_module
-from app import visitor_session as visitor_session_module
 from app.core.auth import require_admin
 from app.db.session import async_session_factory, get_db
 from app.main import app
@@ -25,7 +23,9 @@ from app.models import (
     User,
 )
 from app.routers import me as me_router
+from app.services import email_service as email_module
 from app.services import users_service
+from app.services import visitor_session as visitor_session_module
 from app.services.outbox_service import CONTACT_NOTIFICATION, REGISTRATION_CONFIRMATION, process_one_job
 from app.services.pebble_access import rotate_pebble_token
 from tests.helpers import _post_registration
@@ -45,7 +45,7 @@ async def _post_registration_with_admin_setup(me_client, **overrides):
 @pytest.fixture()
 async def raw_client(db_session):
     """Client with no auth override at all — goes through the real
-    ``app.visitor_session.get_current_user``/``get_current_user_with_claims``,
+    ``app.services.visitor_session.get_current_user``/``get_current_user_with_claims``,
     unlike ``me_client`` (which overrides those dependencies wholesale).
     Needed to test the confirm-first claim flow (#1044), which depends on the
     caller's raw OIDC claims (their own verified email), since an override

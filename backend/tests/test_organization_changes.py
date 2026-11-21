@@ -199,7 +199,7 @@ async def test_concurrent_decisions(engine, db_session, manager):
 
 
 async def test_notification_uses_configured_recipient(db_session, manager, monkeypatch):
-    import app.email as email
+    import app.services.email_service as email
 
     monkeypatch.setattr(settings, "organization_review_recipient", "shared@example.com")
     monkeypatch.setattr(settings, "smtp_host", "smtp.example.com")

@@ -180,7 +180,7 @@ applies it exactly once. A *deliberate* second call after a confirmed success
 is rejected outright — this is not blind-retry-safe in the idempotency-key
 sense, but an ambiguous network result never needs anything beyond reloading
 the message before deciding whether to schedule again. The actual send
-(`app.composer_delivery.deliver_composer_message_dispatch`, run by the outbox
+(`app.services.composer_delivery.deliver_composer_message_dispatch`, run by the outbox
 worker) is itself convergent: it checks `state == "scheduled"` before doing
 anything and no-ops if the message is already `sent`, so duplicate worker
 execution (a recovered expired lease, #947's own retry) cannot create a second
@@ -188,7 +188,7 @@ announcement or double-enqueue the push jobs — each per-subscriber push job's
 `deduplication_key` (`composer-push:{message_id}:{subscription_id}`) is a
 second backstop against the same race.
 
-Per-subscriber push delivery (`app.composer_delivery.deliver_composer_push`)
+Per-subscriber push delivery (`app.services.composer_delivery.deliver_composer_push`)
 follows #941's admin test-send precedent exactly: at-least-once via the
 outbox's lease/backoff, retiring the subscription on a 404/410 response
 instead of retrying it.

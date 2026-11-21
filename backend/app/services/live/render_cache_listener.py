@@ -1,6 +1,6 @@
 """Postgres LISTEN for the render-cache invalidation channel (#992).
 
-Structurally mirrors ``app.live.listener.PgLiveListener`` (same reconnect-
+Structurally mirrors ``app.services.live.listener.PgLiveListener`` (same reconnect-
 with-backoff shape), kept as its own class rather than generalizing that one
 into a multi-channel listener — this channel's payload is empty (a blanket
 invalidate, see ``app.services.public_render_cache.RenderCache.invalidate``),

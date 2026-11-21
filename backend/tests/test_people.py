@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.live import live_bus
 from app.models import Person
+from app.services.live import live_bus
 from tests.helpers import ADMIN_HEADERS, _add_consent, _create_event, _post_registration, _registration_body
 
 # ---------------------------------------------------------------------------

@@ -85,9 +85,9 @@ _FUNCTIONS = (
 def _deliver(channel: str, payload: str) -> None:
     """Run what the PostgreSQL LISTEN relay for *channel* would run for this notification."""
     # Imported here: these modules import the database module, which imports this one.
-    from app.live.bus import live_bus
-    from app.live.events import LiveEvent
-    from app.live.notify import LIVE_EVENTS_CHANNEL
+    from app.services.live.bus import live_bus
+    from app.services.live.events import LiveEvent
+    from app.services.live.notify import LIVE_EVENTS_CHANNEL
     from app.services.public_render_cache import RENDER_CACHE_INVALIDATE_CHANNEL, public_render_cache
 
     if channel == RENDER_CACHE_INVALIDATE_CHANNEL:

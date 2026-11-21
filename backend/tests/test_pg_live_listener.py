@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 
-from app.live.listener import PgLiveListener
+from app.services.live.listener import PgLiveListener
 from tests.helpers import requires_postgres
 
 
@@ -50,7 +50,7 @@ async def test_reconnect_succeeds_once_the_database_becomes_reachable(engine):
     """The reconnect loop started by a failed start() must pick up a real
     connection once one becomes available, not just retry forever.
     """
-    from app.live.listener import _to_asyncpg_dsn
+    from app.services.live.listener import _to_asyncpg_dsn
     from tests.conftest import TEST_DATABASE_URL
 
     listener = PgLiveListener()

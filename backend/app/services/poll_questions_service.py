@@ -16,7 +16,6 @@ from pydantic import SerializeAsAny, ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.db.queries import roles_contains
 from app.models import EditionPollOption, EditionPollQuestion, Person, Registration, VolunteerMealNote
@@ -41,6 +40,7 @@ from app.schemas import (
     VolunteerPollQuestionOut,
 )
 from app.services import poll_event_registrations, poll_options_service
+from app.services.audit_service import write_audit_entry
 from app.services.editions_service import find_active_edition
 from app.services.errors import ApiHTTPException
 from app.services.events_service import ensure_edition_exists

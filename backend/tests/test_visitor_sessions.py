@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Registration, User, VisitorMagicLink, VisitorSession
-from app.visitor_session import (
+from app.services.visitor_session import (
     SESSION_HARD_CAP,
     SESSION_IDLE_TIMEOUT,
     cleanup_expired_magic_links,

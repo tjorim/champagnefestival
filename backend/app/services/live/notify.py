@@ -7,7 +7,7 @@ transaction commits, and drops it entirely if the transaction rolls back.
 Call ``notify_live_event`` before ``db.commit()``, never after.
 
 The actual cross-worker fan-out (relaying a NOTIFY into every worker's local
-``LiveBus``, including the one that sent it) is ``app.live.listener``'s job.
+``LiveBus``, including the one that sent it) is ``app.services.live.listener``'s job.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.live.events import LiveEvent
+from app.services.live.events import LiveEvent
 
 LIVE_EVENTS_CHANNEL = "live_events"
 

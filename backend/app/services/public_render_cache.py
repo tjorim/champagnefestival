@@ -2,7 +2,7 @@
 
 A 60-second TTL is the
 correctness floor regardless of worker count. Proactive invalidation over a
-dedicated Postgres NOTIFY channel (kept separate from `app.live.notify`'s
+dedicated Postgres NOTIFY channel (kept separate from `app.services.live.notify`'s
 ``live_events`` — a render-cache invalidation is a different message shape
 than an SSE client's invalidate-these-query-keys event) expires entries
 early on FAQ/edition/event/policy mutations, but the TTL is never removed as
@@ -103,7 +103,7 @@ async def notify_render_cache_invalidate(db: AsyncSession) -> None:
     """Queue a render-cache invalidation, committed atomically with the caller's write.
 
     Call before ``db.commit()`` on the same session as the mutation, matching
-    ``app.live.notify.notify_live_event``'s contract — Postgres holds a
+    ``app.services.live.notify.notify_live_event``'s contract — Postgres holds a
     NOTIFY sent inside a transaction until it commits, and drops it if the
     transaction rolls back.
     """

@@ -13,13 +13,11 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
-from app.live import mapping as live_mapping
-from app.live import notify_live_event
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableBulkOut, TableCreate, TableOut, TableUpdate
 from app.services.allocations_service import allocated_registration_filter, registration_ids_by_table
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -27,6 +25,8 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
+from app.services.live import mapping as live_mapping
+from app.services.live import notify_live_event
 from app.services.serializers import table_to_out
 
 logger = logging.getLogger(__name__)

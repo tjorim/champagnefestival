@@ -11,10 +11,10 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.models import Layout, Room, Venue
 from app.schemas import RoomBulkOut, RoomCreate, RoomOut, RoomUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
     check_idempotency_key,

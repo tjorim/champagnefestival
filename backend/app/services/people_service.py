@@ -33,15 +33,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.db.queries import get_or_404
-from app.live import mapping as live_mapping
-from app.live import notify_live_event
 from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import email_consent_service
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
+from app.services.live import mapping as live_mapping
+from app.services.live import notify_live_event
 from app.services.member_email import (
     check_email_integrity,
     commit_member_changes,

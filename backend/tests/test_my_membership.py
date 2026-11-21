@@ -4,7 +4,7 @@ import pytest
 
 from app.main import app
 from app.models import Person, User
-from app.visitor_session import get_current_user_with_claims
+from app.services.visitor_session import get_current_user_with_claims
 
 
 @pytest.mark.anyio

@@ -31,12 +31,10 @@ from sqlalchemy import Numeric, Select, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
-from app.live import mapping as live_mapping
-from app.live import notify_live_event
 from app.models import Event, PaymentTransaction, Person, Registration
 from app.schemas import PaymentTransactionLedgerRow, PaymentTransactionOut, PersonPaymentSummary
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
 from app.services.idempotency import (
     check_idempotency_key,
@@ -44,6 +42,8 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
+from app.services.live import mapping as live_mapping
+from app.services.live import notify_live_event
 from app.services.serializers import edition_display_name
 
 PAYMENT_TRANSACTION_SCOPE = "payments.record_transaction"

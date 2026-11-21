@@ -43,7 +43,7 @@ See [retry safety](../retry-safety.md) for the exact guarantees.
 Create, merged updates, and scheduling require at least one complete locale
 title/body pair. Delivery selects the requested complete pair, then Dutch,
 English or French; it never mixes languages. Push validation and delivery
-share the JSON serializer and 4096-byte limit in `app/composer_content.py`.
+share the JSON serializer and 4096-byte limit in `app/services/composer_content.py`.
 Non-push content keeps its character limits without the push byte restriction.
 
 The admin form displays locale text, channels and estimated audience and

@@ -7,9 +7,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.models import Person, Registration, User, VisitorMagicLink, VisitorSession
+from app.services.audit_service import write_audit_entry
 
 logger = logging.getLogger(__name__)
 

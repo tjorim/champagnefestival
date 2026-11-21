@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from app.core.config import Settings, settings
 from app.models import AuditEntry, OutboxJob, PushSubscription
-from app.push import _resolves_to_public_address, deliver_web_push_test
+from app.services.push_delivery import _resolves_to_public_address, deliver_web_push_test
 from app.services.push_service import cleanup_expired_subscriptions
 from tests.helpers import ADMIN_HEADERS, _create_event
 
@@ -43,7 +43,7 @@ def _stub_push_endpoint_as_public(monkeypatch):
     for `_resolves_to_public_address` below (which import and call the real
     function directly, bypassing this patch), override this explicitly.
     """
-    import app.push as push_module
+    import app.services.push_delivery as push_module
 
     monkeypatch.setattr(push_module, "_resolves_to_public_address", lambda hostname: True)
 
@@ -297,7 +297,7 @@ async def test_deliver_web_push_test_success(db_session, monkeypatch):
     )
     await db_session.commit()
 
-    import app.push as push_module
+    import app.services.push_delivery as push_module
 
     calls = []
     monkeypatch.setattr(push_module, "_send_sync", lambda subscription, payload: calls.append(subscription.id))
@@ -325,7 +325,7 @@ async def test_deliver_web_push_test_retires_subscription_resolving_to_private_a
     )
     await db_session.commit()
 
-    import app.push as push_module
+    import app.services.push_delivery as push_module
 
     monkeypatch.setattr(push_module, "_resolves_to_public_address", lambda hostname: False)
     calls = []
@@ -351,7 +351,7 @@ async def test_deliver_web_push_test_retires_subscription_on_invalid_status(db_s
     )
     await db_session.commit()
 
-    import app.push as push_module
+    import app.services.push_delivery as push_module
 
     class FakeResponse:
         def __init__(self, status_code: int) -> None:
@@ -379,7 +379,7 @@ async def test_deliver_web_push_test_retries_on_other_failure(db_session, monkey
     )
     await db_session.commit()
 
-    import app.push as push_module
+    import app.services.push_delivery as push_module
 
     class FakeResponse:
         status_code = 500

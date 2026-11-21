@@ -1,7 +1,7 @@
 """Admin-only central composer endpoints (#942).
 
 Draft lifecycle only — actual delivery runs through the durable outbox (see
-app.composer_delivery). All endpoints require admin auth; there is no
+app.services.composer_delivery). All endpoints require admin auth; there is no
 public surface here.
 """
 

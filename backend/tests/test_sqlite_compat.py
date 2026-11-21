@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.db import sqlite_compat
 from app.db.base import Base
-from app.live.bus import live_bus
-from app.live.events import LiveEvent, LiveScope
-from app.live.notify import notify_live_event
 from app.models import Person
+from app.services.live.bus import live_bus
+from app.services.live.events import LiveEvent, LiveScope
+from app.services.live.notify import notify_live_event
 from tests.helpers import IS_SQLITE
 
 pytestmark = pytest.mark.skipif(not IS_SQLITE, reason="SQLite compatibility layer")

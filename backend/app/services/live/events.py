@@ -58,7 +58,7 @@ class LiveEvent:
         """Return the JSON string sent as a Postgres NOTIFY payload.
 
         Same shape as ``to_sse_data``'s data field, without the SSE framing —
-        see ``app.live.notify.notify_live_event``.
+        see ``app.services.live.notify.notify_live_event``.
         """
         return json.dumps(self._to_payload_dict(), separators=(",", ":"))
 
@@ -67,7 +67,7 @@ class LiveEvent:
         """Reconstruct a LiveEvent from a Postgres NOTIFY payload.
 
         Inverse of ``to_notify_payload`` — used by the LISTEN callback in
-        ``app.live.listener`` to relay a cross-worker notification into this
+        ``app.services.live.listener`` to relay a cross-worker notification into this
         process's local ``LiveBus``.
         """
         payload = json.loads(raw)

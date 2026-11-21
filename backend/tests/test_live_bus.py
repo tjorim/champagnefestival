@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.live.bus import LiveBus
-from app.live.events import LiveEvent, LiveScope
+from app.services.live.bus import LiveBus
+from app.services.live.events import LiveEvent, LiveScope
 
 
 def _make_event(topic: str = "registration") -> LiveEvent:
@@ -113,7 +113,7 @@ async def test_exception_in_consumer_unsubscribes():
 
 
 # ---------------------------------------------------------------------------
-# Notify payload round-trip (app.live.notify / app.live.listener — #932)
+# Notify payload round-trip (app.services.live.notify / app.services.live.listener — #932)
 # ---------------------------------------------------------------------------
 
 

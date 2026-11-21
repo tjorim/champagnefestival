@@ -7,10 +7,10 @@ are immutable; deactivation hides them from new orders without losing history.
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.models import EventOrderOption, EventOrderQuestion, RegistrationOrderAnswer
 from app.schemas import OrderAnswerIn, OrderQuestionList, OrderQuestionOut, VolunteerPollAnswerIn
 from app.services import product_inventory as inventory
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.poll_kinds import KINDS, scalar_answer_fields
 from app.services.public_render_cache import notify_render_cache_invalidate

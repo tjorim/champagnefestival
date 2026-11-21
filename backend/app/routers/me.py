@@ -12,7 +12,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.core.auth import get_current_claims
 from app.core.ratelimit import get_client_ip
 from app.core.translations import Language
@@ -34,6 +33,7 @@ from app.schemas import (
     ResponseModel,
 )
 from app.services import email_consent_service
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
@@ -48,8 +48,12 @@ from app.services.users_service import (
     get_or_create_user,
     verified_email_from_claims,
 )
-from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
-from app.visitor_session import get_current_user as get_current_portal_user
+from app.services.visitor_session import (
+    actor_for_user,
+    get_current_user_with_claims,
+    verified_email_for_caller,
+)
+from app.services.visitor_session import get_current_user as get_current_portal_user
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])

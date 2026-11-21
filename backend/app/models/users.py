@@ -30,7 +30,7 @@ class User(Base):
     identities set means "linked". Roles are never stored here — Keycloak
     stays authoritative. Both kinds read through the same ``registrations``
     relationship and ``/me`` handlers — see
-    ``app.visitor_session.get_current_user``.
+    ``app.services.visitor_session.get_current_user``.
     """
 
     __tablename__ = "users"
@@ -92,7 +92,7 @@ class VisitorSession(Base):
     credential in cleartext. ``last_seen_at``/``expires_at`` implement the
     confirmed 7-day sliding idle window; ``hard_expires_at`` is the 30-day cap
     that activity can never extend — see
-    ``app.visitor_session.SESSION_IDLE_TIMEOUT``/``SESSION_HARD_CAP``.
+    ``app.services.visitor_session.SESSION_IDLE_TIMEOUT``/``SESSION_HARD_CAP``.
     """
 
     __tablename__ = "visitor_sessions"

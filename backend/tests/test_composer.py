@@ -9,9 +9,9 @@ import pytest
 from pywebpush import WebPushException
 from sqlalchemy import select
 
-from app.composer_delivery import deliver_composer_message_dispatch, deliver_composer_push
 from app.core.config import settings
 from app.models import Announcement, AuditEntry, ComposedMessage, OutboxJob
+from app.services.composer_delivery import deliver_composer_message_dispatch, deliver_composer_push
 from tests.helpers import ADMIN_HEADERS
 
 
@@ -25,7 +25,7 @@ def _enable_vapid(monkeypatch) -> None:
 def _stub_composer_push_endpoint_as_public(monkeypatch):
     """See tests/test_push.py's identical fixture for why this patches the
     module-level function rather than global DNS resolution."""
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     monkeypatch.setattr(composer_delivery_module, "_resolves_to_public_address", lambda hostname: True)
 
@@ -265,7 +265,7 @@ async def test_deliver_composer_push_success(client, db_session, monkeypatch):
     await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(message_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     calls = []
     monkeypatch.setattr(composer_delivery_module, "_send_sync", lambda subscription, payload: calls.append(payload))
@@ -290,7 +290,7 @@ async def test_deliver_composer_push_falls_back_to_the_original_for_missing_loca
     await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(message_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     calls = []
     monkeypatch.setattr(composer_delivery_module, "_send_sync", lambda subscription, payload: calls.append(payload))
@@ -310,7 +310,7 @@ async def test_deliver_composer_push_retires_subscription_on_invalid_status(
     await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(message_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     class FakeResponse:
         def __init__(self, status_code: int) -> None:
@@ -335,7 +335,7 @@ async def test_deliver_composer_push_retries_on_other_failure(client, db_session
     await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(message_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     class FakeResponse:
         status_code = 500
@@ -376,7 +376,7 @@ async def test_push_result_counts_reflect_delivery_outcomes(client, engine, monk
     await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(message_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     class FakeResponse:
         status_code = 500
@@ -421,7 +421,7 @@ async def test_push_result_counts_do_not_leak_between_different_messages(client,
     await client.post(f"/api/composer/{second_id}/schedule", json={}, headers=ADMIN_HEADERS)
     await deliver_composer_message_dispatch(second_id)
 
-    import app.composer_delivery as composer_delivery_module
+    import app.services.composer_delivery as composer_delivery_module
 
     monkeypatch.setattr(composer_delivery_module, "_send_sync", lambda subscription, payload: None)
 
@@ -486,7 +486,7 @@ async def test_update_validates_merged_locale_pairs(client):
 
 
 def test_locale_fallback_uses_the_dutch_pair():
-    from app.composer_content import pick_locale_text
+    from app.services.composer_content import pick_locale_text
 
     message = ComposedMessage(title_nl="Titel", body_nl="Inhoud")
     for requested in ("nl", "fr", "en"):
@@ -494,7 +494,7 @@ def test_locale_fallback_uses_the_dutch_pair():
 
 
 def test_locale_fallback_never_mixes_languages():
-    from app.composer_content import pick_locale_text
+    from app.services.composer_content import pick_locale_text
 
     message = ComposedMessage(title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps")
     assert pick_locale_text(message, "nl") == ("Titel", "Inhoud")
@@ -570,7 +570,7 @@ async def test_schedule_requires_a_timezone_on_the_reviewed_version(client):
 
 
 async def test_output_reports_whether_member_mail_is_available(client, monkeypatch):
-    from app import member_mail
+    from app.services import member_mail
 
     created = await client.post("/api/composer", json=_draft_body(channels=["announcement"]), headers=ADMIN_HEADERS)
     message_id = created.json()["id"]

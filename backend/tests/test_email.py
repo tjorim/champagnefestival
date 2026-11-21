@@ -4,8 +4,8 @@ from email.message import EmailMessage
 from types import SimpleNamespace
 from typing import cast
 
-from app import email as email_module
 from app.models import Event, Person, Registration
+from app.services import email_service as email_module
 
 
 async def test_registration_confirmation_contains_reference_link_and_inline_qr(monkeypatch):

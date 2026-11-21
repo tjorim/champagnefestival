@@ -14,12 +14,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.db.queries import get_or_404
 from app.models import Product
 from app.schemas import ProductChangePreviewOut, ProductCreate, ProductUpdate
 from app.services import product_inventory as inventory
+from app.services.audit_service import write_audit_entry
 from app.services.product_changes import TEXT_FIELDS, change_product, ensure_category_exists
 
 

@@ -1,4 +1,4 @@
-from app.audit import audit_provenance
+from app.services.audit_service import audit_provenance
 
 
 def test_audit_provenance_preserves_authentication_identity() -> None:

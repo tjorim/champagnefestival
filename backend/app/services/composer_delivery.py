@@ -15,7 +15,7 @@ reused by #941's admin test-send:
   single attempt: a mail whose outcome is unknown is never submitted again.
 - ``composer_message_push`` (``deliver_composer_push``): one job per
   targeted subscriber, enqueued by the dispatch handler above. Reuses
-  ``app.push``'s SSRF guard, redirect-disabled delivery, and 404/410
+  ``app.services.push_delivery``'s SSRF guard, redirect-disabled delivery, and 404/410
   retirement handling exactly — the only difference from #941's admin
   test-send is a composed (not hardcoded) payload and a composite
   ``resource_id`` (``"{message_id}:{subscription_id}"``) so the handler
@@ -34,32 +34,31 @@ from pydantic import ValidationError
 from pywebpush import WebPushException
 from sqlalchemy import select
 
-from app import member_mail
-from app.audit import write_audit_entry
-from app.composer_content import build_composer_payload as _build_composer_payload
-from app.composer_content import pick_locale_text as _pick_locale_text
 from app.core.config import settings
 from app.db.session import async_session_factory
-from app.member_mail import (
+from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
+from app.schemas import AnnouncementCreate, AnnouncementLevel
+from app.services import announcements_service, member_mail
+from app.services.audit_service import write_audit_entry
+from app.services.composer_content import build_composer_payload as _build_composer_payload
+from app.services.composer_content import pick_locale_text as _pick_locale_text
+from app.services.member_mail import (
     MemberMail,
     MemberMailRejected,
     MemberMailSkipped,
     MemberMailUnavailable,
     MemberMailUncertain,
 )
-from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
-from app.push import (
+from app.services.member_mail_audience import eligible_people, eligible_person
+from app.services.member_mail_render import render_member_mail
+from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url
+from app.services.outbox_service import enqueue_job
+from app.services.push_delivery import (
     _INVALID_SUBSCRIPTION_STATUSES,
     _resolves_to_public_address,
     _send_sync,
     push_enabled,
 )
-from app.schemas import AnnouncementCreate, AnnouncementLevel
-from app.services import announcements_service
-from app.services.member_mail_audience import eligible_people, eligible_person
-from app.services.member_mail_render import render_member_mail
-from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url
-from app.services.outbox_service import enqueue_job
 
 logger = logging.getLogger(__name__)
 

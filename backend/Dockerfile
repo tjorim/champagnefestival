@@ -48,7 +48,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 # ── worker target ─────────────────────────────────────────────────────────────
 # Runs the durable outbox worker. It exposes no HTTP server, so liveness is
 # checked via a heartbeat file the worker's loop touches each pass (see
-# app/worker.py) rather than an HTTP probe. Keep the staleness threshold below
+# app/services/worker.py) rather than an HTTP probe. Keep the staleness threshold below
 # in sync with HEARTBEAT_STALE_SECONDS there.
 FROM runtime AS worker
 

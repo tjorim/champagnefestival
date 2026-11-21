@@ -100,8 +100,8 @@ async def test_option_notification(client, db_session, transport, notify):
 
 @pytest.mark.anyio
 async def test_unused_question_and_failed_delivery(client, db_session, monkeypatch):
-    from app import email
     from app.models import EditionPollQuestion
+    from app.services import email_service as email
     from app.services.outbox_service import process_one_job
     from app.services.poll_notifications import POLL_DELETION
 

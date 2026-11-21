@@ -31,7 +31,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
 from app.db.queries import get_or_404
 from app.db.session import violated_constraint_name
 from app.models import Edition, Event, Organization, Venue
@@ -48,6 +47,7 @@ from app.schemas import (
     VenueOut,
 )
 from app.services import edition_artwork
+from app.services.audit_service import write_audit_entry
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.services.serializers import edition_to_out, event_to_summary_out, venue_to_out
 

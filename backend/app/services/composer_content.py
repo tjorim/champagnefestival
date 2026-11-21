@@ -3,7 +3,7 @@
 import json
 
 from app.core.translations import resolve_pair
-from app.push import _MAX_PAYLOAD_BYTES
+from app.services.push_delivery import _MAX_PAYLOAD_BYTES
 
 LOCALES = ("nl", "en", "fr")
 

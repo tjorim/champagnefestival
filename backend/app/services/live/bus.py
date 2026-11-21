@@ -7,7 +7,7 @@ import contextlib
 import logging
 from collections.abc import AsyncGenerator
 
-from app.live.events import LiveEvent
+from app.services.live.events import LiveEvent
 
 logger = logging.getLogger(__name__)
 

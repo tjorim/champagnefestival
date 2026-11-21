@@ -11,11 +11,12 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from sqlalchemy import select
 
-from app import member_mail
-from app.composer_delivery import deliver_composer_email, deliver_composer_message_dispatch
 from app.core.config import settings
 from app.db.session import async_session_factory
-from app.member_mail import (
+from app.models import AuditEntry, EmailConsent, EmailSuppression, OutboxJob
+from app.services import email_suppression_service, member_mail, member_mail_unsubscribe
+from app.services.composer_delivery import deliver_composer_email, deliver_composer_message_dispatch
+from app.services.member_mail import (
     MemberMail,
     MemberMailRejected,
     MemberMailResult,
@@ -23,8 +24,6 @@ from app.member_mail import (
     MemberMailUnavailable,
     MemberMailUncertain,
 )
-from app.models import AuditEntry, EmailConsent, EmailSuppression, OutboxJob
-from app.services import email_suppression_service, member_mail_unsubscribe
 from app.services.outbox_service import process_one_job
 from tests.helpers import ADMIN_HEADERS, _add_consent
 

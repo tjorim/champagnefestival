@@ -21,10 +21,10 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.models import EmailCategory, EmailConsent, EmailConsentConfirmation, Person
 from app.schemas import EmailConsentOut, EmailPreferenceOut, EmailPreferencesOut
+from app.services.audit_service import write_audit_entry
 from app.services.email_categories_service import NEW_EDITIONS, active_roles, person_allows
 from app.services.errors import NotFoundError, ServiceError
 

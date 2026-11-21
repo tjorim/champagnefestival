@@ -12,19 +12,19 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import member_mail
 from app.core.config import settings
 from app.core.translations import resolve_text
 from app.db.session import async_session_factory
-from app.member_mail import (
+from app.models import EmailCategory, OutboxJob, StampCard, StampCardReward
+from app.services import member_mail
+from app.services.email_categories_service import REWARD_READY
+from app.services.member_mail import (
     MemberMail,
     MemberMailRejected,
     MemberMailSkipped,
     MemberMailUnavailable,
     MemberMailUncertain,
 )
-from app.models import EmailCategory, OutboxJob, StampCard, StampCardReward
-from app.services.email_categories_service import REWARD_READY
 from app.services.member_mail_audience import eligible_person
 from app.services.member_mail_render import compose_text
 from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url

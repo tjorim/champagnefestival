@@ -25,9 +25,9 @@ import logging
 
 import asyncpg
 
-from app.live.bus import live_bus
-from app.live.events import LiveEvent
-from app.live.notify import LIVE_EVENTS_CHANNEL
+from app.services.live.bus import live_bus
+from app.services.live.events import LiveEvent
+from app.services.live.notify import LIVE_EVENTS_CHANNEL
 
 logger = logging.getLogger(__name__)
 

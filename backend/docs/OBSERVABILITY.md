@@ -118,7 +118,7 @@ This lets operators correlate a UI error directly with a backend log line withou
 - [ ] Route is added via `app.include_router(...)` — not via `app.mount()` with a sub-app that bypasses middleware.
 - [ ] If the route accepts credentials in a query parameter, verify that `request.url.path` (not `request.url`) is what gets logged.
 - [ ] If the route introduces a new auth mechanism, ensure it sets `request.state.user_id` and `request.state.auth_type`.
-- [ ] Event-day mutation routes write an `AuditEntry` via `write_audit_entry()` — see `app/audit.py`.
+- [ ] Event-day mutation routes write an `AuditEntry` via `write_audit_entry()` — see `app/services/audit_service.py`.
 
 ---
 

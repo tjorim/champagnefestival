@@ -14,7 +14,6 @@ from app.core.config import settings
 from app.core.ids import make_id
 from app.core.ratelimit import check_push_subscription_rate_limit, check_rate_limit, get_client_ip
 from app.db.session import get_db
-from app.push import WEB_PUSH_TEST, push_enabled
 from app.schemas import (
     PushSubscribeRequest,
     PushSubscriptionOut,
@@ -26,6 +25,7 @@ from app.schemas import (
 from app.services import push_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.outbox_service import enqueue_job
+from app.services.push_delivery import WEB_PUSH_TEST, push_enabled
 
 router = APIRouter(prefix="/api/push", tags=["push"])
 

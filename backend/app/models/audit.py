@@ -25,7 +25,7 @@ class AuditEntry(Base):
     string ``"unknown"`` when the connection has no resolvable peer), a
     visitor session's opaque ``User.id`` (``auth_source == "visitor_session"``
     — never the verified email itself, which would put PII in an audit trail
-    kept indefinitely; see ``app.visitor_session.actor_for_user``), or
+    kept indefinitely; see ``app.services.visitor_session.actor_for_user``), or
     'anonymous'. A row with ``auth_source == "token"`` has its actor blanked
     to ``""`` 30 days after ``timestamp`` by a VPS-scheduled job in
     ``tjorim/apps`` (`infra/scheduled-jobs/champagnefestival-redact-audit-entry-ips.sql`)

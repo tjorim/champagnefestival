@@ -21,7 +21,6 @@ from app.core.config import settings
 from app.core.ids import make_id
 from app.core.ratelimit import check_rate_limit, get_client_ip
 from app.db.session import get_db
-from app.email import send_account_sign_in_email, send_visitor_magic_link_email
 from app.models import User, VisitorMagicLink
 from app.schemas import (
     RegistrationAccessLookupRequest,
@@ -30,10 +29,11 @@ from app.schemas import (
     RegistrationLookupRequestAccepted,
     VisitorSessionStatus,
 )
+from app.services.email_service import send_account_sign_in_email, send_visitor_magic_link_email
 from app.services.errors import ApiHTTPException
 from app.services.serializers import registration_to_guest_out
 from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user_by_email
-from app.visitor_session import (
+from app.services.visitor_session import (
     COOKIE_NAME,
     VISITOR_AUTH_SOURCE,
     clear_session_cookie,
