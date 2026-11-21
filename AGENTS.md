@@ -50,7 +50,7 @@ pnpm format:repo    # same for ../.github, ../scripts and the root JSON files (f
 pnpm typecheck      # includes api:check
 pnpm api:generate   # rewrites openapi.json (needs uv) and src/api-schema/
 pnpm api:check      # fails when src/api-schema/ is stale against openapi.json
-pnpm test
+pnpm test             # Vitest (happy-dom); `pnpm run test --coverage` also checks the thresholds in vitest.config.ts
 pnpm build
 ```
 
@@ -61,7 +61,7 @@ uv run uvicorn app.main:app --reload
 uv run ruff check .
 uv run ruff format --check .  # what CI runs; includes tests and migrations
 uv run ty check .
-uv run pytest
+uv run pytest --cov     # the coverage floor (`fail_under` in pyproject.toml) is what CI enforces
 uv run alembic upgrade head
 ```
 
@@ -215,6 +215,9 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
 - Backend tests: `uv run pytest` (SQLite by default, PostgreSQL via `TEST_DATABASE_URL`; `requires_postgres` tests skip on
   SQLite). `test_openapi_snapshot` and `tests/test_response_models.py` enforce the API contract.
 - API fixtures must follow the fixture-contract rules in "API contract".
+- Coverage floors sit just below the measured totals (backend `fail_under` in `backend/pyproject.toml`, frontend
+  `coverage.thresholds` in `frontend/vitest.config.ts`); CI enforces both. Raise them as tests are added, never lower
+  them to land a change.
 
 
 ## CI
@@ -231,9 +234,9 @@ manual runs run all themes, see `frontend/e2e/README.md`), `android.yml`, `pebbl
 `Frontend` prefix, so the jobs inside `frontend-ci.yml` must not repeat it).
 
 The frontend job runs, in order: `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
-`format:repo:check`, `test`, `build`, `bundle:test` and `bundle:check`, `locale:audit`, `check-message-parity` and
+`format:repo:check`, `test --coverage`, `build`, `bundle:test` and `bundle:check`, `locale:audit`, `check-message-parity` and
 `ui:test` with `ui:check`. The backend job runs `uv sync --locked`, `ruff check`, `ruff format --check`, `ty check`,
-the migration checks and `pytest` (PostgreSQL, then SQLite).
+the migration checks and `pytest` (PostgreSQL with `--cov` and its floor, then SQLite).
 
 Future workflow additions should follow these conventions:
 - Event-day Android APK/manual workflows stay separate from normal frontend/backend CI.

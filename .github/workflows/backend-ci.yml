@@ -60,8 +60,9 @@ jobs:
       - name: Verify migrations are in sync with models
         run: uv run alembic check
 
-      - name: Test (PostgreSQL)
-        run: uv run pytest
+      # The coverage floor (`fail_under`) lives in pyproject.toml.
+      - name: Test (PostgreSQL, with coverage floor)
+        run: uv run pytest --cov
 
       # The default for local development; keeps it working. Fast, so it costs little.
       - name: Test (SQLite)

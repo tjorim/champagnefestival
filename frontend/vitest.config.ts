@@ -40,8 +40,12 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**"],
-      exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**"],
+      // *.md: a README among the sources is not code (V8 coverage would try to parse it).
+      exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**", "src/**/*.md"],
       reporter: ["text", "lcov"],
+      // Floors just below the measured totals (statements 68.49, branches 64.29, functions 68.54, lines 70.75), so
+      // coverage cannot regress unnoticed. Raise them as tests are added; never lower them to land a change.
+      thresholds: { statements: 68, branches: 64, functions: 68, lines: 70 },
     },
   },
 });
