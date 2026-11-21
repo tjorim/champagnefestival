@@ -26,9 +26,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models import SignageVideoExport
+from app.schemas.signage import VideoExportOut
 from app.services import signage_service
 from app.services.errors import ApiHTTPException
-from app.signage_schemas import VideoExportOut
 
 PROFILE = "signage-slideshow-v1"
 MAX_SLIDES = 60

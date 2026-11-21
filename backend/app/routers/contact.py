@@ -17,8 +17,8 @@ from app.db.dialect_functions import dialect_insert
 from app.db.session import get_db
 from app.email import send_contact_notification
 from app.models import ContactMessage
-from app.schema_types import NonEmptyText200
 from app.schemas import OkOut, RequestModel, ResponseModel
+from app.schemas.types import NonEmptyText200
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 

@@ -20,7 +20,7 @@ Layer IDs must be unique; documents have at most 100 layers. Colours are validat
 six-digit hex values. Fonts are Arial (`sans`), Georgia (`serif`), or the platform
 monospace font (`mono`). Text alignment is left, centre or right. Image fit is
 contain or cover. Font size is in canvas pixels. Geometry and font sizes are
-bounded by `backend/app/signage_schemas.py`. `visible` defaults to true, `locked`
+bounded by `backend/app/schemas/signage.py`. `visible` defaults to true, `locked`
 to false, and `name` to an empty string. Locks affect editor changes only; hidden
 layers do not render and do not satisfy required placeholders. Old documents
 receive these defaults without a database migration.

@@ -20,8 +20,8 @@ from app.core.spam import check_form_timing, check_honeypot
 from app.db.dialect_functions import dialect_insert
 from app.db.session import get_db
 from app.models import Event, Product, WaitlistEntry
-from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.schemas import OkOut, RequestModel, WaitlistEntryAdminOut, WaitlistEntryListEnvelope, WaitlistScopes
+from app.schemas.types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.services import waitlist_service as service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.serializers import product_available_quantity, product_sold_out

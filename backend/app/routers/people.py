@@ -18,7 +18,6 @@ from app.core.dependencies import ListQuery, get_request_id
 from app.db.dialect_functions import json_array_elements_text
 from app.db.session import get_db
 from app.models import Event, Person, Registration
-from app.openapi_responses import binary_response
 from app.schemas import (
     EmailConsentOut,
     PeopleCountsOut,
@@ -32,6 +31,7 @@ from app.schemas import (
     RegistrationListOut,
     RegistrationOut,
 )
+from app.schemas.openapi_responses import binary_response
 from app.services import email_consent_service, payments_service, people_service, settings_service
 from app.services.errors import ServiceError, to_http_exception
 from app.services.people_exports import stream_people_csv

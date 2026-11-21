@@ -5,7 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
-from app.schema_types import (
+from app.schemas import ResponseModel
+from app.schemas.types import (
     NonEmptyText200,
     NonNegativeQuantity,
     ResourceId,
@@ -19,7 +20,6 @@ from app.schema_types import (
     Text120,
     Text500,
 )
-from app.schemas import ResponseModel
 
 
 class Document(BaseModel):

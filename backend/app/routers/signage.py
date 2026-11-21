@@ -8,13 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import get_actor_id, require_admin
 from app.db.session import get_db
-from app.openapi_responses import binary_response
 from app.schemas import FaqLocale, ServerTimeOut
-from app.services import edition_artwork
-from app.services import signage_service as service
-from app.services.errors import ServiceError
-from app.services.organization_logos import store
-from app.signage_schemas import (
+from app.schemas.openapi_responses import binary_response
+from app.schemas.signage import (
     ChannelOut,
     ChannelWrite,
     Playlist,
@@ -26,6 +22,10 @@ from app.signage_schemas import (
     TemplateOut,
     TemplateWrite,
 )
+from app.services import edition_artwork
+from app.services import signage_service as service
+from app.services.errors import ServiceError
+from app.services.organization_logos import store
 
 router = APIRouter(prefix="/api/signage", tags=["signage"])
 assets_router = APIRouter(tags=["signage"])

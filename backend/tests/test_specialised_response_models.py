@@ -16,8 +16,8 @@ from app.models import (
     SignageVideoExport,
 )
 from app.schemas import EditionPlanOut, EditionStandsOut, OrderAnswerOut, OrderQuestionOut, OrganizationChangeOut
+from app.schemas.signage import VideoExportOut
 from app.services import organization_changes, signage_video, stands_service
-from app.signage_schemas import VideoExportOut
 
 
 def test_nested_order_responses_keep_nulls_and_option_order():

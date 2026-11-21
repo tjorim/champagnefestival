@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.signage_schemas import Layer, TemplateWrite, missing_bindings
+from app.schemas.signage import Layer, TemplateWrite, missing_bindings
 
 
 def test_legacy_layer_defaults():

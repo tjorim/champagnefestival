@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models import Organization, OrganizationChange, Person, User
-from app.openapi_responses import binary_response
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit
+from app.schemas.openapi_responses import binary_response
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception

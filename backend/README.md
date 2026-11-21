@@ -800,7 +800,7 @@ frontend generates its types from:
   never a bare `dict`, `list[dict]` or `Any`);
 - a route that answers 204 declares `status_code=204`;
 - a file, stream or image route spreads
-  `**binary_response("text/csv", "...")` from `app/openapi_responses.py` into its
+  `**binary_response("text/csv", "...")` from `app/schemas/openapi_responses.py` into its
   decorator, so the document lists the media type instead of an empty JSON body.
 
 A model describes the body the route already sends; it never changes a wire shape.
@@ -809,7 +809,7 @@ an expired video export's playlist), declare a union rather than a model that
 hides one of them. `tests/test_response_models.py` fails when a route breaks
 these rules.
 
-A response model derives from `ResponseModel` (`app/schemas.py`), which sets
+A response model derives from `ResponseModel` (`app/schemas/base.py`), which sets
 `json_schema_serialization_defaults_required`: a response field with a default is
 always sent, so the document lists it as required and the generated TypeScript type
 has `field: T` rather than `field?: T`. Request bodies derive from `RequestModel`
@@ -896,7 +896,7 @@ nullability. Do not derive a partial update from a complete create model, or
 narrow mutable fields inherited from an optional base. Keep write contracts
 explicit; do not generate partial models dynamically or suppress override errors.
 
-Reuse the constrained `Annotated` value types in `app/schema_types.py` for fields
+Reuse the constrained `Annotated` value types in `app/schemas/types.py` for fields
 with the same contract. Constraints belong on the non-null value type; use
 `ValueType | None = None` for optional update fields. Keep descriptions and
 operation-specific defaults on the concrete model. Different domain limits need

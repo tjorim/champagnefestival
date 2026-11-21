@@ -38,7 +38,6 @@ from app.email import send_email_consent_confirmation
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, Table
-from app.openapi_responses import binary_response
 from app.schemas import (
     PaymentTransactionCreate,
     PaymentTransactionLedgerEnvelope,
@@ -52,6 +51,7 @@ from app.schemas import (
     RegistrationUpdate,
     RegistrationVolunteerAssignment,
 )
+from app.schemas.openapi_responses import binary_response
 from app.services import email_consent_service, events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
 from app.services.errors import ApiHTTPException

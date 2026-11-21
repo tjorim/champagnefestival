@@ -15,8 +15,8 @@ from starlette.responses import StreamingResponse
 from app.core.auth import get_actor_id, require_admin
 from app.core.dependencies import ListQuery, get_request_id
 from app.db.session import get_db
-from app.openapi_responses import binary_response
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
+from app.schemas.openapi_responses import binary_response
 from app.services import volunteers_service
 from app.services.people_exports import stream_people_csv
 from app.services.people_listing import VolunteerSortKey, filtered_people_stmt, order_people_stmt

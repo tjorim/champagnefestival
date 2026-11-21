@@ -11,7 +11,7 @@ export const LAYOUT_MIN_AREA_HEIGHT_PX = 24;
 export const LAYOUT_MIN_TABLE_SIZE_PX = 32;
 
 // Same pattern the backend enforces on Room.color writes (RoomCreate/RoomUpdate in
-// backend/app/schemas.py). Responses are not re-validated server-side, so the editor
+// backend/app/schemas/). Responses are not re-validated server-side, so the editor
 // and plan views check it again before putting a saved color into an inline style.
 const ROOM_COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 

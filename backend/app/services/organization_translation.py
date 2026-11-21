@@ -15,8 +15,8 @@ from pydantic import Field
 
 from app.core.config import settings
 from app.core.ratelimit import check_rate_limit
-from app.schema_types import NonEmptyText600
 from app.schemas import RequestModel, ResponseModel
+from app.schemas.types import NonEmptyText600
 
 Language = Literal["nl", "fr", "en"]
 logger = logging.getLogger(__name__)

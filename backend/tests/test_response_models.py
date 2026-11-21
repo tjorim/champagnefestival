@@ -6,7 +6,7 @@ as an untyped JSON body and the generated client could not check it.
 
 A route passes when it declares a ``response_model`` (a JSON body), answers 204,
 or names a non-JSON ``response_class`` and lists its media type
-(``app.openapi_responses.binary_response``).
+(``app.schemas.openapi_responses.binary_response``).
 """
 
 from collections.abc import Iterable

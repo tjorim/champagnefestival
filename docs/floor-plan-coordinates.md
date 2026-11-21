@@ -3,8 +3,8 @@
 This document defines the coordinate system used by `Table.x`/`Table.y`/`Table.rotation`
 and `Area.x`/`Area.y`/`Area.rotation` — the fields that place a table or area on a
 floor-plan `Layout`. It is the single source of truth referenced by the model
-docstrings (`backend/app/models.py`), the Pydantic schema field descriptions
-(`backend/app/schemas.py`), the MCP tool docstrings (`backend/app/mcp_server.py`),
+docstrings (`backend/app/models/`), the Pydantic schema field descriptions
+(`backend/app/schemas/`), the MCP tool docstrings (`backend/app/mcp_server.py`),
 and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx`).
 
 It does **not** cover `Room.width_m`/`length_m`, `TableType.width_m`/`length_m`, or
@@ -19,7 +19,7 @@ Signage uses the same top-left anchor and clockwise centre rotation on a fixed
 ## Position (`x`, `y`)
 
 - **Type:** float, range `[0, 100]` inclusive — enforced by `TableCreate`/`TableUpdate`/
-  `AreaCreate`/`AreaUpdate` in `backend/app/schemas.py`. A value outside this range is
+  `AreaCreate`/`AreaUpdate` in `backend/app/schemas/areas.py`. A value outside this range is
   rejected (422 over REST, `ValueError` over MCP) rather than clamped or silently stored.
 - **Unit:** a **percentage of the layout's rendered canvas** — not the room's physical
   `width_m`/`length_m` directly, and not raw pixels or metres.

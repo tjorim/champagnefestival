@@ -110,7 +110,7 @@ Other frontend scripts follow the shared names: `test:watch`, `test:e2e`, `test:
 
 - Do not commit automatically unless explicitly asked
 - Client code uses the API's own shapes: the types generated from `frontend/openapi.json` (via `@/api-types`) are the client types, with their snake_case field names (`start_date`, `table_type_id`, `width_m`), and responses are read as they arrive. There is no per-field mapper and no camelCase copy of an API record. camelCase is for values that exist only in the interface (component props, form state, local variables); a form draft that is sent to the API is built from, or typed as, the generated request type. Do not declare a hand-written type for an API record
-- Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schema_types.py` constraints and keep defaults and nullability explicit.
+- Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schemas/types.py` constraints and keep defaults and nullability explicit.
 - For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
 - Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/lib/api/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
 
@@ -186,7 +186,7 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   `"snapshot"`, so a release bump never stales it. `frontend/src/api-schema/` is generated from it, one file per
   schema. Never hand-edit either, and do not declare an API record type anywhere else in the frontend.
 - To add or change an endpoint: give the route a `response_model` (a test enforces it; a response model derives from
-  `ResponseModel` in `backend/app/schemas.py` so a field with a default is required in the generated type), run
+  `ResponseModel` in `backend/app/schemas/base.py` so a field with a default is required in the generated type), run
   `pnpm api:generate` in `frontend/` (it needs `uv`), commit `openapi.json` and `src/api-schema/`, and alias the
   generated record for the screens in `frontend/src/api-types.ts`.
 - `pnpm typecheck` runs `pnpm api:check` and fails when `src/api-schema/` is stale; the backend test

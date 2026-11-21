@@ -102,9 +102,9 @@ from app.schemas import (
     TableCreate,
     TableTypeCreate,
 )
+from app.schemas.signage import SlideKind as SignageSlideKind
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.services.people_listing import PersonSortKey
-from app.signage_schemas import SlideKind as SignageSlideKind
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)

@@ -12,9 +12,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.core.ids import make_id
 from app.models import Area, Edition, Event, Layout, Organization, SignageChannel, SignageSlide, SignageTemplate
+from app.schemas.signage import (
+    Content,
+    DisplayTemplate,
+    Playlist,
+    PlaylistPreview,
+    PublicSlide,
+    missing_bindings,
+)
 from app.services.edition_artwork import public_root
 from app.services.errors import ApiHTTPException
-from app.signage_schemas import Content, DisplayTemplate, Playlist, PlaylistPreview, PublicSlide, missing_bindings
 
 MODELS = {"channels": SignageChannel, "templates": SignageTemplate, "slides": SignageSlide}
 
