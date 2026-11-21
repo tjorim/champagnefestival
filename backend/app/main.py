@@ -9,14 +9,14 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
-from app.core.observability import request_metrics_middleware
+from app.core.logging import LOG_FORMAT
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
 from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
 from app.mcp.server import build_keycloak_auth, create_mcp_server
+from app.middleware.request_id import RequestIdMiddleware
 from app.middleware.request_timing import RequestTimingMiddleware
 from app.middleware.setup import (
     GeneralRateLimiter,
@@ -83,10 +83,7 @@ from app.services.live.render_cache_listener import pg_render_cache_listener
 from app.version import APP_VERSION
 
 # Configure logging before any other module uses a logger.
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 _mcp = create_mcp_server(auth=build_keycloak_auth()) if settings.mcp_base_url else None
@@ -192,10 +189,10 @@ async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExc
     )
 
 
-# Metrics middleware is registered next-to-last so it is close to outermost and
-# captures every request, including those short-circuited by CORS, rate
+# Request id, access log and metrics middleware is registered next-to-last so it is close to
+# outermost and captures every request, including those short-circuited by CORS, rate
 # limiting, or OIDC auth.
-app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
+app.add_middleware(RequestIdMiddleware)
 
 # Sets Server-Timing and logs slow requests by route template (apps#246); it
 # wraps everything except the Host header validation below.
