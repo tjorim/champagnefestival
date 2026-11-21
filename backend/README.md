@@ -97,7 +97,8 @@ The interactive API docs are available at <http://localhost:8000/docs>.
 ## Test
 
 ```bash
-uv run pytest
+uv run pytest          # SQLite by default
+uv run pytest --cov    # what CI runs: fails below the `fail_under` coverage floor in pyproject.toml
 ```
 
 Tests live in `tests/` and mirror `app/` (`tests/routers`, `services`, `core`, `db`, `middleware`, `schemas`, `mcp`);

@@ -8,33 +8,38 @@ This document describes the observability guarantees that apply to every HTTP re
 
 | Behaviour | Detail |
 |---|---|
-| **Generation** | If the incoming request carries no `X-Request-ID` header, the middleware generates a UUID4 and assigns it. |
-| **Propagation** | If the incoming request supplies `X-Request-ID`, that value is used unchanged. |
-| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. |
-| **Scope** | The ID is stored in `request.state.request_id` and is available to all downstream handlers. |
+| **Generation** | If the incoming request carries no usable `X-Request-ID` header, the middleware generates a UUID4 and assigns it. |
+| **Propagation** | If the incoming request supplies `X-Request-ID` and it is a short token (`[A-Za-z0-9._:-]{1,128}`), that value is used unchanged. Anything else is replaced by a UUID4, so a caller cannot put arbitrary text into the log lines. |
+| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. The plain-text 500 for an unhandled exception carries it too. |
+| **Scope** | The ID is stored in `request.state.request_id` and in the `current_request_id` context variable (`app.middleware.request_id`), available to all downstream handlers. |
 | **CORS** | `X-Request-ID` is listed in both `allow_headers` (clients may send it) and `expose_headers` (browsers may read it). |
+
+The middleware is `app.middleware.request_id.RequestIdMiddleware`, a pure ASGI middleware (no buffering of streamed responses). It also records every request in the in-process metrics behind `GET /api/metrics`.
 
 ---
 
 ## Structured Request Log
 
-Every request emits one log line via the `app.core.observability` logger after the response is sent. Format:
+Every request emits one JSON line on the `champagnefestival.access` logger after the response has started, inside the shared log layout `asctime - logger - level - message` (`app.core.logging.LOG_FORMAT`). The field names are the same in every app. Example:
 
 ```
-request completed request_id=<uuid> method=<METHOD> path=<path> status=<code> latency_ms=<float> user_id=<sub|None> auth_type=<oidc|None>
+{"event":"http_request","request_id":"<uuid>","user_id":"<sub|null>","auth_type":"<keycloak_user|null>","method":"GET","route":"/api/events/{event_id}","status_code":200,"latency_ms":1.23}
 ```
+
+Responses with status 5xx log at `ERROR`, 4xx at `WARNING`, the rest at `INFO`.
 
 ### Log fields
 
 | Field | Notes |
 |---|---|
-| `request_id` | UUID4 (generated or propagated). |
+| `event` | Always `http_request`. |
+| `request_id` | The validated or generated ID. |
+| `user_id` | OIDC `sub` claim of the authenticated caller. `null` for unauthenticated requests. |
+| `auth_type` | `keycloak_user`, `keycloak_service` or `delegated` once a Bearer JWT has been accepted (`app.core.auth.AuthType`). `null` for unauthenticated requests. |
 | `method` | HTTP verb. |
-| `path` | URL path only — **query parameters are never logged** to prevent token leakage. |
-| `status` | HTTP response status code. |
-| `latency_ms` | Wall-clock time in milliseconds from first byte to response headers sent. |
-| `user_id` | OIDC `sub` claim of the authenticated caller. `None` for unauthenticated requests. |
-| `auth_type` | `"oidc"` when a valid Bearer JWT was presented. `None` for unauthenticated requests. |
+| `route` | The route **template** (`/api/events/{event_id}`), `unmatched` when nothing matched. Never the raw path or the query string, which can carry registration and check-in tokens and ids. |
+| `status_code` | HTTP response status code. |
+| `latency_ms` | Wall-clock time in milliseconds until the response headers are sent (for a streamed response, the time to the first byte). |
 
 ---
 
@@ -43,8 +48,8 @@ request completed request_id=<uuid> method=<METHOD> path=<path> status=<code> la
 | Endpoint | Auth | Behaviour |
 |---|---|---|
 | `GET /api/health/liveness` | None | Returns `{"status": "alive"}` immediately. |
-| `GET /api/health/readiness` | None | Checks database and OIDC JWKS connectivity. Returns 200 or 503. |
-| `GET /api/health` | None | Returns liveness status and links to the readiness and metrics endpoints. |
+| `GET /api/health/readiness` | None | Checks database and OIDC JWKS connectivity. `{"status": "ready"}`, or 503 `{"status": "not_ready"}`. |
+| `GET /api/health` | None | Static summary: `status`, `version`, `commit` and the paths of the two probes (`liveness_endpoint`, `readiness_endpoint`). The image `HEALTHCHECK` uses it. |
 
 Use `/api/health/readiness` for load-balancer health checks — not liveness.
 

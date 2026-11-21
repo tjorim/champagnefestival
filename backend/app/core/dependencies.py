@@ -7,7 +7,7 @@ from sqlalchemy.sql import Select
 
 
 def get_request_id(request: Request) -> str | None:
-    """The request id set by ``app.core.observability``'s middleware, or ``None``.
+    """The request id set by ``app.middleware.request_id``'s middleware, or ``None``.
 
     The ``getattr`` default guards contexts where that middleware didn't run
     (e.g. some test setups) rather than assuming ``request.state.request_id``
