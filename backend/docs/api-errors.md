@@ -40,8 +40,10 @@ application chooses) lives in `app/services/errors.py`.
 
 ## Not covered
 
-`IntegrityError` (a database constraint) still answers `{"detail": ...}` with status 409 and no `code`. OpenAPI documents
-only FastAPI's default 422 schema, not the generic error body.
+`IntegrityError` (a database constraint) answers status 409 with `{"detail": ..., "code": ...}`; the code names the
+failed constraint (`required_field_missing` 23502, `related_records_exist` 23503, `duplicate_value` 23505,
+`constraint_violation` 23514 and unknown). OpenAPI documents only FastAPI's default 422 schema, not the generic error
+body.
 
 `tests/test_error_contract.py` runs the assembled app and pins this contract; `tests/core/test_errors.py` covers the
 handlers in isolation.
