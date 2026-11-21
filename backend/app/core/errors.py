@@ -3,7 +3,7 @@
 Every failure body is JSON with ``detail`` and a stable machine-readable ``code`` (``ApiHTTPException`` in
 ``app.services.errors`` for the codes the application chooses); clients translate ``code`` and treat ``detail`` as an
 English diagnostic. The handlers here cover the failures nothing in the application raised with a code: an unhandled
-exception and a framework or dependency ``HTTPException``.
+exception, a framework or dependency ``HTTPException`` and a request that fails validation.
 """
 
 from __future__ import annotations
@@ -11,7 +11,8 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import Request
+from fastapi import Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 REQUEST_ID_HEADER = "X-Request-ID"
 INTERNAL_ERROR_DETAIL = "Internal server error"
 INTERNAL_ERROR_CODE = "internal_error"
+VALIDATION_ERROR_CODE = "validation_error"
 
 
 def internal_error_response() -> JSONResponse:
@@ -75,4 +77,23 @@ async def handle_http_exception(request: Request, exc: Exception) -> Response:
         {"detail": exc.detail, "code": getattr(exc, "code", None) or default_error_code(exc.status_code)},
         status_code=exc.status_code,
         headers=headers,
+    )
+
+
+# ``input`` (the submitted value) and ``ctx`` (constraint values, sometimes the raw cause) can echo secrets or PII.
+_UNSAFE_VALIDATION_KEYS = frozenset({"input", "ctx"})
+
+
+async def handle_validation_error(request: Request, exc: Exception) -> Response:
+    """Render a 422 as FastAPI's ``detail`` list (``type``, ``loc``, ``msg``) without the submitted values.
+
+    ``detail`` stays a list, as the frontend and the generated client read it; ``code`` is added next to it.
+    """
+    if not isinstance(exc, RequestValidationError):
+        raise exc
+    detail = [
+        {key: value for key, value in issue.items() if key not in _UNSAFE_VALIDATION_KEYS} for issue in exc.errors()
+    ]
+    return JSONResponse(
+        {"detail": detail, "code": VALIDATION_ERROR_CODE}, status_code=status.HTTP_422_UNPROCESSABLE_CONTENT
     )

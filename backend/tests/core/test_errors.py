@@ -7,11 +7,18 @@ import logging
 
 import pytest
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
+from pydantic import BaseModel, Field, ValidationError
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.errors import default_error_code, handle_http_exception, handle_unhandled_exception
+from app.core.errors import (
+    default_error_code,
+    handle_http_exception,
+    handle_unhandled_exception,
+    handle_validation_error,
+)
 from app.services.errors import ApiHTTPException
 
 
@@ -131,3 +138,29 @@ async def test_bodiless_statuses_stay_bodiless(status_code):
 async def test_a_foreign_exception_is_not_swallowed():
     with pytest.raises(ValueError, match="x"):
         await handle_http_exception(_request(), ValueError("x"))
+
+
+class _Item(BaseModel):
+    name: str = Field(min_length=3)
+    count: int = Field(ge=1)
+
+
+@pytest.mark.anyio
+async def test_a_validation_error_drops_input_and_ctx_and_adds_a_code():
+    with pytest.raises(ValidationError) as caught:
+        _Item.model_validate({"name": "ab", "count": 0})
+    original = caught.value.errors(include_url=False)
+    assert all("input" in entry and "ctx" in entry for entry in original)
+
+    response = await handle_validation_error(_request(), RequestValidationError(original))
+
+    assert response.status_code == 422
+    body = json.loads(bytes(response.body))
+    assert body["code"] == "validation_error"
+    assert body["detail"] == [{"type": e["type"], "loc": list(e["loc"]), "msg": e["msg"]} for e in original]
+
+
+@pytest.mark.anyio
+async def test_a_foreign_exception_is_not_swallowed_by_the_validation_handler():
+    with pytest.raises(ValueError, match="x"):
+        await handle_validation_error(_request(), ValueError("x"))

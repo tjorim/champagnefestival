@@ -6,13 +6,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.core.errors import handle_http_exception, handle_unhandled_exception
+from app.core.errors import handle_http_exception, handle_unhandled_exception, handle_validation_error
 from app.core.logging import LOG_FORMAT
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
@@ -242,6 +243,8 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
 # A framework or dependency ``HTTPException`` (unknown route, wrong method, a bare 401/403) keeps its detail and headers
 # and gains a stable code; ``ApiHTTPException`` above and the rate limiter keep theirs (the most specific handler wins).
 app.add_exception_handler(StarletteHTTPException, handle_http_exception)
+# A 422 keeps FastAPI's ``detail`` list (``type``, ``loc``, ``msg``) without the submitted ``input`` and ``ctx``.
+app.add_exception_handler(RequestValidationError, handle_validation_error)
 # An exception nothing answered gets the JSON 500 (``RequestIdMiddleware`` builds the same body for what is raised below
 # it); Starlette's outermost middleware calls this one for what is raised outside it.
 app.add_exception_handler(Exception, handle_unhandled_exception)

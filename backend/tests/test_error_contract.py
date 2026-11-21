@@ -7,9 +7,9 @@ these tests go through ``app.main:app`` so a middleware or a router that changes
 The body of a failure is ``{"detail": str, "code": str}`` (clients translate the code): the app's own code when it
 raised the failure with one, otherwise a code from the status (``not_found``, ``method_not_allowed``, ``unauthorized``,
 ``forbidden``, ``bad_request``, else ``http_<status>``) for what the framework or an uncoded service error produces,
-and ``internal_error`` for an unhandled exception. Validation failures are FastAPI's list of field errors, and the
-general rate limiter answers ``{"error": str}``. The remaining deviations are pinned below (clients read them) so that
-changing one is a decision.
+and ``internal_error`` for an unhandled exception. A validation failure is FastAPI's list of field errors, without the
+submitted values, plus ``code: validation_error``. The general rate limiter answers ``{"error": str}``: that deviation
+is pinned below (clients read it) so that changing it is a decision.
 """
 
 from __future__ import annotations
@@ -102,13 +102,31 @@ async def test_missing_and_invalid_credentials_are_401_with_a_code(real_auth_cli
 
 
 @pytest.mark.anyio
-async def test_validation_failures_list_the_field_errors(client):
-    response = await client.post("/api/events", json={})
+async def test_validation_failures_list_the_field_errors_without_the_submitted_values(client):
+    # ``detail`` stays FastAPI's list (the frontend reads ``loc`` to mark fields) and gains ``code`` like every other
+    # failure; ``input`` and ``ctx`` are dropped because they echo what the caller sent.
+    response = await client.post("/api/events", json={"title": SECRET, "unknown_field": [SECRET]})
 
     assert response.status_code == 422
-    errors = response.json()["detail"]
-    assert errors
-    assert all({"type", "loc", "msg"} <= set(entry) for entry in errors)
+    body = response.json()
+    assert set(body) == {"detail", "code"}
+    assert body["code"] == "validation_error"
+    assert body["detail"]
+    for entry in body["detail"]:
+        assert set(entry) == {"type", "loc", "msg"}
+        assert isinstance(entry["loc"], list)
+    assert SECRET not in response.text
+
+
+@pytest.mark.anyio
+async def test_malformed_json_is_a_validation_error_that_does_not_echo_the_body(client):
+    response = await client.post(
+        "/api/events", content=f'{{"title": "{SECRET}"', headers={"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+    assert SECRET not in response.text
 
 
 @pytest.mark.anyio
