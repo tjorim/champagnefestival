@@ -53,6 +53,15 @@ Static frontend (Vite build / CDN / VPS)
    └─────────────────────────────────┘
 ```
 
+### Source layout
+
+`app/` has `main.py` (app assembly) and one folder per layer: `routers/` (HTTP), `services/` (business logic, incl.
+`services/live/` and the outbox worker), `schemas/` (Pydantic, one module per domain), `models/` (SQLAlchemy, one module
+per domain), `core/` (settings, auth, limits, observability), `db/` (engine, session, SQLite compatibility), `mcp/` (the
+MCP server and tools) and `middleware/`. `python -m app.worker`, `python -m app.maintenance` and
+`python -m app.mcp_server` stay as thin entry points. The full tree, the dependency rules and the removal notes are in
+[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md#backend-backendapp).
+
 ---
 
 ## Setup
@@ -91,7 +100,9 @@ The interactive API docs are available at <http://localhost:8000/docs>.
 uv run pytest
 ```
 
-Tests run on a throwaway SQLite file by default, so they need no container. CI also runs them on
+Tests live in `tests/` and mirror `app/` (`tests/routers`, `services`, `core`, `db`, `middleware`, `schemas`, `mcp`);
+tests that span several domains and the migration tests stay at the top. They run on a throwaway SQLite file by default,
+so they need no container. CI also runs them on
 PostgreSQL, the production database. To do the same locally, create a separate test database:
 
 ```bash

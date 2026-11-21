@@ -4,7 +4,7 @@ import { jsonResponse } from "@/mocks/response";
  * backend/app/services/jsonld_service.build_event_json_ld must produce the
  * same JSON-LD structure from the same fixed input —
  * docs/fixtures/jsonld-edition.json, also read by
- * backend/tests/test_jsonld_service.py.
+ * backend/tests/services/test_jsonld_service.py.
  *
  * The frontend's own real-world render uses the viewer's local timezone
  * (Date.prototype.setHours has no "which timezone" input); there is no
@@ -104,7 +104,7 @@ function getStructuredData(container: HTMLElement) {
 }
 
 describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
-  it("matches backend/tests/test_jsonld_service.py's expected structure exactly", async () => {
+  it("matches backend/tests/services/test_jsonld_service.py's expected structure exactly", async () => {
     server.use(
       http.get("/api/editions/active", () =>
         jsonResponse<import("@/api-types").EditionPublicOut>(apiEdition),

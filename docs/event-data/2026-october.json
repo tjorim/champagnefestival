@@ -1,7 +1,7 @@
 {
   "_readme": [
     "Content payload for the 2026 October festival edition, matching the admin API's",
-    "request schemas (backend/app/schemas.py: VenueCreate, EditionCreate, EventCreate,",
+    "request schemas (backend/app/schemas/: VenueCreate, EditionCreate, EventCreate,",
     "FaqItemCreate). Everything here is DB-driven, editable through the admin dashboard -",
     "this file exists only because the dashboard needs the venue/edition/events/FAQ typed",
     "in by hand once, and it's easier to prepare that text ahead of time than live in the UI.",

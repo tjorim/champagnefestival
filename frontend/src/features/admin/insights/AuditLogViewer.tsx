@@ -17,7 +17,7 @@ import {
  * AuditLogViewer — read-only browser for the operational audit trail.
  *
  * Every admin create/update/delete mutation writes an AuditEntry server-side
- * (see backend/app/audit.py). This is the first UI surface that reads it back —
+ * (see backend/app/services/audit_service.py). This is the first UI surface that reads it back —
  * previously the only way to see who did what was a direct DB query.
  */
 

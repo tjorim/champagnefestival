@@ -82,6 +82,81 @@ Rules:
 
 ## Backend (`backend/app/`)
 
-The backend keeps its current layout for now (`routers/`, `services/`, `mcp/`, `live/` and flat modules such as
-`models.py` and `schemas.py`). The shared target, applied to all four apps in a later step, is `main.py`, `core/`, `db/`,
-`models/`, `schemas/`, `routers/`, `services/`, `mcp/` and `middleware/`.
+```
+main.py                 app assembly: middleware, router registration, lifespan; nothing else
+mcp_server.py           the stdio MCP entry point (`python -m app.mcp_server`): re-exports `app.mcp.server`, see "Entry points"
+worker.py, maintenance.py  `python -m app.worker` / `python -m app.maintenance`: forward to `services/`, see "Entry points"
+openapi_export.py       writes frontend/openapi.json (`uv run python -m app.openapi_export`)
+version.py              the release version read from /VERSION
+routers/                the HTTP layer, one module per domain; thin: validate, call a service, return a response model
+services/              business logic shared by the routers and the MCP tools, one module per domain (`*_service.py` and
+                        topic modules such as `poll_*`, `member_mail*`, `public_render*`, `signage_*`)
+  live/                 live-update infrastructure: in-process bus, Postgres NOTIFY publication and LISTEN relays, the
+                        domain-action to TanStack-key mapping
+  serializers.py        the response builders (`*_to_out`) that turn models into response schemas
+  worker.py, maintenance.py   the outbox worker and the housekeeping command (entry points: `app/worker.py`, `app/maintenance.py`)
+  email_service, member_mail*, push_*, composer_*, visitor_session, audit_service   the former loose domain modules
+models/                 SQLAlchemy models, one module per domain; `base.py` has the shared helpers, `__init__` imports
+                        every module (Alembic needs them all) and re-exports the names
+schemas/                Pydantic request and response models, one module per domain; `base.py` has RequestModel and
+                        ResponseModel, `types.py` the constrained value types, `signage.py` the signage canvas contracts,
+                        `openapi_responses.py` the OpenAPI declarations for file downloads
+core/                   settings, OIDC and bearer auth, shared FastAPI dependencies (pagination, sorting), rate and request
+                        limits, observability, translation vocabulary, anti-spam, ids, CSV and geometry helpers
+db/                     engine and session (`session.py`), the declarative base (`base.py`), query helpers (`queries.py`),
+                        the SQLite compatibility layer and the SQL bootstrap statements for search and the payment ledger
+mcp/                    the MCP server (`server.py`: the FastMCP assembly and tool registration), the tier modules
+                        (`public`, `seating`, `orders`, `check_in`, `delivery`), `admin/` (one module per domain) and
+                        MCP auth, capabilities and middleware
+middleware/             ASGI middleware: CORS, trusted hosts and the general rate limiter (`setup.py`), Server-Timing
+                        and the slow-request log (`request_timing.py`)
+```
+
+Tests live in `backend/tests/` and mirror this tree (`tests/routers`, `tests/services`, `tests/core`, `tests/db`,
+`tests/middleware`, `tests/schemas`, `tests/mcp` with `tests/mcp/admin`); `conftest.py`, `helpers.py`,
+`poll_helpers.py` and `fixtures/` are shared. The `*_migration` tests (they find `alembic/` relative to `tests/`), the
+OpenAPI snapshot, the response-model and contract scans, and the API tests that span several domains (bulk create,
+translations, account unification, poll orders, ...) stay at the top. Sibling-test imports are package imports
+(`from tests.routers.test_visitor_sessions import ...`).
+
+Rules: every JSON route declares a response model; routers do not touch the database directly; code used by one domain
+stays in that domain's modules. Dependencies point downwards: `routers` and `mcp` -> `services` -> `schemas`, `models` ->
+`core`, `db`. `core`, `db`, `models` and `schemas` do not import `routers` or `mcp`. The known upward edges are
+`core/ratelimit.py` (reads the rate-limit table through `models`), `db/queries.py` (the `Person.roles` filter),
+`db/sqlite_compat.py` (imports `services/live` and `services/public_render_cache`: the SQLite stand-in for
+LISTEN/NOTIFY), `schemas/composer.py` (imports `services/composer_content.py`, the composer's locale and push-payload
+validation) and `schemas/` (the poll limits from `models`); `models/orders.py` imports two schemas under `TYPE_CHECKING`
+only.
+
+Naming: `from app.models import X` and `from app.schemas import X` keep working through the package re-exports (explicit
+`__all__`); new code may import the submodule (`from app.schemas.registrations import RegistrationOut`). Models that
+refer to each other only in annotations import each other under `TYPE_CHECKING` (the module files use
+`from __future__ import annotations`). The `services/` modules are still one flat folder of 81 modules; grouping the
+`poll_*`, `member_*`, `public_render*` and `signage_*` families into sub-packages is a later, mechanical step.
+
+### Where does new backend code go?
+
+- A new endpoint: `routers/<domain>.py` (thin), its operation in `services/<domain>_service.py`, request/response models
+  in `schemas/<domain>.py`, tables in `models/<domain>.py` plus an Alembic revision; add the new model module to
+  `models/__init__.py` and the schemas to `schemas/__init__.py`.
+- An MCP tool: `mcp/admin/<domain>.py` (or a tier module), calling the same service the router calls; register it in
+  `mcp/server.py`.
+- Something every domain needs and that knows nothing of a domain (settings, auth, limits, ids): `core/`.
+- Something that reads or writes the engine, session or schema bootstrap: `db/`. ASGI plumbing: `middleware/`.
+- A background job: a handler in `services/`, registered in `services/worker.py`.
+
+### Entry points kept at their old path
+
+These modules only forward to the code in the new layout, because the Dockerfile, the runbook, the docs and MCP client
+configurations start them by name. Each can go once the callers use the new path.
+
+| Old path | Forwards to | Used by | Removal |
+| --- | --- | --- | --- |
+| `app/mcp_server.py` | `app.mcp.server` | `python -m app.mcp_server` (docs/integrations/LOCAL_MCP_SERVER.md, MCP client configs), `from app.mcp_server import ...` | when MCP client configs use `python -m app.mcp.server` |
+| `app/worker.py` | `app.services.worker` | the Dockerfile `worker` target (`python -m app.worker`), docs/outbox-worker.md, RELEASE-RUNBOOK.md | when the Dockerfile target and the docs use `python -m app.services.worker` |
+| `app/maintenance.py` | `app.services.maintenance` | `python -m app.maintenance housekeeping` (docs/outbox-worker.md, scheduled units) | when the units use `python -m app.services.maintenance` |
+
+Logger names that come from `__name__` follow the module (for example `app.middleware.setup`,
+`app.core.observability`, `app.mcp.server`, `app.services.live.listener`). The route and model docstrings that end up in
+`frontend/openapi.json` keep their old text, even where it names a module that moved (the push route still says
+`app.config.Settings`), because changing it would change the committed API document.

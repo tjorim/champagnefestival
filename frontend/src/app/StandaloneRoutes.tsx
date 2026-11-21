@@ -163,7 +163,7 @@ export function PebblePairRoute() {
  * Route component for /me — unlinked, direct-URL-only self-service page for
  * visitors, members, and volunteers alike (the latter two via OIDC). Also
  * the target of the confirmation/magic-link emails' `?token=` links (see
- * backend/app/email.py) — no separate /my-registrations route.
+ * backend/app/services/email_service.py) — no separate /my-registrations route.
  */
 export function MyAccountRoute() {
   useNoIndex();
