@@ -125,7 +125,7 @@ def _app_with(route_handler) -> FastAPI:
 
 
 @pytest.mark.anyio
-async def test_an_unhandled_exception_is_a_plain_500_with_the_request_id_and_is_logged(caplog):
+async def test_an_unhandled_exception_is_a_json_500_with_the_request_id_and_is_logged(caplog):
     async def boom():
         raise RuntimeError("secret internals")
 
@@ -136,7 +136,8 @@ async def test_an_unhandled_exception_is_a_plain_500_with_the_request_id_and_is_
             r = await c.get("/boom", headers={"X-Request-ID": "trace-500"})
 
     assert r.status_code == 500
-    assert r.text == "Internal Server Error"
+    assert r.headers["content-type"] == "application/json"
+    assert r.json() == {"detail": "Internal server error", "code": "internal_error"}
     assert r.headers["x-request-id"] == "trace-500"
     assert "secret internals" not in r.text
     line = _access_lines(caplog)[-1]

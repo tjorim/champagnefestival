@@ -6,11 +6,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
+from app.core.errors import handle_http_exception, handle_unhandled_exception, handle_validation_error
 from app.core.logging import LOG_FORMAT
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
@@ -182,8 +185,10 @@ app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=gene
 
 @app.exception_handler(GeneralRateLimitExceeded)
 async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExceeded) -> JSONResponse:
+    message = f"Rate limit exceeded: {exc.detail}"
+    # ``error`` is what existing clients read; ``detail`` and ``code`` make the body the shared error shape.
     return JSONResponse(
-        {"error": f"Rate limit exceeded: {exc.detail}"},
+        {"error": message, "detail": message, "code": "rate_limited"},
         status_code=429,
         headers={**exc.rate_headers, "Cache-Control": "no-store"},
     )
@@ -236,6 +241,15 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
         headers=exc.headers,
     )
 
+
+# A framework or dependency ``HTTPException`` (unknown route, wrong method, a bare 401/403) keeps its detail and headers
+# and gains a stable code; ``ApiHTTPException`` above and the rate limiter keep theirs (the most specific handler wins).
+app.add_exception_handler(StarletteHTTPException, handle_http_exception)
+# A 422 keeps FastAPI's ``detail`` list (``type``, ``loc``, ``msg``) without the submitted ``input`` and ``ctx``.
+app.add_exception_handler(RequestValidationError, handle_validation_error)
+# An exception nothing answered gets the JSON 500 (``RequestIdMiddleware`` builds the same body for what is raised below
+# it); Starlette's outermost middleware calls this one for what is raised outside it.
+app.add_exception_handler(Exception, handle_unhandled_exception)
 
 app.include_router(registrations.router)
 app.include_router(announcements.router)
