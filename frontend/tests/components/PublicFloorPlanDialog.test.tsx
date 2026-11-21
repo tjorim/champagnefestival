@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import type { EditionPlan } from "@/lib/api/planApi";
-import PublicFloorPlanDialog from "./PublicFloorPlanDialog";
+import PublicFloorPlanDialog from "@/components/PublicFloorPlanDialog";
 
 const area = (id: string, label: string, organizationId: number | null) => ({
   id,

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { localizedPublicPath, localizedPublicUrl, pathLocale } from "./localePath";
+import { localizedPublicPath, localizedPublicUrl, pathLocale } from "@/config/localePath";
 
 it("recognises only explicit public locale paths", () => {
   expect(pathLocale("/en")).toBe("en");

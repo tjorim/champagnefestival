@@ -14,7 +14,7 @@ import MyRegistrationsPage, { buildCheckInQrUrl } from "@/features/my-account/My
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/app/router";
 import { createTestQueryClientWrapper } from "../../utils/queryClient";
-import { selectAdminOption } from "../../helpers/adminSelect";
+import { selectAdminOption } from "../../utils/adminSelect";
 
 const authState = vi.hoisted(() => ({
   accessToken: null as string | null,

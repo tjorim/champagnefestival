@@ -1,7 +1,7 @@
 import { jsonResponse } from "@/mocks/response";
 import { eventOut, productOut } from "@/mocks/data/builders";
-import { readAdminOptions } from "../../../helpers/adminSelect";
-import { selectAdminOption } from "../../../helpers/adminSelect";
+import { readAdminOptions } from "../../../utils/adminSelect";
+import { selectAdminOption } from "../../../utils/adminSelect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";

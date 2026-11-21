@@ -5,7 +5,7 @@ import { HttpResponse, http } from "msw/http";
 import { beforeEach, describe, expect, it } from "vitest";
 import ComposerManagement from "@/features/admin/shared/ComposerManagement";
 import { server } from "@/mocks/server";
-import { readAdminOptions, selectAdminOption } from "../../../helpers/adminSelect";
+import { readAdminOptions, selectAdminOption } from "../../../utils/adminSelect";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
 const draftMessage: import("@/api-types").ComposedMessageOut = {

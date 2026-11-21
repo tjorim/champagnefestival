@@ -198,7 +198,7 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   explicitly: `HttpResponse.json<Api.Model>(...)`, `jsonResponse<Api.Model>(...)` from `@/mocks/response`, or
   `satisfies Api.Model` at a browser response boundary. `jsonResponse` uses `NoInfer` and defaults to `never`, so a
   payload never infers its own contract. The source guard `frontend/tests/types/fixtureContracts.test.ts` fails on a
-  fixture that is unchecked or erased (`as unknown`, `any`), and `frontend/tests/types/apiFixtures.ts` holds
+  fixture that is unchecked or erased (`as unknown`, `any`), and `frontend/tests/utils/apiFixtures.ts` holds
   compile-only negative checks.
 - A deliberately malformed, error, external-provider, control or persistence fixture is exempt only with a comment
   at the call site that says why, starting `Fixture exception:` or `Deliberately malformed:`.

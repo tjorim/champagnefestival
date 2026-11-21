@@ -1,4 +1,4 @@
-import { selectAdminOption } from "../../../helpers/adminSelect";
+import { selectAdminOption } from "../../../utils/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";

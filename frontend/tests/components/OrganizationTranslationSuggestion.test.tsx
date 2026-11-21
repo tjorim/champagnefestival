@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
-import OrganizationTranslationSuggestion from "./OrganizationTranslationSuggestion";
+import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
 import ItemModal from "@/features/admin/editions/ItemModal";
 

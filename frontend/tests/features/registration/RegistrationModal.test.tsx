@@ -8,7 +8,7 @@ import { server } from "@/mocks/server";
 import type { Event, Product } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import { createTestQueryClientWrapper } from "../../utils/queryClient";
-import { selectAdminOption } from "../../helpers/adminSelect";
+import { selectAdminOption } from "../../utils/adminSelect";
 import { noEventTranslations } from "../../utils/eventFixtures";
 
 const authState = vi.hoisted(() => ({ accessToken: null as string | null }));

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { signageResponse } from "./signage";
+import { signageResponse } from "@/sw/signage";
 
 describe("public signage worker cache", () => {
   const match = vi.fn();

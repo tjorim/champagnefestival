@@ -17,7 +17,7 @@ export default defineConfig(async (env) => {
       ...config.test,
       projects: undefined,
       environment: "happy-dom",
-      include: ["tests/components/Dialog.test.tsx"],
+      include: ["tests/components/ui/Dialog.test.tsx"],
       setupFiles: ["./tests/redact-runtime-setup.ts", "./tests/setup.ts"],
       server: { deps: { inline: true } },
       alias: {

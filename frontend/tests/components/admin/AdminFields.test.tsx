@@ -13,7 +13,7 @@ import {
   AdminOptionGroup,
   AdminSelect,
 } from "@/components/admin/AdminFields";
-import { readAdminOptions, selectAdminOption } from "../helpers/adminSelect";
+import { readAdminOptions, selectAdminOption } from "../../utils/adminSelect";
 
 function Selection() {
   const [value, setValue] = useState("a");

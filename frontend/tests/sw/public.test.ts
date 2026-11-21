@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { activatePublicCache, publicResponse } from "./public";
+import { activatePublicCache, publicResponse } from "@/sw/public";
 const network = vi.fn();
 const match = vi.fn();
 const put = vi.fn();

@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw/http";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
-import { useMaintenanceMode } from "./useMaintenanceMode";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 
 function setup() {
   const client = new QueryClient({

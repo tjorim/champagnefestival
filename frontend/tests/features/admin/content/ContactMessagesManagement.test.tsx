@@ -5,13 +5,13 @@ import { delay } from "msw/utils/delay";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ContactMessagesManagement from "@/features/admin/content/ContactMessagesManagement";
 import { server } from "@/mocks/server";
-import { resetAdminTableSearch } from "../../../helpers/adminTableRouter";
-import { selectAdminOptionByLabel } from "../../../helpers/adminSelect";
+import { resetAdminTableSearch } from "../../../utils/adminTableRouter";
+import { selectAdminOptionByLabel } from "../../../utils/adminSelect";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
 vi.mock(
   "@tanstack/react-router",
-  async () => (await import("../../../helpers/adminTableRouter")).adminTableRouterMock,
+  async () => (await import("../../../utils/adminTableRouter")).adminTableRouterMock,
 );
 
 const message = (id: string, name: string, handled_at: string | null = null) => ({

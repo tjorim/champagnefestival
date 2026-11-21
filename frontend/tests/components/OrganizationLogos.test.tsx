@@ -5,8 +5,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
-import OrganizationLogoUpload from "./OrganizationLogoUpload";
-import OrganizationLogoPreview from "./OrganizationLogoPreview";
+import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
+import OrganizationLogoPreview from "@/components/OrganizationLogoPreview";
 import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
 
 function mount(child: React.ReactNode) {
