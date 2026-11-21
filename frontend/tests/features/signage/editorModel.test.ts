@@ -6,7 +6,7 @@ import {
   missingBindings,
   newLayer,
   validTemplate,
-} from "./editorModel";
+} from "@/features/signage/editorModel";
 
 describe("signage template requirements", () => {
   it("requires the sponsor slot because organisation playlists include sponsors", () => {
@@ -27,7 +27,7 @@ describe("signage template requirements", () => {
 });
 
 it("resizes along rotated axes while keeping the opposite corner anchored", async () => {
-  const { resizeLayer } = await import("./editorModel");
+  const { resizeLayer } = await import("@/features/signage/editorModel");
   const layer = { ...newLayer("shape"), x: 30, y: 30, rotation: 90 };
   const result = resizeLayer(layer, 0, 192);
   expect(result.width).toBeCloseTo(50);

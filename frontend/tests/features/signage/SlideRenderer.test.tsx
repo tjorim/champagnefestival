@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { m } from "@/paraglide/messages";
-import { SlideRenderer } from "./SlideRenderer";
-import type { Layer, PublicSlide } from "./types";
+import { SlideRenderer } from "@/features/signage/SlideRenderer";
+import type { Layer, PublicSlide } from "@/features/signage/types";
 
 function slide(binding: Layer["binding"]): PublicSlide {
   return {

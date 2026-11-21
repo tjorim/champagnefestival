@@ -3,12 +3,12 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { http } from "msw/http";
-import SignageChannels from "@/components/admin/SignageChannels";
+import SignageChannels from "@/features/signage/SignageChannels";
 import { server } from "@/mocks/server";
 import { m } from "@/paraglide/messages";
 import { setLocale } from "@/paraglide/runtime";
-import { renderLocation } from "../utils/locationRouter";
-import { createTestQueryClientWrapper } from "../utils/queryClient";
+import { renderLocation } from "../../utils/locationRouter";
+import { createTestQueryClientWrapper } from "../../utils/queryClient";
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 

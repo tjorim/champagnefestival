@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimateOffset, slideAtTime } from "./clock";
+import { estimateOffset, slideAtTime } from "@/features/signage/clock";
 
 describe("signage clock", () => {
   it("uses the least delayed sample even with a wrong device clock", () => {

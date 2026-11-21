@@ -1,4 +1,4 @@
-import { AdminEmptyState } from "./AdminEmptyState";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import {
@@ -16,9 +16,15 @@ import {
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/button";
-import { AdminField, AdminLabel, AdminSelect, AdminOption, AdminOptionGroup } from "./AdminFields";
+import {
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+  AdminOptionGroup,
+} from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
-import type { Layer } from "@/signage/types";
+import type { Layer } from "./types";
 
 interface Props {
   layers: Layer[];

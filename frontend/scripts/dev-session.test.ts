@@ -56,7 +56,7 @@ describe("development browser session", () => {
     expect(tags(env, { filename: index })).toBeUndefined();
     expect(
       tags(env, {
-        filename: resolve(import.meta.dirname, "../src/signage/offline-player.html"),
+        filename: resolve(import.meta.dirname, "../src/features/signage/offline-player.html"),
         server: {},
       }),
     ).toBeUndefined();

@@ -51,7 +51,7 @@ const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
 const EmailCategoryManagement = React.lazy(() => import("./EmailCategoryManagement"));
 const FaqManagement = React.lazy(() => import("./FaqManagement"));
 const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
-const SignageSection = React.lazy(() => import("./SignageSection"));
+const SignageSection = React.lazy(() => import("@/features/signage/SignageSection"));
 const PolicyManagement = React.lazy(() => import("./PolicyManagement"));
 const SettingsManagement = React.lazy(() => import("./SettingsManagement"));
 const ContactMessagesManagement = React.lazy(() => import("./ContactMessagesManagement"));

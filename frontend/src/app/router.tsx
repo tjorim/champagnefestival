@@ -197,7 +197,7 @@ export function createAppRouter({
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/signage/$channel",
-      component: lazyRouteComponent(() => import("@/signage/SignagePage")),
+      component: lazyRouteComponent(() => import("@/features/signage/SignagePage")),
     }),
     ...(["/en", "/fr"] as const).map((path) =>
       createRoute({

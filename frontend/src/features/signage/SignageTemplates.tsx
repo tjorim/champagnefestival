@@ -1,4 +1,4 @@
-import { AdminEmptyState } from "./AdminEmptyState";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
@@ -13,13 +13,13 @@ import {
   AdminSelect,
   AdminOption,
   AdminTextarea,
-} from "./AdminFields";
+} from "@/components/admin/AdminFields";
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { SlideRenderer } from "@/signage/SlideRenderer";
-import { signageIcons } from "@/signage/icons";
+import { SlideRenderer } from "./SlideRenderer";
+import { signageIcons } from "./icons";
 import {
   addMissingBindings,
   moveLayer,
@@ -31,13 +31,13 @@ import {
   type Template,
   type TemplateDraft,
   type TemplateKind,
-} from "@/signage/editorModel";
-import type { Layer, PublicSlide } from "@/signage/types";
-import "@/signage/editor.css";
-import AdminEditorDialog from "./AdminEditorDialog";
+} from "./editorModel";
+import type { Layer, PublicSlide } from "./types";
+import "./editor.css";
+import AdminEditorDialog from "@/components/admin/AdminEditorDialog";
 import SignageLayerPanel from "./SignageLayerPanel";
 import { PencilIcon } from "lucide-react";
-import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
+import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 
 const labels = () => ({
   name: m.signage_editor_name(),

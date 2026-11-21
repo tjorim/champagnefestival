@@ -1,6 +1,6 @@
 import { TemplateEditor } from "./SignageTemplates";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { AdminEmptyState } from "./AdminEmptyState";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,7 +24,7 @@ import {
   AdminOption,
   AdminCheck,
   AdminTextarea,
-} from "./AdminFields";
+} from "@/components/admin/AdminFields";
 import {
   signageRequest,
   signageOperationErrorMessage,
@@ -34,7 +34,7 @@ import {
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { missingBindings, type Template } from "@/signage/editorModel";
+import { missingBindings, type Template } from "./editorModel";
 import {
   emptySlide,
   validSlide,
@@ -44,15 +44,15 @@ import {
   type ChannelDraft,
   type Slide,
   type SlideDraft,
-} from "@/signage/playlistModel";
-import type { Playlist } from "@/signage/types";
-import { SlideRenderer } from "@/signage/SlideRenderer";
-import { signageIcons } from "@/signage/icons";
-import "@/signage/editor.css";
+} from "./playlistModel";
+import type { Playlist } from "./types";
+import { SlideRenderer } from "./SlideRenderer";
+import { signageIcons } from "./icons";
+import "./editor.css";
 import SignageVideoExports from "./SignageVideoExports";
-import AdminEditorDialog from "./AdminEditorDialog";
+import AdminEditorDialog from "@/components/admin/AdminEditorDialog";
 import { editionDisplayNameWithType } from "@/lib/editions/editionName";
-import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
+import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 
 const channelPath = (slug: string) => `/signage/${slug}`;
 
@@ -492,7 +492,7 @@ export default function SignageChannels({
                         { headers: authHeaders() },
                         m.signage_export_error(),
                       );
-                      const { downloadExport } = await import("@/signage/export");
+                      const { downloadExport } = await import("./export");
                       await downloadExport(playlist, item.slug, bundle, {
                         start: m.signage_start(),
                         setup: m.signage_export_setup(),

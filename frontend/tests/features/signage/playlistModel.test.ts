@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptySlide, validSlide, moveSlide, localSchedule } from "./playlistModel";
+import { emptySlide, validSlide, moveSlide, localSchedule } from "@/features/signage/playlistModel";
 describe("playlist editing contracts", () => {
   it("requires notice text, bounded duration and ordered schedule", () => {
     const slide = { ...emptySlide("hall", 0), template_id: "template", kind: "notice" as const };

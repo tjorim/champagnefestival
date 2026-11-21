@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
 import { toBlob } from "html-to-image";
-import { exportArchive, offlineHtml, renderSlideImages } from "./export";
-import type { Playlist } from "./types";
+import { exportArchive, offlineHtml, renderSlideImages } from "@/features/signage/export";
+import type { Playlist } from "@/features/signage/types";
 
 vi.mock("html-to-image", () => ({
   toBlob: vi.fn().mockRejectedValue(new Error("Capture failed")),

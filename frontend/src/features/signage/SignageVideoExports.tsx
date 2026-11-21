@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { AdminField, AdminLabel, AdminSelect, AdminOption } from "./AdminFields";
+import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
 import {
   signageRequest,
   fetchJsonOrThrowWithUnauthorized,
@@ -11,8 +11,8 @@ import {
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
-import type { Channel } from "@/signage/playlistModel";
-import type { Playlist } from "@/signage/types";
+import type { Channel } from "./playlistModel";
+import type { Playlist } from "./types";
 
 type Job = import("@/api-types").VideoExportOut;
 type State = Job["state"];
@@ -99,7 +99,7 @@ export default function SignageVideoExports({
       currentJob.current = job.id;
       await refresh();
       if (job.state === "preparing" && "epoch" in job.playlist) {
-        const { renderSlideImages } = await import("@/signage/export");
+        const { renderSlideImages } = await import("./export");
         let totalBytes = 0;
         await renderSlideImages(job.playlist, {
           signal: abort.signal,
