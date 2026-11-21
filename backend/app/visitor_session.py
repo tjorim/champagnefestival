@@ -43,7 +43,7 @@ SESSION_IDLE_TIMEOUT = timedelta(days=7)
 SESSION_HARD_CAP = timedelta(days=30)
 
 #: auth_source value for AuditEntry rows written under a visitor session —
-#: see AuditEntry.actor's docstring in app/models.py.
+#: see AuditEntry.actor's docstring in app/models/.
 VISITOR_AUTH_SOURCE = "visitor_session"
 
 COOKIE_NAME = "visitor_session"

@@ -7,10 +7,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection
 from sqlalchemy.engine.url import make_url
 
+# Import every model module (app.models imports them all) so Alembic can detect schema changes
+import app.models  # noqa: F401
 from alembic import context
-
-# Import our models so Alembic can detect schema changes
-from app.models import Base  # noqa: F401
+from app.db.base import Base
 
 config = context.config
 if config.config_file_name is not None:
