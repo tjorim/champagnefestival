@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   backend:
-    name: Backend
+    name: Checks
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne

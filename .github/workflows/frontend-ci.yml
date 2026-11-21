@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   frontend:
-    name: Frontend
+    name: Checks
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,7 +69,7 @@ jobs:
   # aggregate is named `Frontend / E2E Tests (Chromium)`. See
   # frontend/e2e/README.md ("CI sharding") for the measurements behind these numbers.
   e2e-shard:
-    name: Frontend / E2E shard ${{ matrix.shard }}/4
+    name: E2E shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
     # A stuck or systematically failing run (retries double it) must not occupy a runner for hours.
     timeout-minutes: 30
@@ -130,7 +130,7 @@ jobs:
           retention-days: 7
 
   e2e-signage:
-    name: Frontend / E2E signage (production build)
+    name: E2E signage (production build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -176,7 +176,7 @@ jobs:
   # The required status check. It fails if any shard or the signage suite failed, was
   # cancelled or never ran, so a hidden shard failure cannot pass the CI gate.
   e2e:
-    name: Frontend / E2E Tests (Chromium)
+    name: E2E Tests (Chromium)
     needs: [e2e-shard, e2e-signage]
     if: always()
     runs-on: ubuntu-latest
