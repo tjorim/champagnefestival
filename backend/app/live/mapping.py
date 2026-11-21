@@ -7,8 +7,8 @@ must stay in sync with ``frontend/src/lib/query/queryKeys.ts``.
 
 from __future__ import annotations
 
+from app.core.ids import make_id
 from app.live.events import LiveEvent, LiveScope
-from app.utils import make_id
 
 # ---------------------------------------------------------------------------
 # TanStack Query key constants — must match frontend/src/lib/query/queryKeys.ts

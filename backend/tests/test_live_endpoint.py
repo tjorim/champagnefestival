@@ -13,7 +13,7 @@ import json
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
-from app.auth import require_volunteer
+from app.core.auth import require_volunteer
 from app.live import live_bus
 from app.live.mapping import check_in_changed, seating_changed
 from app.main import app

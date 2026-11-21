@@ -21,8 +21,8 @@ import requests
 from pywebpush import WebPushException, webpush
 from sqlalchemy import delete, update
 
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.session import async_session_factory
 from app.models import PushSubscription
 
 logger = logging.getLogger(__name__)

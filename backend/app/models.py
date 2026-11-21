@@ -34,9 +34,9 @@ from sqlalchemy import (
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
-from app.database import Base
-from app.dialect_functions import json_array_elements, trim_spaces
-from app.translations import BASE_LANGUAGE, resolve_pair, resolve_text
+from app.core.translations import BASE_LANGUAGE, resolve_pair, resolve_text
+from app.db.base import Base
+from app.db.dialect_functions import json_array_elements, trim_spaces
 
 
 def _utcnow() -> datetime:
@@ -1384,7 +1384,7 @@ class AuditEntry(Base):
     actor: Mapped[str] = mapped_column(String(255), index=True)
     """OIDC ``sub`` claim, client IP for token-gated ops (``auth_source ==
     "token"``, set only by ``get_client_ip``'s callers — see
-    ``app.ratelimit.get_client_ip``, whose fallback value is the literal
+    ``app.core.ratelimit.get_client_ip``, whose fallback value is the literal
     string ``"unknown"`` when the connection has no resolvable peer), a
     visitor session's opaque ``User.id`` (``auth_source == "visitor_session"``
     — never the verified email itself, which would put PII in an audit trail
@@ -1413,12 +1413,12 @@ class AuditEntry(Base):
 class RateLimitBucket(Base):
     """Cross-worker fixed-window rate-limit counter (#932 decision 1).
 
-    Backs ``app.ratelimit.check_rate_limit_pg`` — the Postgres-backed
+    Backs ``app.core.ratelimit.check_rate_limit_pg`` — the Postgres-backed
     replacement for check-in's per-registration limit and shared-IP backstop,
     the two scopes this decision migrates off the in-process deque so they're
     enforced consistently across worker processes. ``key`` packs ``scope`` and
     the caller's bucket key (an IP or registration ID) with a separator that
-    can't appear in either half; see ``app.ratelimit._bucket_key``. Swept daily
+    can't appear in either half; see ``app.core.ratelimit._bucket_key``. Swept daily
     by ``app.worker`` alongside the outbox cleanup.
     """
 

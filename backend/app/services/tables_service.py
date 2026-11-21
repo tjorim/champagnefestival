@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Layout, Registration, Table, TableType
@@ -26,7 +27,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, table_to_out
+from app.services.serializers import table_to_out
 
 logger = logging.getLogger(__name__)
 

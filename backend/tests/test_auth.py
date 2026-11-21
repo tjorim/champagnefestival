@@ -6,7 +6,7 @@ import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app import auth
+from app.core import auth
 
 
 def _credentials() -> HTTPAuthorizationCredentials:
@@ -195,7 +195,7 @@ async def test_get_optional_claims_validates_supplied_credentials(monkeypatch) -
 
 @pytest.mark.asyncio
 async def test_get_current_claims_raises_401_on_invalid_token(monkeypatch) -> None:
-    from app.oidc_config import OIDCTokenError
+    from app.core.oidc import OIDCTokenError
 
     async def fake_decode_token(_token: str) -> dict:
         raise OIDCTokenError("invalid")

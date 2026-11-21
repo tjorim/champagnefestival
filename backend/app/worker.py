@@ -13,8 +13,8 @@ from app.composer_delivery import (
     deliver_composer_message_dispatch,
     deliver_composer_push,
 )
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.session import async_session_factory
 from app.email import (
     deliver_contact_notification,
     deliver_organization_change_notification,

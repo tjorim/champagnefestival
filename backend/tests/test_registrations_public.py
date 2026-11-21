@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
-from app.auth import get_optional_claims
+from app.core.auth import get_optional_claims
 from app.main import app
 from app.models import EmailConsent, EmailConsentConfirmation, OutboxJob, Registration, User
 from tests.helpers import (

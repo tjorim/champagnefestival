@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.oidc_config import OIDCTokenError, decode_token
+from app.core.oidc import OIDCTokenError, decode_token
 
 logger = logging.getLogger(__name__)
 

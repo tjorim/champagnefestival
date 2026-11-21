@@ -4,7 +4,7 @@ for server-rendered pages (#992).
 paraglide-js compiles the frontend's translations into the JS bundle at
 build time; this backend process only has ``frontend/dist`` mounted in
 production (the built shell and its hashed assets, not the ``messages/``
-source files — see ``app.config.Settings.frontend_dist_path``), so
+source files — see ``app.core.config.Settings.frontend_dist_path``), so
 it cannot read the real translation files at runtime.
 
 These four keys are duplicated here instead, kept deliberately small and

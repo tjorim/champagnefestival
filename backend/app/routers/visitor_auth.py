@@ -17,11 +17,12 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import get_db
+from app.core.config import settings
+from app.core.ids import make_id
+from app.core.ratelimit import check_rate_limit, get_client_ip
+from app.db.session import get_db
 from app.email import send_account_sign_in_email, send_visitor_magic_link_email
 from app.models import User, VisitorMagicLink
-from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     RegistrationAccessLookupRequest,
     RegistrationGuestOut,
@@ -30,8 +31,8 @@ from app.schemas import (
     VisitorSessionStatus,
 )
 from app.services.errors import ApiHTTPException
+from app.services.serializers import registration_to_guest_out
 from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user_by_email
-from app.utils import make_id, registration_to_guest_out
 from app.visitor_session import (
     COOKIE_NAME,
     VISITOR_AUTH_SOURCE,

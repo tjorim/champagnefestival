@@ -22,13 +22,13 @@ import jwt
 from jwt.exceptions import ExpiredSignatureError, PyJWTError
 from jwt.types import Options
 
-from app.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 # Fixed claims returned for DEV_AUTH_BYPASS_TOKEN (see decode_token below) —
 # shaped like a real Keycloak-issued token so downstream code (realm role
-# extraction in app.auth) needs no bypass-specific handling.
+# extraction in app.core.auth) needs no bypass-specific handling.
 _DEV_BYPASS_CLAIMS: dict[str, Any] = {
     "sub": "dev-bypass-user",
     "preferred_username": "devuser",

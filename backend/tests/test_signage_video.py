@@ -11,8 +11,8 @@ from PIL import Image
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.auth import get_actor_id, require_admin
-from app.config import settings
+from app.core.auth import get_actor_id, require_admin
+from app.core.config import settings
 from app.main import app
 from app.models import SignageVideoExport
 from app.services import signage_video as service

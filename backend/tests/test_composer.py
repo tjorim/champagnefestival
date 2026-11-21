@@ -10,7 +10,7 @@ from pywebpush import WebPushException
 from sqlalchemy import select
 
 from app.composer_delivery import deliver_composer_message_dispatch, deliver_composer_push
-from app.config import settings
+from app.core.config import settings
 from app.models import Announcement, AuditEntry, ComposedMessage, OutboxJob
 from tests.helpers import ADMIN_HEADERS
 

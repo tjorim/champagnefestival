@@ -13,8 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import member_mail
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.core.translations import resolve_text
+from app.db.session import async_session_factory
 from app.member_mail import (
     MemberMail,
     MemberMailRejected,
@@ -28,7 +29,6 @@ from app.services.member_mail_audience import eligible_person
 from app.services.member_mail_render import compose_text
 from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url
 from app.services.outbox_service import enqueue_job
-from app.translations import resolve_text
 
 logger = logging.getLogger(__name__)
 

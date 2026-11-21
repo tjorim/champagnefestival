@@ -7,7 +7,7 @@ from datetime import date
 
 import pytest
 
-from app.auth import require_admin, require_volunteer
+from app.core.auth import require_admin, require_volunteer
 from app.main import app
 from app.services import stands_service
 from tests.helpers import ADMIN_HEADERS, _post_registration

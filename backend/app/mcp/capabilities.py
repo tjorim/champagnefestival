@@ -6,7 +6,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import AuthCheck, AuthContext, require_roles
 from mcp.types import ToolAnnotations
 
-from app.config import settings
+from app.core.config import settings
 from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
 
 TOOL_EFFECT_READ = "read"

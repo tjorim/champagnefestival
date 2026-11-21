@@ -4,7 +4,7 @@ Python 3.15 ships a sampling profiler in the standard library, `profiling.sampli
 
 ## Find the slow request first
 
-Start from the request log, not the profiler. Every response carries `Server-Timing: app;dur=…, db;desc="N queries";dur=…` (visible in the browser devtools Network tab), and a request slower than 300 ms is logged as a warning with its method, route template, status, duration and query count (`app/request_timing.py`). Many queries for one request is an N+1 pattern that the SQL log explains better than a profile does. A high `app` time with few queries is what a profile is for. `X-Request-ID` and `latency_ms` in the structured request log ([OBSERVABILITY.md](OBSERVABILITY.md)) tie the response to a log line.
+Start from the request log, not the profiler. Every response carries `Server-Timing: app;dur=…, db;desc="N queries";dur=…` (visible in the browser devtools Network tab), and a request slower than 300 ms is logged as a warning with its method, route template, status, duration and query count (`app/middleware/request_timing.py`). Many queries for one request is an N+1 pattern that the SQL log explains better than a profile does. A high `app` time with few queries is what a profile is for. `X-Request-ID` and `latency_ms` in the structured request log ([OBSERVABILITY.md](OBSERVABILITY.md)) tie the response to a log line.
 
 ## Local setup
 

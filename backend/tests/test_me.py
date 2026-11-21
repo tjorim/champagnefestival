@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import email as email_module
 from app import visitor_session as visitor_session_module
-from app.auth import require_admin
-from app.database import async_session_factory, get_db
+from app.core.auth import require_admin
+from app.db.session import async_session_factory, get_db
 from app.main import app
 from app.models import (
     AuditEntry,

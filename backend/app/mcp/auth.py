@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
+from app.core.config import settings
 
 
 def build_keycloak_auth(session_factory: async_sessionmaker | None = None) -> Any:
@@ -23,7 +23,7 @@ def build_keycloak_auth(session_factory: async_sessionmaker | None = None) -> An
     from app.mcp.integration_auth import IntegrationKeyTokenVerifier
 
     if session_factory is None:
-        from app.database import async_session_factory
+        from app.db.session import async_session_factory
 
         session_factory = async_session_factory
 

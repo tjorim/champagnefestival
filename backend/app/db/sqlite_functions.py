@@ -1,6 +1,6 @@
 """Python versions of the PostgreSQL functions the application calls, for SQLite.
 
-Registered on every SQLite connection by :mod:`app.sqlite_compat` (local development and the
+Registered on every SQLite connection by :mod:`app.db.sqlite_compat` (local development and the
 test suite only; production is PostgreSQL). They follow the extension each one comes from:
 
 * ``unaccent`` (the ``unaccent`` extension)
@@ -9,7 +9,7 @@ test suite only; production is PostgreSQL). They follow the extension each one c
 * ``greatest`` and ``json_extract_path_text`` (core PostgreSQL)
 
 and the two helpers the person search trigger uses, mirroring
-``update_person_operational_search_values`` in :mod:`app.operational_search_schema`.
+``update_person_operational_search_values`` in :mod:`app.db.operational_search`.
 """
 
 from __future__ import annotations

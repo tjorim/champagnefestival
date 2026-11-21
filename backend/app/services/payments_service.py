@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, PaymentTransaction, Person, Registration
@@ -43,7 +44,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import edition_display_name, make_id
+from app.services.serializers import edition_display_name
 
 PAYMENT_TRANSACTION_SCOPE = "payments.record_transaction"
 

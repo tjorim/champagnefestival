@@ -75,7 +75,7 @@ Other frontend scripts follow the shared names: `test:watch`, `test:e2e`, `test:
 > **Prerequisites:** none. Tests and a local dev instance both run on SQLite by default, so no
 > container is needed. The suite takes under two minutes that way (about four on PostgreSQL).
 > Production runs on PostgreSQL and CI runs the whole suite against it too. What SQLite cannot
-> do, `app/sqlite_compat.py` and `app/sqlite_functions.py` stand in for: UTC datetimes, foreign
+> do, `app/db/sqlite_compat.py` and `app/db/sqlite_functions.py` stand in for: UTC datetimes, foreign
 > keys, the `pg_trgm`/`unaccent` search functions and their triggers, and an in-process
 > `pg_notify` that reaches the live-update stream on commit. Tests that exercise real
 > PostgreSQL behaviour (concurrent sessions and locks, the Alembic migrations, the ledger

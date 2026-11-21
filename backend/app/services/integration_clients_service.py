@@ -24,10 +24,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import IntegrationClient
 from app.schemas import IntegrationClientOut
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.utils import make_id
 
 TOKEN_PREFIX = "cfic_"
 ALLOWED_ROLES = ("admin", "volunteer")

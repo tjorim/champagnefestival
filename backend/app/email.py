@@ -17,10 +17,10 @@ import qrcode
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.session import async_session_factory
 from app.models import ContactMessage, Event, Person, Registration
-from app.utils import order_item_name
+from app.services.serializers import order_item_name
 
 logger = logging.getLogger(__name__)
 

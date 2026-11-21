@@ -7,8 +7,8 @@ import httpx
 import pytest
 from sqlalchemy import func, select
 
-from app.auth import require_admin
-from app.config import settings
+from app.core.auth import require_admin
+from app.core.config import settings
 from app.main import app
 from app.models import AuditEntry, OrganizationChange, OutboxJob
 from app.services import organization_translation as translation
@@ -199,7 +199,7 @@ async def test_non_admin_is_rejected(client, service, monkeypatch, roles):
         return {"sub": "non-admin", "realm_access": {"roles": roles}}
 
     app.dependency_overrides.pop(require_admin)
-    monkeypatch.setattr("app.auth._decode_or_401", decode)
+    monkeypatch.setattr("app.core.auth._decode_or_401", decode)
     for method in ("GET", "POST"):
         response = await client.request(
             method,

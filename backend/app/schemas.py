@@ -1923,7 +1923,7 @@ class TableTypeCreate(RequestModel):
 
     @model_validator(mode="after")
     def normalise_dimensions(self) -> Self:
-        from app.utils import normalise_table_type_dimensions
+        from app.core.geometry import normalise_table_type_dimensions
 
         self.width_m, self.length_m = normalise_table_type_dimensions(self.shape, self.width_m, self.length_m)
         return self

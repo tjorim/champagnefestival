@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.dependencies import ListQuery, get_request_id
-from app.dialect_functions import json_array_elements_text
+from app.core.auth import get_actor_id, require_admin
+from app.core.dependencies import ListQuery, get_request_id
+from app.db.dialect_functions import json_array_elements_text
+from app.db.session import get_db
 from app.models import Event, Person, Registration
 from app.openapi_responses import binary_response
 from app.schemas import (
@@ -45,7 +45,7 @@ from app.services.people_listing import (
     reward_due,
     role_active,
 )
-from app.utils import person_to_out, registration_to_list_out
+from app.services.serializers import person_to_out, registration_to_list_out
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
 # 7 years after a person's most recent registration's event date. 365.25 days/year

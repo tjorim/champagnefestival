@@ -36,7 +36,8 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.dependencies import SortDirection
+from app.core.dependencies import SortDirection
+from app.core.translations import Language
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -104,7 +105,6 @@ from app.schemas import (
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.services.people_listing import PersonSortKey
 from app.signage_schemas import SlideKind as SignageSlideKind
-from app.translations import Language
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -208,7 +208,7 @@ class ChampagneFestivalMcpBackend:
     def _actor(self) -> str:
         """Return the OIDC ``sub`` claim for audit logging, or ``'anonymous'``.
 
-        MCP equivalent of ``app.auth.get_actor_id`` — there is no ``request.state``
+        MCP equivalent of ``app.core.auth.get_actor_id`` — there is no ``request.state``
         to read from, so this reads the ``sub`` claim directly off the access token.
         """
         token = get_access_token()
@@ -3100,7 +3100,7 @@ def create_mcp_server(
         token is provided via another mechanism.
     """
     if session_factory is None:
-        from app.database import async_session_factory as _default_factory
+        from app.db.session import async_session_factory as _default_factory
 
         session_factory = _default_factory
 

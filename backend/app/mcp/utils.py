@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, Person, Registration
 from app.services.errors import ServiceError
-from app.utils import event_text_dict
+from app.services.serializers import event_text_dict
 
 ROLE_ADMIN = "admin"
 ROLE_VOLUNTEER = "volunteer"

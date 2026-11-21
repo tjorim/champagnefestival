@@ -10,8 +10,8 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import DeliveryAttempt, OutboxJob, PollDeletionNotification
-from app.utils import make_id
 
 REGISTRATION_CONFIRMATION = "registration_confirmation"
 CONTACT_NOTIFICATION = "contact_notification"

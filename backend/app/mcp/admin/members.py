@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.dependencies import SortDirection
+from app.core.dependencies import SortDirection
 from app.mcp.utils import as_value_error, dump_response, validate_with_schema
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import members_service
@@ -26,8 +26,8 @@ from app.services.people_listing import (
     last_attended,
     order_people_stmt,
 )
+from app.services.serializers import person_admin_summary_out
 from app.services.settings_service import get_or_create_settings
-from app.utils import person_admin_summary_out
 
 
 async def create_member(

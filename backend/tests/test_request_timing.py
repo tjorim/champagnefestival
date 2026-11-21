@@ -16,9 +16,9 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.types import Message, Receive, Scope, Send
 
-from app import request_timing
 from app.main import app as champagnefestival_app
-from app.request_timing import RequestTimingMiddleware
+from app.middleware import request_timing
+from app.middleware.request_timing import RequestTimingMiddleware
 from tests.conftest import TEST_DATABASE_URL
 
 # Queries run in SQLAlchemy's asyncio greenlets on asyncpg, as in production.

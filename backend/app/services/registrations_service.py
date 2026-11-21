@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, Person, Registration
@@ -51,7 +52,7 @@ from app.services.idempotency import (
     record_idempotency_key,
 )
 from app.services.outbox_service import enqueue_registration_confirmation
-from app.utils import make_id, registration_to_out
+from app.services.serializers import registration_to_out
 
 logger = logging.getLogger(__name__)
 

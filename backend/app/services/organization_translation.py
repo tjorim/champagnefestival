@@ -13,8 +13,8 @@ import httpx
 from fastapi import HTTPException
 from pydantic import Field
 
-from app.config import settings
-from app.ratelimit import check_rate_limit
+from app.core.config import settings
+from app.core.ratelimit import check_rate_limit
 from app.schema_types import NonEmptyText600
 from app.schemas import RequestModel, ResponseModel
 

@@ -61,11 +61,11 @@ async def test_metrics_response_includes_request_id(client, monkeypatch):
 
 @pytest.mark.anyio
 async def test_structured_log_contains_required_fields(client, caplog):
-    with caplog.at_level(logging.INFO, logger="app.observability"):
+    with caplog.at_level(logging.INFO, logger="app.core.observability"):
         r = await client.get("/api/health/liveness")
 
     assert r.status_code == 200
-    log_records = [rec for rec in caplog.records if rec.name == "app.observability"]
+    log_records = [rec for rec in caplog.records if rec.name == "app.core.observability"]
     assert log_records, "Expected at least one structured log record from observability middleware"
 
     msg = log_records[-1].message
@@ -80,11 +80,11 @@ async def test_structured_log_contains_required_fields(client, caplog):
 
 @pytest.mark.anyio
 async def test_structured_log_does_not_include_query_params(client, caplog):
-    with caplog.at_level(logging.INFO, logger="app.observability"):
+    with caplog.at_level(logging.INFO, logger="app.core.observability"):
         r = await client.get("/api/health/liveness?sensitive=secret-token")
 
     assert r.status_code == 200
-    log_records = [rec for rec in caplog.records if rec.name == "app.observability"]
+    log_records = [rec for rec in caplog.records if rec.name == "app.core.observability"]
     assert log_records
     msg = log_records[-1].message
     assert "sensitive" not in msg

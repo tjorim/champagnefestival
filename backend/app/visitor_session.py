@@ -9,7 +9,7 @@ for emailed credentials. This makes the confirmed 7-day sliding idle window
 never extended) simple row operations instead of needing token-revocation
 infrastructure a stateless JWT would require for the same properties.
 
-Structurally separate from staff OIDC auth (``app.auth``): ``require_admin``,
+Structurally separate from staff OIDC auth (``app.core.auth``): ``require_admin``,
 ``require_volunteer``, and every other staff-only dependency never look at
 this cookie at all, so there is no code path in which a visitor session could
 satisfy them (decision 3's scope-limit requirement) — enforced by simply
@@ -29,12 +29,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import get_db
+from app.core.config import settings
+from app.core.ids import make_id
+from app.core.oidc import OIDCTokenError, decode_token
+from app.db.session import get_db
 from app.models import User, VisitorMagicLink, VisitorSession
-from app.oidc_config import OIDCTokenError, decode_token
 from app.services.users_service import resolve_oidc_user, verified_email_from_claims
-from app.utils import make_id
 
 #: Confirmed by the project owner 2026-09-06 — matches worktime's existing
 #: Keycloak realm session-length precedent exactly (sso_session_idle_timeout

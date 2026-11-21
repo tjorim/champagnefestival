@@ -12,9 +12,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.dependencies import ListQuery, get_request_id
+from app.core.auth import get_actor_id, require_admin
+from app.core.dependencies import ListQuery, get_request_id
+from app.db.session import get_db
 from app.openapi_responses import binary_response
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service

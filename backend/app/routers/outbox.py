@@ -7,9 +7,9 @@ from pydantic import ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
-from app.database import get_db
-from app.dependencies import Pagination
+from app.core.auth import require_admin
+from app.core.dependencies import Pagination
+from app.db.session import get_db
 from app.models import OutboxJob
 from app.schemas import ResponseModel
 

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.config import settings
+from app.core.config import settings
 from app.models import Policy, PolicyVersion
 from app.services.public_render import hero_preload_link
 from tests.helpers import ADMIN_HEADERS, _create_event

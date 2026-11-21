@@ -8,8 +8,8 @@ import httpx
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app import oidc_config as oc
-from app.config import settings
+from app.core import oidc as oc
+from app.core.config import settings
 from app.main import app
 from app.routers import auth
 

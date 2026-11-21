@@ -19,7 +19,7 @@ from app.models import Edition, Organization, Person
 from app.schemas import OrganizationCreate, OrganizationDescription, OrganizationOut, OrganizationUpdate
 from app.services import organization_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.utils import organization_to_out
+from app.services.serializers import organization_to_out
 
 DESCRIPTION_FIELDS = ("description_nl", "description_fr", "description_en")
 

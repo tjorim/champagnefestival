@@ -12,10 +12,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Area, Layout, Organization
 from app.schemas import AreaCreate, AreaOut, AreaUpdate
 from app.services.errors import NotFoundError, ValidationFailedError
-from app.utils import area_to_out, make_id
+from app.services.serializers import area_to_out
 
 
 async def _check_organization_assignable(db: AsyncSession, organization_id: int) -> None:

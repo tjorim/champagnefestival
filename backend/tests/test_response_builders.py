@@ -7,9 +7,10 @@ from typing import Any
 
 import pytest
 
-from app import schemas, utils
+from app import schemas
 from app.mcp.utils import dump_response
 from app.models import FaqItem, VolunteerPeriod
+from app.services import serializers as utils
 from app.services.volunteers_service import to_volunteer_out
 
 NOW = datetime(2026, 11, 15, 12, 30, tzinfo=UTC)

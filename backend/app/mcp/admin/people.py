@@ -18,7 +18,7 @@ from app.mcp.utils import MCPToolError, as_value_error, dump_response, get_or_er
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import people_service
-from app.utils import person_admin_summary_out
+from app.services.serializers import person_admin_summary_out
 
 
 async def create_person(

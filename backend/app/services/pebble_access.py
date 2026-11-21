@@ -10,8 +10,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.ids import make_id
 from app.models import PebbleAccessToken
-from app.utils import make_id
 
 TOKEN_PREFIX = "cfpat_"
 _LAST_USED_UPDATE_INTERVAL = timedelta(minutes=15)

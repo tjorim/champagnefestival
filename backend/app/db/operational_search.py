@@ -1,7 +1,7 @@
 """Database bootstrap statements for indexed operational person lookup."""
 
 # SQLite twin (local development and tests): the same derived columns, kept current by triggers that
-# call the Python functions of app.sqlite_functions. SQLite has no BEFORE-trigger assignment, so the
+# call the Python functions of app.db.sqlite_functions. SQLite has no BEFORE-trigger assignment, so the
 # trigger updates the row after it is written; UPDATE OF name, email keeps it from re-firing itself.
 _SQLITE_SET_SEARCH_VALUES = """
     UPDATE people SET

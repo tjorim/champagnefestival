@@ -22,7 +22,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, dump_response, validate_with_schema
 from app.schemas import EventCreate, EventUpdate
 from app.services import events_service
-from app.utils import event_to_summary_out
+from app.services.serializers import event_to_summary_out
 
 
 async def create_event(

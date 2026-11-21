@@ -14,9 +14,9 @@ from collections.abc import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import async_session_factory
-from app.ratelimit import cleanup_expired_rate_limit_buckets
+from app.core.config import settings
+from app.core.ratelimit import cleanup_expired_rate_limit_buckets
+from app.db.session import async_session_factory
 from app.services.email_consent_service import cleanup_expired_confirmations
 from app.services.outbox_service import cleanup_completed_jobs
 from app.services.push_service import cleanup_expired_subscriptions

@@ -7,11 +7,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.dialect_functions import assign_positions
+from app.core.ids import make_id
+from app.db.dialect_functions import assign_positions
 from app.models import Announcement
 from app.schemas import AnnouncementCreate, AnnouncementOut, AnnouncementUpdate, AnnouncementWrite
 from app.services.errors import NotFoundError, ValidationFailedError
-from app.utils import make_id
 
 
 def to_out(item: Announcement) -> AnnouncementOut:

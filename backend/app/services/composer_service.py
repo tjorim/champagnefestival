@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import member_mail
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.member_mail import MemberMailSkipped
 from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
 from app.schemas import (
@@ -31,7 +32,6 @@ from app.schemas import (
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.member_mail_audience import eligible_people
 from app.services.outbox_service import enqueue_job
-from app.utils import make_id
 
 COMPOSER_MESSAGE_DISPATCH = "composer_message_dispatch"
 _COMPOSER_MESSAGE_PUSH = "composer_message_push"

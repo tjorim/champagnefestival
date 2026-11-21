@@ -31,10 +31,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import violated_constraint_name
+from app.core.ids import make_id
+from app.db.session import violated_constraint_name
 from app.models import IdempotencyKey
 from app.services.errors import ConflictError
-from app.utils import make_id
 
 IDEMPOTENCY_REPLAY_WINDOW = timedelta(hours=72)
 

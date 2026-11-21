@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from app.dependencies import DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT
+from app.core.dependencies import DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT
 from app.models import Person
 from app.services.operational_search import normalize_text
 from tests.helpers import ADMIN_HEADERS

@@ -6,8 +6,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Request, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.openapi_responses import binary_response
 from app.schemas import FaqLocale, ServerTimeOut
 from app.services import edition_artwork

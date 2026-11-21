@@ -17,6 +17,8 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
+from app.db.queries import roles_contains
 from app.models import EditionPollOption, EditionPollQuestion, Person, Registration, VolunteerMealNote
 from app.schemas import (
     AdminPollOrderIn,
@@ -53,7 +55,6 @@ from app.services.poll_common import (
 )
 from app.services.poll_kinds import KINDS, kind_of
 from app.services.poll_notifications import queue_removed_answers
-from app.utils import make_id, roles_contains
 
 TEXT_FIELDS = ("title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en")
 

@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 from sqlalchemy import select
 
-from app.auth import require_admin
+from app.core.auth import require_admin
 from app.main import app
 from app.models import Area, AuditEntry, Edition, Layout, Organization, Room
 from app.services.signage_service import playlist
@@ -212,7 +212,7 @@ async def test_schedule_boundaries_and_template_revision(client, db_session):
 
 @pytest.mark.anyio
 async def test_assets_and_admin_auth(client, db_session, monkeypatch, tmp_path):
-    from app.config import settings
+    from app.core.config import settings
 
     monkeypatch.setattr(settings, "edition_artwork_public_root", str(tmp_path))
     image = BytesIO()

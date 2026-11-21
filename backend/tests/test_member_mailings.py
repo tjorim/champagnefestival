@@ -13,8 +13,8 @@ from sqlalchemy import select
 
 from app import member_mail
 from app.composer_delivery import deliver_composer_email, deliver_composer_message_dispatch
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.session import async_session_factory
 from app.member_mail import (
     MemberMail,
     MemberMailRejected,
@@ -466,7 +466,7 @@ async def test_unsubscribe_is_unavailable_without_a_signing_key(unauth_client):
 def test_signing_key_must_be_long_enough():
     from pydantic import ValidationError
 
-    from app.config import Settings
+    from app.core.config import Settings
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, member_mail_signing_key="short")

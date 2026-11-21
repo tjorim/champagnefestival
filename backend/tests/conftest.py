@@ -11,15 +11,19 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-import app.ratelimit as ratelimit_module
+import app.core.ratelimit as ratelimit_module
 import app.routers.public_pages as public_pages_module
-from app import sqlite_compat
-from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
-from app.database import Base, get_db
+from app.core.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
+from app.db import sqlite_compat
+from app.db.base import Base
+from app.db.operational_search import (
+    OPERATIONAL_SEARCH_SCHEMA_STATEMENTS,
+    OPERATIONAL_SEARCH_SQLITE_STATEMENTS,
+)
+from app.db.payment_ledger import PAYMENT_LEDGER_SCHEMA_STATEMENTS
+from app.db.session import get_db
 from app.main import app
 from app.models import EmailCategory, EventCategory, ProductCategory
-from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS, OPERATIONAL_SEARCH_SQLITE_STATEMENTS
-from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 from app.services.email_categories_service import DEFAULT_EMAIL_CATEGORIES
 from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user

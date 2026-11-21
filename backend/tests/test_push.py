@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from pywebpush import WebPushException
 from sqlalchemy import select
 
-from app.config import Settings, settings
+from app.core.config import Settings, settings
 from app.models import AuditEntry, OutboxJob, PushSubscription
 from app.push import _resolves_to_public_address, deliver_web_push_test
 from app.services.push_service import cleanup_expired_subscriptions

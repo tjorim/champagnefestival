@@ -24,8 +24,8 @@ from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from app.core.translations import resolve_text
 from app.services.frontend_i18n_snippets import FESTIVAL_NAME, WELCOME_SUBTITLE, Locale
-from app.translations import resolve_text
 
 _BRUSSELS = ZoneInfo("Europe/Brussels")
 _FESTIVAL_START_HOUR = 17

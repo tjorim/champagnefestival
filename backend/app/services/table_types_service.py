@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Layout, Room, Table, TableType, Venue
 from app.schemas import TableTypeBulkOut, TableTypeCreate, TableTypeOut, TableTypeUpdate
 from app.services.errors import ConflictError, NotFoundError
@@ -21,7 +22,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, table_type_to_out
+from app.services.serializers import table_type_to_out
 
 _BULK_SCOPE = "table_types.bulk_create"
 
@@ -190,7 +191,7 @@ async def update_table_type(
     reshape_requested = body.shape is not None or body.width_m is not None or body.length_m is not None
     blast_radius: dict[str, int] = {}
     if reshape_requested:
-        from app.utils import normalise_table_type_dimensions
+        from app.core.geometry import normalise_table_type_dimensions
 
         tt.width_m, tt.length_m = normalise_table_type_dimensions(tt.shape, tt.width_m, tt.length_m)
         if tt.width_m != pre_width and "width_m" not in fields_changed:

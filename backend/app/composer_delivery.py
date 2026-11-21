@@ -38,8 +38,8 @@ from app import member_mail
 from app.audit import write_audit_entry
 from app.composer_content import build_composer_payload as _build_composer_payload
 from app.composer_content import pick_locale_text as _pick_locale_text
-from app.config import settings
-from app.database import async_session_factory
+from app.core.config import settings
+from app.db.session import async_session_factory
 from app.member_mail import (
     MemberMail,
     MemberMailRejected,

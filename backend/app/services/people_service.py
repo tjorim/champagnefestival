@@ -34,6 +34,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
+from app.db.queries import get_or_404
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
@@ -47,7 +49,7 @@ from app.services.member_email import (
     flush_member_changes,
 )
 from app.services.role_history import sync_roles
-from app.utils import get_or_404, make_id, person_to_out
+from app.services.serializers import person_to_out
 
 logger = logging.getLogger(__name__)
 

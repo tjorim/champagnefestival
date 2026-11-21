@@ -22,12 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
+from app.db.queries import get_or_404
 from app.models import Edition, EditionPollQuestion, Event, Layout, Registration, Room
 from app.schemas import EventCreate, EventOut, EventTextFields, EventUpdate
 from app.services import event_categories_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import event_to_summary_out, get_or_404, make_id
+from app.services.serializers import event_to_summary_out
 
 TEXT_FIELDS = (
     "title_nl",

@@ -7,9 +7,9 @@ from fastapi import Depends, FastAPI
 from httpx import ASGITransport, AsyncClient
 from limits import parse
 
-from app.config import Settings
+from app.core.config import Settings
 from app.main import general_rate_limit_exceeded
-from app.middleware import GeneralRateLimiter, GeneralRateLimitExceeded, add_trusted_host_middleware
+from app.middleware.setup import GeneralRateLimiter, GeneralRateLimitExceeded, add_trusted_host_middleware
 
 
 def _ping_app(settings: Settings | None = None) -> FastAPI:

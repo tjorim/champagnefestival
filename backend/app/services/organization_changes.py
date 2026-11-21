@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.config import settings
+from app.core.config import settings
 from app.models import Organization, OrganizationChange
 from app.schemas import OrganizationChangeOut, OrganizationChangeSubmit, OrganizationDescription
 from app.services import organization_logos

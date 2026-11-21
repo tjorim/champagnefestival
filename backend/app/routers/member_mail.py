@@ -10,8 +10,8 @@ caller-supplied value.
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.ratelimit import check_rate_limit, get_client_ip
+from app.core.ratelimit import check_rate_limit, get_client_ip
+from app.db.session import get_db
 from app.schemas import MemberMailUnsubscribeCategoryOut
 from app.services import member_mail_unsubscribe
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception

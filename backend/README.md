@@ -259,7 +259,7 @@ See `.env.example` for a template.
 ### Authentication
 
 - Admin API endpoints require a valid OIDC Bearer JWT (`Authorization: Bearer <token>`)
-  whose `realm_access.roles` claim includes `admin` — see `app/auth.py`.
+  whose `realm_access.roles` claim includes `admin` — see `app/core/auth.py`.
 - OIDC authorization/token endpoints are discovered from `GET /api/auth/oidc-config`,
   which the frontend and Android app both call to configure their auth flow.
 - Public endpoints (registration creation, check-in) do not require admin auth.
@@ -334,7 +334,7 @@ See `.env.example` for a template.
 ### Paged list contract
 
 `GET /api/people` and `GET /api/volunteers` share one list contract
-(`ListQuery` in `app/dependencies.py`, ordering and filtering in
+(`ListQuery` in `app/core/dependencies.py`, ordering and filtering in
 `app/services/people_listing.py`), so a table can drive them with plain query
 parameters and read `{items, total, limit, page}` back. `GET /api/registrations`
 follows the same shape.

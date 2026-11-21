@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.ids import make_id
 from app.models import AuditEntry
-from app.utils import make_id
 
 
 def audit_provenance(actor: str) -> tuple[str, str | None, str | None]:

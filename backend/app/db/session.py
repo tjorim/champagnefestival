@@ -10,12 +10,15 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 
-from app import sqlite_compat
-from app.config import settings
-from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS, OPERATIONAL_SEARCH_SQLITE_STATEMENTS
-from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
+from app.core.config import settings
+from app.db import sqlite_compat
+from app.db.base import Base
+from app.db.operational_search import (
+    OPERATIONAL_SEARCH_SCHEMA_STATEMENTS,
+    OPERATIONAL_SEARCH_SQLITE_STATEMENTS,
+)
+from app.db.payment_ledger import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 
 logger = logging.getLogger(__name__)
 
@@ -50,10 +53,6 @@ async_session_factory = async_sessionmaker(
     engine,
     expire_on_commit=False,
 )
-
-
-class Base(DeclarativeBase):
-    pass
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:

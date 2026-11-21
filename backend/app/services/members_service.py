@@ -24,13 +24,15 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
+from app.db.queries import get_or_404
 from app.models import Person
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services.errors import ApiHTTPException
 from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
-from app.utils import get_or_404, make_id, person_to_out
+from app.services.serializers import person_to_out
 
 
 def ensure_member_role(person: Person, *, started_on: date | None = None) -> None:

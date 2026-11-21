@@ -7,8 +7,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
-from app.auth import get_actor_id
-from app.config import settings
+from app.core.auth import get_actor_id
+from app.core.config import settings
 from app.main import app
 from app.mcp.admin import signage as mcp_signage
 from app.mcp.admin import signage_video as mcp_video

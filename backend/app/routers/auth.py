@@ -5,7 +5,7 @@ import logging
 import httpx
 from fastapi import APIRouter, HTTPException, status
 
-from app.config import settings
+from app.core.config import settings
 from app.schemas import ResponseModel
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class OidcDiscoveryConfig(ResponseModel):
 
 
 # Discovery results are stable for the lifetime of the process, like the JWKS
-# cache in app.oidc_config. Keyed by issuer so a config change is picked up.
+# cache in app.core.oidc. Keyed by issuer so a config change is picked up.
 _config_cache: dict[str, OidcDiscoveryConfig] = {}
 
 

@@ -8,7 +8,7 @@ import { m } from "@/paraglide/messages";
  * `year` and `month` identify an edition (the id is derived from them), so the
  * name is unambiguous without the edition type, which the screens show as its
  * own badge. The backend builds the same string for ledger rows
- * (`edition_display_name` in `backend/app/utils.py`); keep the two in step.
+ * (`edition_display_name` in `backend/app/services/serializers.py`); keep the two in step.
  */
 export function editionDisplayName(edition: { year: number; month: string }): string {
   const month = edition.month.trim();

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config import Settings
+from app.core.config import Settings
 from app.member_mail import MemberMail, get_member_mail_provider
 
 

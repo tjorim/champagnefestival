@@ -5,7 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.utils import csv_safe, edition_display_name, registration_to_guest_out
+from app.core.csv_safe import csv_safe
+from app.services.serializers import edition_display_name, registration_to_guest_out
 
 
 @pytest.mark.parametrize("prefix", ["=", "+", "-", "@", "\t", "\r", "\n"])

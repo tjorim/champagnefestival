@@ -1,8 +1,8 @@
-"""app.sqlite_functions: Python versions of the PostgreSQL functions, checked against the documented behaviour."""
+"""app.db.sqlite_functions: Python versions of the PostgreSQL functions, checked against the documented behaviour."""
 
 import pytest
 
-from app import sqlite_functions as f
+from app.db import sqlite_functions as f
 
 
 def test_similarity_matches_the_pg_trgm_documentation():

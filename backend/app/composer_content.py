@@ -2,8 +2,8 @@
 
 import json
 
+from app.core.translations import resolve_pair
 from app.push import _MAX_PAYLOAD_BYTES
-from app.translations import resolve_pair
 
 LOCALES = ("nl", "en", "fr")
 

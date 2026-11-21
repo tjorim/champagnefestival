@@ -9,15 +9,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.database import get_db
+from app.core.ratelimit import check_check_in_rate_limit, get_client_ip
+from app.db.session import get_db
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, Person, Registration, Table
-from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
 from app.services.errors import ApiHTTPException
 from app.services.registrations_service import ensure_registration_can_check_in
-from app.utils import registration_to_checkin_out
+from app.services.serializers import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)
 

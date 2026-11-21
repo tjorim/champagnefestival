@@ -15,6 +15,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
+from app.db.queries import get_or_404
 from app.models import EditionPollOption, VolunteerPollChoice, VolunteerPollSelection
 from app.schemas import (
     DietaryTag,
@@ -28,7 +30,6 @@ from app.services.errors import ApiHTTPException
 from app.services.poll_common import OPTION_ORDER, get_question_or_404, is_closed, lock_edition
 from app.services.poll_kinds import kind_of
 from app.services.poll_notifications import queue_removed_answers
-from app.utils import get_or_404, make_id
 
 
 def poll_option_to_out(

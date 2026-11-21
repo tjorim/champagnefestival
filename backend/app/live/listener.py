@@ -38,7 +38,7 @@ _RECONNECT_MAX_DELAY_SECONDS = 60.0
 def _to_asyncpg_dsn(database_url: str) -> str:
     """Strip the ``+asyncpg`` SQLAlchemy dialect suffix for direct asyncpg use.
 
-    ``app.config.Settings.validate_database_url`` already guarantees
+    ``app.core.config.Settings.validate_database_url`` already guarantees
     *database_url* starts with ``postgresql+asyncpg://``.
     """
     return database_url.replace("postgresql+asyncpg://", "postgresql://", 1)

@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Layout, Room, Venue
 from app.schemas import RoomBulkOut, RoomCreate, RoomOut, RoomUpdate
 from app.services.errors import ConflictError, NotFoundError
@@ -21,7 +22,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import make_id, room_to_out
+from app.services.serializers import room_to_out
 
 _BULK_SCOPE = "rooms.bulk_create"
 

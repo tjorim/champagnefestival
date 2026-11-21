@@ -12,11 +12,11 @@ request/response schemas, the request id) around it.
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.schemas import ProductChangePreviewOut, ProductCreate, ProductOut, ProductUpdate
 from app.services import products_service
-from app.utils import product_to_out
+from app.services.serializers import product_to_out
 
 router = APIRouter(
     prefix="/api/products",

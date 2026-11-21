@@ -37,7 +37,7 @@ acceptance gates are satisfied.
 
 ## Implementation pointers
 
-- Shared limits and notifications: [rate limits](../backend/app/ratelimit.py),
+- Shared limits and notifications: [rate limits](../backend/app/core/ratelimit.py),
   [publication](../backend/app/live/notify.py), [listener](../backend/app/live/listener.py).
 - Retention: [person service](../backend/app/services/people_service.py);
   production cleanup jobs live in the infrastructure repository.

@@ -9,7 +9,7 @@ from PIL import Image
 from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
+from app.core.config import settings
 from app.models import Organization
 from app.services import organization_changes, organization_logos
 from app.services.errors import ServiceError
@@ -182,8 +182,8 @@ def test_separate_roots(monkeypatch, storage):
 
 
 async def test_staff_roles_do_not_grant_logo_rights(client, manager, monkeypatch):
-    from app import auth
-    from app.auth import require_admin
+    from app.core import auth
+    from app.core.auth import require_admin
     from app.main import app
 
     await login(client, manager)

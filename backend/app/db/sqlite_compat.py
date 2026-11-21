@@ -9,7 +9,7 @@ container. This module covers what the application relies on that SQLite lacks:
 * Foreign keys, which SQLite ignores unless ``PRAGMA foreign_keys=ON`` runs per connection.
 * The PostgreSQL functions the queries call (``unaccent``, ``pg_trgm``'s ``similarity`` and
   ``word_similarity``, ``levenshtein_less_equal``, ``greatest``, ``json_extract_path_text``),
-  implemented in :mod:`app.sqlite_functions`.
+  implemented in :mod:`app.db.sqlite_functions`.
 * ``pg_notify`` and ``pg_advisory_xact_lock``, which the live-update relay and the
   serialised writers call as SQL functions. SQLite has one writer lock, so the advisory
   locks have nothing to do. A notification is queued on its connection and handed to the
@@ -33,7 +33,7 @@ from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app import sqlite_functions
+from app.db import sqlite_functions
 
 logger = logging.getLogger(__name__)
 

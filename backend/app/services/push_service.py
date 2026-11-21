@@ -15,10 +15,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.core.config import settings
+from app.core.ids import make_id
 from app.models import Event, PushSubscription
 from app.services.errors import ValidationFailedError
-from app.utils import make_id
 
 _CATEGORY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,49}$")
 _MAX_CATEGORIES = 10

@@ -7,8 +7,8 @@ import time
 import pytest
 from pydantic import ValidationError
 
-from app.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
-from app.observability import InMemoryRequestMetrics
+from app.core.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
+from app.core.observability import InMemoryRequestMetrics
 from app.routers.health import build_metrics_token
 
 # ---------------------------------------------------------------------------

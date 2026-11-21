@@ -7,8 +7,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.auth import require_admin
-from app.config import settings
+from app.core.auth import require_admin
+from app.core.config import settings
 from app.main import app
 from app.models import AuditEntry, OrganizationChange, OutboxJob
 from app.schemas import OrganizationChangeSubmit
@@ -139,7 +139,7 @@ async def test_authorization_and_validation(client, db_session, manager, monkeyp
     assert (await propose(client, row, description_nl="a" * 601)).status_code == 422
     change = (await propose(client, row, website="https://safe.example")).json()
     app.dependency_overrides.pop(require_admin)
-    import app.auth as auth
+    import app.core.auth as auth
 
     claims = {"sub": "reviewer", "realm_access": {"roles": []}}
 

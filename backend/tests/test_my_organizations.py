@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy import select
 
-from app.auth import require_admin, require_volunteer
+from app.core.auth import require_admin, require_volunteer
 from app.main import app
 from app.models import Organization, Person, User, VisitorSession
 from tests.helpers import _post_registration

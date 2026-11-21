@@ -24,7 +24,7 @@ from PIL import Image
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.core.config import settings
 from app.models import SignageVideoExport
 from app.services import signage_service
 from app.services.errors import ApiHTTPException

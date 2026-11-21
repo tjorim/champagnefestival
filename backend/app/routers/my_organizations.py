@@ -8,7 +8,7 @@ from fastapi.responses import Response as ImageResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.db.session import get_db
 from app.models import Organization, OrganizationChange, Person, User
 from app.openapi_responses import binary_response
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit

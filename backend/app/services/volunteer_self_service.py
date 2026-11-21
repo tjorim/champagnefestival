@@ -1,7 +1,7 @@
 """Self-service identity operations for OIDC-authenticated volunteers (#1006).
 
 There is no built-in link between an OIDC token and a ``Person`` row — the
-``volunteer``/``admin`` realm role checked by ``app.auth.require_volunteer``
+``volunteer``/``admin`` realm role checked by ``app.core.auth.require_volunteer``
 proves *that* a token may act as a volunteer, not *which* ``Person`` it
 belongs to. ``Person.oidc_subject`` (nullable, unique) is that link, and this
 module is the only place that establishes or reads it outside admin edits
@@ -26,12 +26,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Person
 from app.services.errors import ApiHTTPException
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity
 from app.services.volunteers_service import ensure_volunteer_role
-from app.utils import make_id
 
 
 async def get_linked_volunteer(db: AsyncSession, subject: str) -> Person | None:

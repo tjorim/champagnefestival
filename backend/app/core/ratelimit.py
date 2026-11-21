@@ -18,8 +18,8 @@ from fastapi import Request
 from sqlalchemy import DateTime, bindparam, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.request_limits import get_client_ip as request_client_ip
 from app.models import RateLimitBucket
-from app.request_limits import get_client_ip as request_client_ip
 
 _RATE_LIMIT_MAX_REQUESTS = 5
 _RATE_LIMIT_WINDOW_SECONDS = 600

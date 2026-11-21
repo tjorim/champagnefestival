@@ -16,13 +16,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import get_actor_id, require_admin, require_volunteer
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin, require_volunteer
+from app.db.session import get_db
 from app.models import Event, Registration
 from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate, OrderQuestionList, OrderQuestionOut
 from app.services import events_service
 from app.services import organization_translation as translation
-from app.utils import event_to_summary_out
+from app.services.serializers import event_to_summary_out
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 

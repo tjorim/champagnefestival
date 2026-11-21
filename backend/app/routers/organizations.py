@@ -10,9 +10,10 @@ from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.core.auth import get_actor_id, require_admin
+from app.core.dependencies import Pagination, apply_pagination
+from app.db.queries import get_or_404
+from app.db.session import get_db
 from app.models import Organization, OrganizationChange
 from app.openapi_responses import binary_response
 from app.schemas import (
@@ -25,7 +26,7 @@ from app.schemas import (
 from app.services import organization_changes, organization_logos, organizations_service
 from app.services import organization_translation as translation
 from app.services.errors import ServiceError, to_http_exception
-from app.utils import get_or_404, organization_to_out
+from app.services.serializers import organization_to_out
 
 router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 

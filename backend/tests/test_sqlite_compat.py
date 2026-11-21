@@ -1,4 +1,4 @@
-"""app.sqlite_compat: what makes SQLite behave like the PostgreSQL schema for local development and tests."""
+"""app.db.sqlite_compat: what makes SQLite behave like the PostgreSQL schema for local development and tests."""
 
 import asyncio
 from datetime import UTC, datetime, timedelta, timezone
@@ -7,8 +7,8 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app import sqlite_compat
-from app.database import Base
+from app.db import sqlite_compat
+from app.db.base import Base
 from app.live.bus import live_bus
 from app.live.events import LiveEvent, LiveScope
 from app.live.notify import notify_live_event

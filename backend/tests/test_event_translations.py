@@ -11,10 +11,10 @@ import pytest
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
-from app.config import settings
+from app.core.config import settings
+from app.core.translations import resolve_text
 from app.models import AuditEntry, Event
 from app.services import organization_translation as translation
-from app.translations import resolve_text
 from tests.conftest import DEFAULT_TEST_CATEGORIES
 from tests.helpers import ADMIN_HEADERS, _create_event
 

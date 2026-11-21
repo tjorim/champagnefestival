@@ -16,8 +16,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 from sqlalchemy import Numeric, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.core.translations import Language
+from app.db.session import get_db
 from app.models import Event, PaymentTransaction, Registration
 from app.schemas import (
     EditionAttendanceStats,
@@ -33,7 +34,6 @@ from app.schemas import (
 )
 from app.services import edition_artwork, editions_service, stands_service
 from app.services.errors import ServiceError, to_http_exception
-from app.translations import Language
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
 logger = logging.getLogger(__name__)

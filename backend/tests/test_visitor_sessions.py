@@ -218,7 +218,7 @@ async def test_redeem_does_not_reassign_owned_registration(client, db_session, m
 
 async def test_visitor_session_cannot_access_admin_endpoints(client, db_session, monkeypatch):
     """Scope limit (#953 decision 3): a visitor session must never satisfy require_admin."""
-    from app.auth import require_admin
+    from app.core.auth import require_admin
     from app.main import app
 
     captured = _capture_sent_token(monkeypatch)

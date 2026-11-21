@@ -2,7 +2,7 @@
 
 check-in's two scopes are Postgres-backed (check_rate_limit_pg /
 check_check_in_rate_limit); the remaining scopes stay on the in-process deque
-(check_rate_limit) — see app/ratelimit.py's module docstring. Postgres-backed
+(check_rate_limit) — see app/core/ratelimit.py's module docstring. Postgres-backed
 tests use db_session directly rather than the client fixture; they don't need
 an HTTP layer, and db_session's own per-test cleanup (see conftest.py)
 already clears rate_limit_buckets between tests.
@@ -16,15 +16,15 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from starlette.requests import Request
 
-import app.ratelimit as ratelimit_module
-from app.models import RateLimitBucket
-from app.ratelimit import (
+import app.core.ratelimit as ratelimit_module
+from app.core.ratelimit import (
     check_check_in_rate_limit,
     check_rate_limit,
     check_rate_limit_pg,
     cleanup_expired_rate_limit_buckets,
     get_client_ip,
 )
+from app.models import RateLimitBucket
 
 
 def _make_request(headers: dict[str, str], client_host: str | None = "10.0.0.1") -> Request:

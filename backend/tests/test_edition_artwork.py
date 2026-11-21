@@ -9,7 +9,7 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.config import settings
+from app.core.config import settings
 from app.models import AuditEntry
 from app.services import edition_artwork, editions_service
 from app.services.public_render_cache import public_render_cache

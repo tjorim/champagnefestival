@@ -9,13 +9,13 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemOut, FaqItemPublicOut, FaqItemReorder, FaqItemUpdate, FaqLocale
 from app.services import faq_service
 from app.services.errors import ServiceError, to_http_exception
-from app.utils import faq_item_to_public_out
+from app.services.serializers import faq_item_to_public_out
 
 router = APIRouter(
     prefix="/api/faq",

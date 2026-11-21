@@ -335,7 +335,7 @@ reverses. A reversal must be a negative amount against a positive payment on
 the same booking, and the refunds linked to one payment can never total more
 than it (`payment_reversal_amount_invalid`); this is checked under the booking
 lock, so it does not change the retry strategy. A PostgreSQL trigger (`payment_transactions_append_only`,
-`app.payment_ledger_schema`) rejects UPDATE/DELETE against the table
+`app.db.payment_ledger`) rejects UPDATE/DELETE against the table
 unconditionally — the append-only contract holds even against a bug, a
 future migration, or a direct psql session, not just against
 `payments_service`'s own code path. The one bypass is `SET LOCAL

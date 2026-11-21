@@ -1,6 +1,6 @@
 """Chooses the test database before ``tests/conftest.py`` imports the application.
 
-The default is a throwaway SQLite file, so the suite needs no container (see ``app.sqlite_compat``).
+The default is a throwaway SQLite file, so the suite needs no container (see ``app.db.sqlite_compat``).
 CI also runs it against PostgreSQL, the production database, by setting ``TEST_DATABASE_URL``, for
 example ``postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne``, a *separate*
 database from the dev one. Create it once with:

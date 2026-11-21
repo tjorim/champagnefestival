@@ -12,9 +12,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_volunteer
-from app.database import get_db
-from app.dependencies import get_request_id
+from app.core.auth import get_actor_id, require_volunteer
+from app.core.dependencies import get_request_id
+from app.db.session import get_db
 from app.models import Person
 from app.schema_types import NonEmptyText20, NonEmptyText50, NonEmptyText200
 from app.schemas import (

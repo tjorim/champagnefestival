@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     """Whether the general rate limiter applies to eligible /api routes.
     Token-gated check-in routes are exempt because their purpose-specific
-    per-registration and shared-IP limits in app/ratelimit.py always apply."""
+    per-registration and shared-IP limits in app/core/ratelimit.py always apply."""
 
     rate_limit_default: str = "60/minute"
     """Default rate limit applied per client IP and route, e.g. "60/minute".

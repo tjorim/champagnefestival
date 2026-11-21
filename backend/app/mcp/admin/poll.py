@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from app.core.translations import Language
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import (
     AdminPollOrderIn,
@@ -32,7 +33,6 @@ from app.schemas import (
     PollTextItem,
 )
 from app.services import poll_options_service, poll_questions_service
-from app.translations import Language
 
 # --- Questions ------------------------------------------------------------------------------------
 

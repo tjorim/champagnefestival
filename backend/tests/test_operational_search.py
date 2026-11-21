@@ -2,7 +2,7 @@
 
 from sqlalchemy.dialects import postgresql
 
-from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.db.operational_search import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
 from app.services.operational_search import (
     best_registration_match,
     bounded_limit,

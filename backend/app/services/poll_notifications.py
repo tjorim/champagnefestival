@@ -5,10 +5,10 @@ from typing import Any, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.ids import make_id
 from app.models import EditionPollOption, EditionPollQuestion, Person, PollDeletionNotification
 from app.services.outbox_service import enqueue_job
 from app.services.poll_kinds import kind_of
-from app.utils import make_id
 
 POLL_DELETION = "poll_deletion_notification"
 COPY = {

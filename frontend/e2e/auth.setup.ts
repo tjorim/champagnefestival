@@ -5,7 +5,7 @@ import { test as setup, expect } from "@playwright/test";
  * (https://playwright.dev/docs/auth) applied to this app's react-oidc-context
  * setup. Seeds the same localStorage entry a real Keycloak login would leave
  * behind — using the backend's existing DEV_AUTH_BYPASS_TOKEN dev user
- * (see AGENTS.md and backend/app/oidc_config.py's _DEV_BYPASS_CLAIMS) — then
+ * (see AGENTS.md and backend/app/core/oidc.py's _DEV_BYPASS_CLAIMS) — then
  * saves it as reusable storageState.
  *
  * This never touches application auth code: it's Playwright constructing a
@@ -24,7 +24,7 @@ const OIDC_AUTHORITY =
 const OIDC_CLIENT_ID = process.env.VITE_OIDC_CLIENT_ID ?? "champagnefestival";
 const storageKey = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
 
-// Matches the backend's _DEV_BYPASS_CLAIMS (backend/app/oidc_config.py) so a
+// Matches the backend's _DEV_BYPASS_CLAIMS (backend/app/core/oidc.py) so a
 // real backend started with the same DEV_AUTH_BYPASS_TOKEN also accepts this
 // session's Authorization header, not just the frontend UI. The fallback is
 // this repo's own MSW happy-path token (src/mocks/handlers/admin.ts's

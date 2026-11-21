@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.config import Settings
-from app.request_limits import RateLimitExceeded, RequestRateLimiter
+from app.core.config import Settings
+from app.core.request_limits import RateLimitExceeded, RequestRateLimiter
 
 logger = logging.getLogger(__name__)
 

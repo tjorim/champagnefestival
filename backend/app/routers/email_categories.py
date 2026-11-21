@@ -7,12 +7,12 @@ administrator edits names, descriptions and the roles that may use a category, n
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.core.translations import Language
+from app.db.session import get_db
 from app.schemas import EmailCategoryCreate, EmailCategoryOut, EmailCategoryUpdate
 from app.services import email_categories_service
 from app.services.errors import ServiceError, to_http_exception
-from app.translations import Language
 
 router = APIRouter(prefix="/api/email-categories", tags=["email-categories"], dependencies=[Depends(require_admin)])
 

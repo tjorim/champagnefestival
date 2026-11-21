@@ -11,8 +11,8 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import get_db
+from app.core.config import settings
+from app.db.session import get_db
 from app.models import FaqItem
 from app.schemas import FaqLocale
 from app.services import editions_service, jsonld_service, policies_service
@@ -28,7 +28,7 @@ from app.services.public_render import (
     rewrite_head_meta,
 )
 from app.services.public_render_cache import public_render_cache
-from app.utils import faq_item_to_public_out
+from app.services.serializers import faq_item_to_public_out
 
 logger = logging.getLogger(__name__)
 

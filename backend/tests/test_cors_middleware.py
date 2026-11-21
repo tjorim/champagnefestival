@@ -4,8 +4,8 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from app.config import Settings
-from app.middleware import add_cors_middleware
+from app.core.config import Settings
+from app.middleware.setup import add_cors_middleware
 
 
 @pytest.mark.anyio

@@ -18,7 +18,7 @@ This document describes the observability guarantees that apply to every HTTP re
 
 ## Structured Request Log
 
-Every request emits one log line via the `app.observability` logger after the response is sent. Format:
+Every request emits one log line via the `app.core.observability` logger after the response is sent. Format:
 
 ```
 request completed request_id=<uuid> method=<METHOD> path=<path> status=<code> latency_ms=<float> user_id=<sub|None> auth_type=<oidc|None>
@@ -71,7 +71,7 @@ curl -H "X-Metrics-Token: $(python -c "from app.routers.health import build_metr
 
 ## Rate Limiting
 
-A general, configurable per-IP and route-template rate limiter (`RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT`, via a global FastAPI dependency and `limits`) covers included routers. Token-gated check-in routes are exempt and retain their database-backed per-registration and shared-IP policy. Registration creation retains its additional purpose-specific limit (`app/ratelimit.py`). Mounted `/mcp` uses its own authentication and integration-client rate policy. See the backend README for rollout guidance following #1497.
+A general, configurable per-IP and route-template rate limiter (`RATE_LIMIT_ENABLED` / `RATE_LIMIT_DEFAULT`, via a global FastAPI dependency and `limits`) covers included routers. Token-gated check-in routes are exempt and retain their database-backed per-registration and shared-IP policy. Registration creation retains its additional purpose-specific limit (`app/core/ratelimit.py`). Mounted `/mcp` uses its own authentication and integration-client rate policy. See the backend README for rollout guidance following #1497.
 
 ---
 

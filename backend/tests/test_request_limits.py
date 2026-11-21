@@ -9,7 +9,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.routing import Route
 
-from app.request_limits import (
+from app.core.request_limits import (
     RateLimitExceeded,
     RateLimitHeadersMiddleware,
     RequestRateLimiter,

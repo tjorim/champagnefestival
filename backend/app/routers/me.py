@@ -13,11 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.auth import get_current_claims
-from app.database import get_db
-from app.dialect_functions import dialect_insert
+from app.core.auth import get_current_claims
+from app.core.ratelimit import get_client_ip
+from app.core.translations import Language
+from app.db.dialect_functions import dialect_insert
+from app.db.queries import roles_contains
+from app.db.session import get_db
 from app.models import ContactMessage, Event, Person, Registration, User
-from app.ratelimit import get_client_ip
 from app.schemas import (
     CommunicationPreferenceOut,
     CommunicationPreferenceUpdate,
@@ -40,13 +42,12 @@ from app.services.pebble_access import (
     rotate_pebble_token,
 )
 from app.services.people_listing import role_active
+from app.services.serializers import registration_to_guest_out
 from app.services.users_service import (
     claim_unowned_registrations_for_email,
     get_or_create_user,
     verified_email_from_claims,
 )
-from app.translations import Language
-from app.utils import registration_to_guest_out, roles_contains
 from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
 from app.visitor_session import get_current_user as get_current_portal_user
 

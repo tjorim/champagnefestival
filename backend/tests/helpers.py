@@ -20,7 +20,7 @@ def mcp_session_factory(db_session: Any) -> Any:
     """Wrap a real ``db_session`` fixture as an ``async with``-able session factory.
 
     MCP admin tool functions take a ``session_factory`` (mirroring
-    ``app.database.async_session_factory``) rather than a session directly, so
+    ``app.db.session.async_session_factory``) rather than a session directly, so
     their tests need something that behaves like one. Every call returns the
     same underlying test session/transaction.
     """
@@ -248,8 +248,8 @@ async def _add_consent(db_session, person_id: str, category_key: str = "new_edit
     """Insert an email consent row directly: the API only grants through the person's own verified action."""
     from datetime import UTC, datetime
 
+    from app.core.ids import make_id
     from app.models import EmailConsent
-    from app.utils import make_id
 
     consent = EmailConsent(
         id=make_id("ecn"),

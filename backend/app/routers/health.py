@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
-from app.database import get_db
-from app.observability import metrics
-from app.oidc_config import OIDCTokenError, _resolve_jwks_uri
+from app.core.config import settings
+from app.core.observability import metrics
+from app.core.oidc import OIDCTokenError, _resolve_jwks_uri
+from app.db.session import get_db
 from app.schemas import HealthOut, HealthStatusOut, MetricsOut
 from app.version import APP_COMMIT, APP_VERSION
 

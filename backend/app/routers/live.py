@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator
 from fastapi import APIRouter, Depends
 from starlette.responses import StreamingResponse
 
-from app.auth import require_volunteer
+from app.core.auth import require_volunteer
 from app.live import live_bus
 from app.live.events import LiveEvent
 from app.openapi_responses import binary_response

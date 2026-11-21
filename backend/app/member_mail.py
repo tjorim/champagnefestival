@@ -10,7 +10,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, EmailStr, HttpUrl, field_validator
 
-from app.config import Settings, settings
+from app.core.config import Settings, settings
 from app.schema_types import NonEmptyText, ResourceKey
 
 logger = logging.getLogger(__name__)
