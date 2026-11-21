@@ -31,7 +31,7 @@ dependencies = [
   "sqlalchemy[asyncio]==2.1.9",
   "uvicorn[standard]==0.54.0",
   "markdown-it-py==4.3.0",
-  "nh3==0.3.7",
+  "nh3==0.3.8",
   "pywebpush==2.5.0",
 ]
 
