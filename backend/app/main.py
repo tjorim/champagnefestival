@@ -11,6 +11,7 @@ from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
+from app.core.errors import handle_unhandled_exception
 from app.core.logging import LOG_FORMAT
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
@@ -236,6 +237,10 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
         headers=exc.headers,
     )
 
+
+# An exception nothing answered gets the JSON 500 (``RequestIdMiddleware`` builds the same body for what is raised below
+# it); Starlette's outermost middleware calls this one for what is raised outside it.
+app.add_exception_handler(Exception, handle_unhandled_exception)
 
 app.include_router(registrations.router)
 app.include_router(announcements.router)

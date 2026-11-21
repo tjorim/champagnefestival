@@ -19,7 +19,10 @@ time to the first byte, not the length of the stream.
 
 Pure ASGI: no ``BaseHTTPMiddleware`` overhead, no context-var isolation (which breaks Sentry) and no buffering of
 streamed responses. An exception that escapes the app before a response starts is reported to Sentry and answered here
-with a plain-text 500 that still carries the id; once a response has started it is re-raised to the server.
+with the JSON 500 of ``internal_error_response`` (``{"detail": "Internal server error", "code": "internal_error"}``) that
+still carries the id; once a response has started it is re-raised to the server. An exception raised outside this
+middleware reaches Starlette's outermost ``ServerErrorMiddleware`` after it has unwound, so ``handle_unhandled_exception``
+(``app.core.errors``) adds the id from ``request.state`` itself.
 """
 
 import json
@@ -30,9 +33,9 @@ import uuid
 from contextvars import ContextVar
 
 from starlette.datastructures import Headers, MutableHeaders
-from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.errors import internal_error_response
 from app.core.logging import ACCESS_LOGGER
 from app.core.observability import metrics, sentry_sdk
 from app.middleware.request_timing import _route_template
@@ -96,7 +99,7 @@ class RequestIdMiddleware:
                     sentry_sdk.capture_exception(exc)
                 if response_started:
                     raise
-                await Response("Internal Server Error", status_code=500)(scope, receive, send_with_id)
+                await internal_error_response()(scope, receive, send_with_id)
         finally:
             current_request_id.reset(token)
             if latency_ms is None:

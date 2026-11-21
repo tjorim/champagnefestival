@@ -138,9 +138,9 @@ async def test_failures_never_carry_a_stack_trace_or_a_secret(real_auth_client):
 
 
 @pytest.mark.anyio
-async def test_an_unhandled_exception_answers_500_without_leaking_its_cause(db_session):
-    # The unhandled-exception response is plain text, not the JSON shape above (recorded as a follow-up); it still
-    # carries the request id.
+async def test_an_unhandled_exception_answers_a_json_500_without_leaking_its_cause(db_session, caplog):
+    # Raised below ``RequestIdMiddleware``: the middleware logs the traceback server side, reports it to Sentry and
+    # answers with the JSON body and the request id.
     async def failing():
         raise RuntimeError("secret-token postgresql://user:password@db/champagne")
         yield  # pragma: no cover
@@ -151,13 +151,17 @@ async def test_an_unhandled_exception_answers_500_without_leaking_its_cause(db_s
         async with AsyncClient(
             transport=ASGITransport(app=app, raise_app_exceptions=False), base_url="http://test"
         ) as c:
-            response = await c.get("/api/events/1")
+            response = await c.get("/api/events/1", headers={"X-Request-ID": "trace-me-1"})
     finally:
         app.dependency_overrides.clear()
 
     assert response.status_code == 500
-    assert response.headers["x-request-id"]
+    assert response.headers["content-type"] == "application/json"
+    assert response.headers["x-request-id"] == "trace-me-1"
+    assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
     for secret in ("secret-token", "password", "postgresql", "RuntimeError"):
         assert secret not in response.text
     for marker in TRACE_MARKERS:
         assert marker not in response.text
+    # The cause is still logged with its traceback, on the server.
+    assert any(record.exc_info and "secret-token" in str(record.exc_info[1]) for record in caplog.records)

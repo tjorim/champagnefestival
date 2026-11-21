@@ -10,7 +10,7 @@ This document describes the observability guarantees that apply to every HTTP re
 |---|---|
 | **Generation** | If the incoming request carries no usable `X-Request-ID` header, the middleware generates a UUID4 and assigns it. |
 | **Propagation** | If the incoming request supplies `X-Request-ID` and it is a short token (`[A-Za-z0-9._:-]{1,128}`), that value is used unchanged. Anything else is replaced by a UUID4, so a caller cannot put arbitrary text into the log lines. |
-| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. The plain-text 500 for an unhandled exception carries it too. |
+| **Echo** | Every response carries `X-Request-ID` in its headers regardless of status code. The JSON 500 for an unhandled exception (`{"detail": "Internal server error", "code": "internal_error"}`) carries it too. |
 | **Scope** | The ID is stored in `request.state.request_id` and in the `current_request_id` context variable (`app.middleware.request_id`), available to all downstream handlers. |
 | **CORS** | `X-Request-ID` is listed in both `allow_headers` (clients may send it) and `expose_headers` (browsers may read it). |
 
