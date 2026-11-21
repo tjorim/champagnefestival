@@ -84,7 +84,7 @@ def without_body_validation_payload[F: Callable[..., Any]](fn: F) -> F:
         except PydanticValidationError as exc:
             raise ToolResultValidationError(exc) from None
 
-    return wrapper  # ty: ignore[invalid-return-type]
+    return wrapper  # ty: ignore[invalid-explicit-return]
 
 
 def _new_request_id() -> str:
