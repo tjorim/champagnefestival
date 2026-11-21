@@ -43,8 +43,8 @@ request completed request_id=<uuid> method=<METHOD> path=<path> status=<code> la
 | Endpoint | Auth | Behaviour |
 |---|---|---|
 | `GET /api/health/liveness` | None | Returns `{"status": "alive"}` immediately. |
-| `GET /api/health/readiness` | None | Checks database and OIDC JWKS connectivity. Returns 200 or 503. |
-| `GET /api/health` | None | Returns liveness status and links to the readiness and metrics endpoints. |
+| `GET /api/health/readiness` | None | Checks database and OIDC JWKS connectivity. `{"status": "ready"}`, or 503 `{"status": "not_ready"}`. |
+| `GET /api/health` | None | Static summary: `status`, `version`, `commit` and the paths of the two probes (`liveness_endpoint`, `readiness_endpoint`). The image `HEALTHCHECK` uses it. |
 
 Use `/api/health/readiness` for load-balancer health checks — not liveness.
 

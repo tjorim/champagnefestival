@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import time
 
+import httpx
 import pytest
 from pydantic import ValidationError
 
 from app.core.config import GUEST_ACCESS_TOKEN_TTL_MAX_MINUTES, Settings
 from app.core.observability import InMemoryRequestMetrics
+from app.core.oidc import OIDCTokenError
+from app.db.session import get_db
+from app.main import app
+from app.routers import health
 from app.routers.health import build_metrics_token
 
 # ---------------------------------------------------------------------------
@@ -26,6 +31,55 @@ async def test_liveness(client):
 @pytest.mark.anyio
 async def test_readiness(client):
     r = await client.get("/api/health/readiness")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ready"}
+
+
+@pytest.mark.anyio
+async def test_readiness_is_503_not_ready_when_the_database_is_unreachable(client, monkeypatch):
+    class BrokenSession:
+        def get_bind(self):
+            return type("Bind", (), {"dialect": type("Dialect", (), {"name": "sqlite"})()})()
+
+        async def execute(self, *args, **kwargs):
+            raise RuntimeError("connection refused: postgresql://user:password@db/champagne")
+
+    async def broken_db():
+        yield BrokenSession()
+
+    monkeypatch.setitem(app.dependency_overrides, get_db, broken_db)
+    r = await client.get("/api/health/readiness")
+
+    assert r.status_code == 503
+    assert r.json() == {"status": "not_ready"}
+    assert "password" not in r.text
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("failure", [OIDCTokenError("discovery failed"), httpx.ConnectError("unreachable")])
+async def test_readiness_is_503_not_ready_when_the_identity_provider_is_unreachable(client, monkeypatch, failure):
+    async def unreachable() -> bool:
+        raise failure
+
+    monkeypatch.setattr(health.settings, "oidc_issuer_url", "https://idp.test/realms/test")
+    monkeypatch.setattr(health, "_jwks_readiness_cache", None)
+    monkeypatch.setattr(health, "_check_jwks_reachable", unreachable)
+    r = await client.get("/api/health/readiness")
+
+    assert r.status_code == 503
+    assert r.json() == {"status": "not_ready"}
+
+
+@pytest.mark.anyio
+async def test_readiness_is_ready_when_the_identity_provider_is_reachable(client, monkeypatch):
+    async def reachable() -> bool:
+        return True
+
+    monkeypatch.setattr(health.settings, "oidc_issuer_url", "https://idp.test/realms/test")
+    monkeypatch.setattr(health, "_jwks_readiness_cache", None)
+    monkeypatch.setattr(health, "_check_jwks_reachable", reachable)
+    r = await client.get("/api/health/readiness")
+
     assert r.status_code == 200
     assert r.json() == {"status": "ready"}
 
@@ -60,8 +114,12 @@ async def test_health_summary(client, monkeypatch):
     assert body["status"] == "ok"
     assert body["commit"] == "a" * 40
     assert body["version"]
-    assert "liveness_endpoint" in body
-    assert "readiness_endpoint" in body
+    assert body["liveness_endpoint"] == "/api/health/liveness"
+    assert body["readiness_endpoint"] == "/api/health/readiness"
+    assert set(body) == {"status", "version", "commit", "liveness_endpoint", "readiness_endpoint"}
+    # The probes the summary points at exist and answer without credentials.
+    assert (await client.get(body["liveness_endpoint"])).status_code == 200
+    assert (await client.get(body["readiness_endpoint"])).status_code == 200
 
 
 # ---------------------------------------------------------------------------
