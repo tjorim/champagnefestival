@@ -402,6 +402,7 @@ for (const [locale, messages] of Object.entries({ nl, fr })) {
         (element) => element.scrollWidth - element.clientWidth,
       );
       if (overflow > 1) {
+        // oxlint-disable-next-line no-console -- diagnostic output for a failing assertion
         console.log(
           await dialog.evaluate((element) => {
             const boundary = element.getBoundingClientRect();

@@ -17,5 +17,6 @@ const pkg = JSON.parse(pkgText);
 if (pkg.version !== version) {
   pkg.version = version;
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  // oxlint-disable-next-line no-console -- CLI script output
   console.log(`Synced frontend/package.json version -> ${version}`);
 }

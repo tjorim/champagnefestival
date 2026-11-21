@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   backend:
-    name: Lint, Typecheck, Migrate & Test
+    name: Checks
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
@@ -43,7 +43,7 @@ jobs:
           working-directory: backend
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Lint (ruff check)
         run: uv run ruff check .

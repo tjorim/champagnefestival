@@ -23,5 +23,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "vite.sw.config.ts"]
+  "include": [
+    "oxlint.config.ts",
+    "playwright*.config.ts",
+    "scripts/**/*.ts",
+    "vite.config.ts",
+    "vite.sw.config.ts",
+    "vitest.config.ts"
+  ]
 }

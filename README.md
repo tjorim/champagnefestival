@@ -1,34 +1,24 @@
-# Champagnefestival Website
+# Champagnefestival
 
-The official website for the Champagnefestival — a React/Vite frontend with a FastAPI backend.
+## What it is
 
-## Project structure
+The official website, reservation and check-in system for the Champagnefestival — a React/Vite frontend with a
+FastAPI backend, an event-day Android app and an experimental Pebble companion. The backend's OpenAPI document is the
+source of truth for the frontend's generated API types.
 
-```text
-champagnefestival/
-├── frontend/      # React + Vite SPA (TypeScript, pnpm)  → see frontend/README.md
-├── backend/       # FastAPI REST API (Python, uv)         → see backend/README.md
-├── DEPLOYMENT.md  # VPS + Caddy deployment guide
-└── AGENTS.md      # Repo-specific contributor guidance
-```
+## Quick start
 
-## Prerequisites
+### Prerequisites
 
 | Tool | Purpose | Install |
 |---|---|---|
-| Node.js 26.13.0 + pnpm 12.16.1 | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
+| Node.js (see `frontend/.node-version`) + pnpm (see `packageManager` in `frontend/package.json`) | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
 | Python 3.15+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
-| Docker (optional) | Containerised backend | [docs.docker.com](https://docs.docker.com) |
+| Docker (optional) | Containerised backend, PostgreSQL | [docs.docker.com](https://docs.docker.com) |
 
-## Releases
+Toolchain versions and coordinated rollout: [Node and pnpm toolchain](docs/toolchain.md).
 
-- Bump the version in the root `VERSION` file (CalVer `YYYY.MM.MICRO`, e.g. `2026.7.1`)
-  — frontend, backend, and Android all derive from it; see "Versioning" in `AGENTS.md`.
-- Add a matching `CHANGELOG.md` entry header: `## [YYYY.MM.MICRO] - YYYY-MM-DD`
-- Push tag `vYYYY.MM.MICRO` to trigger the draft release workflow.
-- Publish the generated draft release to trigger the production deploy.
-
-## Quick start
+### Run locally
 
 ```bash
 # Backend (Terminal 1)
@@ -72,16 +62,67 @@ adds the real bypass token to proxied API requests on the server. Production
 builds and `pnpm preview` do not enable it, and the real token is not injected
 into HTML. The backend refuses bypass authentication outside development.
 
-## More details
+## Development commands
 
+```bash
+# Frontend (cd frontend)
+pnpm dev                 # Vite dev server
+pnpm typecheck           # paraglide + api:check + tsc -b
+pnpm lint && pnpm format:check
+pnpm build
+pnpm api:generate        # regenerate openapi.json and src/api-schema/ (needs uv)
+
+# Backend (cd backend)
+uv run uvicorn app.main:app --reload
+uv run ruff check . && uv run ruff format --check . && uv run ty check .
+uv run alembic upgrade head
+```
+
+The full command list, with what CI runs, is in [AGENTS.md](AGENTS.md#commands).
+
+## Testing
+
+```bash
+cd frontend && pnpm test          # Vitest
+cd frontend && pnpm test:e2e      # Playwright (see frontend/e2e/README.md)
+cd backend && uv run pytest       # SQLite by default; PostgreSQL via TEST_DATABASE_URL
+```
+
+See [Testing in AGENTS.md](AGENTS.md#testing) for the bundle, UI-inventory and locale checks.
+
+## Project layout
+
+```text
+champagnefestival/
+├── frontend/      # React + Vite SPA (TypeScript, pnpm)  → see frontend/README.md
+├── backend/       # FastAPI REST API (Python, uv)         → see backend/README.md
+├── android/       # Event-day Android app
+├── pebble/        # Experimental Pebble companion
+├── docs/          # Contracts, decisions, product audit
+├── DEPLOYMENT.md  # VPS + Caddy deployment guide
+└── AGENTS.md      # Repo-specific contributor guidance
+```
+
+## Deployment and release
+
+- Bump the version in the root `VERSION` file (CalVer `YYYY.MM.MICRO`, e.g. `2026.7.1`)
+  — frontend, backend, and Android all derive from it; see "Release" in `AGENTS.md`.
+- Add a matching `CHANGELOG.md` entry header: `## [YYYY.MM.MICRO] - YYYY-MM-DD`
+- Push tag `vYYYY.MM.MICRO` to trigger the draft release workflow.
+- Publish the generated draft release to trigger the production deploy.
+
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the production VPS + Caddy setup.
+
+## Contributing and docs
+
+- **[AGENTS.md](./AGENTS.md)** — repository layout, commands, conventions, CI and release process
 - **[frontend/README.md](./frontend/README.md)** — commands, project structure, i18n, code style
-- **[backend/README.md](./backend/README.md)** — architecture, API overview, dev tools, deployment options
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** — production VPS + Caddy setup
+- **[backend/README.md](./backend/README.md)** — setup, tests, migrations, API overview, deployment options
+- [Documentation guide](docs/README.md) — operational contracts, current product work and architectural decisions
+- [UI dependency and component maintenance](docs/ui-maintenance.md)
 
-## Documentation
 
-See the [documentation guide](docs/README.md) for operational contracts,
-current product work, and architectural decisions.
+### Product notes
 
 The UI uses **organisation** (Dutch **organisatie**, French **organisation**)
 for producers, sponsors and vendors, covering companies and associations.
@@ -114,9 +155,3 @@ page, the Refresh hero and the home page's `og:image`/JSON-LD image. See
 Organisation editors can request editable description drafts from the optional
 self-hosted translation service. Nothing is saved until a person saves or submits
 it. See [configuration and API contract](docs/organization-description-translation.md).
-
-## UI maintenance
-
-See [UI dependency and component maintenance](docs/ui-maintenance.md) for package updates, component provenance, upstream review commands and validation.
-
-Toolchain versions and coordinated rollout: [Node and pnpm toolchain](docs/toolchain.md).

@@ -26,8 +26,8 @@ jobs:
       pebble: ${{ steps.filter.outputs.pebble }}
       codeql-actions: ${{ steps.filter.outputs.codeql-actions }}
       codeql-android: ${{ steps.filter.outputs.codeql-android }}
-      codeql-backend: ${{ steps.filter.outputs.codeql-backend }}
-      codeql-frontend: ${{ steps.filter.outputs.codeql-frontend }}
+      codeql-python: ${{ steps.filter.outputs.codeql-python }}
+      codeql-javascript: ${{ steps.filter.outputs.codeql-javascript }}
       pr-preview: ${{ steps.filter.outputs.pr-preview }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,11 +43,13 @@ jobs:
             backend:
               - 'backend/**'
               - 'frontend/openapi.json'
+              - 'frontend/src/api-schema/**'
               - 'VERSION'
               - '.github/workflows/backend-ci.yml'
               - '.github/workflows/ci.yml'
             frontend:
               - 'frontend/**'
+              - 'backend/app/openapi_export.py'
               - 'VERSION'
               - '.github/workflows/frontend-ci.yml'
               - '.github/workflows/ci.yml'
@@ -71,13 +73,13 @@ jobs:
               - 'android/**'
               - '.github/workflows/codeql-android.yml'
               - '.github/workflows/ci.yml'
-            codeql-backend:
+            codeql-python:
               - 'backend/**'
-              - '.github/workflows/codeql-backend.yml'
+              - '.github/workflows/codeql-python.yml'
               - '.github/workflows/ci.yml'
-            codeql-frontend:
+            codeql-javascript:
               - 'frontend/**'
-              - '.github/workflows/codeql-frontend.yml'
+              - '.github/workflows/codeql-javascript.yml'
               - '.github/workflows/ci.yml'
             pr-preview:
               - 'frontend/**'
@@ -130,22 +132,22 @@ jobs:
       packages: read
       security-events: write
 
-  codeql-backend:
-    name: CodeQL (Backend)
+  codeql-python:
+    name: CodeQL (Python)
     needs: changes
-    if: github.event_name == 'push' || needs.changes.outputs.codeql-backend == 'true'
-    uses: ./.github/workflows/codeql-backend.yml
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-python == 'true'
+    uses: ./.github/workflows/codeql-python.yml
     permissions:
       actions: read
       contents: read
       packages: read
       security-events: write
 
-  codeql-frontend:
-    name: CodeQL (Frontend)
+  codeql-javascript:
+    name: CodeQL (JavaScript)
     needs: changes
-    if: github.event_name == 'push' || needs.changes.outputs.codeql-frontend == 'true'
-    uses: ./.github/workflows/codeql-frontend.yml
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-javascript == 'true'
+    uses: ./.github/workflows/codeql-javascript.yml
     permissions:
       actions: read
       contents: read
@@ -212,8 +214,8 @@ jobs:
       - pebble
       - codeql-actions
       - codeql-android
-      - codeql-backend
-      - codeql-frontend
+      - codeql-python
+      - codeql-javascript
       - pr-preview
       - release-metadata
       - repo-format

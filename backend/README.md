@@ -55,12 +55,12 @@ Static frontend (Vite build / CDN / VPS)
 
 ---
 
-## Quick start (development)
+## Setup
 
 ```bash
 cd backend
 
-# 1. Start PostgreSQL (from repo root)
+# 1. Start PostgreSQL (from repo root; optional — SQLite works for development and tests)
 docker compose up db -d
 
 # 2. Install dependencies (creates .venv automatically)
@@ -70,24 +70,41 @@ uv sync
 cp .env.example .env
 # Edit .env — DATABASE_URL and OIDC_ISSUER_URL are the ones you'll usually need;
 # admin endpoints return 401 until OIDC_ISSUER_URL is set
+```
 
-# 4. Run database migrations
-uv run alembic upgrade head
+---
 
-# Note: only SQLAlchemy model/table changes require a new Alembic revision.
-# API-only changes do not need a migration by themselves, but removing or
-# replacing persisted volunteer fields such as `people.first_help_day` /
-# `people.last_help_day` would require one.
+## Run
 
-# 4. Start the development server
-uv run uvicorn app.main:app --reload
+```bash
+uv run alembic upgrade head          # apply database migrations (see "Migrations")
+uv run uvicorn app.main:app --reload # start the development server
 ```
 
 The interactive API docs are available at <http://localhost:8000/docs>.
 
 ---
 
-## Development tools
+## Test
+
+```bash
+uv run pytest
+```
+
+Tests run on a throwaway SQLite file by default, so they need no container. CI also runs them on
+PostgreSQL, the production database. To do the same locally, create a separate test database:
+
+```bash
+psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
+export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
+```
+
+Tests that exercise PostgreSQL behaviour (concurrent sessions, the Alembic migrations, the ledger
+trigger, LISTEN reconnects) are marked `requires_postgres` and skip on SQLite.
+
+---
+
+## Lint and type-check
 
 The project uses the [Astral](https://astral.sh) toolchain for linting, formatting, and type checking.
 
@@ -103,21 +120,29 @@ uv run ruff format .
 
 # Type check
 uv run ty check .
-
-# Run tests
-uv run pytest
 ```
 
-Tests run on a throwaway SQLite file by default, so they need no container. CI also runs them on
-PostgreSQL, the production database. To do the same locally, create a separate test database:
+---
+
+## Migrations
 
 ```bash
-psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
-export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
+uv run alembic upgrade head                       # apply
+uv run alembic revision --autogenerate -m "..."   # create a revision after a model change
+uv run alembic check                              # fail when the models and migrations disagree (CI runs this)
 ```
 
-Tests that exercise PostgreSQL behaviour (concurrent sessions, the Alembic migrations, the ledger
-trigger, LISTEN reconnects) are marked `requires_postgres` and skip on SQLite.
+Only SQLAlchemy model/table changes require a new Alembic revision. API-only changes do not need a
+migration by themselves, but removing or replacing persisted volunteer fields such as
+`people.first_help_day` / `people.last_help_day` would require one.
+
+---
+
+## API contract
+
+The response models are the source of truth for the frontend's API types: `frontend/openapi.json` is generated from
+them (`uv run python -m app.openapi_export`, normally via `pnpm api:generate` in `frontend/`) and
+`test_openapi_snapshot` fails when it is stale. See "API contract" in the root [AGENTS.md](../AGENTS.md).
 
 ---
 

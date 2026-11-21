@@ -1072,6 +1072,7 @@ async function enableMocking(): Promise<void> {
   if (import.meta.env.DEV && import.meta.env.VITE_MSW === "true") {
     const { worker } = await import("./mocks/browser");
     await worker.start({ onUnhandledFrame: "warn" });
+    // oxlint-disable-next-line no-console -- dev-only notice that the mock API is active
     console.info("[MSW] Mock Service Worker active — using mock API");
   }
 }

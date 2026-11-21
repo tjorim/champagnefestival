@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   frontend:
-    name: Typecheck, Lint, Test & Build
+    name: Checks
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,24 +34,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Validate UI maintenance inventory
-        working-directory: frontend
-        run: |
-          node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs
-          node scripts/ui-maintenance.mjs check
-          node scripts/ui-imports.mjs
-
-      - name: Audit interface strings and catalogues
-        run: pnpm run locale:audit
-
-      - name: Typecheck (Paraglide + tsc)
+      - name: Typecheck (Paraglide, API types, tsc)
         run: pnpm run typecheck
 
       - name: Lint
         run: pnpm run lint
 
-      - name: Format check
+      - name: Check formatting
         run: pnpm run format:check
+
+      - name: Check formatting of workflows, scripts and root JSON
+        run: pnpm run format:repo:check
 
       - name: Test
         run: pnpm run test
@@ -59,12 +52,21 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Bundle size budget
-        run: pnpm bundle:test && pnpm bundle:check
+      - name: Check bundle budget
+        run: pnpm run bundle:test && pnpm run bundle:check
+
+      - name: Audit interface strings and catalogues
+        run: pnpm run locale:audit
+
+      - name: Check message parity
+        run: pnpm run check-message-parity
+
+      - name: Validate UI maintenance inventory
+        run: pnpm run ui:test && pnpm run ui:check
 
   # E2E runs as four shards (one worker each, because concurrent cold Vite loads cause
   # contention), the production signage suite in parallel, and an aggregate job. The
-  # aggregate keeps the required check name `Frontend / E2E Tests (Chromium)`. See
+  # aggregate is named `Frontend / E2E Tests (Chromium)`. See
   # frontend/e2e/README.md ("CI sharding") for the measurements behind these numbers.
   e2e-shard:
     name: E2E shard ${{ matrix.shard }}/4

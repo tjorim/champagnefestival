@@ -24,6 +24,7 @@ const browser = await chromium.launch({ headless: false });
 const context = await browser.newContext({ storageState: authFile });
 const page = await context.newPage();
 await page.goto(`${baseURL}/admin`);
+// oxlint-disable-next-line no-console -- CLI helper output
 console.log(`Admin dashboard open at ${baseURL}/admin — close the window to exit.`);
 await new Promise((resolve) => {
   browser.on("disconnected", () => resolve());

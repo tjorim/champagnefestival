@@ -20,26 +20,26 @@ dependencies = [
   "httpx==0.28.1",
   "limits==5.8.0",
   "phonenumbers==9.0.43",
-  "psycopg[binary]==3.3.8",
+  "psycopg[binary]==3.3.9",
   "pydantic[email]==2.14.3",
-  "pydantic-settings==2.16.2",
+  "pydantic-settings==2.16.3",
   "pyjwt[crypto]==2.15.1",
   "python-dotenv==1.2.4",
   "python-multipart==0.0.33",
   "qrcode[pil]==8.2",
   "pillow==13.0.0",
-  "sqlalchemy[asyncio]==2.1.8",
+  "sqlalchemy[asyncio]==2.1.9",
   "uvicorn[standard]==0.54.0",
   "markdown-it-py==4.3.0",
   "nh3==0.3.7",
-  "pywebpush>=2.5.0",
+  "pywebpush==2.5.0",
 ]
 
 [project.optional-dependencies]
 sentry = ["sentry-sdk[fastapi]==2.74.0"]
 
 [dependency-groups]
-dev = ["pytest==9.2.0", "pytest-asyncio==1.5.0", "anyio==4.16.0", "ruff==0.17.5", "ty==0.0.101"]
+dev = ["pytest==9.2.0", "pytest-asyncio==1.5.0", "anyio==4.16.0", "ruff==0.17.5", "ty==0.0.105"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -68,3 +68,6 @@ ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.ty.environment]
+python-version = "3.15"

@@ -21,9 +21,8 @@ section should open `/admin?section=...`; `/admin` intentionally opens My tasks.
 each, because concurrent cold Vite loads cause contention) and runs the production
 signage suite (`playwright.signage.config.ts`) on its own runner at the same time.
 Playwright shards by spec file and adds the `setup` project to every shard that has
-authenticated specs. The `E2E Tests (Chromium)` job aggregates all of them, so the
-required check name is unchanged and fails if any shard or the signage run failed,
-was cancelled or did not run.
+authenticated specs. The `Frontend / E2E Tests (Chromium)` job aggregates all of them
+and fails if any shard or the signage run failed, was cancelled or did not run.
 
 Each shard uploads its own HTML report (`playwright-report-N`, with traces for retried
 tests) and the signage run uploads `playwright-report-signage`. There is no merged report: a

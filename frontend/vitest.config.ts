@@ -41,6 +41,7 @@ export default defineConfig({
       provider: "v8",
       include: ["src/**"],
       exclude: ["src/paraglide/**", "src/main.tsx", "src/assets/**"],
+      reporter: ["text", "lcov"],
     },
   },
 });
