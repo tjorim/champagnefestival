@@ -33,5 +33,6 @@ for (const { template, output } of files) {
   const outputPath = join(frontendDir, "public", output);
   const rendered = readFileSync(templatePath, "utf8").replaceAll("%VITE_PUBLIC_URL%", publicUrl);
   writeFileSync(outputPath, rendered);
+  // oxlint-disable-next-line no-console -- CLI script output
   console.log(`Generated public/${output} -> ${publicUrl}`);
 }

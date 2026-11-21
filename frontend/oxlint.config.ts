@@ -12,6 +12,7 @@ export default defineConfig({
   ],
   jsPlugins: ["@shadcn/lint"],
   rules: {
+    "no-console": ["error", { allow: ["error", "warn"] }],
     "shadcn/no-arbitrary-values": "error",
     "shadcn/no-raw-colors": "error",
     "shadcn/no-inline-styles": "error",

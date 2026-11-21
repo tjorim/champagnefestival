@@ -231,6 +231,7 @@ for (const [width, height, zoom] of [
       await page.waitForFunction((factor) => Math.abs(devicePixelRatio - factor) < 0.05, zoom);
       await test.step("Exercise populated editors", () => editors(page));
     } catch (error) {
+      // oxlint-disable-next-line no-console -- dump the page text when the step fails
       console.log(await context.pages().at(-1)?.locator("body").innerText());
       throw error;
     } finally {
