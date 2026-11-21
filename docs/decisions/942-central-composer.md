@@ -60,7 +60,7 @@ not an implemented guarantee. Preview uses plain form text; delivery applies
 the complete-pair fallback above. The API supports future scheduling; the
 current UI sends with an empty scheduling body (“now”).
 
-Tests: `backend/tests/test_composer.py` and
+Tests: `backend/tests/routers/test_composer.py` and
 `frontend/tests/features/admin/shared/ComposerManagement.test.tsx` cover validation,
 state transitions, audience timing, delivery outcomes, repeat-submit protection,
 error handling and accessibility. Shared delivery rules are in the

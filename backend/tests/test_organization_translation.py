@@ -12,8 +12,8 @@ from app.core.config import settings
 from app.main import app
 from app.models import AuditEntry, OrganizationChange, OutboxJob
 from app.services import organization_translation as translation
-from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
+from tests.routers import test_my_organizations
 
 manager = test_my_organizations.manager
 login = test_my_organizations.login

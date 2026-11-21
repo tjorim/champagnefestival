@@ -12,7 +12,7 @@ from app.models import AuditEntry, EmailConsent, EmailConsentConfirmation, Perso
 from app.services.email_categories_service import DEFAULT_EMAIL_CATEGORIES
 from app.services.email_consent_service import cleanup_expired_confirmations
 from tests.helpers import ADMIN_HEADERS, _add_consent, _create_event, _post_registration
-from tests.test_visitor_sessions import _capture_sent_token
+from tests.routers.test_visitor_sessions import _capture_sent_token
 
 PREFERENCES = "/api/me/email-preferences"
 
@@ -52,7 +52,7 @@ async def test_default_categories_are_seeded_with_roles(client):
 
 
 def test_migration_seeds_the_same_categories_as_the_test_defaults():
-    path = Path(__file__).parents[1] / "alembic" / "versions" / "010_membership_and_mailings.py"
+    path = Path(__file__).parents[2] / "alembic" / "versions" / "010_membership_and_mailings.py"
     spec = importlib.util.spec_from_file_location("migration_010", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)

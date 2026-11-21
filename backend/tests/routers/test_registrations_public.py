@@ -260,7 +260,7 @@ async def test_updates_option_from_an_unverified_visitor_waits_for_email_confirm
 async def test_updates_option_with_the_signed_in_verified_address_is_consent_at_once(
     client, db_session, sent_confirmations, monkeypatch
 ):
-    from tests.test_visitor_sessions import _capture_sent_token
+    from tests.routers.test_visitor_sessions import _capture_sent_token
 
     tokens = _capture_sent_token(monkeypatch)
     event = await _create_event(client)
@@ -280,7 +280,7 @@ async def test_updates_option_with_the_signed_in_verified_address_is_consent_at_
 async def test_updates_option_with_a_different_verified_address_still_needs_confirmation(
     client, db_session, sent_confirmations, monkeypatch
 ):
-    from tests.test_visitor_sessions import _capture_sent_token
+    from tests.routers.test_visitor_sessions import _capture_sent_token
 
     tokens = _capture_sent_token(monkeypatch)
     event = await _create_event(client)
@@ -348,7 +348,7 @@ async def test_member_registering_with_the_updates_option_consents_directly(
     client, db_session, sent_confirmations, monkeypatch
 ):
     """The members-only gate attaches the booking to the signed-in member, whose address is verified."""
-    from tests.test_visitor_sessions import _capture_sent_token
+    from tests.routers.test_visitor_sessions import _capture_sent_token
 
     tokens = _capture_sent_token(monkeypatch)
     event = await _create_event(client)

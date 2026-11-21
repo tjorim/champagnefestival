@@ -17,7 +17,7 @@ from app.main import app
 from app.models import SignageVideoExport
 from app.services import signage_video as service
 from tests.helpers import requires_postgres
-from tests.test_signage import setup, slide
+from tests.routers.test_signage import setup, slide
 
 
 @pytest.fixture

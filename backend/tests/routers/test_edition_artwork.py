@@ -36,7 +36,7 @@ def storage(tmp_path, monkeypatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def fixture_shell(monkeypatch):
-    monkeypatch.setattr(settings, "frontend_dist_path", str(Path(__file__).parent / "fixtures" / "frontend_dist"))
+    monkeypatch.setattr(settings, "frontend_dist_path", str(Path(__file__).parents[1] / "fixtures" / "frontend_dist"))
 
 
 @pytest.fixture

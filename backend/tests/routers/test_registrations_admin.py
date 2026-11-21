@@ -545,7 +545,7 @@ async def _admin_booking_fixture(client) -> tuple[str, dict]:
 
 @pytest.mark.anyio
 async def test_admin_create_replays_the_first_booking_for_a_repeated_idempotency_key(client, db_session):
-    from tests.test_products import _create_product
+    from tests.routers.test_products import _create_product
 
     person_id, event = await _admin_booking_fixture(client)
     ticket = await _create_product(client, event["id"], name="Ticket", price="15", unit="person", required=True)

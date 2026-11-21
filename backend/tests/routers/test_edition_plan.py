@@ -9,7 +9,7 @@ import pytest
 
 from app.services import stands_service
 from tests.helpers import ADMIN_HEADERS, _post_registration
-from tests.test_edition_stands import EDITION_ID, _post, _public_get, _setup, _stand
+from tests.routers.test_edition_stands import EDITION_ID, _post, _public_get, _setup, _stand
 
 
 @pytest.fixture(autouse=True)

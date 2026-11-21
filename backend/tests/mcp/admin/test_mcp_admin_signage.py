@@ -14,7 +14,7 @@ from app.mcp.admin import signage as mcp_signage
 from app.mcp.admin import signage_video as mcp_video
 from app.models import AuditEntry
 from tests.helpers import _create_event, mcp_session_factory
-from tests.test_signage_video import new_job
+from tests.routers.test_signage_video import new_job
 
 LAYERS = [{"id": key, "kind": "binding", "binding": key} for key in ("logo", "name", "sponsor", "title", "text")]
 

@@ -312,10 +312,10 @@ cd backend
 # Start a PostgreSQL test database (if not already running)
 docker compose up db -d
 
-uv run pytest tests/test_mcp_server.py -v
+uv run pytest tests/mcp/test_mcp_server.py -v
 ```
 
-`tests/test_mcp_server.py` (role resolution, tool registration, and the read-only tools)
+`tests/mcp/test_mcp_server.py` (role resolution, tool registration, and the read-only tools)
 uses mocked database sessions and does not require a running PostgreSQL instance.
 
 `tests/test_mcp_admin_*.py` (one file per `app/mcp/admin/` module) exercise the admin
@@ -323,7 +323,7 @@ write tools against a real database, same as the REST router tests — set
 `TEST_DATABASE_URL` (see the backend README) and run:
 
 ```bash
-uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.py -v
+uv run pytest tests/mcp/admin/test_mcp_admin_venues.py tests/mcp/admin/test_mcp_admin_registrations.py -v
 ```
 
 ### Adding new tools
@@ -331,7 +331,7 @@ uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.
 **Read-only tools:**
 1. Add a method to `ChampagneFestivalMcpBackend` in `backend/app/mcp/server.py`.
 2. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
-3. Add unit tests in `backend/tests/test_mcp_server.py`.
+3. Add unit tests in `backend/tests/mcp/test_mcp_server.py`.
 
 **Admin write tools:**
 1. Add the implementation to the relevant module under `backend/app/mcp/admin/` (or a new
@@ -344,7 +344,7 @@ uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.
    dependency, like `get_settings`) and delegates to it with `self._actor()`.
 3. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
 4. Add tests in `backend/tests/test_mcp_admin_<module>.py` against a real database, and a
-   role-gating/delegation spot-check in `backend/tests/test_mcp_server.py`'s
+   role-gating/delegation spot-check in `backend/tests/mcp/test_mcp_server.py`'s
    `TestAdminToolWiring`.
 
 Visitor order questions are configured per event through admin REST

@@ -478,7 +478,7 @@ async def _earn_reward(client, db_session, *, consent: bool = True, language: st
     """Earn a stamp-card reward for a member; returns (person id, reward id)."""
     from app.models import Person
     from tests.helpers import _post_registration
-    from tests.test_stamp_cards import check, setup_card
+    from tests.routers.test_stamp_cards import check, setup_card
 
     _, event, first = await setup_card(client)
     second = (await _post_registration(client, event=event)).json()

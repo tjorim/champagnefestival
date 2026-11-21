@@ -2,7 +2,7 @@
 
 Covers hashing, lookup, rate limiting, role-escalation prevention, and
 revocation/rotation — mirroring the spirit of daynest's
-backend/tests/test_integration_clients.py.
+backend/tests/routers/test_integration_clients.py.
 """
 
 from __future__ import annotations

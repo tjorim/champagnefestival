@@ -3,7 +3,7 @@
 import pytest
 
 from tests.helpers import VALID_RESERVATION, _create_event, requires_postgres
-from tests.test_products import _create_product
+from tests.routers.test_products import _create_product
 
 
 async def book(client, event, product, quantity=1, email="inventory@example.com"):

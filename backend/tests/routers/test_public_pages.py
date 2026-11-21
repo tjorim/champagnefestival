@@ -20,7 +20,7 @@ from app.models import Policy, PolicyVersion
 from app.services.public_render import hero_preload_link
 from tests.helpers import ADMIN_HEADERS, _create_event
 
-_FIXTURE_DIST = Path(__file__).parent / "fixtures" / "frontend_dist"
+_FIXTURE_DIST = Path(__file__).parents[1] / "fixtures" / "frontend_dist"
 
 
 @pytest.fixture(autouse=True)

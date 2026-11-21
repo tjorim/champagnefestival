@@ -17,8 +17,8 @@ from pathlib import Path
 from app.services.frontend_i18n_snippets import FAQ_TITLE, FESTIVAL_NAME, SCHEDULE_TITLE, WELCOME_SUBTITLE
 from app.services.jsonld_service import build_event_json_ld
 
-_FIXTURE = Path(__file__).parents[2] / "docs" / "fixtures" / "jsonld-edition.json"
-_MESSAGES_DIR = Path(__file__).parents[2] / "frontend" / "messages"
+_FIXTURE = Path(__file__).parents[3] / "docs" / "fixtures" / "jsonld-edition.json"
+_MESSAGES_DIR = Path(__file__).parents[3] / "frontend" / "messages"
 
 
 def _load_edition_fixture() -> dict:

@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from app.models import Person
 from app.services import role_history as rh
-from tests.test_people import ADMIN_HEADERS
+from tests.routers.test_people import ADMIN_HEADERS
 
 
 def _person(**kwargs) -> Person:

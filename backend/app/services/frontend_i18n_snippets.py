@@ -8,8 +8,8 @@ source files — see ``app.core.config.Settings.frontend_dist_path``), so
 it cannot read the real translation files at runtime.
 
 These four keys are duplicated here instead, kept deliberately small and
-static (no interpolation, no pluralization). ``backend/tests/test_jsonld_service.py``
-and ``backend/tests/test_public_pages.py`` read the real
+static (no interpolation, no pluralization). ``backend/tests/services/test_jsonld_service.py``
+and ``backend/tests/routers/test_public_pages.py`` read the real
 ``frontend/messages/*.json`` files (available in this repo checkout at test
 time, just not in the production container) and fail if any of these drift
 from them — so an edit to the real translation without updating this file

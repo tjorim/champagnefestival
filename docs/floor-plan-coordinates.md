@@ -105,7 +105,7 @@ icon, x, y, rotation, width_m, length_m, organization_id}]}]}]`:
 - **Which rooms and days:** active event days in date order; a room appears only when it has
   at least one published area.
 - **Tables:** never. There are no table shapes, registrations, guests, capacities,
-  allocations or layout ids; `tests/test_edition_plan.py` asserts their absence.
+  allocations or layout ids; `tests/routers/test_edition_plan.py` asserts their absence.
 - **Window:** the same as the stand list (first active event day through
   `STANDS_VISIBLE_DAYS_AFTER` days after the last one, Europe/Brussels); `days` is empty
   outside it and an inactive edition returns 404.

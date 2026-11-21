@@ -2,7 +2,7 @@
 
 Mirrors ``frontend/src/features/site/JsonLd.tsx`` field-for-field. The shared
 ``docs/fixtures/jsonld-edition.json`` fixture is exercised by both
-``backend/tests/test_jsonld_service.py`` and a frontend contract test
+``backend/tests/services/test_jsonld_service.py`` and a frontend contract test
 asserting ``EventStructuredData`` reproduces the same structure from the
 same input. Dates are computed in a fixed Europe/Brussels timezone rather
 than a viewer's local time — the client component's own render is inherently

@@ -541,7 +541,7 @@ The response (`EditionStandsOut`) lists, per organization, `{event_id, date, roo
 label}` for each stand, so an organization can be somewhere else on another day or have no
 entry at all. It is built by `app/services/stands_service.py`, which loads only
 organizations, layouts, rooms and areas — never tables, registrations or allocations
-(asserted in `tests/test_edition_stands.py`). Stands are only published while the festival is on (first
+(asserted in `tests/routers/test_edition_stands.py`). Stands are only published while the festival is on (first
 active event day through 7 days after the last, Europe/Brussels) and the list is empty
 outside that window; inside it they appear as soon as they are assigned. Inactive
 editions, events and organizations are excluded. The public MCP tool
@@ -552,7 +552,7 @@ behind the homepage's "Show on plan" button: per active event day and room, the 
 geometry (`id`, `name`, `width_m`, `length_m`, `color`) and its areas (`id`, `label`, `icon`,
 `x`, `y`, `rotation`, `width_m`, `length_m`, `organization_id`). It includes areas without an
 organization (stage, entrance, ...) but never tables, registrations, guests, capacities,
-allocations or layout ids (`EditionPlanOut`; asserted in `tests/test_edition_plan.py`), uses
+allocations or layout ids (`EditionPlanOut`; asserted in `tests/routers/test_edition_plan.py`), uses
 the same publication window as the stands and returns 404 for inactive editions. See the
 "Public floor plan subset" section of `docs/floor-plan-coordinates.md`.
 
@@ -700,7 +700,7 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
 Everything that differs per kind (how answers are stored, counted, validated and shown) lives in one
 `PollKind` per kind in `app/services/poll_kinds.py`; `poll_questions_service` never branches on the kind. To
 add a kind, add a handler there and register it in `KINDS`, extend `POLL_QUESTION_KINDS` (and the check
-constraint with a migration) and `PollQuestionKind`; `tests/test_poll_kinds.py` fails until they agree. On the
+constraint with a migration) and `PollQuestionKind`; `tests/services/test_poll_kinds.py` fails until they agree. On the
 frontend the per-kind pieces are `Record<PollQuestionKind, ...>` maps (`utils/pollKinds.ts`,
 `components/MyPollAnswers.tsx`, `components/admin/pollAnswerFields.tsx`, `PollOrdersTable`), so a new kind
 fails type-checking until each says what to do with it. The REST shapes still carry kind-specific fields
@@ -921,7 +921,7 @@ requirements.
 Omission and explicit `null` are separate API decisions. Preserve
 `model_fields_set` / `exclude_unset=True` handling, and document any intentional
 change in null handling or write validation in `docs/retry-safety.md`. Tests in
-`tests/test_request_schemas.py` cover create/update constraint consistency and
+`tests/schemas/test_request_schemas.py` cover create/update constraint consistency and
 complete-versus-partial nullability.
 
 ## Private signage MP4 jobs (#1349)

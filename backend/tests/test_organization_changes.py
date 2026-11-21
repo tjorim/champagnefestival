@@ -14,9 +14,9 @@ from app.models import AuditEntry, OrganizationChange, OutboxJob
 from app.schemas import OrganizationChangeSubmit
 from app.services import organization_changes
 from app.services.errors import ConflictError
-from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
 from tests.helpers import requires_postgres
+from tests.routers import test_my_organizations
 
 manager = test_my_organizations.manager
 login = test_my_organizations.login

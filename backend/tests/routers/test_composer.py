@@ -23,7 +23,7 @@ def _enable_vapid(monkeypatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _stub_composer_push_endpoint_as_public(monkeypatch):
-    """See tests/test_push.py's identical fixture for why this patches the
+    """See tests/routers/test_push.py's identical fixture for why this patches the
     module-level function rather than global DNS resolution."""
     import app.services.composer_delivery as composer_delivery_module
 

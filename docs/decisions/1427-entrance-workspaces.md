@@ -140,7 +140,7 @@ exemption, incomplete-form and new-person continuation regressions.
 - Frontend tests cover filter context while collapsed, cross-page bulk scope,
   responsive cards, camera denial, selected-workspace focus/return, offline
   no-write/no-replay behaviour, and absolute undo requests without retries.
-- `backend/tests/test_registrations_admin.py` verifies repeated uncheck-in clears
+- `backend/tests/routers/test_registrations_admin.py` verifies repeated uncheck-in clears
   the attendance timestamp and preserves strap state. `test_stamp_cards.py`
   covers attendance/stamp synchronisation and blocked undo after reward hand-out.
   The targeted SQLite run passed 43 tests; three PostgreSQL-only cases skipped.

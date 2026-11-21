@@ -13,9 +13,9 @@ from app.core.config import settings
 from app.models import Organization
 from app.services import organization_changes, organization_logos
 from app.services.errors import ServiceError
-from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
 from tests.helpers import requires_postgres
+from tests.routers import test_my_organizations
 from tests.test_organization_changes import decision, login, propose
 
 manager = test_my_organizations.manager

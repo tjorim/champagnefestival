@@ -1,24 +1,28 @@
-"""Tests for PgRenderCacheListener's reconnect behaviour (#992).
+"""Tests for PgLiveListener's reconnect behaviour (#932 decision 2).
 
-Mirrors tests/test_pg_live_listener.py's structure and rationale exactly —
-this class is a deliberate near-duplicate of PgLiveListener rather than a
-generalization of it, see app.services.live.render_cache_listener's module docstring.
-Full end-to-end delivery (a real NOTIFY clearing the cache) is already
-exercised by tests/test_public_pages.py via the session-scoped listener in
-conftest.py; this file covers the failure/reconnect path specifically.
+Full end-to-end delivery (a real NOTIFY reaching live_bus) is already
+exercised by tests/services/test_live_broadcasts.py via the session-scoped listener in
+conftest.py. This file covers the failure/reconnect path specifically, which
+that fixture's happy-path connection never triggers.
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from app.services.live.render_cache_listener import PgRenderCacheListener
+from app.services.live.listener import PgLiveListener
 from tests.helpers import requires_postgres
 
 
 async def test_start_failure_schedules_reconnect_instead_of_stopping():
-    listener = PgRenderCacheListener()
+    """Regression (PR #1011 review): an initial connection failure must not
+    call stop() — that sets _closing, permanently disabling the same
+    reconnect-with-backoff loop a later unexpected drop relies on.
+    """
+    listener = PgLiveListener()
     try:
+        # An unroutable port on localhost fails fast without a long OS-level
+        # connect timeout, unlike an unreachable external host would.
         await listener.start("postgresql+asyncpg://postgres:postgres@localhost:1/nonexistent")
 
         assert listener._closing is False
@@ -29,7 +33,7 @@ async def test_start_failure_schedules_reconnect_instead_of_stopping():
 
 
 async def test_stop_before_any_successful_connect_cancels_the_reconnect_task():
-    listener = PgRenderCacheListener()
+    listener = PgLiveListener()
     await listener.start("postgresql+asyncpg://postgres:postgres@localhost:1/nonexistent")
     reconnect_task = listener._reconnect_task
     assert reconnect_task is not None
@@ -43,14 +47,20 @@ async def test_stop_before_any_successful_connect_cancels_the_reconnect_task():
 
 @requires_postgres("LISTEN/NOTIFY is PostgreSQL only")
 async def test_reconnect_succeeds_once_the_database_becomes_reachable(engine):
-    from app.services.live.render_cache_listener import _to_asyncpg_dsn
+    """The reconnect loop started by a failed start() must pick up a real
+    connection once one becomes available, not just retry forever.
+    """
+    from app.services.live.listener import _to_asyncpg_dsn
     from tests.conftest import TEST_DATABASE_URL
 
-    listener = PgRenderCacheListener()
+    listener = PgLiveListener()
     try:
         await listener.start("postgresql+asyncpg://postgres:postgres@localhost:1/nonexistent")
         assert listener._conn is None
 
+        # Point the in-flight reconnect loop at the real test database — it
+        # re-reads self._dsn on every retry, so this simulates the address
+        # becoming reachable without needing an actually-flaky target.
         listener._dsn = _to_asyncpg_dsn(TEST_DATABASE_URL)
 
         async def _connected() -> None:
