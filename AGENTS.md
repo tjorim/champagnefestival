@@ -10,7 +10,7 @@ Toolchain versions live in `frontend/.node-version`, the `packageManager` field 
 
 ## Repository layout
 
-- `frontend/` contains the web app
+- `frontend/` contains the web app; `frontend/src/` is laid out as described in `docs/ARCHITECTURE.md` (`app/`, `features/<domain>/`, `components/`, `hooks/`, `lib/`, `mocks/`, `config/`, `types/`, `styles/`), with tests under `frontend/tests/` mirroring `src/` and end-to-end specs in `frontend/e2e/`
 - `backend/` contains the FastAPI service
 - `android/` contains the event-day Android app
 - `pebble/` contains an experimental, unshipped Pebble (Alloy) companion app scaffold — see `pebble/README.md` (tracks issue #757)

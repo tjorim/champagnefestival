@@ -40,16 +40,23 @@ To develop without a running backend, see [Mock API (MSW)](#mock-api-msw) below.
 frontend/
 ├── messages/          # i18n translation files (nl.json, en.json, fr.json)
 ├── public/            # static assets (images, fonts, …)
+├── e2e/               # Playwright specs
+├── tests/             # Vitest tests, mirroring src/ (tests/features/<domain>/…)
 └── src/
-    ├── components/    # React components (feature sub-directories)
+    ├── app/           # bootstrap and app shell: providers, router, layout, theme
+    ├── features/      # one folder per domain: site, registration, my-account, check-in, signage, admin/…
+    ├── components/    # UI shared by two or more features; components/ui/ holds the primitives
+    ├── hooks/         # hooks shared by two or more features
+    ├── lib/           # helpers and API calls shared by two or more features (lib/api, lib/query, …)
     ├── config/        # site configuration (schedule, navigation, …)
-    ├── hooks/         # custom React hooks
     ├── mocks/         # MSW mock handlers and seed data (dev-only)
     ├── paraglide/     # generated i18n message functions (do not edit)
-    ├── router.tsx     # TanStack Router setup + shared route search validators
-    ├── types/         # TypeScript type definitions
-    └── utils/         # shared utilities (date helpers, …)
+    ├── styles/        # global CSS
+    ├── sw/            # service-worker modules (entry: sw.ts)
+    └── types/         # UI-only TypeScript types
 ```
+
+The rules for where new code goes are in [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
 
 ## Internationalization
 
