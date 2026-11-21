@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
-from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.core.auth import require_admin
+from app.core.dependencies import Pagination, apply_pagination
+from app.db.session import get_db
 from app.models import AuditEntry
 from app.schemas import AuditEntryOut
 

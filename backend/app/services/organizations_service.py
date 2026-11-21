@@ -14,12 +14,12 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.models import Edition, Organization, Person
 from app.schemas import OrganizationCreate, OrganizationDescription, OrganizationOut, OrganizationUpdate
 from app.services import organization_logos
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.utils import organization_to_out
+from app.services.serializers import organization_to_out
 
 DESCRIPTION_FIELDS = ("description_nl", "description_fr", "description_en")
 

@@ -11,11 +11,12 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from sqlalchemy import select
 
-from app import member_mail
-from app.composer_delivery import deliver_composer_email, deliver_composer_message_dispatch
-from app.config import settings
-from app.database import async_session_factory
-from app.member_mail import (
+from app.core.config import settings
+from app.db.session import async_session_factory
+from app.models import AuditEntry, EmailConsent, EmailSuppression, OutboxJob
+from app.services import email_suppression_service, member_mail, member_mail_unsubscribe
+from app.services.composer_delivery import deliver_composer_email, deliver_composer_message_dispatch
+from app.services.member_mail import (
     MemberMail,
     MemberMailRejected,
     MemberMailResult,
@@ -23,8 +24,6 @@ from app.member_mail import (
     MemberMailUnavailable,
     MemberMailUncertain,
 )
-from app.models import AuditEntry, EmailConsent, EmailSuppression, OutboxJob
-from app.services import email_suppression_service, member_mail_unsubscribe
 from app.services.outbox_service import process_one_job
 from tests.helpers import ADMIN_HEADERS, _add_consent
 
@@ -466,7 +465,7 @@ async def test_unsubscribe_is_unavailable_without_a_signing_key(unauth_client):
 def test_signing_key_must_be_long_enough():
     from pydantic import ValidationError
 
-    from app.config import Settings
+    from app.core.config import Settings
 
     with pytest.raises(ValidationError):
         Settings(_env_file=None, member_mail_signing_key="short")
@@ -479,7 +478,7 @@ async def _earn_reward(client, db_session, *, consent: bool = True, language: st
     """Earn a stamp-card reward for a member; returns (person id, reward id)."""
     from app.models import Person
     from tests.helpers import _post_registration
-    from tests.test_stamp_cards import check, setup_card
+    from tests.routers.test_stamp_cards import check, setup_card
 
     _, event, first = await setup_card(client)
     second = (await _post_registration(client, event=event)).json()

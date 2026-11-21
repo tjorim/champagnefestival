@@ -14,11 +14,11 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
-from app.database import violated_constraint_name
+from app.db.session import violated_constraint_name
 from app.models import AppSettings
 from app.schemas import AppSettingsOut, AppSettingsUpdate
-from app.utils import app_settings_to_out
+from app.services.audit_service import write_audit_entry
+from app.services.serializers import app_settings_to_out
 
 _SETTINGS_ID = "app_settings"
 

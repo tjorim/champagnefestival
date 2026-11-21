@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import products_service
-from app.utils import product_to_out
+from app.services.serializers import product_to_out
 
 
 async def create_product(

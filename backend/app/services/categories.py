@@ -15,9 +15,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
-from app.audit import write_audit_entry
 from app.models import EventCategory, ProductCategory
 from app.schemas import CategoryCreate, CategoryLabels, CategoryOut, CategoryUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ServiceError, ValidationFailedError
 
 LABEL_FIELDS = ("label_nl", "label_fr", "label_en")

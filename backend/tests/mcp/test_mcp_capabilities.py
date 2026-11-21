@@ -1,0 +1,375 @@
+"""Tests for the MCP capabilities manifest (issue #807).
+
+Guards against drift between the advertised tool/role manifest and the
+actual live tool registration in ``create_mcp_server()`` — the acceptance
+criterion is "Capability output is generated from or verified against actual
+MCP registration."
+"""
+
+from __future__ import annotations
+
+from typing import Any, cast
+from unittest.mock import MagicMock
+
+import pytest
+from fastmcp.server.auth import AccessToken, AuthContext, run_auth_checks
+
+from app.mcp.capabilities import (
+    MCP_CAPABILITY_CONTRACT_VERSION,
+    PUBLIC_TOOL_NAMES,
+    ROLE_ADMIN,
+    ROLE_PUBLIC,
+    ROLE_VOLUNTEER,
+    TOOL_EFFECT_READ,
+    TOOL_EFFECT_WRITE,
+    VOLUNTEER_TOOL_NAMES,
+    get_mcp_capabilities,
+    tool_annotations,
+    tool_auth,
+    tool_effect,
+    tool_required_role,
+)
+from app.mcp.server import create_mcp_server
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_covers_every_registered_tool_exactly_once():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    registered = {tool.name for tool in await mcp.local_provider.list_tools()}
+
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    manifest_names = {entry["name"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    # Generated directly off mcp.list_tools(), so this can't drift by
+    # construction — asserted anyway as a regression guard on that invariant.
+    assert manifest_names == registered
+
+
+def test_public_and_volunteer_tool_allowlists_are_disjoint():
+    assert PUBLIC_TOOL_NAMES.isdisjoint(VOLUNTEER_TOOL_NAMES)
+
+
+@pytest.mark.anyio
+async def test_public_and_volunteer_allowlists_only_reference_real_tools():
+    """Catches a typo'd or removed tool name lingering in the allowlists —
+    every name in PUBLIC_TOOL_NAMES/VOLUNTEER_TOOL_NAMES must correspond to an
+    actually-registered tool, otherwise the manifest would silently omit it."""
+    mcp = create_mcp_server(session_factory=MagicMock())
+    registered = {tool.name for tool in await mcp.local_provider.list_tools()}
+
+    assert registered >= PUBLIC_TOOL_NAMES
+    assert registered >= VOLUNTEER_TOOL_NAMES
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_roles_are_valid_and_sorted():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+
+    tools = cast(list[dict[str, Any]], manifest["tools"])
+    names = [entry["name"] for entry in tools]
+    assert names == sorted(names)
+    assert all(entry["access"]["role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
+    assert all(entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE) for entry in tools)
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_follows_shared_contract():
+    """Shared MCP manifest contract v1 (tjorim/apps#229)."""
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+
+    assert manifest["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION == 1
+    tools = cast(list[dict[str, Any]], manifest["tools"])
+    assert tools
+    for entry in tools:
+        assert entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE)
+        assert entry["requires_confirmation"] is False
+        assert set(entry) == {"name", "effect", "requires_confirmation", "access"}
+        assert entry["access"] == {"role": tool_required_role(entry["name"])}
+
+
+@pytest.mark.anyio
+async def test_manifest_effect_matches_registered_tool_annotations():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    registered = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+
+    for entry in cast(list[dict[str, Any]], manifest["tools"]):
+        annotations = registered[entry["name"]].annotations
+        assert annotations is not None
+        assert annotations.read_only_hint is (entry["effect"] == TOOL_EFFECT_READ)
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_spot_checks_known_tiers():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    role_by_name = {entry["name"]: entry["access"]["role"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    assert role_by_name["whoami"] == ROLE_PUBLIC
+    assert role_by_name["get_active_edition"] == ROLE_PUBLIC
+    assert role_by_name["find_guest"] == ROLE_VOLUNTEER
+    assert role_by_name["get_check_in_summary"] == ROLE_VOLUNTEER
+    assert role_by_name["create_venue"] == ROLE_ADMIN
+    assert role_by_name["create_integration_client"] == ROLE_ADMIN
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_classifies_side_effects_conservatively():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    effect_by_name = {entry["name"]: entry["effect"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    assert effect_by_name["whoami"] == TOOL_EFFECT_READ
+    assert effect_by_name["get_active_edition"] == TOOL_EFFECT_READ
+    assert effect_by_name["list_audit_entries"] == TOOL_EFFECT_READ
+    assert effect_by_name["create_venue"] == TOOL_EFFECT_WRITE
+    assert effect_by_name["rotate_integration_client"] == TOOL_EFFECT_WRITE
+    assert tool_effect("future_tool_without_policy") == TOOL_EFFECT_WRITE
+
+
+@pytest.mark.anyio
+async def test_registered_tools_advertise_explicit_safety_annotations():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = await mcp.local_provider.list_tools()
+
+    assert tools
+    for tool in tools:
+        annotations = tool.annotations
+        assert annotations is not None
+        expected_read_only = tool_effect(tool.name) == TOOL_EFFECT_READ
+        assert annotations.read_only_hint is expected_read_only
+        assert annotations.open_world_hint is False
+        if expected_read_only:
+            assert annotations.destructive_hint is False
+            assert annotations.idempotent_hint is True
+
+
+def test_write_annotations_distinguish_creation_from_destructive_changes():
+    create = tool_annotations("create_edition")
+    update = tool_annotations("update_edition")
+    delete = tool_annotations("delete_edition")
+    unknown = tool_annotations("future_tool_without_policy")
+
+    assert create.read_only_hint is False
+    assert create.destructive_hint is False
+    assert update.destructive_hint is True
+    assert delete.destructive_hint is True
+    assert unknown.read_only_hint is False
+    assert unknown.destructive_hint is True
+
+
+@pytest.mark.anyio
+async def test_registered_tools_enforce_role_aware_component_authorization():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+
+    def context(tool_name: str, roles: list[str]) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test-token",
+                client_id="test-client",
+                scopes=[],
+                claims={"realm_access": {"roles": roles}},
+            ),
+            component=tools[tool_name],
+        )
+
+    assert tools["whoami"].auth is None
+
+    volunteer_auth = tools["find_guest"].auth
+    assert volunteer_auth is not None
+    assert await run_auth_checks(volunteer_auth, context("find_guest", [ROLE_VOLUNTEER]))
+    assert await run_auth_checks(volunteer_auth, context("find_guest", [ROLE_ADMIN]))
+    assert not await run_auth_checks(volunteer_auth, context("find_guest", []))
+
+    admin_auth = tools["create_venue"].auth
+    assert admin_auth is not None
+    assert await run_auth_checks(admin_auth, context("create_venue", [ROLE_ADMIN]))
+    assert not await run_auth_checks(admin_auth, context("create_venue", [ROLE_VOLUNTEER]))
+    assert not await run_auth_checks(admin_auth, context("create_venue", []))
+
+
+@pytest.mark.anyio
+async def test_integration_client_management_requires_interactive_admin():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    tools = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+
+    def context(tool_name: str, **claims: object) -> AuthContext:
+        return AuthContext(
+            token=AccessToken(
+                token="test-token",
+                client_id="test-client",
+                scopes=[],
+                claims={
+                    "azp": "champagnefestival",
+                    "realm_access": {"roles": [ROLE_ADMIN]},
+                    **claims,
+                },
+            ),
+            component=tools[tool_name],
+        )
+
+    for tool_name in (
+        "create_integration_client",
+        "list_integration_clients",
+        "rotate_integration_client",
+        "revoke_integration_client",
+    ):
+        auth = tools[tool_name].auth
+        assert auth is not None
+        assert await run_auth_checks(auth, context(tool_name))
+        assert not await run_auth_checks(auth, context(tool_name, auth_source="integration"))
+        assert not await run_auth_checks(
+            auth,
+            context(
+                tool_name,
+                azp="champagnefestival-mcp",
+                preferred_username="service-account-champagnefestival-mcp",
+            ),
+        )
+        assert not await run_auth_checks(
+            auth,
+            context(
+                tool_name,
+                preferred_username="service-account-champagnefestival",
+            ),
+        )
+        assert not await run_auth_checks(
+            auth,
+            context(tool_name, azp="champagnefestival-mcp"),
+        )
+
+
+@pytest.mark.anyio
+async def test_component_auth_hides_non_public_tools_without_role_claims():
+    mcp = create_mcp_server(session_factory=MagicMock())
+
+    visible = {tool.name for tool in await mcp.list_tools()}
+
+    # With BM25SearchTransform, only always_visible tools that pass auth plus synthetic tools are listed.
+    # Only the public entry tools plus the synthetic discovery tools remain initially visible.
+    assert visible == {"whoami", "get_active_edition", "search_tools", "call_tool"}
+
+
+def test_unknown_tools_default_to_admin_component_authorization():
+    assert tool_auth("future_tool_without_policy") is not None
+
+
+# ---------------------------------------------------------------------------
+# /api/mcp/capabilities REST endpoint
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_mcp_capabilities_endpoint_reports_disabled_when_mcp_not_mounted(client):
+    # The test app's settings.mcp_base_url is unset, so app.main._mcp is None.
+    r = await client.get("/api/mcp/capabilities")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enabled"] is False
+    assert body["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION
+    assert body["tools"] == []
+    assert body["resources"] == []
+    assert body["prompts"] == []
+    assert body["mount_path"] == "/mcp"
+
+
+@pytest.mark.anyio
+async def test_mcp_capabilities_endpoint_reports_enabled_tool_list(client, monkeypatch):
+    import app.main as main_module
+
+    fake_mcp = create_mcp_server(session_factory=MagicMock())
+    monkeypatch.setattr(main_module, "_mcp", fake_mcp)
+
+    r = await client.get("/api/mcp/capabilities")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["enabled"] is True
+    assert body["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION
+    assert any(t["name"] == "whoami" for t in body["tools"])
+    assert any(
+        t["name"] == "create_venue" and t["access"] == {"role": "admin"} and t["requires_confirmation"] is False
+        for t in body["tools"]
+    )
+
+
+def test_layout_comparison_and_restore_preview_are_read_tools():
+    for name in ("compare_layout_revisions", "preview_layout_restore"):
+        assert tool_effect(name) == TOOL_EFFECT_READ, name
+        assert tool_annotations(name).read_only_hint is True, name
+    assert tool_effect("restore_layout_revision") == TOOL_EFFECT_WRITE
+
+
+ADMIN_READ_TOOLS = {
+    "list_announcements",
+    "list_composed_messages",
+    "get_composed_message",
+    "list_policies",
+    "get_policy",
+    "preview_policy_markdown",
+    "list_signage_channels",
+    "get_signage_channel",
+    "list_signage_templates",
+    "get_signage_template",
+    "list_signage_slides",
+    "get_signage_slide",
+    "get_signage_playlist",
+    "preview_signage_playlist",
+    "get_signage_video_capability",
+    "list_signage_video_exports",
+    "get_signage_video_export",
+    "list_waitlist_entries",
+    "list_poll_questions",
+    "list_poll_orders",
+}
+ADMIN_WRITE_TOOLS = {
+    "create_announcement",
+    "update_announcement",
+    "reorder_announcements",
+    "delete_announcement",
+    "create_composed_message",
+    "update_composed_message",
+    "schedule_composed_message",
+    "create_policy_draft",
+    "update_policy_draft",
+    "discard_policy_draft",
+    "publish_policy_draft",
+    "create_signage_channel",
+    "update_signage_channel",
+    "delete_signage_channel",
+    "create_signage_template",
+    "update_signage_template",
+    "delete_signage_template",
+    "create_signage_slide",
+    "update_signage_slide",
+    "delete_signage_slide",
+    "reorder_signage_slides",
+    "cancel_signage_video_export",
+    "mark_waitlist_entry_handled",
+    "delete_waitlist_entry",
+    "reorder_poll_options",
+    "create_poll_question",
+    "update_poll_question",
+    "delete_poll_question",
+    "reorder_poll_questions",
+    "copy_poll_questions",
+    "set_volunteer_poll_order",
+}
+
+
+@pytest.mark.anyio
+async def test_content_and_signage_admin_tools_are_registered_admin_only_with_the_right_effect():
+    """Announcements, composer, policies, signage (+ video exports) and the waitlist queue have
+    REST admin endpoints, so they need MCP tools too — and none of them may be reachable by
+    volunteers or anonymous callers."""
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    by_name = {entry["name"]: entry for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    for name in ADMIN_READ_TOOLS | ADMIN_WRITE_TOOLS:
+        assert by_name[name]["access"]["role"] == ROLE_ADMIN, name
+        assert tool_auth(name) is not None, name
+    assert {by_name[name]["effect"] for name in ADMIN_READ_TOOLS} == {TOOL_EFFECT_READ}
+    assert {by_name[name]["effect"] for name in ADMIN_WRITE_TOOLS} == {TOOL_EFFECT_WRITE}

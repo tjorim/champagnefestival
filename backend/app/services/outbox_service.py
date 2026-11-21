@@ -9,9 +9,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import DeliveryAttempt, OutboxJob, PollDeletionNotification
-from app.utils import make_id
+from app.services.audit_service import write_audit_entry
 
 REGISTRATION_CONFIRMATION = "registration_confirmation"
 CONTACT_NOTIFICATION = "contact_notification"

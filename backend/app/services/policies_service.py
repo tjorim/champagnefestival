@@ -23,12 +23,12 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Policy, PolicyVersion
 from app.schemas import PolicyDraftCreate, PolicyDraftUpdate, PolicyOut, PolicyVersionOut
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import make_id
 
 
 def resolve_published(policy: Policy, version: PolicyVersion, locale: str | None) -> tuple[str, str, str]:

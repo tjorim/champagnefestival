@@ -43,7 +43,7 @@ See [retry safety](../retry-safety.md) for the exact guarantees.
 Create, merged updates, and scheduling require at least one complete locale
 title/body pair. Delivery selects the requested complete pair, then Dutch,
 English or French; it never mixes languages. Push validation and delivery
-share the JSON serializer and 4096-byte limit in `app/composer_content.py`.
+share the JSON serializer and 4096-byte limit in `app/services/composer_content.py`.
 Non-push content keeps its character limits without the push byte restriction.
 
 The admin form displays locale text, channels and estimated audience and
@@ -60,7 +60,7 @@ not an implemented guarantee. Preview uses plain form text; delivery applies
 the complete-pair fallback above. The API supports future scheduling; the
 current UI sends with an empty scheduling body (“now”).
 
-Tests: `backend/tests/test_composer.py` and
+Tests: `backend/tests/routers/test_composer.py` and
 `frontend/tests/features/admin/shared/ComposerManagement.test.tsx` cover validation,
 state transitions, audience timing, delivery outcomes, repeat-submit protection,
 error handling and accessibility. Shared delivery rules are in the

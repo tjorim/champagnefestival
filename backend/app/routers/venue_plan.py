@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth import require_volunteer
-from app.database import get_db
+from app.core.auth import require_volunteer
+from app.db.session import get_db
 from app.models import Edition, Layout, Registration, RegistrationAllocation
 from app.schemas import VenuePlanAreaOut, VenuePlanLayoutOut, VenuePlanOut, VenuePlanRoomOut, VenuePlanTableOut
 

@@ -6,7 +6,6 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.models import (
     AppSettings,
     Edition,
@@ -20,6 +19,7 @@ from app.models import (
 )
 from app.schemas import StampCardOut, StampCardTypeOut, StampCardTypeWrite, StampOut, StampProgress, StampRewardOut
 from app.services import reward_mail
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 
 LABELS = ("reward_label_nl", "reward_label_fr", "reward_label_en")

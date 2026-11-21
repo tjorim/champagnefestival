@@ -11,8 +11,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.schemas import IntegrationClientCreate, IntegrationClientCreatedOut, IntegrationClientOut
 from app.services import integration_clients_service as ics
 from app.services.errors import ServiceError, to_http_exception

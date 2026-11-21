@@ -60,7 +60,7 @@ jobs:
               - 'frontend/src/app/providers/AuthContext.tsx'
               - 'frontend/src/main.tsx'
               - 'frontend/src/app/router.tsx'
-              - 'backend/app/models.py'
+              - 'backend/app/models/**'
               - 'backend/app/routers/me.py'
               - 'backend/app/services/pebble_access.py'
               - '.github/workflows/pebble.yml'

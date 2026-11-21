@@ -7,16 +7,16 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.auth import require_admin
-from app.config import settings
+from app.core.auth import require_admin
+from app.core.config import settings
 from app.main import app
 from app.models import AuditEntry, OrganizationChange, OutboxJob
 from app.schemas import OrganizationChangeSubmit
 from app.services import organization_changes
 from app.services.errors import ConflictError
-from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
 from tests.helpers import requires_postgres
+from tests.routers import test_my_organizations
 
 manager = test_my_organizations.manager
 login = test_my_organizations.login
@@ -139,7 +139,7 @@ async def test_authorization_and_validation(client, db_session, manager, monkeyp
     assert (await propose(client, row, description_nl="a" * 601)).status_code == 422
     change = (await propose(client, row, website="https://safe.example")).json()
     app.dependency_overrides.pop(require_admin)
-    import app.auth as auth
+    import app.core.auth as auth
 
     claims = {"sub": "reviewer", "realm_access": {"roles": []}}
 
@@ -199,7 +199,7 @@ async def test_concurrent_decisions(engine, db_session, manager):
 
 
 async def test_notification_uses_configured_recipient(db_session, manager, monkeypatch):
-    import app.email as email
+    import app.services.email_service as email
 
     monkeypatch.setattr(settings, "organization_review_recipient", "shared@example.com")
     monkeypatch.setattr(settings, "smtp_host", "smtp.example.com")
@@ -266,7 +266,7 @@ async def test_submission_id_conflict_and_replay_after_replacement(client, manag
 
 async def test_mcp_review_authorization_and_supersession(db_session, manager, monkeypatch):
     from app.mcp.admin import organizations as mcp_organizations
-    from app.mcp_server import ChampagneFestivalMcpBackend
+    from app.mcp.server import ChampagneFestivalMcpBackend
     from tests.helpers import mcp_session_factory
 
     backend = ChampagneFestivalMcpBackend(mcp_session_factory(db_session))

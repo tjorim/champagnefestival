@@ -1,7 +1,7 @@
 """Draft lifecycle for the central composer (#942).
 
 Actual delivery (announcement creation, push enqueueing, the state
-transition to ``sent``) is ``app.composer_delivery``'s job, run from the
+transition to ``sent``) is ``app.services.composer_delivery``'s job, run from the
 durable outbox.
 This module only owns the ``draft`` half: create, update, read, and the
 ``schedule`` call that hands off to delivery.
@@ -16,9 +16,7 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import member_mail
-from app.audit import write_audit_entry
-from app.member_mail import MemberMailSkipped
+from app.core.ids import make_id
 from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
 from app.schemas import (
     AnnouncementLevel,
@@ -28,10 +26,12 @@ from app.schemas import (
     ComposedMessageUpdate,
     ComposedMessageWrite,
 )
+from app.services import member_mail
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.services.member_mail import MemberMailSkipped
 from app.services.member_mail_audience import eligible_people
 from app.services.outbox_service import enqueue_job
-from app.utils import make_id
 
 COMPOSER_MESSAGE_DISPATCH = "composer_message_dispatch"
 _COMPOSER_MESSAGE_PUSH = "composer_message_push"

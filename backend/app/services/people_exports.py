@@ -7,9 +7,9 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
+from app.core.csv_safe import csv_safe
 from app.services import volunteers_service
 from app.services.people_listing import registration_count
-from app.utils import csv_safe
 
 EXPORT_BATCH_SIZE = 250
 

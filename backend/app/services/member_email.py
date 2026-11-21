@@ -4,11 +4,11 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import violated_constraint_name
+from app.db.queries import roles_contains
+from app.db.session import violated_constraint_name
 from app.models import Person
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import role_active
-from app.utils import roles_contains
 
 
 def email_conflict() -> ApiHTTPException:

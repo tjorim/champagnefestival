@@ -26,15 +26,17 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
-from app.dependencies import SortDirection
+from app.core.dependencies import SortDirection
+from app.core.ids import make_id
+from app.db.queries import get_or_404
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerOut, VolunteerPeriodOut, VolunteerUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
-from app.utils import get_or_404, make_id, person_to_out
+from app.services.serializers import person_to_out
 
 
 def ensure_volunteer_role(person: Person, *, started_on: dt_date | None = None) -> None:

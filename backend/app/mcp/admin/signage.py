@@ -23,8 +23,7 @@ from pydantic import BaseModel
 
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import FaqLocale
-from app.services import signage_service as service
-from app.signage_schemas import (
+from app.schemas.signage import (
     ChannelOut,
     ChannelWrite,
     PlaylistPreview,
@@ -35,6 +34,7 @@ from app.signage_schemas import (
     TemplateOut,
     TemplateWrite,
 )
+from app.services import signage_service as service
 
 
 def _dump(schema: type[BaseModel], item: Any) -> dict:

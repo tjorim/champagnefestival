@@ -18,7 +18,7 @@ from sqlalchemy import event, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from app.config import settings
+from app.core.config import settings
 from app.models import Organization, OrganizationChange
 from app.services.errors import NotFoundError, ServiceError
 
@@ -158,7 +158,7 @@ async def reconcile(db: AsyncSession) -> int:
 
 
 async def main() -> None:
-    from app.database import async_session_factory
+    from app.db.session import async_session_factory
 
     async with async_session_factory() as db:
         print(f"Removed {await reconcile(db)} unreferenced logos.")

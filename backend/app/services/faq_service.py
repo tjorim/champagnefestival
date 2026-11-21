@@ -19,13 +19,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
-from app.dialect_functions import assign_positions
+from app.core.ids import make_id
+from app.db.dialect_functions import assign_positions
 from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemOut, FaqItemUpdate, FaqTextFields
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.utils import make_id
 
 TEXT_FIELDS = (
     "question_nl",

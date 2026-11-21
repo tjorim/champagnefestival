@@ -8,12 +8,12 @@ Business logic lives in ``app.services.members_service`` and is shared with
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.dependencies import get_request_id
+from app.core.auth import get_actor_id, require_admin
+from app.core.dependencies import get_request_id
+from app.db.session import get_db
 from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonOut, PersonUpdate
 from app.services import members_service
-from app.utils import person_to_out
+from app.services.serializers import person_to_out
 
 router = APIRouter(
     prefix="/api/members",

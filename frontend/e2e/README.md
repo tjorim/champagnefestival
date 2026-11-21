@@ -115,7 +115,7 @@ happy-path token (`mock-access-token` — see `src/mocks/handlers/admin.ts`'s
 `validAdminTokens`), so it authenticates against the mocks with zero setup.
 To instead point at a real running backend, set `DEV_AUTH_BYPASS_TOKEN` to the
 same value before running the setup step _and_ before starting the backend
-(see the root `AGENTS.md` and `backend/app/oidc_config.py`'s
+(see the root `AGENTS.md` and `backend/app/core/oidc.py`'s
 `_DEV_BYPASS_CLAIMS`) — that value then flows through as the session's
 Authorization header instead.
 

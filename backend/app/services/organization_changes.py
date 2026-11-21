@@ -3,11 +3,11 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
-from app.config import settings
+from app.core.config import settings
 from app.models import Organization, OrganizationChange
 from app.schemas import OrganizationChangeOut, OrganizationChangeSubmit, OrganizationDescription
 from app.services import organization_logos
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.organizations_service import DESCRIPTION_FIELDS
 from app.services.outbox_service import enqueue_job

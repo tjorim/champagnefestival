@@ -11,21 +11,19 @@ from fastmcp.utilities.lifespan import combine_lifespans
 from sqlalchemy.exc import IntegrityError
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.config import settings
-from app.database import create_tables
-from app.live.listener import pg_live_listener
-from app.live.render_cache_listener import pg_render_cache_listener
+from app.core.config import settings
+from app.core.observability import request_metrics_middleware
+from app.core.request_limits import RateLimitHeadersMiddleware
+from app.db.session import create_tables
 from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
-from app.mcp_server import build_keycloak_auth, create_mcp_server
-from app.middleware import (
+from app.mcp.server import build_keycloak_auth, create_mcp_server
+from app.middleware.request_timing import RequestTimingMiddleware
+from app.middleware.setup import (
     GeneralRateLimiter,
     GeneralRateLimitExceeded,
     add_cors_middleware,
     add_trusted_host_middleware,
 )
-from app.observability import request_metrics_middleware
-from app.request_limits import RateLimitHeadersMiddleware
-from app.request_timing import RequestTimingMiddleware
 from app.routers import (
     announcements,
     areas,
@@ -80,6 +78,8 @@ from app.routers import (
 )
 from app.schemas import McpCapabilitiesOut
 from app.services.errors import ApiHTTPException
+from app.services.live.listener import pg_live_listener
+from app.services.live.render_cache_listener import pg_render_cache_listener
 from app.version import APP_VERSION
 
 # Configure logging before any other module uses a logger.
@@ -126,7 +126,7 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
         logger.error(f"❌ Database initialisation failed: {exc}")
         raise
 
-    # LISTEN/NOTIFY is PostgreSQL only. A SQLite dev instance (see app.sqlite_compat) has no
+    # LISTEN/NOTIFY is PostgreSQL only. A SQLite dev instance (see app.db.sqlite_compat) has no
     # live-update stream and no proactive render-cache invalidation.
     listen = not settings.database_url.startswith("sqlite")
 
@@ -145,7 +145,7 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Startup complete — server ready to accept connections")
     logger.info("=" * 60)
 
-    from app.database import async_session_factory
+    from app.db.session import async_session_factory
     from app.services.signage_video import run as reconcile_video
 
     video_task = asyncio.create_task(reconcile_video(async_session_factory))

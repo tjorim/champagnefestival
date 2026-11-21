@@ -53,6 +53,15 @@ Static frontend (Vite build / CDN / VPS)
    └─────────────────────────────────┘
 ```
 
+### Source layout
+
+`app/` has `main.py` (app assembly) and one folder per layer: `routers/` (HTTP), `services/` (business logic, incl.
+`services/live/` and the outbox worker), `schemas/` (Pydantic, one module per domain), `models/` (SQLAlchemy, one module
+per domain), `core/` (settings, auth, limits, observability), `db/` (engine, session, SQLite compatibility), `mcp/` (the
+MCP server and tools) and `middleware/`. `python -m app.worker`, `python -m app.maintenance` and
+`python -m app.mcp_server` stay as thin entry points. The full tree, the dependency rules and the removal notes are in
+[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md#backend-backendapp).
+
 ---
 
 ## Setup
@@ -91,7 +100,9 @@ The interactive API docs are available at <http://localhost:8000/docs>.
 uv run pytest
 ```
 
-Tests run on a throwaway SQLite file by default, so they need no container. CI also runs them on
+Tests live in `tests/` and mirror `app/` (`tests/routers`, `services`, `core`, `db`, `middleware`, `schemas`, `mcp`);
+tests that span several domains and the migration tests stay at the top. They run on a throwaway SQLite file by default,
+so they need no container. CI also runs them on
 PostgreSQL, the production database. To do the same locally, create a separate test database:
 
 ```bash
@@ -259,7 +270,7 @@ See `.env.example` for a template.
 ### Authentication
 
 - Admin API endpoints require a valid OIDC Bearer JWT (`Authorization: Bearer <token>`)
-  whose `realm_access.roles` claim includes `admin` — see `app/auth.py`.
+  whose `realm_access.roles` claim includes `admin` — see `app/core/auth.py`.
 - OIDC authorization/token endpoints are discovered from `GET /api/auth/oidc-config`,
   which the frontend and Android app both call to configure their auth flow.
 - Public endpoints (registration creation, check-in) do not require admin auth.
@@ -334,7 +345,7 @@ See `.env.example` for a template.
 ### Paged list contract
 
 `GET /api/people` and `GET /api/volunteers` share one list contract
-(`ListQuery` in `app/dependencies.py`, ordering and filtering in
+(`ListQuery` in `app/core/dependencies.py`, ordering and filtering in
 `app/services/people_listing.py`), so a table can drive them with plain query
 parameters and read `{items, total, limit, page}` back. `GET /api/registrations`
 follows the same shape.
@@ -541,7 +552,7 @@ The response (`EditionStandsOut`) lists, per organization, `{event_id, date, roo
 label}` for each stand, so an organization can be somewhere else on another day or have no
 entry at all. It is built by `app/services/stands_service.py`, which loads only
 organizations, layouts, rooms and areas — never tables, registrations or allocations
-(asserted in `tests/test_edition_stands.py`). Stands are only published while the festival is on (first
+(asserted in `tests/routers/test_edition_stands.py`). Stands are only published while the festival is on (first
 active event day through 7 days after the last, Europe/Brussels) and the list is empty
 outside that window; inside it they appear as soon as they are assigned. Inactive
 editions, events and organizations are excluded. The public MCP tool
@@ -552,7 +563,7 @@ behind the homepage's "Show on plan" button: per active event day and room, the 
 geometry (`id`, `name`, `width_m`, `length_m`, `color`) and its areas (`id`, `label`, `icon`,
 `x`, `y`, `rotation`, `width_m`, `length_m`, `organization_id`). It includes areas without an
 organization (stage, entrance, ...) but never tables, registrations, guests, capacities,
-allocations or layout ids (`EditionPlanOut`; asserted in `tests/test_edition_plan.py`), uses
+allocations or layout ids (`EditionPlanOut`; asserted in `tests/routers/test_edition_plan.py`), uses
 the same publication window as the stands and returns 404 for inactive editions. See the
 "Public floor plan subset" section of `docs/floor-plan-coordinates.md`.
 
@@ -700,7 +711,7 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
 Everything that differs per kind (how answers are stored, counted, validated and shown) lives in one
 `PollKind` per kind in `app/services/poll_kinds.py`; `poll_questions_service` never branches on the kind. To
 add a kind, add a handler there and register it in `KINDS`, extend `POLL_QUESTION_KINDS` (and the check
-constraint with a migration) and `PollQuestionKind`; `tests/test_poll_kinds.py` fails until they agree. On the
+constraint with a migration) and `PollQuestionKind`; `tests/services/test_poll_kinds.py` fails until they agree. On the
 frontend the per-kind pieces are `Record<PollQuestionKind, ...>` maps (`utils/pollKinds.ts`,
 `components/MyPollAnswers.tsx`, `components/admin/pollAnswerFields.tsx`, `PollOrdersTable`), so a new kind
 fails type-checking until each says what to do with it. The REST shapes still carry kind-specific fields
@@ -800,7 +811,7 @@ frontend generates its types from:
   never a bare `dict`, `list[dict]` or `Any`);
 - a route that answers 204 declares `status_code=204`;
 - a file, stream or image route spreads
-  `**binary_response("text/csv", "...")` from `app/openapi_responses.py` into its
+  `**binary_response("text/csv", "...")` from `app/schemas/openapi_responses.py` into its
   decorator, so the document lists the media type instead of an empty JSON body.
 
 A model describes the body the route already sends; it never changes a wire shape.
@@ -809,7 +820,7 @@ an expired video export's playlist), declare a union rather than a model that
 hides one of them. `tests/test_response_models.py` fails when a route breaks
 these rules.
 
-A response model derives from `ResponseModel` (`app/schemas.py`), which sets
+A response model derives from `ResponseModel` (`app/schemas/base.py`), which sets
 `json_schema_serialization_defaults_required`: a response field with a default is
 always sent, so the document lists it as required and the generated TypeScript type
 has `field: T` rather than `field?: T`. Request bodies derive from `RequestModel`
@@ -896,7 +907,7 @@ nullability. Do not derive a partial update from a complete create model, or
 narrow mutable fields inherited from an optional base. Keep write contracts
 explicit; do not generate partial models dynamically or suppress override errors.
 
-Reuse the constrained `Annotated` value types in `app/schema_types.py` for fields
+Reuse the constrained `Annotated` value types in `app/schemas/types.py` for fields
 with the same contract. Constraints belong on the non-null value type; use
 `ValueType | None = None` for optional update fields. Keep descriptions and
 operation-specific defaults on the concrete model. Different domain limits need
@@ -921,7 +932,7 @@ requirements.
 Omission and explicit `null` are separate API decisions. Preserve
 `model_fields_set` / `exclude_unset=True` handling, and document any intentional
 change in null handling or write validation in `docs/retry-safety.md`. Tests in
-`tests/test_request_schemas.py` cover create/update constraint consistency and
+`tests/schemas/test_request_schemas.py` cover create/update constraint consistency and
 complete-versus-partial nullability.
 
 ## Private signage MP4 jobs (#1349)

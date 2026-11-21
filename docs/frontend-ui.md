@@ -329,7 +329,7 @@ primary action.
 - An edition is `editionDisplayName` (`frontend/src/lib/editions/editionName.ts`):
   "March 2027". Never show its id (`2027-march`). The backend builds the same
   string for ledger rows and the payments CSV (`edition_display_name` in
-  `backend/app/utils.py`); keep the two in step. Where the edition type matters
+  `backend/app/services/serializers.py`); keep the two in step. Where the edition type matters
   and cannot be assumed (the active-edition strip and filter), use
   `editionDisplayNameWithType`: "Champagnefestival · March 2027".
 - The page title "Admin Dashboard" appears once, in the top bar; the sidebar

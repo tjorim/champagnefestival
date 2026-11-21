@@ -62,7 +62,7 @@ the endpoint is retained for retry. See [retry safety](../retry-safety.md).
 current recovery mechanism. Category/event targeting needs a future opt-in
 UI and sender design. Bulk email is not part of Web Push.
 
-Tests: `backend/tests/test_push.py`, `usePushSubscription.test.ts`, and
+Tests: `backend/tests/routers/test_push.py`, `usePushSubscription.test.ts`, and
 `PushOptIn.test.tsx` cover consent, delivery, limiting, cleanup and accessibility.
 
 ## Historical context

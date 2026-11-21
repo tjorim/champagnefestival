@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from app.auth import require_admin
-from app.database import get_db
+from app.core.auth import require_admin
+from app.db.session import get_db
 from app.main import app
 from tests.helpers import ADMIN_HEADERS
 

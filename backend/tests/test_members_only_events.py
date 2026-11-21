@@ -5,8 +5,8 @@ from sqlalchemy import select
 
 from app.models import Person, Registration
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
-from tests.test_visitor_sessions import _capture_sent_token
-from tests.test_waitlist import SUBMISSION_ID, _create_sold_out_product
+from tests.routers.test_visitor_sessions import _capture_sent_token
+from tests.routers.test_waitlist import SUBMISSION_ID, _create_sold_out_product
 
 
 @pytest.mark.parametrize("state", ["current", "wrong_email", "retired", "anonymised", "anonymous"])
@@ -67,7 +67,7 @@ async def test_switch_keeps_existing_registrations(client):
 async def test_admin_bypass_and_mcp_switch(client, db_session):
     from app.mcp.admin.events import update_event
     from tests.helpers import mcp_session_factory
-    from tests.test_audit import _create_admin_registration
+    from tests.services.test_audit import _create_admin_registration
 
     event = await _create_event(client)
     result = await update_event(mcp_session_factory(db_session), "test-admin", event["id"], members_only=True)

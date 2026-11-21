@@ -15,7 +15,7 @@ from app.models import Organization
 from app.schemas import OrganizationCreate, OrganizationUpdate
 from app.services import organizations_service
 from app.services.errors import ServiceError
-from app.utils import organization_to_out
+from app.services.serializers import organization_to_out
 
 
 async def create_organization(

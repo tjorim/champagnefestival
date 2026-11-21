@@ -11,11 +11,12 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import Edition, Room, Venue
 from app.schemas import VenueCreate, VenueOut, VenueUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError
-from app.utils import make_id, venue_to_out
+from app.services.serializers import venue_to_out
 
 
 async def create_venue(db: AsyncSession, *, actor: str, body: VenueCreate, request_id: str | None = None) -> VenueOut:

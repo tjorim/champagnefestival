@@ -3,8 +3,8 @@
 This document defines the coordinate system used by `Table.x`/`Table.y`/`Table.rotation`
 and `Area.x`/`Area.y`/`Area.rotation` — the fields that place a table or area on a
 floor-plan `Layout`. It is the single source of truth referenced by the model
-docstrings (`backend/app/models.py`), the Pydantic schema field descriptions
-(`backend/app/schemas.py`), the MCP tool docstrings (`backend/app/mcp_server.py`),
+docstrings (`backend/app/models/`), the Pydantic schema field descriptions
+(`backend/app/schemas/`), the MCP tool docstrings (`backend/app/mcp/server.py`),
 and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx`).
 
 It does **not** cover `Room.width_m`/`length_m`, `TableType.width_m`/`length_m`, or
@@ -19,7 +19,7 @@ Signage uses the same top-left anchor and clockwise centre rotation on a fixed
 ## Position (`x`, `y`)
 
 - **Type:** float, range `[0, 100]` inclusive — enforced by `TableCreate`/`TableUpdate`/
-  `AreaCreate`/`AreaUpdate` in `backend/app/schemas.py`. A value outside this range is
+  `AreaCreate`/`AreaUpdate` in `backend/app/schemas/areas.py`. A value outside this range is
   rejected (422 over REST, `ValueError` over MCP) rather than clamped or silently stored.
 - **Unit:** a **percentage of the layout's rendered canvas** — not the room's physical
   `width_m`/`length_m` directly, and not raw pixels or metres.
@@ -105,7 +105,7 @@ icon, x, y, rotation, width_m, length_m, organization_id}]}]}]`:
 - **Which rooms and days:** active event days in date order; a room appears only when it has
   at least one published area.
 - **Tables:** never. There are no table shapes, registrations, guests, capacities,
-  allocations or layout ids; `tests/test_edition_plan.py` asserts their absence.
+  allocations or layout ids; `tests/routers/test_edition_plan.py` asserts their absence.
 - **Window:** the same as the stand list (first active event day through
   `STANDS_VISIBLE_DAYS_AFTER` days after the last one, Europe/Brussels); `days` is empty
   outside it and an inactive edition returns 404.

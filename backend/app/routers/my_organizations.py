@@ -8,14 +8,18 @@ from fastapi.responses import Response as ImageResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.db.session import get_db
 from app.models import Organization, OrganizationChange, Person, User
-from app.openapi_responses import binary_response
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit
+from app.schemas.openapi_responses import binary_response
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
-from app.visitor_session import actor_for_user, get_current_user_with_claims, get_organization_contact_email
+from app.services.visitor_session import (
+    actor_for_user,
+    get_current_user_with_claims,
+    get_organization_contact_email,
+)
 
 router = APIRouter(prefix="/api/me/organizations", tags=["me", "organizations"])
 

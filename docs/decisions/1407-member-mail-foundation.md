@@ -2,7 +2,7 @@
 
 ## Implemented increment — 2026-10-24
 
-The provider-neutral boundary is `backend/app/member_mail.py`. It accepts one
+The provider-neutral boundary is `backend/app/services/member_mail.py`. It accepts one
 recipient, an explicit sender, a stable delivery key, a category key, rendered
 plain text and a category unsubscribe URL. MIME generation includes
 `List-Unsubscribe` and `List-Unsubscribe-Post`. HTTPS URL validation does not

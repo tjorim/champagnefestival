@@ -8,8 +8,8 @@ the confirmation page, not a mail client's prefetch) activates the consent.
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
-from app.ratelimit import check_rate_limit, get_client_ip
+from app.core.ratelimit import check_rate_limit, get_client_ip
+from app.db.session import get_db
 from app.schemas import EmailConsentConfirm, EmailConsentConfirmedOut
 from app.services import email_consent_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception

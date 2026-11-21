@@ -11,19 +11,23 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-import app.ratelimit as ratelimit_module
+import app.core.ratelimit as ratelimit_module
 import app.routers.public_pages as public_pages_module
-from app import sqlite_compat
-from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
-from app.database import Base, get_db
+from app.core.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
+from app.db import sqlite_compat
+from app.db.base import Base
+from app.db.operational_search import (
+    OPERATIONAL_SEARCH_SCHEMA_STATEMENTS,
+    OPERATIONAL_SEARCH_SQLITE_STATEMENTS,
+)
+from app.db.payment_ledger import PAYMENT_LEDGER_SCHEMA_STATEMENTS
+from app.db.session import get_db
 from app.main import app
 from app.models import EmailCategory, EventCategory, ProductCategory
-from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS, OPERATIONAL_SEARCH_SQLITE_STATEMENTS
-from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 from app.services.email_categories_service import DEFAULT_EMAIL_CATEGORIES
 from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user
-from app.visitor_session import get_current_user, get_current_user_with_claims
+from app.services.visitor_session import get_current_user, get_current_user_with_claims
 
 TEST_DATABASE_URL = os.environ["TEST_DATABASE_URL"]  # set by backend/conftest.py
 IS_SQLITE = TEST_DATABASE_URL.startswith("sqlite")
@@ -124,7 +128,7 @@ async def pg_live_listener(engine):
     if IS_SQLITE:  # LISTEN/NOTIFY is PostgreSQL only
         yield
         return
-    from app.live.listener import pg_live_listener as listener
+    from app.services.live.listener import pg_live_listener as listener
 
     await listener.start(TEST_DATABASE_URL)
     yield
@@ -138,7 +142,7 @@ async def pg_render_cache_listener(engine):
     if IS_SQLITE:
         yield
         return
-    from app.live.render_cache_listener import pg_render_cache_listener as listener
+    from app.services.live.render_cache_listener import pg_render_cache_listener as listener
 
     await listener.start(TEST_DATABASE_URL)
     yield
@@ -319,7 +323,7 @@ async def me_client(db_session):
     """Client that simulates an authenticated (OIDC) visitor for ``/api/me/*`` endpoints.
 
     ``get_current_claims`` is overridden for the still-OIDC-only handlers
-    (Pebble token, account deletion); ``app.visitor_session.get_current_user`` and ``get_current_user_with_claims``
+    (Pebble token, account deletion); ``app.services.visitor_session.get_current_user`` and ``get_current_user_with_claims``
     are overridden for the dual-mode handlers (#953) so all resolve to the
     same OIDC-backed ``User`` without a real OIDC provider.
     """

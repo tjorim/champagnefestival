@@ -139,7 +139,7 @@ continues, and existing locally ready downloads remain available until expiry.
 For local real-encoder checks, run the apps worker from that commit on a private
 loopback URL with synthetic per-app credentials, then set
 `MEDIA_WORKER_TEST_URL` and `MEDIA_WORKER_TEST_TOKEN_FILE` when running backend
-`pytest tests/test_signage_video.py -k real_worker` and frontend
+`pytest tests/routers/test_signage_video.py -k real_worker` and frontend
 `playwright test e2e/signage-video.authenticated.spec.ts --project=chromium-admin`.
 The browser test feeds actual PNG captures into the worker and inspects the cuts
 and final hold in Chromium; the backend test verifies a single-slide encode,

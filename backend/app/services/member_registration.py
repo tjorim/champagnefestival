@@ -4,11 +4,11 @@ from fastapi import Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.queries import roles_contains
 from app.models import Person, User
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import role_active
-from app.utils import roles_contains
-from app.visitor_session import COOKIE_NAME, resolve_session
+from app.services.visitor_session import COOKIE_NAME, resolve_session
 
 
 async def visitor_user(db: AsyncSession, request: Request) -> User | None:

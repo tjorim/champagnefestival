@@ -17,10 +17,10 @@ from typing import Any, Literal
 from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.sql import Select
 
-from app.dependencies import SortDirection
+from app.core.dependencies import SortDirection
+from app.db.queries import roles_contains
 from app.models import Edition, Event, Person, Registration, StampCard, StampCardReward
 from app.services.operational_search import person_search_order_by, person_search_predicate
-from app.utils import roles_contains
 
 PersonSortKey = Literal["name", "email", "created", "updated", "registration_count", "last_attended"]
 VolunteerSortKey = Literal["name", "created", "updated"]

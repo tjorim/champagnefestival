@@ -10,8 +10,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from app.core.ratelimit import check_rate_limit
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.ratelimit import check_rate_limit
 from app.schemas import (
     AnnouncementLevel,
     ComposedMessageCreate,

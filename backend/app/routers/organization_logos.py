@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
-from app.openapi_responses import binary_response
+from app.schemas.openapi_responses import binary_response
 from app.services.organization_logos import NAME, PREFIX, roots
 
 router = APIRouter(tags=["organizations"])

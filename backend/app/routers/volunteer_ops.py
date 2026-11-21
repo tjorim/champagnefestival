@@ -20,12 +20,9 @@ from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
-from app.auth import get_actor_id, require_volunteer
-from app.database import get_db
-from app.dependencies import Pagination
-from app.live import mapping as live_mapping
-from app.live import notify_live_event
+from app.core.auth import get_actor_id, require_volunteer
+from app.core.dependencies import Pagination
+from app.db.session import get_db
 from app.models import Event, Person, Registration, RegistrationAllocation, Table
 from app.schemas import (
     CheckInGuestOut,
@@ -37,6 +34,9 @@ from app.schemas import (
     VolunteerTableResolveOut,
 )
 from app.services.allocations_service import allocated_registration_filter
+from app.services.audit_service import write_audit_entry
+from app.services.live import mapping as live_mapping
+from app.services.live import notify_live_event
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_registration_match,
@@ -47,8 +47,8 @@ from app.services.operational_search import (
     rank_table_reference,
 )
 from app.services.registrations_service import apply_delivery_updates, ensure_registration_can_check_in
+from app.services.serializers import registration_to_checkin_out
 from app.services.stamp_cards_service import sync_check_in
-from app.utils import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)
 

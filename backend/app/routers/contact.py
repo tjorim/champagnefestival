@@ -9,16 +9,16 @@ from pydantic import ConfigDict, EmailStr, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import require_admin
-from app.database import get_db
-from app.dependencies import ListQuery
-from app.dialect_functions import dialect_insert
-from app.email import send_contact_notification
+from app.core.auth import require_admin
+from app.core.dependencies import ListQuery
+from app.core.ratelimit import check_rate_limit, get_client_ip
+from app.core.spam import check_form_timing, check_honeypot
+from app.db.dialect_functions import dialect_insert
+from app.db.session import get_db
 from app.models import ContactMessage
-from app.ratelimit import check_rate_limit, get_client_ip
-from app.schema_types import NonEmptyText200
 from app.schemas import OkOut, RequestModel, ResponseModel
-from app.spam import check_form_timing, check_honeypot
+from app.schemas.types import NonEmptyText200
+from app.services.email_service import send_contact_notification
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 

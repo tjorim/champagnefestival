@@ -13,9 +13,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.audit import write_audit_entry
 from app.models import ComposedMessage, EmailCategory, EmailConsent, Person
 from app.schemas import EmailCategoryCreate, EmailCategoryOut, EmailCategoryTexts, EmailCategoryUpdate
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 
 TEXT_FIELDS = ("name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en")

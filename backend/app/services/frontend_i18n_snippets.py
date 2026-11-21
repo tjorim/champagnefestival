@@ -4,12 +4,12 @@ for server-rendered pages (#992).
 paraglide-js compiles the frontend's translations into the JS bundle at
 build time; this backend process only has ``frontend/dist`` mounted in
 production (the built shell and its hashed assets, not the ``messages/``
-source files — see ``app.config.Settings.frontend_dist_path``), so
+source files — see ``app.core.config.Settings.frontend_dist_path``), so
 it cannot read the real translation files at runtime.
 
 These four keys are duplicated here instead, kept deliberately small and
-static (no interpolation, no pluralization). ``backend/tests/test_jsonld_service.py``
-and ``backend/tests/test_public_pages.py`` read the real
+static (no interpolation, no pluralization). ``backend/tests/services/test_jsonld_service.py``
+and ``backend/tests/routers/test_public_pages.py`` read the real
 ``frontend/messages/*.json`` files (available in this repo checkout at test
 time, just not in the production container) and fail if any of these drift
 from them — so an edit to the real translation without updating this file

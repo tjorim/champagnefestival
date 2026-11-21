@@ -7,12 +7,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.schema_types import ResourceId
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.schemas import FaqLocale
+from app.schemas.signage import VideoExportCapabilityOut, VideoExportCreatedOut, VideoExportOut
+from app.schemas.types import ResourceId
 from app.services import signage_video as service
-from app.signage_schemas import VideoExportCapabilityOut, VideoExportCreatedOut, VideoExportOut
 
 
 def private_response(response: Response):

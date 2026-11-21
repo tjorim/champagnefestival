@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.composer_content import pick_locale_text
 from app.models import ComposedMessage, EmailCategory
+from app.services.composer_content import pick_locale_text
 
 _FOOTER = {
     "nl": "Je ontvangt dit bericht omdat je je hebt aangemeld voor “{category}”.\nAfmelden: {url}",

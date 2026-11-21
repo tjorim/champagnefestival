@@ -3,8 +3,8 @@
 import pytest
 
 from tests.helpers import ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VALID_RESERVATION, _create_event, requires_postgres
-from tests.test_product_inventory import book
-from tests.test_products import _create_product
+from tests.routers.test_products import _create_product
+from tests.services.test_product_inventory import book
 
 
 async def room_and_plan(client, event, name="Main room"):
@@ -227,7 +227,7 @@ async def test_concurrent_allocations_cannot_overfill_a_table(client, engine):
 
 @pytest.mark.anyio
 async def test_package_change_requires_releasing_included_tables_first(client):
-    from tests.test_product_inventory import edge
+    from tests.services.test_product_inventory import edge
 
     event = await _create_event(client)
     _, plan = await room_and_plan(client, event)

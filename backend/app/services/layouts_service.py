@@ -18,7 +18,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.audit import write_audit_entry
+from app.core.ids import make_id
 from app.models import (
     Area,
     Edition,
@@ -45,6 +45,7 @@ from app.schemas import (
     LayoutWithTablesOut,
 )
 from app.services.allocations_service import registration_ids_by_table
+from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -52,7 +53,7 @@ from app.services.idempotency import (
     hash_request,
     record_idempotency_key,
 )
-from app.utils import area_to_out, layout_to_out, make_id, table_to_out
+from app.services.serializers import area_to_out, layout_to_out, table_to_out
 
 _BULK_SCOPE = "layouts.bulk_create"
 

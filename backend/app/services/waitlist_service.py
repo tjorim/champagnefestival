@@ -13,7 +13,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import ListQuery
+from app.core.dependencies import ListQuery
 from app.models import Event, Product, WaitlistEntry
 from app.schemas import WaitlistEntryAdminOut, WaitlistEntryListEnvelope, WaitlistScopes
 from app.services.errors import NotFoundError

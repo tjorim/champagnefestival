@@ -27,15 +27,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
-from app.auth import get_actor_id, get_optional_claims, require_admin
-from app.database import get_db
-from app.dependencies import DEFAULT_LIST_LIMIT, Pagination, apply_pagination
-from app.email import send_email_consent_confirmation
-from app.live import mapping as live_mapping
-from app.live import notify_live_event
+from app.core.auth import get_actor_id, get_optional_claims, require_admin
+from app.core.csv_safe import csv_safe
+from app.core.dependencies import DEFAULT_LIST_LIMIT, Pagination, apply_pagination
+from app.core.ids import make_id
+from app.core.ratelimit import check_rate_limit, get_client_ip
+from app.core.spam import check_form_timing, check_honeypot
+from app.db.session import get_db
 from app.models import Edition, Event, Person, Registration, Table
-from app.openapi_responses import binary_response
-from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
     PaymentTransactionLedgerEnvelope,
@@ -49,24 +48,25 @@ from app.schemas import (
     RegistrationUpdate,
     RegistrationVolunteerAssignment,
 )
+from app.schemas.openapi_responses import binary_response
 from app.services import email_consent_service, events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
+from app.services.email_service import send_email_consent_confirmation
 from app.services.errors import ApiHTTPException
+from app.services.live import mapping as live_mapping
+from app.services.live import notify_live_event
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
-from app.services.users_service import get_or_create_user, verified_email_from_claims
-from app.spam import check_form_timing, check_honeypot
-from app.utils import (
-    csv_safe,
+from app.services.serializers import (
     edition_display_name,
-    make_id,
     order_answer_text,
     registration_to_list_out,
     registration_to_out,
     registration_to_out_with_token,
 )
-from app.visitor_session import actor_for_user
+from app.services.users_service import get_or_create_user, verified_email_from_claims
+from app.services.visitor_session import actor_for_user
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
 logger = logging.getLogger(__name__)

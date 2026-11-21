@@ -1,7 +1,7 @@
 """Admin-only central composer endpoints (#942).
 
 Draft lifecycle only — actual delivery runs through the durable outbox (see
-app.composer_delivery). All endpoints require admin auth; there is no
+app.services.composer_delivery). All endpoints require admin auth; there is no
 public surface here.
 """
 
@@ -10,9 +10,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
-from app.ratelimit import check_rate_limit
+from app.core.auth import get_actor_id, require_admin
+from app.core.ratelimit import check_rate_limit
+from app.db.session import get_db
 from app.schemas import ComposedMessageCreate, ComposedMessageOut, ComposedMessageScheduleRequest, ComposedMessageUpdate
 from app.services import composer_service as service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
@@ -82,7 +82,7 @@ async def schedule_send(
     """
     # In-process limiter: authenticated, low-volume admin action — same
     # narrower scope #932/#941 already give this category (see
-    # app.ratelimit's module docstring).
+    # app.core.ratelimit's module docstring).
     if not check_rate_limit(actor, scope="composer-schedule", max_requests=10):
         raise ApiHTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,

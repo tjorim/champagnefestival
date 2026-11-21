@@ -19,7 +19,7 @@ from urllib.parse import quote
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import Settings, settings
+from app.core.config import Settings, settings
 from app.models import EmailCategory, EmailConsent, EmailConsentConfirmation, Person
 from app.services.email_consent_service import _audit, people_for_email
 from app.services.errors import ServiceError

@@ -23,7 +23,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.core.config import settings
 from app.models import Edition
 from app.services.errors import ServiceError
 from app.services.organization_logos import TYPES, defer_delete, store
@@ -177,7 +177,7 @@ async def reconcile(db: AsyncSession) -> int:
 
 
 async def main() -> None:
-    from app.database import async_session_factory
+    from app.db.session import async_session_factory
 
     async with async_session_factory() as db:
         print(f"Removed {await reconcile(db)} unreferenced edition images.")

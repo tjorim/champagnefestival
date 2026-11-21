@@ -8,8 +8,8 @@ Business logic lives in ``app.services.tables_service`` and is shared with
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_actor_id, require_admin
-from app.database import get_db
+from app.core.auth import get_actor_id, require_admin
+from app.db.session import get_db
 from app.schemas import TableBulkCreate, TableBulkOut, TableCreate, TableOut, TableUpdate
 from app.services import tables_service
 from app.services.errors import ServiceError, to_http_exception

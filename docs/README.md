@@ -37,14 +37,14 @@ acceptance gates are satisfied.
 
 ## Implementation pointers
 
-- Shared limits and notifications: [rate limits](../backend/app/ratelimit.py),
-  [publication](../backend/app/live/notify.py), [listener](../backend/app/live/listener.py).
+- Shared limits and notifications: [rate limits](../backend/app/core/ratelimit.py),
+  [publication](../backend/app/services/live/notify.py), [listener](../backend/app/services/live/listener.py).
 - Retention: [person service](../backend/app/services/people_service.py);
   production cleanup jobs live in the infrastructure repository.
-- Push: [delivery](../backend/app/push.py), [browser subscription hook](../frontend/src/hooks/usePushSubscription.ts),
+- Push: [delivery](../backend/app/services/push_delivery.py), [browser subscription hook](../frontend/src/hooks/usePushSubscription.ts),
   [shared service worker](../frontend/src/sw.ts).
 - Composer: [draft lifecycle](../backend/app/services/composer_service.py),
-  [dispatch and delivery](../backend/app/composer_delivery.py).
+  [dispatch and delivery](../backend/app/services/composer_delivery.py).
 - Public rendering: [routes](../backend/app/routers/public_pages.py),
   [shell rendering](../backend/app/services/public_render.py),
   [render cache](../backend/app/services/public_render_cache.py).
