@@ -43,7 +43,25 @@ def _app(*, with_middleware: bool) -> FastAPI:
     async def boom() -> None:
         raise RuntimeError("secret-token postgresql://user:password@db/champagne")
 
+    @app.get("/boom/{token}")
+    async def boom_with_token(token: str) -> None:
+        raise RuntimeError("boom")
+
     return app
+
+
+@pytest.mark.anyio
+async def test_the_log_names_the_route_template_not_the_raw_path(caplog):
+    # A path can carry a credential (an access or check-in token), so the log must never contain it.
+    transport = ASGITransport(app=_app(with_middleware=True), raise_app_exceptions=False)
+    with caplog.at_level(logging.ERROR, logger="app.core.errors"):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/boom/secret-path-token")
+
+    assert response.status_code == 500
+    [record] = [r for r in caplog.records if r.name == "app.core.errors"]
+    assert "/boom/{token}" in record.getMessage()
+    assert "secret-path-token" not in record.getMessage()
 
 
 @pytest.mark.anyio
