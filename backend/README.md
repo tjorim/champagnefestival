@@ -431,6 +431,10 @@ failure the interface can explain carries a stable `code` next to it:
 - Codes are lowercase snake_case, named for the condition (not the endpoint), and
   stable once published: add a new code rather than changing what one means.
   `rate_limited` is shared by every rate-limited route.
+- Failures no rule raised with a code (an unknown route, a wrong method, a bare
+  401/403, a 422, an unhandled exception) get one from their status
+  (`not_found`, `unauthorized`, `validation_error`, `internal_error`, ...). The whole
+  contract is in [API error contract](docs/api-errors.md).
 - The frontend maps a code to a translation in `frontend/src/lib/api/apiErrors.ts`
   (`apiErrorMessage(error, fallback)`) and shows the caller's translated operation
   message (`m.admin_error_*`) when the code is missing or not yet mapped. Adding a
@@ -1130,8 +1134,9 @@ for stable error codes, lock order and reconciliation after timeouts.
 including nested `include_router` routes. Each worker has an in-memory fixed-window
 bucket per client IP and route template; methods and different IDs of one template
 share that bucket. Trusted-proxy IP resolution uses the same `get_client_ip`
-helper as the purpose-specific limits. Rejections retain the response shape
-`{"error": "Rate limit exceeded: 60 per 1 minute"}`. `RATE_LIMIT_ENABLED=false`
+helper as the purpose-specific limits. A rejection is
+`{"error": "Rate limit exceeded: 60 per 1 minute", "detail": "<same text>", "code": "rate_limited"}`
+(`error` is kept for existing clients). `RATE_LIMIT_ENABLED=false`
 disables only this general policy.
 
 The token-gated check-in lookup and check-in endpoints are exempt and retain their
