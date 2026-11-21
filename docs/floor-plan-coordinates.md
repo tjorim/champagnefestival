@@ -4,7 +4,7 @@ This document defines the coordinate system used by `Table.x`/`Table.y`/`Table.r
 and `Area.x`/`Area.y`/`Area.rotation` — the fields that place a table or area on a
 floor-plan `Layout`. It is the single source of truth referenced by the model
 docstrings (`backend/app/models/`), the Pydantic schema field descriptions
-(`backend/app/schemas/`), the MCP tool docstrings (`backend/app/mcp_server.py`),
+(`backend/app/schemas/`), the MCP tool docstrings (`backend/app/mcp/server.py`),
 and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx`).
 
 It does **not** cover `Room.width_m`/`length_m`, `TableType.width_m`/`length_m`, or

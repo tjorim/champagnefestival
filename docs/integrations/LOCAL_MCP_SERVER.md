@@ -187,7 +187,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 
 The MCP server is only mounted when `MCP_BASE_URL` is set; `OIDC_ISSUER_URL` is required
 whenever `MCP_BASE_URL` is (the app refuses to start otherwise). When both are configured,
-`build_keycloak_auth()` (`backend/app/mcp_server.py`) builds a FastMCP `MultiAuth` that
+`build_keycloak_auth()` (`backend/app/mcp/server.py`) builds a FastMCP `MultiAuth` that
 accepts either credential type on the same endpoint:
 
 - a Keycloak-issued JWT (`KeycloakAuthProvider`), or
@@ -239,7 +239,7 @@ and the expected `role`.
 `GET /api/mcp/capabilities` returns whether the MCP server is mounted and, when it is, the
 live registered tool list with each tool's side-effect classification and access policy —
 generated directly from the running server's tool registration
-(`app.mcp_server.get_mcp_capabilities`), so it cannot drift from what's actually callable
+(`app.mcp.capabilities.get_mcp_capabilities`), so it cannot drift from what's actually callable
 (example below is abbreviated — the live response includes all registered tools).
 
 The manifest follows the shared MCP capability contract (`contract_version: 1`, tracked in
@@ -329,7 +329,7 @@ uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.
 ### Adding new tools
 
 **Read-only tools:**
-1. Add a method to `ChampagneFestivalMcpBackend` in `backend/app/mcp_server.py`.
+1. Add a method to `ChampagneFestivalMcpBackend` in `backend/app/mcp/server.py`.
 2. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
 3. Add unit tests in `backend/tests/test_mcp_server.py`.
 
@@ -339,7 +339,7 @@ uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.
    (via `validate_with_schema`) and private helper functions rather than re-deriving their
    validation/business logic — see `backend/app/mcp/admin/__init__.py` for the module-wide
    conventions and `venues.py` for a worked example.
-2. Add a thin `ChampagneFestivalMcpBackend` method in `backend/app/mcp_server.py` that
+2. Add a thin `ChampagneFestivalMcpBackend` method in `backend/app/mcp/server.py` that
    calls `self._require_admin()` (or leaves it out, for a REST endpoint with no auth
    dependency, like `get_settings`) and delegates to it with `self._actor()`.
 3. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.

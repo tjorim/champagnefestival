@@ -16,7 +16,7 @@ from app.core.observability import request_metrics_middleware
 from app.core.request_limits import RateLimitHeadersMiddleware
 from app.db.session import create_tables
 from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
-from app.mcp_server import build_keycloak_auth, create_mcp_server
+from app.mcp.server import build_keycloak_auth, create_mcp_server
 from app.middleware.request_timing import RequestTimingMiddleware
 from app.middleware.setup import (
     GeneralRateLimiter,

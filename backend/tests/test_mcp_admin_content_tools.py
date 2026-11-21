@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from app.mcp_server import ChampagneFestivalMcpBackend
+from app.mcp.server import ChampagneFestivalMcpBackend
 from app.models import Policy
 from tests.helpers import _create_event, mcp_session_factory
 

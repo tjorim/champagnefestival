@@ -188,7 +188,7 @@ async def test_stamp_guards_registration_delete_and_reassignment(client):
 
 @pytest.mark.anyio
 async def test_mcp_check_in_and_reward_share_services(client, db_session, monkeypatch):
-    from app.mcp_server import ChampagneFestivalMcpBackend
+    from app.mcp.server import ChampagneFestivalMcpBackend
     from tests.helpers import mcp_session_factory
 
     backend = ChampagneFestivalMcpBackend(mcp_session_factory(db_session))

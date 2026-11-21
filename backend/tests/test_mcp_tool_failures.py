@@ -22,10 +22,10 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-import app.mcp_server as mcp_module
+import app.mcp.server as mcp_module
 from app.mcp.middleware import CorrelatedToolError, ToolFailureMiddleware, without_body_validation_payload
+from app.mcp.server import ALWAYS_VISIBLE_TOOLS, ChampagneFestivalMcpBackend, create_mcp_server
 from app.mcp.utils import MCPToolError
-from app.mcp_server import ALWAYS_VISIBLE_TOOLS, ChampagneFestivalMcpBackend, create_mcp_server
 from app.models import AuditEntry
 from tests.helpers import mcp_session_factory
 

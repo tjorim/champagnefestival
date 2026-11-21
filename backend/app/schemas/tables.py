@@ -79,7 +79,7 @@ class TableTypeBulkOut(ResponseModel):
 # origin, clockwise degrees) are shared by Table and Area — see
 # docs/floor-plan-coordinates.md for the full contract, including why the
 # canvas isn't a 1:1 percentage of the room's physical width_m/length_m.
-# Public (no leading underscore) so app.mcp_server can reuse the same text for
+# Public (no leading underscore) so app.mcp.server can reuse the same text for
 # the MCP tool parameter schemas (see create_table/update_table/create_area/
 # update_area there), keeping the wording identical across REST and MCP.
 X_POSITION_DESCRIPTION = (

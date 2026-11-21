@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from app.mcp_server import create_mcp_server
+from app.mcp.server import create_mcp_server
 
 
 @pytest.fixture

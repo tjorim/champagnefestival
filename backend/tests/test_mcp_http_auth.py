@@ -18,7 +18,7 @@ from pydantic import AnyHttpUrl
 from sqlalchemy import select
 
 from app.mcp.integration_auth import IntegrationKeyTokenVerifier
-from app.mcp_server import create_mcp_server
+from app.mcp.server import create_mcp_server
 from app.models import AuditEntry
 from app.services import integration_clients_service as ics
 from tests.helpers import mcp_session_factory

@@ -29,7 +29,7 @@ from app.mcp.capabilities import (
     tool_effect,
     tool_required_role,
 )
-from app.mcp_server import create_mcp_server
+from app.mcp.server import create_mcp_server
 
 
 @pytest.mark.anyio

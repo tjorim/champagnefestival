@@ -266,7 +266,7 @@ async def test_submission_id_conflict_and_replay_after_replacement(client, manag
 
 async def test_mcp_review_authorization_and_supersession(db_session, manager, monkeypatch):
     from app.mcp.admin import organizations as mcp_organizations
-    from app.mcp_server import ChampagneFestivalMcpBackend
+    from app.mcp.server import ChampagneFestivalMcpBackend
     from tests.helpers import mcp_session_factory
 
     backend = ChampagneFestivalMcpBackend(mcp_session_factory(db_session))

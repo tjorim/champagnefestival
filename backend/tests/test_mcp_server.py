@@ -22,11 +22,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 
-import app.mcp_server as mcp_module
+import app.mcp.server as mcp_module
 from app.mcp import auth as mcp_auth_module
 from app.mcp.capabilities import tool_required_role
-from app.mcp.utils import get_active_edition_obj, person_dict
-from app.mcp_server import (
+from app.mcp.server import (
     ROLE_ADMIN,
     ROLE_PUBLIC,
     ROLE_VOLUNTEER,
@@ -34,6 +33,7 @@ from app.mcp_server import (
     build_keycloak_auth,
     create_mcp_server,
 )
+from app.mcp.utils import get_active_edition_obj, person_dict
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory
 
 # ---------------------------------------------------------------------------

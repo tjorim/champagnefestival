@@ -1,7 +1,7 @@
 """FastMCP ``TokenVerifier`` for database-backed integration-client credentials.
 
 Combined with the Keycloak provider via ``MultiAuth`` in
-``app.mcp_server.build_keycloak_auth`` so an MCP caller can present either a
+``app.mcp.auth.build_keycloak_auth`` so an MCP caller can present either a
 Keycloak-issued JWT or an integration-client key — see issue #807.
 """
 
