@@ -16,7 +16,7 @@ import { useRegistrationAdminMutations } from "../registrations/useRegistrationA
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import { fetchRegistration } from "@/lib/api/adminFetch";
 import { toLocalDateKey } from "@/lib/format/dateUtils";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 
 interface UseAdminRegistrationActionsOptions {
   authHeaders: () => Record<string, string>;

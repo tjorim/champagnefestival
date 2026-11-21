@@ -7,7 +7,7 @@ import {
   ADMIN_CACHE_WIPE_SIGNAL,
 } from "@/lib/collections/adminCachePersistence";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { removeAuthenticatedQueries } from "@/lib/query/queryInvalidation";
 import { signOutVisitorSession } from "@/lib/api/publicRegistrationApi";
 import { m } from "@/paraglide/messages";

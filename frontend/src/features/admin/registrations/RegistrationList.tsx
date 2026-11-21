@@ -77,7 +77,7 @@ import { queryKeys } from "@/lib/query/queryKeys";
 import { toLocalDateKey } from "@/lib/format/dateUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { useTodayKey } from "@/hooks/useTodayKey";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { editionDisplayNameWithType } from "@/lib/editions/editionName";
 import { AdminAddButton } from "@/components/admin/RowActions";
 

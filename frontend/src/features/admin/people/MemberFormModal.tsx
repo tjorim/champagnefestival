@@ -30,7 +30,7 @@ import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirt
 import { m } from "@/paraglide/messages";
 import { usePersonFieldErrors } from "../shared/usePersonFieldErrors";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
 import { roleSince, type Person } from "@/types/person";
 

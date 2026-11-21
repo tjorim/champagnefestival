@@ -11,64 +11,64 @@ export const exclusions = {
     "; path=/; max-age=":
       "HTTP cookie attributes for sidebar state persistence, not interface copy",
   },
-  "signage/SlideRenderer.tsx": {
+  "features/signage/SlideRenderer.tsx": {
     "Arial, sans-serif": "CSS font-family stack from the validated signage font allow-list",
     "Georgia, serif": "CSS font-family stack from the validated signage font allow-list",
     "linear-gradient(135deg,": "CSS gradient syntax for the authored template background",
   },
-  "components/BrandWordmark.tsx": {
+  "app/layout/BrandWordmark.tsx": {
     Champagne: "fixed application brand",
     festival: "fixed application brand",
   },
-  "components/CheckInPage.tsx": {
+  "features/check-in/CheckInPage.tsx": {
     "×": "multiplication sign before a quantity",
     Bearer: "HTTP authorization scheme",
   },
-  "components/MyMembership.tsx": {
+  "features/my-account/MyMembership.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "components/MyRegistrationsPage.tsx": {
+  "features/my-account/MyRegistrationsPage.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",
     English: "language autonym",
     "×": "multiplication sign before a quantity",
   },
-  "components/admin/RegistrationNewPersonPanel.tsx": {
+  "features/admin/registrations/RegistrationNewPersonPanel.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",
     English: "language autonym",
   },
-  "components/RegistrationModal.tsx": {
+  "features/registration/RegistrationModal.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",
     English: "language autonym",
   },
-  "components/FestivalMascot.tsx": {
+  "features/site/FestivalMascot.tsx": {
     "(min-width: 768px) 9rem, 8rem": "image sizes attribute",
   },
-  "components/Footer.tsx": {
+  "app/layout/Footer.tsx": {
     "&copy;": "copyright sign entity",
   },
   "components/MapComponent.tsx": {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors':
       "provider attribution",
   },
-  "components/VenuePlanPage.tsx": {
+  "features/venue-plan/VenuePlanPage.tsx": {
     "hidden lg:block": "Responsive CSS class list for the floor-plan table list",
     "translate(-50%, -50%) rotate(": "CSS transform",
     Bearer: "HTTP authorization scheme",
   },
-  "components/admin/AdminDataTable.tsx": {
+  "features/admin/shared/AdminDataTable.tsx": {
     "button, a, input, [role=menuitem]": "CSS selector",
     "×": "filter chip close sign",
   },
-  "components/admin/ComposerManagement.tsx": {
+  "features/admin/shared/ComposerManagement.tsx": {
     "https://…": "URL input example",
   },
-  "components/admin/ItemModal.tsx": {
+  "features/admin/editions/ItemModal.tsx": {
     "https://…": "URL input example",
   },
-  "components/admin/EventModal.tsx": {
+  "features/admin/editions/EventModal.tsx": {
     title_nl: "form field key",
     description_nl: "form field key",
     title_fr: "form field key",
@@ -76,7 +76,7 @@ export const exclusions = {
     title_en: "form field key",
     description_en: "form field key",
   },
-  "components/admin/PollQuestionCard.tsx": {
+  "features/admin/editions/PollQuestionCard.tsx": {
     titleNl: "form field key",
     descriptionNl: "form field key",
     titleFr: "form field key",
@@ -84,46 +84,46 @@ export const exclusions = {
     titleEn: "form field key",
     descriptionEn: "form field key",
   },
-  "components/admin/LayoutEditor.tsx": {
+  "features/admin/venue/LayoutEditor.tsx": {
     "(max-width: 1199px), (max-height: 599px)":
       "CSS media query for scrolling the floor-plan inspector into view, not interface copy",
     "border-color 0.15s, opacity 0.15s": "CSS transition",
     "border-color 0.15s": "CSS transition",
   },
-  "components/admin/MemberFormModal.tsx": {
+  "features/admin/people/MemberFormModal.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",
     English: "language autonym",
   },
-  "components/admin/PersonFormModal.tsx": {
+  "features/admin/people/PersonFormModal.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",
     English: "language autonym",
   },
-  "components/admin/PeopleManagement.tsx": {
+  "features/admin/people/PeopleManagement.tsx": {
     "hidden md:table-cell": "CSS class list",
     "hidden lg:table-cell": "CSS class list",
   },
-  "components/admin/RegistrationList.tsx": {
+  "features/admin/registrations/RegistrationList.tsx": {
     "hidden md:table-cell": "CSS class list",
     "hidden lg:table-cell": "CSS class list",
   },
-  "components/admin/RegistrationDetail.tsx": {
+  "features/admin/registrations/RegistrationDetail.tsx": {
     "×": "multiplication sign before a quantity",
   },
-  "components/admin/analyticsChartExport.ts": {
+  "features/admin/insights/analyticsChartExport.ts": {
     'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif': "CSS font stack",
   },
-  "components/affiche/AfficheHero.tsx": {
+  "features/site/affiche/AfficheHero.tsx": {
     "(min-width: 992px) 18rem, 40vw": "image sizes attribute",
   },
-  "components/billet/BilletHero.tsx": {
+  "features/site/billet/BilletHero.tsx": {
     "N°": "decorative serial prefix on the ticket barcode, hidden from assistive technology",
   },
-  "components/cuvee/CuveeHero.tsx": {
+  "features/site/cuvee/CuveeHero.tsx": {
     CF: "brand monogram",
   },
-  "components/riviera/RivieraHero.tsx": {
+  "features/site/riviera/RivieraHero.tsx": {
     CF: "brand monogram",
   },
   "config/contact.ts": {
@@ -146,50 +146,50 @@ export const exclusions = {
   "hooks/useMaintenanceMode.ts": {
     "Failed to load settings:": "internal diagnostic",
   },
-  "hooks/useNoIndex.ts": {
+  "app/layout/useNoIndex.ts": {
     "noindex, nofollow": "robots meta content",
   },
   "hooks/useOtherEvents.ts": {
     "upcoming editions[": "internal validation context",
   },
-  "hooks/useVisualTheme.ts": {
+  "app/theme/useVisualTheme.ts": {
     'meta[name="theme-color"][media="(prefers-color-scheme: dark)"]': "CSS selector",
     'meta[name="theme-color"][media="(prefers-color-scheme: light)"]': "CSS selector",
   },
   "sw/push.ts": {
     Champagnefestival: "fixed application brand",
   },
-  "utils/emailComposer.ts": {
+  "features/admin/shared/emailComposer.ts": {
     ",\nChampagnefestival": "fixed application brand in the email signature",
   },
-  "components/MyAccountPage.tsx": {
+  "features/my-account/MyAccountPage.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "components/PebblePairPage.tsx": {
+  "features/pebble/PebblePairPage.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "components/admin/AdminDashboard.tsx": {
+  "features/admin/shell/AdminDashboard.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "router.tsx": {
+  "app/router.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "state/LiveUpdatesProvider.tsx": {
+  "app/providers/LiveUpdatesProvider.tsx": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/emailConsentApi.ts": {
+  "lib/api/emailConsentApi.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/liveStream.ts": {
+  "lib/api/liveStream.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/meApi.ts": {
+  "features/my-account/meApi.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/myVolunteerApi.ts": {
+  "lib/api/myVolunteerApi.ts": {
     Bearer: "HTTP authorization scheme",
   },
-  "utils/publicRegistrationApi.ts": {
+  "lib/api/publicRegistrationApi.ts": {
     Bearer: "HTTP authorization scheme",
   },
 };

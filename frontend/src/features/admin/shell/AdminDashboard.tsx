@@ -37,7 +37,7 @@ import {
 } from "@/lib/collections/adminOrganizationsCollection";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { recordSignOutReason } from "./signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
 import AdminSectionPane from "./AdminSectionPane";

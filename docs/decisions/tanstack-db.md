@@ -212,9 +212,9 @@ resource, built together and registered, reset and fenced as a group.
   (`registerAdminVenueCollections`). A local write that fails after the server
   committed is not reported as a failed action; the refetch reconciles.
   `isAuthenticated` turning false empties all five collections and removes their
-  query keys. Tests: `tests/state/adminVenueCollections.test.ts`,
-  `tests/hooks/useAdminVenueCollections.test.tsx`,
-  `tests/hooks/useAdminSignOutCache.test.tsx`.
+  query keys. Tests: `tests/features/admin/venue/adminVenueCollections.test.ts`,
+  `tests/features/admin/shell/useAdminVenueCollections.test.tsx`,
+  `tests/features/admin/shell/useAdminSignOutCache.test.tsx`.
 - **Keys.** `"venues"`, `"rooms"`, `"table-types"`, `"layouts"` and `"areas"` are no
   longer in `ADMIN_RESOURCE_KEYS`; `ADMIN_RESOURCE_KEYS` was then `registrations` and
   `organizations` (organizations left it in [#1184](#organizations-1184)). No `useQuery` or
@@ -272,10 +272,10 @@ migration. They are now one eager collection on the shared factory
   are separate reads of the same endpoint, not a second copy the dashboard patches.
 - **No live events.** The stream carries no topic for organizations.
 - Retry-safety decisions are in `docs/retry-safety.md`. Tests:
-  `tests/state/adminOrganizationsCollection.test.ts`,
-  `tests/hooks/useAdminSignOutCache.test.tsx`,
-  `tests/hooks/useAdminPeopleActions.test.tsx`,
-  `tests/components/admin.ContentManagement.test.tsx`.
+  `tests/lib/collections/adminOrganizationsCollection.test.ts`,
+  `tests/features/admin/shell/useAdminSignOutCache.test.tsx`,
+  `tests/features/admin/shell/useAdminPeopleActions.test.tsx`,
+  `tests/features/admin/editions/ContentManagement.test.tsx`.
 
 ## Shared collection factory and remaining resources ([#1166](https://github.com/tjorim/champagnefestival/issues/1166))
 
@@ -308,7 +308,7 @@ module is now mostly its data handling.
   public exports (`registerAdmin…Collection`, `resetAdmin…Collection`,
   `captureAdmin…Fence`, `refetchAdmin…`). People uses Query session fencing
   instead; its former collection integration was retired in #1181.
-- Tests: `tests/state/adminCollectionFactory.test.ts`.
+- Tests: `tests/lib/collections/adminCollectionFactory.test.ts`.
 
 ### Sign-out safety for the plain queries
 

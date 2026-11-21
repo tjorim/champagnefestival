@@ -79,7 +79,7 @@ Package, storage backend, size, CSP and workers:
 - **Version mismatch.** `db-sqlite-persistence-core` 0.4.4 depends on
   `@tanstack/db` 0.12.0; we run 0.11.3 (with `@tanstack/react-db` ^0.5.3 and
   `@tanstack/query-db-collection` ^1.3.4). Adoption starts with a coordinated
-  upgrade of all four, re-running `tests/spikes/membersListOnDemand.spike.test.tsx`
+  upgrade of all four, re-running `tests/features/admin/people/membersListOnDemand.spike.test.tsx`
   and the collection tests, which pin 0.11 behavior.
 - **Size.** The registry reports about 2.2 MB unpacked for the browser package and
   the core package each, and 18 MB unpacked for `@journeyapps/wa-sqlite` (several

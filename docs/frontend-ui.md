@@ -409,7 +409,7 @@ Replaced:
   trap, Escape, scroll lock and focus return that the old manual `role="dialog"` overlay
   lacked. The lightbox is now a standard titled dialog (flyer name, close button, themed
   surface, blurred backdrop) rather than a full-screen dark overlay; the image is capped
-  to the viewport height so the whole flyer fits. Unit tests (`tests/components/MaintenancePage.test.tsx`) and
+  to the viewport height so the whole flyer fits. Unit tests (`tests/features/maintenance/MaintenancePage.test.tsx`) and
   `e2e/maintenance-lightbox.spec.ts` cover the dialog's axe scan, Escape and focus
   return in light, dark and narrow scenarios.
 - `EditionCard` expand/collapse uses `Collapsible`; Base UI now provides

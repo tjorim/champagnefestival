@@ -47,7 +47,7 @@ import {
 } from "@/lib/api/adminFetch";
 import type { EditionAttendanceStats } from "@/api-types";
 import { queryKeys } from "@/lib/query/queryKeys";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "../shared/LedgerModal";
 import "./analyticsDashboard.css";
 import { editionDisplayName } from "@/lib/editions/editionName";

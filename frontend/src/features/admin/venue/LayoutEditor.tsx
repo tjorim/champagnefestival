@@ -77,7 +77,7 @@ import {
   safeRoomColor,
 } from "@/lib/venue/layoutUtils";
 import { getTablesInArea } from "./layoutGeometry";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
 import LayoutRevisionsModal from "./LayoutRevisionsModal";
 import { AdminAddButton, RowActionDivider } from "@/components/admin/RowActions";

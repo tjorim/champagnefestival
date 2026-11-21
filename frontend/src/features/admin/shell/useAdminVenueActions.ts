@@ -31,7 +31,7 @@ import {
   type AdminVenueCollections,
 } from "../venue/adminVenueCollections";
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { getAreaSizePx, getCanvasSizePx } from "@/lib/venue/layoutUtils";
 import { toTableRecord } from "@/lib/collections/tableOccupancy";
 

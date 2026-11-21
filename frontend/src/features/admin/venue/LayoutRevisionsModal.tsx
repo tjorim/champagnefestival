@@ -41,7 +41,7 @@ import {
   fetchLayoutRevisions,
   previewLayoutRestore,
 } from "@/lib/api/adminFetch";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 
 const CURRENT_REF = "current";
 

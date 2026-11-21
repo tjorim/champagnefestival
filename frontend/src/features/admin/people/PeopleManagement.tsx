@@ -49,7 +49,7 @@ import {
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
 } from "@/lib/api/adminFetch";
-import { devError } from "@/lib/editions/devLog";
+import { devError } from "@/lib/devLog";
 import { createAppColumnHelper } from "../shared/useAdminTable";
 import PersonEmailConsents from "./PersonEmailConsents";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
