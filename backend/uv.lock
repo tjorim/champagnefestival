@@ -324,7 +324,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = "==0.22.1" },
     { name = "alembic", specifier = "==1.20.1" },
     { name = "asyncpg", specifier = "==0.32.0" },
-    { name = "fastapi", specifier = "==0.162.5" },
+    { name = "fastapi", specifier = "==0.164.0" },
     { name = "fastmcp", specifier = "==4.2.1" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "limits", specifier = "==5.8.0" },
@@ -337,7 +337,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.16.3" },
     { name = "pyjwt", extras = ["crypto"], specifier = "==2.15.1" },
     { name = "python-dotenv", specifier = "==1.2.4" },
-    { name = "python-multipart", specifier = "==0.0.33" },
+    { name = "python-multipart", specifier = "==0.0.34" },
     { name = "pywebpush", specifier = "==2.5.0" },
     { name = "qrcode", extras = ["pil"], specifier = "==8.2" },
     { name = "sentry-sdk", extras = ["fastapi"], marker = "extra == 'sentry'", specifier = "==2.75.0" },
@@ -593,7 +593,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.162.5"
+version = "0.164.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -604,9 +604,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/7b/ae546e10f153fcf9a6afd8b9fe4730bdfeb8fdcb93178d54122973ef3f4c/fastapi-0.162.5.tar.gz", hash = "sha256:1ca37f64f61c99cebd38636e67525fb721c5e8c1169f07f2a35d73b0a63265d4", size = 531785, upload-time = "2026-11-11T22:29:53.177Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/9f/d0e353b6c275329d17b1c926db48003e1276879855e8b6c87eb9d57907ad/fastapi-0.164.0.tar.gz", hash = "sha256:3db1b4b146924d284b33bd6b9ca244c8bd0560d5e3526591447fd3abe4383989", size = 555183, upload-time = "2026-11-18T13:09:09.456Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/19/5b9abfa67a29b862e509911eef40f4901f78aa48de32ad1f939b5c2b165e/fastapi-0.162.5-py3-none-any.whl", hash = "sha256:5303c67415fde762889ca337db79d27b755b8bd09cef314fa7a4340bb30bfd2b", size = 151782, upload-time = "2026-11-11T22:29:51.47Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/56/d1ddbd742cd6c5d309651d3906ef7c246f170b73246db9b63d8a2fd5b3b3/fastapi-0.164.0-py3-none-any.whl", hash = "sha256:6ec63b74a112a6acc22c87f29bb8cb209002050cfeb4f993b959e6caea65c468", size = 157847, upload-time = "2026-11-18T13:09:07.796Z" },
 ]
 
 [[package]]
@@ -1521,11 +1521,11 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.33"
+version = "0.0.34"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9f/b7/15b905f6142a9a8a68f66900788da1a32e4d4254452783b37ad1eccb0506/python_multipart-0.0.33.tar.gz", hash = "sha256:b8112424a6abd162ec08d390565dd113ad699f2fe6fef3c987b8bbcbfe9e390d", size = 50499, upload-time = "2026-10-31T14:23:47.461Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/c0/c753d487a83d873f6946cee6cbc26cea3fe59a476ad0de99a14938a2fbd8/python_multipart-0.0.34.tar.gz", hash = "sha256:b998ae90ca6e1e363261ce2e0e230281b8af53867b757970abd69ee9edcd843a", size = 52456, upload-time = "2026-11-16T10:40:38.261Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/1b/6b1b4164ec734cac911460ab599bfbe46afedd42c5c9627fe4235942c314/python_multipart-0.0.33-py3-none-any.whl", hash = "sha256:8f16c07b36add9da6b2ee87d3efcaf0a45a6de9c3d0a5dd94e9ccf7675a7bc45", size = 32253, upload-time = "2026-10-31T14:23:46.33Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/0e/090c52b122d8ec5fa37942c1410fea9cf04ce98bca0c84dde7f0aa11594d/python_multipart-0.0.34-py3-none-any.whl", hash = "sha256:ebacd224bd686eee2f9aa1066a657affe07435a185834e05e5235e2e59173e91", size = 32585, upload-time = "2026-11-16T10:40:37.119Z" },
 ]
 
 [[package]]
