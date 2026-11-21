@@ -127,7 +127,7 @@ assertions start; individual test timeouts and assertions are unchanged. Saving
 state before this visit keeps navigation preferences out of the shared fixture.
 
 This is test/dev tooling only — `frontend/src/config/oidc.ts` and
-`frontend/src/contexts/AuthContext.tsx` are untouched, and the normal login
+`frontend/src/app/providers/AuthContext.tsx` are untouched, and the normal login
 flow works exactly as before when neither the Vite dev-session opt-in nor
 the authenticated Playwright project is used.
 

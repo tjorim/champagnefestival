@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { getVapidPublicKey, subscribeToPush, unsubscribeFromPush } from "@/utils/pushApi";
+import { getVapidPublicKey, subscribeToPush, unsubscribeFromPush } from "@/lib/api/pushApi";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 /** Convert a base64url VAPID public key into the Uint8Array `pushManager.subscribe`'s
  * `applicationServerKey` expects — standard Web Push boilerplate. */

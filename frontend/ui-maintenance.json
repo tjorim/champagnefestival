@@ -323,7 +323,7 @@
       "capturedAt": "2026-10-23T22:47:12.357560Z"
     },
     "MobileMenu": {
-      "files": ["src/components/MobileMenu.tsx"],
+      "files": ["src/app/layout/MobileMenu.tsx"],
       "registry": null,
       "origin": "local",
       "reason": "App-specific Base UI composition; review direct primitive API changes and interaction tests.",
@@ -342,7 +342,7 @@
   "importPolicy": {
     "uiAlias": "@/components/ui",
     "baseUiExceptions": {
-      "src/components/MobileMenu.tsx": {
+      "src/app/layout/MobileMenu.tsx": {
         "component": "MobileMenu",
         "modules": ["@base-ui/react/dialog"],
         "reason": "Public responsive navigation composition with site-specific sheet and navigation behaviour."

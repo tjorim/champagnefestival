@@ -1,0 +1,236 @@
+import { jsonResponse } from "@/mocks/response";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { axe } from "jest-axe";
+import { describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import ContentManagement from "@/features/admin/editions/ContentManagement";
+import { seedOrganizations } from "@/mocks/data/organizations";
+import { server } from "@/mocks/server";
+import { createTestQueryClient } from "../../../utils/queryClient";
+
+vi.mock("@/paraglide/messages", () => ({
+  m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
+    get(_target, key: string) {
+      return (...args: unknown[]) => (args.length ? `${key}(${JSON.stringify(args[0])})` : key);
+    },
+  }),
+}));
+
+// GET /api/organizations requires a Bearer token recognized by the mock server
+// (see `validAdminTokens` in src/mocks/handlers/admin.ts) — an empty headers
+// object would 401 and never surface the seeded organizations.
+const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
+
+function renderContentManagement(captureOrganizationsFence?: () => () => boolean) {
+  const queryClient = createTestQueryClient();
+  const onOrganizationSaved = vi.fn();
+  const onOrganizationDeleted = vi.fn();
+  const onEditionMutated = vi.fn();
+
+  const { container } = render(
+    <QueryClientProvider client={queryClient}>
+      <ContentManagement
+        authHeaders={authHeaders}
+        venues={[]}
+        onOrganizationSaved={onOrganizationSaved}
+        onOrganizationDeleted={onOrganizationDeleted}
+        captureOrganizationsFence={captureOrganizationsFence}
+        onEditionMutated={onEditionMutated}
+      />
+    </QueryClientProvider>,
+  );
+
+  return { container, onOrganizationSaved, onOrganizationDeleted, onEditionMutated };
+}
+
+describe("ContentManagement", () => {
+  it("renders seeded organizations after loading and hides the loading spinner", async () => {
+    renderContentManagement();
+
+    expect(screen.getAllByText("admin_content_loading").length).toBeGreaterThan(0);
+
+    expect(await screen.findByText("Maison Moët & Chandon")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bollinger")).toBeInTheDocument();
+
+    expect(screen.queryByText("admin_content_loading")).not.toBeInTheDocument();
+  });
+
+  it("has no axe violations once loaded", async () => {
+    const { container } = renderContentManagement();
+
+    expect(await screen.findByText("Maison Moët & Chandon")).toBeInTheDocument();
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  // Primary mutation flow: archiving an organization. We chose this over driving
+  // the full ItemModal "add item" form because ItemModal assigns a client-side
+  // id via `Date.now()` for new items, which the save API treats as an
+  // existing id (`isNew = draft.id <= 0`) and routes to PUT instead of POST —
+  // against the mock server that PUT 404s for an id that doesn't exist yet.
+  // The archive action is a self-contained PUT against a known, seeded id and
+  // exercises the same optimistic-cache-update code path without that
+  // complication.
+  it("archives an organization: fires a PUT request and moves the item into the archived section", async () => {
+    let capturedBody: unknown = null;
+    server.use(
+      http.put("/api/organizations/:id", async ({ request, params }) => {
+        capturedBody = await request.json();
+        return jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          id: Number(params.id),
+          name: "Maison Moët & Chandon",
+          image: "/images/moet.png",
+          website: "https://www.moet.com",
+          active: false,
+          type: "producer",
+          contact_person_id: "person-01",
+          contact_person: {
+            preferred_language: null,
+            id: "person-01",
+            name: "Alice Dupont",
+            email: "alice@moet.com",
+            phone: "+32471000001",
+          },
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-02T00:00:00Z",
+        });
+      }),
+    );
+
+    renderContentManagement();
+
+    await screen.findByText("Maison Moët & Chandon");
+
+    const archiveButton = screen.getByRole("button", {
+      name: "admin_content_archive: Maison Moët & Chandon",
+    });
+    fireEvent.click(archiveButton);
+
+    await waitFor(() => {
+      expect(capturedBody).toEqual({ active: false });
+    });
+
+    const archivedToggle = await screen.findByRole("button", {
+      name: "admin_content_archived_section",
+    });
+    fireEvent.click(archivedToggle);
+
+    const archivedRow = await screen.findByText("Maison Moët & Chandon");
+    const row = archivedRow.closest('[data-slot="presentation-list-item"]');
+    expect(row).not.toBeNull();
+    expect(row).toHaveClass("opacity-50");
+  });
+
+  it("asks before deleting an archived organization, naming it, and only then sends the DELETE", async () => {
+    const deleted: string[] = [];
+    server.use(
+      http.put("/api/organizations/:id", ({ params }) =>
+        jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          id: Number(params.id),
+          name: "Maison Moët & Chandon",
+          image: "/images/moet.png",
+          website: "https://www.moet.com",
+          active: false,
+          type: "producer",
+          contact_person_id: null,
+          contact_person: null,
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-02T00:00:00Z",
+        }),
+      ),
+      http.delete("/api/organizations/:id", ({ params }) => {
+        deleted.push(String(params.id));
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    renderContentManagement();
+    await screen.findByText("Maison Moët & Chandon");
+    fireEvent.click(
+      screen.getByRole("button", { name: "admin_content_archive: Maison Moët & Chandon" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "admin_content_archived_section" }));
+
+    const deleteName = 'admin_delete_item({"name":"Maison Moët & Chandon"})';
+    fireEvent.click(await screen.findByRole("button", { name: deleteName }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(
+      dialog.getByText('admin_item_delete_confirm({"name":"Maison Moët & Chandon"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(deleted).toEqual([]);
+
+    fireEvent.click(screen.getByRole("button", { name: deleteName }));
+    fireEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", { name: "admin_delete" }),
+    );
+    await waitFor(() => expect(deleted).toEqual([String(seedOrganizations[0]?.id)]));
+  });
+
+  it("takes the session fence before the write request and hands it to the saved callback", async () => {
+    const events: string[] = [];
+    const isCurrent = () => true;
+    const captureOrganizationsFence = vi.fn(() => {
+      events.push("capture");
+      return isCurrent;
+    });
+    server.use(
+      http.put("/api/organizations/:id", async ({ params }) => {
+        events.push("request");
+        return jsonResponse<import("@/api-types").OrganizationOut>({
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          website: "",
+          contact_person: null,
+          id: Number(params.id),
+          name: "Maison Moët & Chandon",
+          image: "/images/moet.png",
+          active: false,
+          type: "producer",
+          contact_person_id: null,
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-02T00:00:00Z",
+        });
+      }),
+    );
+
+    const { onOrganizationSaved } = renderContentManagement(captureOrganizationsFence);
+    await screen.findByText("Maison Moët & Chandon");
+    fireEvent.click(
+      screen.getByRole("button", { name: "admin_content_archive: Maison Moët & Chandon" }),
+    );
+
+    await waitFor(() => expect(onOrganizationSaved).toHaveBeenCalled());
+    expect(events).toEqual(["capture", "request"]);
+    expect(onOrganizationSaved).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Maison Moët & Chandon", active: false }),
+      isCurrent,
+    );
+  });
+
+  it("shows an error alert when loading organizations fails", async () => {
+    server.use(
+      http.get("/api/organizations", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Server error",
+          },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    renderContentManagement();
+
+    expect(await screen.findByText("admin_content_error_load")).toBeInTheDocument();
+  });
+});

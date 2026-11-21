@@ -5,7 +5,7 @@ import { m } from "@/paraglide/messages";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
-import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
+import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 
 export default function OrganizationLogoUpload({
   url,

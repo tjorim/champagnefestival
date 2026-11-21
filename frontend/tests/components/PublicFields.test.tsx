@@ -14,7 +14,7 @@ import {
   PublicSelect,
   PublicTextarea,
 } from "@/components/PublicFields";
-import { selectAdminOption } from "../helpers/adminSelect";
+import { selectAdminOption } from "../utils/adminSelect";
 
 function Language() {
   const [value, setValue] = useState("nl");

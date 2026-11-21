@@ -1,5 +1,5 @@
 import { Link, useLocation, useSearch } from "@tanstack/react-router";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import { ButtonLink } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";

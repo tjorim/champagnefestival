@@ -1,0 +1,63 @@
+import type { VapidPublicKeyOut, PushSubscriptionOut } from "@/api-types";
+import { fetchVoidOrThrowWithUnauthorized } from "./adminApi";
+import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "./apiErrors";
+
+export type VapidPublicKeyResponse = VapidPublicKeyOut;
+
+export async function getVapidPublicKey(): Promise<VapidPublicKeyResponse> {
+  const response = await fetch("/api/push/vapid-public-key");
+  if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
+  return response.json();
+}
+
+export interface PushSubscribeInput {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  locale: "nl" | "fr" | "en";
+  categories?: string[];
+  eventIds?: string[];
+}
+
+export type PushSubscriptionResult = PushSubscriptionOut;
+
+export async function subscribeToPush(input: PushSubscribeInput): Promise<PushSubscriptionResult> {
+  const response = await fetch("/api/push/subscriptions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      endpoint: input.endpoint,
+      keys: { p256dh: input.p256dh, auth: input.auth },
+      locale: input.locale,
+      categories: input.categories ?? ["system_test"],
+      event_ids: input.eventIds ?? [],
+    }),
+  });
+  if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
+  return response.json();
+}
+
+export async function unsubscribeFromPush(endpoint: string): Promise<void> {
+  const response = await fetch("/api/push/subscriptions/unsubscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  });
+  if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
+}
+
+export async function sendTestPush(
+  subscriptionId: string,
+  authHeaders: Record<string, string>,
+): Promise<void> {
+  await fetchVoidOrThrowWithUnauthorized(
+    "/api/push/test",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ subscription_id: subscriptionId }),
+    },
+    m.push_error_generic(),
+  );
+}

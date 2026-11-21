@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 
 // This suite uses the repository's Vite/MSW server to observe actual module requests.
 // Context routes include the worker's passthrough requests, unlike page routes.
-const analyticsModule = "**/src/components/admin/AnalyticsDashboard.tsx*";
+const analyticsModule = "**/src/features/admin/insights/AnalyticsDashboard.tsx*";
 const attendanceChart = "Guests registered and checked in per edition, chronological";
 
 async function expectRegistrations(page: import("@playwright/test").Page) {

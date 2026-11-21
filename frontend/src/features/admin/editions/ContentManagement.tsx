@@ -1,0 +1,849 @@
+import type { OrganizationOut } from "@/api-types";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import OrganizationChangeReview from "./OrganizationChangeReview";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { AdminInput } from "@/components/admin/AdminFields";
+import {
+  ArchiveIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  TrashIcon,
+  UserIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
+/**
+ * ContentManagement — admin tab for editing producers, sponsors, and editions.
+ */
+
+import { cn } from "@/lib/utils";
+import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Spinner } from "@/components/ui/spinner";
+
+import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import EditionCard from "./EditionCard";
+import EditionModal from "./EditionModal";
+import ItemModal from "./ItemModal";
+import type { ItemDraft } from "@/types/itemTypes";
+import type { EditionType } from "./editionTypes";
+import type { Edition } from "@/api-types";
+import type { Venue } from "@/api-types";
+import { queryKeys } from "@/lib/query/queryKeys";
+import {
+  deleteContentSectionItem,
+  fetchContentSectionItems,
+  fetchEditions,
+  saveContentSectionItem,
+  updateContentSectionItemActive,
+} from "@/lib/api/adminContentApi";
+import { editionDisplayName } from "@/lib/editions/editionName";
+import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+
+function typeBadgeVariant(type: string | undefined): BadgeVariant {
+  switch (type) {
+    case "producer":
+      return "warning";
+    case "sponsor":
+      return "info";
+    default:
+      return "secondary";
+  }
+}
+
+function typeLabel(type: string | undefined): string {
+  switch (type) {
+    case "producer":
+      return m.admin_item_producer();
+    case "sponsor":
+      return m.admin_item_sponsor();
+    default:
+      return m.admin_item_vendor();
+  }
+}
+
+function editionTypeLabel(type: EditionType | "all") {
+  switch (type) {
+    case "festival":
+      return m.admin_filter_edition_festivals();
+    case "bourse":
+      return m.admin_edition_type_bourse();
+    case "capsule_exchange":
+      return m.admin_edition_type_capsule_exchange();
+    default:
+      return m.admin_filter_edition_all();
+  }
+}
+
+interface ContentManagementProps {
+  authHeaders: () => Record<string, string>;
+  venues: Venue[];
+  onOrganizationSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
+  onOrganizationDeleted?: (id: number, isCurrent: () => boolean) => void;
+  /** Takes the organizations collection's session fence; called before each write request. */
+  captureOrganizationsFence?: () => () => boolean;
+  onEditionMutated?: () => void;
+}
+
+const contentSectionQueryKey = queryKeys.admin.contentManagement.section;
+const contentEditionsQueryKey = queryKeys.admin.contentManagement.editions;
+
+interface ContentSectionProps {
+  sectionKey: string;
+  title: string;
+  authHeaders: () => Record<string, string>;
+  /** `isCurrent` is the session fence taken before the request (always true without `captureFence`). */
+  onItemSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
+  onItemDeleted?: (id: number, isCurrent: () => boolean) => void;
+  /** Takes a session fence before each write request, so a write that settles after sign-out can be dropped. */
+  captureFence?: () => () => boolean;
+}
+
+const ALWAYS_CURRENT = () => true;
+
+export function ContentSection({
+  sectionKey,
+  title,
+  authHeaders,
+  onItemSaved,
+  onItemDeleted,
+  captureFence,
+}: ContentSectionProps) {
+  const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "producer" | "sponsor" | "vendor">("all");
+  const [q, setQ] = useState("");
+  const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
+  const [bulkArchiveInProgress, setBulkArchiveInProgress] = useState(false);
+
+  const itemsQuery = useQuery({
+    queryKey: contentSectionQueryKey(sectionKey),
+    queryFn: () => fetchContentSectionItems(sectionKey, authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const editionsQuery = useQuery({
+    queryKey: contentEditionsQueryKey,
+    queryFn: () => fetchEditions(authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  // Map item id → array of edition labels that reference it (as producer, sponsor, or vendor)
+  const editionsByItemId = useMemo((): Map<number, string[]> => {
+    const editions = editionsQuery.data ?? [];
+    const map = new Map<number, string[]>();
+    for (const edition of editions) {
+      const label = editionDisplayName(edition);
+      for (const item of [
+        ...(edition.producers ?? []),
+        ...(edition.sponsors ?? []),
+        ...(edition.vendors ?? []),
+      ]) {
+        const existing = map.get(item.id);
+        if (existing) map.set(item.id, [...existing, label]);
+        else map.set(item.id, [label]);
+      }
+    }
+    return map;
+  }, [editionsQuery.data]);
+
+  const saveItemMutation = useMutation({
+    mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft, authHeaders),
+    retry: false,
+  });
+
+  const updateItemActiveMutation = useMutation({
+    mutationFn: ({ id, active }: { id: number; active: boolean }) =>
+      updateContentSectionItemActive(sectionKey, id, active, authHeaders),
+    retry: false,
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: (id: number) => deleteContentSectionItem(sectionKey, id, authHeaders),
+    retry: false,
+  });
+
+  const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+
+  const { activeItems, archivedItems, totalActive, totalArchived } = useMemo(() => {
+    const s = q.toLowerCase();
+    const matches = (item: ItemDraft): boolean => {
+      const itemType = item.type ?? "vendor";
+      if (typeFilter !== "all" && itemType !== typeFilter) return false;
+      if (s) {
+        return (
+          item.name.toLowerCase().includes(s) ||
+          (item.contact_person?.name ?? "").toLowerCase().includes(s)
+        );
+      }
+      return true;
+    };
+    const activeItems: OrganizationOut[] = [];
+    const archivedItems: OrganizationOut[] = [];
+    let totalActive = 0;
+    let totalArchived = 0;
+    for (const item of items) {
+      const isActive = item.active !== false;
+      if (isActive) {
+        totalActive += 1;
+        if (matches(item)) {
+          activeItems.push(item);
+        }
+      } else {
+        totalArchived += 1;
+        if (matches(item)) {
+          archivedItems.push(item);
+        }
+      }
+    }
+    return {
+      activeItems,
+      archivedItems,
+      totalActive,
+      totalArchived,
+    };
+  }, [items, typeFilter, q]);
+
+  const typeLabels: Record<"all" | "producer" | "sponsor" | "vendor", string> = {
+    all: m.admin_filter_all(),
+    producer: m.admin_item_producer(),
+    sponsor: m.admin_item_sponsor(),
+    vendor: m.admin_item_vendor(),
+  };
+
+  function openAdd() {
+    setModalItem(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(item: ItemDraft) {
+    setModalItem(item);
+    setModalOpen(true);
+  }
+
+  function handleClearFilters() {
+    setTypeFilter("all");
+    setQ("");
+  }
+
+  const handleModalSave = useCallback(
+    async (draft: ItemDraft) => {
+      setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
+      try {
+        const saved = await saveItemMutation.mutateAsync(draft);
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => {
+            const idx = prev.findIndex((item) => item.id === saved.id);
+            return idx >= 0
+              ? prev.map((item) => (item.id === saved.id ? saved : item))
+              : [...prev, saved];
+          },
+        );
+        setImageErrors((prev) => {
+          const copy = new Set(prev);
+          copy.delete(saved.id);
+          return copy;
+        });
+        onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
+        setModalOpen(false);
+      } catch (error) {
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
+      }
+    },
+    [captureFence, onItemSaved, queryClient, saveItemMutation, sectionKey],
+  );
+
+  const handleArchive = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
+      try {
+        const saved = await updateItemActiveMutation.mutateAsync({
+          id,
+          active: false,
+        });
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.map((item) => (item.id === id ? saved : item)),
+        );
+        onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
+      } catch (error) {
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
+      }
+    },
+    [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
+  );
+
+  const handleRestore = useCallback(
+    async (id: number) => {
+      setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
+      try {
+        const saved = await updateItemActiveMutation.mutateAsync({
+          id,
+          active: true,
+        });
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.map((item) => (item.id === id ? saved : item)),
+        );
+        onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
+      } catch (error) {
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
+      }
+    },
+    [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
+  );
+
+  const handleDelete = useCallback(
+    async (item: ItemDraft) => {
+      const confirmed = await confirm({
+        title: m.admin_item_delete_title(),
+        body: m.admin_item_delete_confirm({ name: item.name }),
+        confirmLabel: m.admin_delete(),
+        errorFallback: m.admin_item_delete_error(),
+      });
+      if (!confirmed) return;
+      const id = item.id;
+      setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
+      try {
+        await deleteItemMutation.mutateAsync(id);
+        queryClient.setQueryData<OrganizationOut[]>(
+          contentSectionQueryKey(sectionKey),
+          (prev = []) => prev.filter((item) => item.id !== id),
+        );
+        onItemDeleted?.(id, isCurrent);
+      } catch (error) {
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
+      }
+    },
+    [captureFence, confirm, deleteItemMutation, onItemDeleted, queryClient, sectionKey],
+  );
+
+  const handleBulkArchive = useCallback(async () => {
+    setBulkArchiveInProgress(true);
+    const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
+    const snapshot = [...activeItems];
+    const results = await Promise.allSettled(
+      snapshot.map((item) => updateItemActiveMutation.mutateAsync({ id: item.id, active: false })),
+    );
+    const succeededIds = new Set(
+      snapshot.filter((_, i) => results[i]?.status === "fulfilled").map((item) => item.id),
+    );
+    if (succeededIds.size > 0) {
+      queryClient.setQueryData<OrganizationOut[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
+        prev.map((item) => (succeededIds.has(item.id) ? { ...item, active: false } : item)),
+      );
+      snapshot
+        .filter((item) => succeededIds.has(item.id))
+        .forEach((item) => onItemSaved?.({ ...item, active: false }, isCurrent));
+    }
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0) {
+      setActionError(
+        m.admin_bulk_content_archive_error({
+          failed: failedCount,
+          total: snapshot.length,
+        }),
+      );
+    }
+    setBulkArchiveInProgress(false);
+    setBulkArchiveOpen(false);
+  }, [activeItems, captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation]);
+
+  function renderItemRow(item: ItemDraft, isArchived: boolean) {
+    return (
+      <PresentationListItem
+        key={item.id}
+        className={cn("flex justify-between items-center gap-2", isArchived && "opacity-50")}
+      >
+        <span className="flex items-center gap-2 grow truncate">
+          {item.image && (
+            <span className="inline-flex items-center justify-center w-8 h-8 shrink-0">
+              {imageErrors.has(item.id) ? (
+                <span role="img" aria-label={m.admin_image_unavailable({ name: item.name })}>
+                  🖼
+                </span>
+              ) : (
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-8 h-8 object-contain"
+                  onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
+                />
+              )}
+            </span>
+          )}
+          {editionsByItemId.has(item.id) ? (
+            <Tooltip>
+              <TooltipTrigger
+                aria-description={`${m.admin_content_used_in_editions()}: ${editionsByItemId.get(item.id)!.join(", ")}`}
+                render={<button type="button" />}
+                className={cn(
+                  "truncate border-0 bg-transparent p-0 underline decoration-dotted",
+                  isArchived ? "text-muted-foreground" : "text-foreground",
+                )}
+              >
+                {item.name}
+              </TooltipTrigger>
+              <TooltipContent admin>
+                {m.admin_content_used_in_editions()}: {editionsByItemId.get(item.id)!.join(", ")}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className={cn("truncate", isArchived ? "text-subtle" : "text-content")}>
+              {item.name}
+            </span>
+          )}
+          <Badge
+            variant={typeBadgeVariant(item.type)}
+            className="shrink-0"
+            aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
+          >
+            {typeLabel(item.type)}
+          </Badge>
+          <small className="text-subtle truncate hidden site-md:inline">{item.image}</small>
+          {item.contact_person && (
+            <small className="text-subtle truncate hidden site-lg:inline">
+              <Icon icon={UserIcon} className="me-1" />
+              {item.contact_person.name}
+            </small>
+          )}
+        </span>
+        <RowActions
+          className="shrink-0"
+          destructive={
+            isArchived ? (
+              <RowActionButton
+                destructive
+                icon={TrashIcon}
+                label={m.admin_delete_item({ name: item.name })}
+                onClick={() => handleDelete(item)}
+              />
+            ) : undefined
+          }
+        >
+          {!isArchived && (
+            <RowActionButton
+              icon={PencilIcon}
+              label={m.admin_edit_item({ name: item.name })}
+              onClick={() => openEdit(item)}
+            />
+          )}
+          {!isArchived ? (
+            <RowActionButton
+              icon={ArchiveIcon}
+              label={`${m.admin_content_archive()}: ${item.name}`}
+              onClick={() => handleArchive(item.id)}
+            />
+          ) : (
+            <RowActionButton
+              variant="outline-success"
+              icon={RotateCcwIcon}
+              label={`${m.admin_content_restore()}: ${item.name}`}
+              onClick={() => handleRestore(item.id)}
+            />
+          )}
+        </RowActions>
+      </PresentationListItem>
+    );
+  }
+
+  if (itemsQuery.isPending) {
+    return (
+      <div className="text-center py-4">
+        <Spinner size="sm" variant="primary" />
+        <span className="ms-2 text-subtle">{m.admin_content_loading()}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+        <h2 className="mb-0 text-base font-semibold leading-tight text-primary">
+          {title}
+          <Badge variant="secondary" className="ms-2">
+            {totalActive}
+          </Badge>
+          {totalArchived > 0 && (
+            <Badge variant="outline" className="ms-1">
+              {totalArchived} {m.admin_content_archived_section()}
+            </Badge>
+          )}
+        </h2>
+        <AdminAddButton onClick={openAdd}>{m.admin_content_add_item()}</AdminAddButton>
+      </div>
+      <div className="flex flex-wrap gap-2 items-center mb-2">
+        <ToggleGroup
+          size="sm"
+          variant="outline"
+          value={[typeFilter]}
+          onValueChange={(values) => {
+            const value = values[0];
+            if (value) setTypeFilter(value as typeof typeFilter);
+          }}
+          aria-label={m.admin_content_type_filter_aria()}
+        >
+          {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
+            <ToggleGroupItem key={type} value={type}>
+              {typeLabels[type]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <AdminInput
+          size="sm"
+          type="search"
+          placeholder={m.admin_content_search_placeholder()}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="bg-muted text-content border-input max-w-65"
+        />
+        {typeFilter !== "all" && activeItems.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline-warning"
+            onClick={() => setBulkArchiveOpen(true)}
+            title={m.admin_bulk_content_archive_all({
+              type: typeLabels[typeFilter],
+            })}
+          >
+            <Icon icon={ArchiveIcon} />
+            {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
+          </Button>
+        )}
+      </div>
+
+      {itemsQuery.isError && (
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-2">
+          {m.admin_content_error_load()}
+        </Alert>
+      )}
+      {confirmDialog}
+      {actionError && (
+        <Alert
+          role="alert"
+          aria-live="assertive"
+          variant="danger"
+          className="py-1 mb-2"
+          onClose={() => setActionError(null)}
+        >
+          {actionError}
+        </Alert>
+      )}
+      <PresentationList flush>
+        {activeItems.map((item) => renderItemRow(item, false))}
+      </PresentationList>
+      {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
+        <AdminEmptyState
+          action={
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              {m.admin_content_clear_filters()}
+            </Button>
+          }
+        >
+          {m.admin_content_no_results()}
+        </AdminEmptyState>
+      )}
+      {archivedItems.length > 0 && (
+        <div className="mt-2">
+          <Button
+            variant="link"
+            size="sm"
+            className="text-subtle px-0"
+            onClick={() => setArchivedOpen((value) => !value)}
+          >
+            <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} />
+            {m.admin_content_archived_section()}
+          </Button>
+          {archivedOpen && (
+            <PresentationList flush>
+              {archivedItems.map((item) => renderItemRow(item, true))}
+            </PresentationList>
+          )}
+        </div>
+      )}
+
+      <ItemModal
+        show={modalOpen}
+        initial={modalItem}
+        authHeaders={authHeaders}
+        saving={saveItemMutation.isPending}
+        onSave={handleModalSave}
+        onHide={() => setModalOpen(false)}
+      />
+
+      {/* Bulk archive confirmation */}
+      <Dialog
+        open={bulkArchiveOpen}
+        onOpenChange={(open) => {
+          if (!open) setBulkArchiveOpen(false);
+        }}
+      >
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle>{m.admin_content_archive()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {m.admin_bulk_content_archive_confirm({
+              count: activeItems.length,
+              type:
+                typeFilter === "producer"
+                  ? m.admin_item_producer()
+                  : typeFilter === "sponsor"
+                    ? m.admin_item_sponsor()
+                    : m.admin_item_vendor(),
+            })}
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setBulkArchiveOpen(false)}
+              disabled={bulkArchiveInProgress}
+            >
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
+              {bulkArchiveInProgress && <Spinner size="sm" aria-hidden="true" />}
+              {m.admin_content_archive()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+interface EditionsSectionProps {
+  authHeaders: () => Record<string, string>;
+  venues: Venue[];
+  onEditionMutated?: () => void;
+}
+
+export function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
+  const queryClient = useQueryClient();
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editionTypeFilter, setEditionTypeFilter] = useState<EditionType | "all">("all");
+
+  const editionsQuery = useQuery({
+    queryKey: contentEditionsQueryKey,
+    queryFn: () => fetchEditions(authHeaders),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const visibleEditions = useMemo(
+    () =>
+      (editionsQuery.data ?? []).filter(
+        (edition) => editionTypeFilter === "all" || edition.edition_type === editionTypeFilter,
+      ),
+    [editionTypeFilter, editionsQuery.data],
+  );
+  const groupedEditions = useMemo(
+    () => ({
+      festival: visibleEditions.filter((edition) => edition.edition_type === "festival"),
+      bourse: visibleEditions.filter((edition) => edition.edition_type === "bourse"),
+      capsule_exchange: visibleEditions.filter(
+        (edition) => edition.edition_type === "capsule_exchange",
+      ),
+    }),
+    [visibleEditions],
+  );
+
+  const handleCreated = useCallback(
+    (edition: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) => [
+        ...prev,
+        edition,
+      ]);
+      setAddModalOpen(false);
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
+
+  const handleDeleted = useCallback(
+    (id: string) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.filter((edition) => edition.id !== id),
+      );
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
+
+  const handleUpdated = useCallback(
+    (updated: Edition) => {
+      queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
+        prev.map((edition) => (edition.id === updated.id ? updated : edition)),
+      );
+      onEditionMutated?.();
+    },
+    [onEditionMutated, queryClient],
+  );
+
+  const handleEventMutation = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: contentEditionsQueryKey });
+    onEditionMutated?.();
+  }, [onEditionMutated, queryClient]);
+
+  return (
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+        <div>
+          <h2 className="mb-1 text-base font-semibold leading-tight text-primary">
+            {m.admin_content_editions_section()}
+          </h2>
+          <ToggleGroup
+            size="sm"
+            variant="outline"
+            value={[editionTypeFilter]}
+            onValueChange={(values) => {
+              const value = values[0];
+              if (value) setEditionTypeFilter(value as typeof editionTypeFilter);
+            }}
+            aria-label={m.admin_content_edition_type_filter_aria()}
+          >
+            {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
+              <ToggleGroupItem key={type} value={type}>
+                {editionTypeLabel(type)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+        <AdminAddButton onClick={() => setAddModalOpen(true)}>
+          {m.admin_content_edition_add()}
+        </AdminAddButton>
+      </div>
+
+      {editionsQuery.isPending && (
+        <div className="text-center py-4">
+          <Spinner size="sm" variant="primary" />
+          <span className="ms-2 text-subtle">{m.admin_content_loading()}</span>
+        </div>
+      )}
+      {!editionsQuery.isPending && editionsQuery.isError && (
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 text-sm">
+          {m.admin_content_error_load()}
+        </Alert>
+      )}
+      {!editionsQuery.isPending &&
+        !editionsQuery.isError &&
+        (editionsQuery.data ?? []).length === 0 && (
+          <AdminEmptyState>{m.admin_content_no_editions()}</AdminEmptyState>
+        )}
+      {!editionsQuery.isPending && !editionsQuery.isError && (
+        <div className="flex flex-col gap-4">
+          {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {
+            const grouped = groupedEditions[type];
+            if (grouped.length === 0) return null;
+            return (
+              <div key={type}>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="mb-0 text-base font-semibold leading-tight text-content">
+                    {editionTypeLabel(type)}
+                  </h3>
+                  <Badge variant="secondary">{grouped.length}</Badge>
+                </div>
+                {grouped.map((edition) => (
+                  <EditionCard
+                    key={edition.id}
+                    edition={edition}
+                    venues={venues}
+                    authHeaders={authHeaders}
+                    onDeleted={handleDeleted}
+                    onUpdated={handleUpdated}
+                    onEventMutation={handleEventMutation}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <EditionModal
+        show={addModalOpen}
+        initial={null}
+        venues={venues}
+        authHeaders={authHeaders}
+        onSaved={handleCreated}
+        onHide={() => setAddModalOpen(false)}
+      />
+    </div>
+  );
+}
+
+export default function ContentManagement({
+  authHeaders,
+  venues,
+  onOrganizationSaved,
+  onOrganizationDeleted,
+  captureOrganizationsFence,
+  onEditionMutated,
+}: ContentManagementProps) {
+  const reviewQueryClient = useQueryClient();
+  return (
+    <div>
+      <Card tone="secondary" className="mb-4">
+        <CardContent>
+          <OrganizationChangeReview
+            authHeaders={authHeaders}
+            onDecided={() => {
+              void reviewQueryClient.invalidateQueries({
+                queryKey: contentSectionQueryKey("organizations"),
+              });
+            }}
+          />
+          <ContentSection
+            sectionKey="organizations"
+            title={m.admin_content_organizations_section()}
+            authHeaders={authHeaders}
+            onItemSaved={onOrganizationSaved}
+            onItemDeleted={onOrganizationDeleted}
+            captureFence={captureOrganizationsFence}
+          />
+          <hr className="border-subtle" />
+          <EditionsSection
+            authHeaders={authHeaders}
+            venues={venues}
+            onEditionMutated={onEditionMutated}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

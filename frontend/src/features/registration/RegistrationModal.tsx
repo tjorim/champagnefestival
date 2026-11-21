@@ -1,0 +1,689 @@
+import { OrderAnswerInputs } from "@/components/OrderAnswers";
+import type { OrderAnswer } from "@/lib/editions/orderQuestions";
+import {
+  CalendarCheckIcon,
+  CircleCheckIcon,
+  MinusIcon,
+  PlusIcon,
+  TicketIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/Icon";
+import { useMutation } from "@tanstack/react-query";
+import { useForm, useSelector } from "@tanstack/react-form";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  PublicCheck,
+  PublicDescription,
+  PublicError,
+  PublicField,
+  PublicInput,
+  PublicLabel,
+  PublicOption,
+  PublicSelect,
+  PublicTextarea,
+} from "@/components/PublicFields";
+import { Alert, AlertLink } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { m } from "@/paraglide/messages";
+import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
+import { EMAIL_REGEX } from "@/config/constants";
+import type { OrderItemRequest } from "@/api-types";
+import type { RegistrationFormData } from "@/types/registration";
+import type { EventPublicOut as Event } from "@/api-types";
+import { eventTitle, productDescription, productName } from "@/lib/editions/eventText";
+import {
+  RegistrationSubmitError,
+  submitRegistration,
+  submitWaitlistEntry,
+} from "@/lib/api/publicRegistrationApi";
+import { useAuth } from "@/app/providers/AuthContext";
+import { getLocale } from "@/paraglide/runtime";
+
+export interface RegistrationModalProps {
+  show: boolean;
+  onHide: () => void;
+  event: Event | null;
+}
+
+interface RegistrationFields {
+  name: string;
+  email: string;
+  phone: string;
+  preferredLanguage: "nl" | "fr" | "en";
+  guestCount: number;
+  notes: string;
+  newEditionsOptIn: boolean;
+  honeypot: string;
+  formStartTime: string;
+}
+
+export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
+  const auth = useAuth();
+  const [orderAnswers, setOrderAnswers] = useState<OrderAnswer[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItemRequest[]>([]);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [registrationId, setRegistrationId] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
+  const submitRegistrationMutation = useMutation({
+    mutationFn: (payload: RegistrationFormData) =>
+      submitRegistration(payload, auth.getAccessToken()),
+    retry: false,
+  });
+
+  const isSubmitting = submitRegistrationMutation.isPending;
+  // The public API only ever returns purchasable products, and strips any
+  // inclusion edge pointing at a hidden one, before this reaches the client
+  // (see Event.products) — the `purchasable` filter here is defense in depth
+  // only, not something a real payload should ever need.
+  const products = useMemo(() => event?.products ?? [], [event]);
+  const purchasableProducts = useMemo(() => products.filter((p) => p.purchasable), [products]);
+  // Whether guests can order anything is answered by there being a
+  // purchasable product, not by a separate flag.
+  const showOrderItems = purchasableProducts.length > 0;
+
+  const [initialFormStartTime] = useState(() => new Date().toISOString());
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      preferredLanguage: getLocale(),
+      guestCount: 1,
+      notes: "",
+      newEditionsOptIn: false,
+      honeypot: "",
+      formStartTime: initialFormStartTime,
+    } as RegistrationFields,
+    onSubmit: async ({ value }) => {
+      setSubmitError("");
+      if (!event?.id) {
+        setSubmitError(m.registration_error());
+        return;
+      }
+
+      try {
+        const created = await submitRegistrationMutation.mutateAsync({
+          ...value,
+          eventId: event.id,
+          orderAnswers: orderAnswers.filter((a) =>
+            event.order_questions?.some((q) => q.id === a.question_id && q.active),
+          ),
+          orderItems: showOrderItems ? orderItems : [],
+        });
+        setRegistrationId(created.id);
+        setSubmitSuccess(true);
+      } catch (error) {
+        setSubmitError(
+          error instanceof RegistrationSubmitError ? error.message : m.registration_network_error(),
+        );
+      }
+    },
+  });
+
+  const handleQuantityChange = useCallback(
+    (productId: string, quantity: number) => {
+      setOrderItems((prev) => {
+        const existing = prev.find((o) => o.product_id === productId);
+        if (quantity <= 0) {
+          return prev.filter((o) => o.product_id !== productId);
+        }
+        const product = products.find((p) => p.id === productId);
+        if (!product) return prev;
+
+        // The server resolves name, price and category, and computes and merges any bundle-included
+        // quantity on top of this — the client only ever asks for what is explicitly chosen.
+        const item: OrderItemRequest = { product_id: productId, quantity };
+
+        if (existing) {
+          return prev.map((o) => (o.product_id === productId ? item : o));
+        }
+        return [...prev, item];
+      });
+    },
+    [products],
+  );
+
+  const guestCount = useSelector(form.atom, (s) => s.values.guestCount);
+  const contactName = useSelector(form.atom, (s) => s.values.name);
+  const contactEmail = useSelector(form.atom, (s) => s.values.email);
+  const contactPhone = useSelector(form.atom, (s) => s.values.phone);
+  const contactNotes = useSelector(form.atom, (s) => s.values.notes);
+
+  const [waitlistedProductIds, setWaitlistedProductIds] = useState<Set<string>>(new Set());
+  const [waitlistError, setWaitlistError] = useState("");
+  // One stable submission id per product, not one shared across every
+  // product: a failed/lost response for product A must not have a
+  // subsequent join for a different product B silently reuse A's id (the
+  // server's ON CONFLICT DO NOTHING would then no-op B's insert while this
+  // still reports success and marks B as joined).
+  const waitlistSubmissionIds = useRef(new Map<string, string>());
+  const joinWaitlistMutation = useMutation({
+    mutationFn: (productId: string) => {
+      const submissionId = waitlistSubmissionIds.current.get(productId) ?? crypto.randomUUID();
+      waitlistSubmissionIds.current.set(productId, submissionId);
+      return submitWaitlistEntry(
+        {
+          productId,
+          name: contactName,
+          email: contactEmail,
+          phone: contactPhone,
+          guestCount,
+          notes: contactNotes,
+        },
+        submissionId,
+      );
+    },
+    onSuccess: (_data, productId) => {
+      waitlistSubmissionIds.current.delete(productId);
+      setWaitlistedProductIds((prev) => new Set(prev).add(productId));
+    },
+    onError: (error) => {
+      setWaitlistError(
+        error instanceof RegistrationSubmitError ? error.message : m.registration_waitlist_error(),
+      );
+    },
+    retry: false,
+  });
+
+  const handleJoinWaitlist = useCallback(
+    (productId: string) => {
+      setWaitlistError("");
+      if (!contactName.trim() || !EMAIL_REGEX.test(contactEmail)) {
+        setWaitlistError(m.registration_waitlist_needs_contact_info());
+        return;
+      }
+      joinWaitlistMutation.mutate(productId);
+    },
+    [contactName, contactEmail, joinWaitlistMutation],
+  );
+
+  const requiredProducts = useMemo(
+    () => purchasableProducts.filter((p) => p.required),
+    [purchasableProducts],
+  );
+  const hasRequiredSelected = useMemo(
+    () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.product_id)),
+    [orderItems, requiredProducts],
+  );
+
+  const includedQuantities = useMemo(() => {
+    // Every product here is purchasable, and the server strips any inclusion
+    // edge targeting a hidden product before it reaches this payload — so an
+    // edge present below is always safe to name to the visitor.
+    const included = new Map<string, { quantity: number; sourceName: string }>();
+    let visits = 0;
+    const expand = (id: string, quantity: number, sourceName: string, path: Set<string>) => {
+      if (path.has(id) || ++visits > 10000) return;
+      const product = products.find((p) => p.id === id);
+      if (!product) return;
+      const nextPath = new Set([...path, id]);
+      const edges =
+        product.inclusions ??
+        (product.included_product_id && product.included_per_guests
+          ? [
+              {
+                product_id: product.included_product_id,
+                quantity: Math.floor((guestCount || 0) / product.included_per_guests),
+                per_quantity: quantity,
+                rounding: "down" as const,
+              },
+            ]
+          : []);
+      for (const edge of edges) {
+        const value = (quantity * edge.quantity) / edge.per_quantity;
+        const count = edge.rounding === "up" ? Math.ceil(value) : Math.floor(value);
+        if (count <= 0) continue;
+        const old = included.get(edge.product_id);
+        included.set(edge.product_id, {
+          quantity: (old?.quantity ?? 0) + count,
+          sourceName: old ? `${old.sourceName}, ${sourceName}` : sourceName,
+        });
+        expand(edge.product_id, count, sourceName, nextPath);
+      }
+    };
+    for (const order of orderItems) {
+      const ordered = products.find((p) => p.id === order.product_id);
+      expand(
+        order.product_id,
+        order.quantity,
+        ordered ? productName(ordered, getLocale()) : "",
+        new Set(),
+      );
+    }
+    return included;
+  }, [guestCount, orderItems, products]);
+
+  // The dialog stays mounted between openings, so the anti-bot timing field is stamped when it
+  // opens, not at mount or at the previous close.
+  useEffect(() => {
+    if (show) form.setFieldValue("formStartTime", new Date().toISOString());
+  }, [show, form]);
+
+  const handleClose = useCallback(() => {
+    form.reset({
+      name: "",
+      email: "",
+      phone: "",
+      preferredLanguage: getLocale(),
+      guestCount: 1,
+      notes: "",
+      newEditionsOptIn: false,
+      honeypot: "",
+      formStartTime: new Date().toISOString(),
+    });
+    setOrderItems([]);
+    setOrderAnswers([]);
+    setSubmitSuccess(false);
+    setRegistrationId("");
+    setSubmitError("");
+    onHide();
+  }, [form, onHide]);
+
+  return (
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle id="registration-modal-title">
+            <Icon icon={TicketIcon} className="text-warning me-2" />
+            {event ? eventTitle(event, getLocale()) : m.registration_modal_title()}
+          </DialogTitle>
+        </DialogHeader>
+
+        <DialogBody>
+          {event?.members_only && (
+            <Alert className="mb-3">
+              {m.member_sign_in_prompt()}{" "}
+              <AlertLink href="/me">{m.member_sign_in_link()}</AlertLink>
+            </Alert>
+          )}
+
+          {!event ? (
+            <Alert variant="danger" className="mb-0">
+              <Icon icon={TriangleAlertIcon} className="me-2" />
+              {m.registration_error()}
+            </Alert>
+          ) : event.volunteers_only ? (
+            <Alert>
+              {m.volunteer_event_poll_required()}{" "}
+              <AlertLink href="/me">{m.volunteer_event_portal_link()}</AlertLink>
+            </Alert>
+          ) : submitSuccess ? (
+            <Alert variant="success" className="mb-0">
+              <Icon icon={CircleCheckIcon} className="me-2" />
+              {m.registration_success()}
+              <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
+              <AlertLink href="/me">{m.registration_view_my_registrations()}</AlertLink>
+            </Alert>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void form.handleSubmit();
+              }}
+              noValidate
+            >
+              <form.Field name="honeypot">
+                {(field) => (
+                  <PublicInput
+                    type="text"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="hidden"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                )}
+              </form.Field>
+
+              <form.Field
+                name="name"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.registration_errors_name_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <PublicField className="mb-4" controlId="res-name">
+                      <PublicLabel>{m.registration_name()} *</PublicLabel>
+                      <PublicInput
+                        type="text"
+                        aria-invalid={showErr}
+                        autoComplete="name"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field
+                name="email"
+                validators={[
+                  {
+                    run: ({ value }) => {
+                      if (!value?.trim()) return m.registration_errors_email_required();
+                      if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
+                      return undefined;
+                    },
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <PublicField className="mb-4" controlId="res-email">
+                      <PublicLabel>{m.registration_email()} *</PublicLabel>
+                      <PublicInput
+                        type="email"
+                        aria-invalid={showErr}
+                        autoComplete="email"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field
+                name="phone"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.registration_errors_phone_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <PublicField className="mb-4" controlId="res-phone">
+                      <PublicLabel>{m.registration_phone()} *</PublicLabel>
+                      <PublicInput
+                        type="tel"
+                        aria-invalid={showErr}
+                        autoComplete="tel"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field
+                name="guestCount"
+                validators={[
+                  {
+                    run: ({ value }) => {
+                      if (!value && value !== 0) return m.registration_errors_guests_required();
+                      if (value < MIN_GUESTS) return m.registration_errors_guests_min();
+                      if (value > MAX_GUESTS) return m.registration_errors_guests_max();
+                      return undefined;
+                    },
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <PublicField className="mb-4" controlId="res-guests">
+                      <PublicLabel>{m.registration_guests()} *</PublicLabel>
+                      <PublicInput
+                        type="number"
+                        aria-invalid={showErr}
+                        min={MIN_GUESTS}
+                        max={MAX_GUESTS}
+                        value={field.value}
+                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field name="preferredLanguage">
+                {(field) => (
+                  <PublicField className="mb-4" controlId="res-preferred-language">
+                    <PublicLabel>{m.registration_preferred_language()}</PublicLabel>
+                    <PublicSelect
+                      value={field.value}
+                      onValueChange={(language) =>
+                        field.handleChange(language as "nl" | "fr" | "en")
+                      }
+                    >
+                      <PublicOption value="nl">Nederlands</PublicOption>
+                      <PublicOption value="fr">Français</PublicOption>
+                      <PublicOption value="en">English</PublicOption>
+                    </PublicSelect>
+                    <PublicDescription>
+                      {m.registration_preferred_language_help()}
+                    </PublicDescription>
+                  </PublicField>
+                )}
+              </form.Field>
+
+              <form.Field name="newEditionsOptIn">
+                {(field) => (
+                  <PublicField className="mb-4" controlId="res-new-editions-opt-in">
+                    <PublicCheck
+                      id="res-new-editions-opt-in-check"
+                      label={m.registration_new_editions_opt_in()}
+                      checked={field.value}
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      aria-describedby="res-new-editions-opt-in-description"
+                    />
+                    <PublicDescription>
+                      {m.registration_new_editions_opt_in_help()}
+                    </PublicDescription>
+                  </PublicField>
+                )}
+              </form.Field>
+
+              {showOrderItems && (
+                <fieldset className="mb-4">
+                  <legend className="text-base font-semibold mb-1">
+                    {m.registration_order_title()}
+                  </legend>
+                  <p className="text-subtle text-sm mb-2">{m.registration_order_description()}</p>
+                  {requiredProducts.length > 0 && !hasRequiredSelected && (
+                    <p className="text-highlight text-sm mb-2">
+                      {m.registration_order_required_hint({
+                        products: requiredProducts
+                          .map((p) => productName(p, getLocale()))
+                          .join(", "),
+                      })}
+                    </p>
+                  )}
+
+                  {purchasableProducts.map((product) => {
+                    const currentItem = orderItems.find((o) => o.product_id === product.id);
+                    const qty = currentItem?.quantity ?? 0;
+                    const label = `${productName(product, getLocale())} - €${product.price}`;
+                    const isLockedOptional =
+                      !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
+                    const included = includedQuantities.get(product.id);
+                    return (
+                      <div key={product.id} className="mb-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-foreground text-sm">
+                            {label}
+                            {product.sold_out && (
+                              <>
+                                <Badge variant="danger" className="ms-2">
+                                  {m.registration_order_sold_out()}
+                                </Badge>
+                                {waitlistedProductIds.has(product.id) ? (
+                                  <Badge variant="success" className="ms-2">
+                                    {m.registration_waitlist_joined()}
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="p-0 ms-2 align-baseline"
+                                    disabled={joinWaitlistMutation.isPending}
+                                    onClick={() => handleJoinWaitlist(product.id)}
+                                  >
+                                    {m.registration_waitlist_join()}
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {productDescription(product, getLocale()) && (
+                              <span className="text-subtle block text-xs">
+                                {productDescription(product, getLocale())}
+                              </span>
+                            )}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleQuantityChange(product.id, qty - 1)}
+                              disabled={qty === 0}
+                              aria-label={m.registration_decrease_quantity({ name: label })}
+                            >
+                              <Icon icon={MinusIcon} />
+                            </Button>
+                            <span className="text-foreground min-w-6 text-center">{qty}</span>
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              onClick={() => handleQuantityChange(product.id, qty + 1)}
+                              disabled={
+                                isLockedOptional ||
+                                product.sold_out ||
+                                (product.available_quantity != null &&
+                                  qty + (included?.quantity ?? 0) >= product.available_quantity)
+                              }
+                              aria-label={m.registration_increase_quantity({ name: label })}
+                            >
+                              <Icon icon={PlusIcon} />
+                            </Button>
+                          </div>
+                        </div>
+                        {product.available_quantity != null && (
+                          <div className="text-subtle text-sm">
+                            {m.registration_order_available()}: {product.available_quantity}
+                          </div>
+                        )}
+                        {included && (
+                          <div className="text-subtle text-xs">
+                            {m.registration_order_included_note({
+                              count: included.quantity,
+                              source: included.sourceName,
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </fieldset>
+              )}
+
+              {waitlistError && (
+                <Alert variant="danger" className="py-2 text-sm">
+                  {waitlistError}
+                </Alert>
+              )}
+
+              <OrderAnswerInputs
+                questions={(event?.order_questions ?? []).filter((q) => q.active)}
+                answers={orderAnswers}
+                onChange={setOrderAnswers}
+                disabled={isSubmitting}
+              />
+              <form.Field name="notes">
+                {(field) => (
+                  <PublicField className="mb-4" controlId="res-notes">
+                    <PublicLabel>{m.registration_notes()}</PublicLabel>
+                    <PublicTextarea
+                      rows={3}
+                      maxLength={4000}
+                      placeholder={m.registration_notes_placeholder()}
+                      value={field.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <PublicDescription>{m.registration_notes_help()}</PublicDescription>
+                  </PublicField>
+                )}
+              </form.Field>
+
+              {submitError && (
+                <Alert variant="danger" className="mb-4">
+                  <Icon icon={TriangleAlertIcon} className="me-2" />
+                  {submitError}
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                variant="warning"
+                className="w-full"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner size="sm" role="status" aria-hidden="true" className="me-2" />
+                    {m.registration_submitting()}
+                  </>
+                ) : (
+                  <>
+                    <Icon icon={CalendarCheckIcon} className="me-2" />
+                    {m.registration_submit()}
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
+        </DialogBody>
+
+        {submitSuccess && (
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>
+              {m.close()}
+            </Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

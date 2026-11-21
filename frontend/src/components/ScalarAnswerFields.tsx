@@ -8,7 +8,7 @@ import {
 } from "@/components/admin/AdminFields";
 import { PublicLabel, PublicSelect, PublicTextarea } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
-import type { ScalarQuestionKind, ScalarValue } from "@/utils/orderQuestions";
+import type { ScalarQuestionKind, ScalarValue } from "@/lib/editions/orderQuestions";
 
 export interface ScalarAnswerFieldsProps {
   id: string;

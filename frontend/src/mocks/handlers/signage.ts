@@ -1,9 +1,9 @@
 import { jsonResponse } from "../response";
 import { http, HttpResponse } from "msw/http";
-import type { Channel, Slide, ChannelDraft, SlideDraft } from "@/signage/playlistModel";
-import type { Playlist } from "@/signage/types";
+import type { Channel, Slide, ChannelDraft, SlideDraft } from "@/features/signage/playlistModel";
+import type { Playlist } from "@/features/signage/types";
 import { seedOrganizations } from "../data/organizations";
-import type { Template, TemplateDraft } from "@/signage/editorModel";
+import type { Template, TemplateDraft } from "@/features/signage/editorModel";
 
 const channels: Channel[] = [];
 const slides: Slide[] = [];

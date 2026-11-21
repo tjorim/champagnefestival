@@ -1,0 +1,702 @@
+import { useTodayKey } from "@/hooks/useTodayKey";
+import {
+  ADMIN_CONTROL_CLASS,
+  AdminDescription,
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminError,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
+import { SaveIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/Icon";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useForm, useSelector } from "@tanstack/react-form";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxLabel,
+  ComboboxCollection,
+  ComboboxChips,
+  ComboboxChip,
+  ComboboxChipsInput,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
+import { EditionLineupOrder } from "./EditionLineupOrder";
+import type { SponsorTier } from "@/config/editions";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
+import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import type { ItemDraft } from "@/types/itemTypes";
+import type { EditionType } from "./editionTypes";
+import type { Edition } from "@/api-types";
+import type { Venue } from "@/api-types";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { fetchEditionModalOrganizations, saveEdition } from "@/lib/api/adminContentApi";
+import { editionDisplayName } from "@/lib/editions/editionName";
+
+interface EditionModalProps {
+  show: boolean;
+  initial: Edition | null;
+  venues: Venue[];
+  authHeaders: () => Record<string, string>;
+  onSaved: (edition: Edition) => void;
+  onHide: () => void;
+}
+
+interface ItemOption {
+  value: number;
+  label: string;
+  isArchived: boolean;
+  /** Organisation type; only sponsors can have a level. */
+  type?: string;
+}
+
+const editionModalOrganizationsQueryKey = queryKeys.admin.editionModalOrganizations;
+
+/** Moves one entry, as a new array. */
+function moved<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  if (item !== undefined) next.splice(to, 0, item);
+  return next;
+}
+
+/** The lineup of a saved edition in its admin-defined order (producers and sponsors, never vendors). */
+function lineupOptions(initial: Edition | null | undefined): ItemOption[] {
+  const known = new Map<number, { name: string; type: string }>([
+    ...(initial?.producers ?? []).map((e) => [e.id, { name: e.name, type: "producer" }] as const),
+    ...(initial?.sponsors ?? []).map((e) => [e.id, { name: e.name, type: "sponsor" }] as const),
+  ]);
+  // Older responses carry no order; fall back to producers then sponsors.
+  const ids = initial?.organizations?.length ? initial.organizations : [...known.keys()];
+  return ids.flatMap((id) => {
+    const entry = known.get(id);
+    return entry ? [{ value: id, label: entry.name, isArchived: false, type: entry.type }] : [];
+  });
+}
+
+function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
+  const active: ItemOption[] = [];
+  const archived: ItemOption[] = [];
+  for (const item of items) {
+    const opt: ItemOption = {
+      value: item.id,
+      label: item.name,
+      isArchived: item.active === false,
+      type: item.type,
+    };
+    if (item.active === false) archived.push(opt);
+    else active.push(opt);
+  }
+  return { active, archived };
+}
+
+function typeLabel(type: EditionType) {
+  switch (type) {
+    case "bourse":
+      return m.admin_edition_type_bourse();
+    case "capsule_exchange":
+      return m.admin_edition_type_capsule_exchange();
+    default:
+      return m.admin_edition_type_festival();
+  }
+}
+
+function draftOf<T extends { selectedOrganizations: ItemOption[] }>(values: T) {
+  return { ...values, selectedOrganizations: values.selectedOrganizations.map((o) => o.value) };
+}
+
+export default function EditionModal({
+  show,
+  initial,
+  venues,
+  authHeaders,
+  onSaved,
+  onHide,
+}: EditionModalProps) {
+  const hydratedRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  // The edition as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(show, initial?.id ?? "", initial);
+
+  // Keyed on the resolved id rather than the `venues` array: callers pass
+  // `query.data ?? []`, so a fresh empty array on every render would otherwise
+  // give `defaultValues` a new identity each time and drive the reset effect
+  // below into a loop. A string settles as soon as the venues load.
+  const fallbackVenueId = useMemo(() => venues.find((v) => v.active)?.id ?? "", [venues]);
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EventModal for the details.
+  const currentYear = Number(useTodayKey().slice(0, 4));
+  const defaultValues = useMemo(
+    () => ({
+      id: record?.id ?? "",
+      year: record?.year ?? currentYear,
+      month: record?.month ?? "",
+      edition_type: (record?.edition_type ?? "festival") as EditionType,
+      venueId: record?.venue?.id ?? fallbackVenueId,
+      active: record?.active ?? true,
+      coOrganizerId: record?.co_organizer?.id ? String(record.co_organizer.id) : "",
+      // Producers and sponsors only — the API rejects vendor ids on an edition,
+      // so vendors are deliberately not selectable and not submitted.
+      // In lineup order: the public site lists sponsors in this order (#1226).
+      selectedOrganizations: lineupOptions(record),
+      sponsorTiers: Object.fromEntries(
+        (record?.sponsors ?? []).flatMap((sponsor) =>
+          sponsor.sponsor_tier ? [[sponsor.id, sponsor.sponsor_tier]] : [],
+        ),
+      ) as Record<number, SponsorTier>,
+    }),
+    [fallbackVenueId, record, currentYear],
+  );
+
+  const form = useForm({
+    defaultValues,
+    onSubmit: async ({ value }) => {
+      if (!record && value.id.trim() === "") {
+        setError(m.admin_edition_id_required());
+        return;
+      }
+      try {
+        const savedEdition = await saveEditionMutation.mutateAsync({
+          id: value.id.trim(),
+          year: value.year,
+          month: value.month.trim(),
+          edition_type: value.edition_type,
+          venueId: value.venueId,
+          active: value.active,
+          // Producers and sponsors only, deliberately. The API rejects vendor ids
+          // on an edition outright ("Vendor-type organizations may not be linked to
+          // editions"), so an edition showing vendors is in a state the backend
+          // considers invalid — re-sending them would make it unsaveable. Leaving
+          // them out lets the next save clear the invalid link.
+          organizations:
+            value.edition_type === "festival"
+              ? value.selectedOrganizations.map((option: ItemOption) => option.value)
+              : [],
+          // Levels only for sponsors that are still in the lineup.
+          sponsorTiers: Object.fromEntries(
+            value.selectedOrganizations.flatMap((option: ItemOption) => {
+              const tier = value.sponsorTiers[option.value];
+              return option.type === "sponsor" && tier ? [[option.value, tier]] : [];
+            }),
+          ),
+          // Any edition type may name one; it is not part of the lineup.
+          coOrganizerOrganizationId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
+        });
+        onSaved(savedEdition);
+      } catch (mutationError) {
+        setError(apiErrorMessage(mutationError, m.admin_content_error_save()));
+      }
+    },
+  });
+
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched. Read through an effect event so a
+  // venue list that arrives later (which refreshes `defaultValues`) cannot re-seed
+  // a draft in progress.
+  const seedForm = useEffectEvent(() => form.reset(defaultValues));
+  useLayoutEffect(() => {
+    if (show) seedForm();
+  }, [show, sessionId]);
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (show) setError(null);
+  }
+
+  // Ref mutations belong in an effect, not render — this just marks the
+  // organization-hydration effect below as pending again for the fresh form.
+  useEffect(() => {
+    if (show) hydratedRef.current = false;
+  }, [show]);
+
+  const organizationsQuery = useQuery({
+    queryKey: editionModalOrganizationsQueryKey,
+    queryFn: () => fetchEditionModalOrganizations(authHeaders),
+    enabled: show,
+    staleTime: 60 * 1000,
+    retry: false,
+  });
+
+  const saveEditionMutation = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      year: number;
+      month: string;
+      edition_type: EditionType;
+      venueId: string;
+      active: boolean;
+      organizations: number[];
+      sponsorTiers: Record<number, SponsorTier>;
+      coOrganizerOrganizationId: number | null;
+    }) => saveEdition(payload, authHeaders, record?.id),
+    retry: false,
+  });
+
+  const allOrganizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
+  const isEdit = !!record;
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    // Compare the lineup by id: loading the organization list enriches the
+    // selected options (archived, type) without the user changing anything.
+    dirty: isDraftDirty(draftOf(values), draftOf(defaultValues)),
+    busy: saveEditionMutation.isPending,
+    onDismiss: onHide,
+  });
+  const edition_type = useSelector(form.atom, (s) => s.values.edition_type as EditionType);
+  const sponsorTiers = useSelector(
+    form.atom,
+    (s) => s.values.sponsorTiers as Record<number, SponsorTier>,
+  );
+  const isFestival = edition_type === "festival";
+  const programmableOrganizations = useMemo(
+    () => allOrganizations.filter((organization) => organization.type !== "vendor"),
+    [allOrganizations],
+  );
+
+  // Once the organization list loads, re-derive the selected options from it so the
+  // archived ones pick up their styling. Same ids as `defaultValues` seeded —
+  // this only enriches them, so it must not run after the user starts editing.
+  useEffect(() => {
+    if (!show || allOrganizations.length === 0 || hydratedRef.current) return;
+    const { active: act, archived: arch } = toOptions(programmableOrganizations);
+    const byId = new Map([...act, ...arch].map((option) => [option.value, option]));
+    // Keep the saved lineup order; only the option details (archived, type) are refreshed.
+    form.setFieldValue(
+      "selectedOrganizations",
+      lineupOptions(record).flatMap((option) => byId.get(option.value) ?? []),
+    );
+    hydratedRef.current = true;
+  }, [allOrganizations, programmableOrganizations, record, form, show]);
+  const organizationGroups = useMemo(() => {
+    const { active: act, archived: arch } = toOptions(programmableOrganizations);
+    const groups: { label: string; items: ItemOption[] }[] = [];
+    if (act.length) groups.push({ label: m.admin_edition_organizations(), items: act });
+    if (arch.length) groups.push({ label: m.admin_content_archived_section(), items: arch });
+    return groups;
+  }, [programmableOrganizations]);
+
+  const comboboxAnchor = useComboboxAnchor();
+  const previewDates = useMemo(() => record?.dates ?? [], [record?.dates]);
+
+  return (
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) void requestClose();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit
+              ? m.admin_edit_item({ name: editionDisplayName(record!) })
+              : m.admin_content_edition_add()}
+          </DialogTitle>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          noValidate
+        >
+          <DialogBody>
+            {error && (
+              <Alert variant="danger" className="py-1 mb-4 text-sm">
+                {error}
+              </Alert>
+            )}
+
+            {!isEdit && (
+              <AdminField className="mb-4" controlId="edition-id">
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_id_label()}
+                </AdminLabel>
+                <form.Field
+                  name="id"
+                  validators={[
+                    {
+                      run: ({ value }) =>
+                        !value?.trim() ? m.admin_edition_id_required() : undefined,
+                      triggers: ["change"],
+                    },
+                  ]}
+                >
+                  {(field) => {
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
+                    return (
+                      <>
+                        <AdminInput
+                          required
+                          className={ADMIN_CONTROL_CLASS}
+                          placeholder={m.admin_edition_id_placeholder()}
+                          autoFocus
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          aria-invalid={showErr}
+                        />
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                      </>
+                    );
+                  }}
+                </form.Field>
+                <AdminDescription>{m.admin_edition_id_help()}</AdminDescription>
+              </AdminField>
+            )}
+
+            <div className="flex gap-2 flex-wrap mb-4">
+              <AdminField className="max-w-25" controlId="edition-year">
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_year_label()}
+                </AdminLabel>
+                <form.Field name="year">
+                  {(field) => (
+                    <AdminInput
+                      type="number"
+                      className={ADMIN_CONTROL_CLASS}
+                      value={field.value}
+                      onChange={(e) => field.handleChange(Number(e.target.value))}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
+              </AdminField>
+              <AdminField className="min-w-35 grow-1 shrink-1 basis-35" controlId="edition-month">
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_month_label()}
+                </AdminLabel>
+                <form.Field
+                  name="month"
+                  validators={[
+                    {
+                      run: ({ value }) =>
+                        !value?.trim() ? m.admin_edition_month_required() : undefined,
+                      triggers: ["change"],
+                    },
+                  ]}
+                >
+                  {(field) => {
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
+                    return (
+                      <>
+                        <AdminInput
+                          required
+                          className={ADMIN_CONTROL_CLASS}
+                          placeholder={m.admin_edition_month_placeholder()}
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          aria-invalid={showErr}
+                        />
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                      </>
+                    );
+                  }}
+                </form.Field>
+                <AdminDescription>{m.admin_edition_month_help()}</AdminDescription>
+              </AdminField>
+              <AdminField className="min-w-45 grow-1 shrink-1 basis-45" controlId="edition-type">
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_type_label()}
+                </AdminLabel>
+                <form.Field name="edition_type">
+                  {(field) => (
+                    <AdminSelect
+                      value={field.value}
+                      onValueChange={(e) => {
+                        field.handleChange(e as EditionType);
+                        if (e !== "festival") {
+                          form.setFieldValue("selectedOrganizations", [] as ItemOption[]);
+                        }
+                      }}
+                      onBlur={field.handleBlur}
+                      className={ADMIN_CONTROL_CLASS}
+                    >
+                      <AdminOption value="festival">{m.admin_edition_type_festival()}</AdminOption>
+                      <AdminOption value="bourse">{m.admin_edition_type_bourse()}</AdminOption>
+                      <AdminOption value="capsule_exchange">
+                        {m.admin_edition_type_capsule_exchange()}
+                      </AdminOption>
+                    </AdminSelect>
+                  )}
+                </form.Field>
+              </AdminField>
+              <form.Field name="active">
+                {(field) => (
+                  <AdminCheck
+                    type="checkbox"
+                    id="modal-edition-active"
+                    label={m.admin_content_edition_active()}
+                    checked={field.value}
+                    onCheckedChange={(e) => field.handleChange(e)}
+                    className="text-content self-end mb-1"
+                  />
+                )}
+              </form.Field>
+            </div>
+
+            <AdminField className="mb-4" controlId="edition-venue">
+              <AdminLabel className="text-subtle text-sm mb-1">
+                {m.admin_edition_venue_label()}
+              </AdminLabel>
+              <form.Field
+                name="venueId"
+                validators={[
+                  {
+                    run: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <AdminSelect
+                        className={ADMIN_CONTROL_CLASS}
+                        value={field.value}
+                        onValueChange={(e) => field.handleChange(e)}
+                        onBlur={field.handleBlur}
+                        aria-invalid={showErr}
+                      >
+                        <AdminOption value="">{m.admin_edition_venue_placeholder()}</AdminOption>
+                        {venues.map((venue) => (
+                          <AdminOption key={venue.id} value={venue.id}>
+                            {venue.name}
+                            {venue.active ? "" : " (archived)"}
+                          </AdminOption>
+                        ))}
+                      </AdminSelect>
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </AdminField>
+
+            <div className="rounded-md border border-subtle p-4 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-content text-sm font-semibold">
+                  {typeLabel(edition_type)} {m.admin_edition_date_handling()}
+                </div>
+                <span className="text-subtle text-sm">{m.admin_edition_dates_info()}</span>
+              </div>
+              {isFestival ? (
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
+                  {["Friday", "Saturday", "Sunday"].map((label, index) => (
+                    <AdminField
+                      className="site-md:w-4/12"
+                      key={label}
+                      controlId={`edition-date-${label.toLowerCase()}`}
+                    >
+                      <AdminLabel className="text-subtle text-sm mb-1">{label}</AdminLabel>
+                      <AdminInput
+                        type="date"
+                        value={previewDates[index] ?? ""}
+                        className={ADMIN_CONTROL_CLASS}
+                        readOnly
+                        disabled={!previewDates[index]}
+                      />
+                    </AdminField>
+                  ))}
+                </div>
+              ) : (
+                <AdminField controlId="edition-standalone-date">
+                  <AdminLabel className="text-subtle text-sm mb-1">
+                    {m.admin_edition_date_label()}
+                  </AdminLabel>
+                  <AdminInput
+                    type="date"
+                    value={previewDates[0] ?? ""}
+                    className={ADMIN_CONTROL_CLASS}
+                    readOnly
+                    disabled={!previewDates[0]}
+                  />
+                </AdminField>
+              )}
+              <div className="text-subtle text-sm mt-2">
+                {isEdit
+                  ? m.admin_edition_update_event_dates()
+                  : m.admin_edition_create_first_then_events()}
+              </div>
+            </div>
+
+            <AdminField className="mb-4" controlId="edition-co-organizer">
+              <AdminLabel className="text-subtle text-sm mb-1">
+                {m.admin_edition_co_organizer_label()}
+              </AdminLabel>
+              <form.Field name="coOrganizerId">
+                {(field) => (
+                  <AdminSelect
+                    className={ADMIN_CONTROL_CLASS}
+                    value={field.value}
+                    onValueChange={(e) => field.handleChange(e)}
+                    onBlur={field.handleBlur}
+                  >
+                    <AdminOption value="">{m.admin_edition_co_organizer_none()}</AdminOption>
+                    {allOrganizations
+                      .filter((organization) => organization.active !== false)
+                      .map((organization) => (
+                        <AdminOption key={organization.id} value={String(organization.id)}>
+                          {organization.name}
+                        </AdminOption>
+                      ))}
+                  </AdminSelect>
+                )}
+              </form.Field>
+              <div className="text-subtle text-sm mt-1">{m.admin_edition_co_organizer_help()}</div>
+            </AdminField>
+
+            {isFestival && (
+              <AdminField className="mb-4" controlId="edition-organizations">
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_festival_organizations()}
+                </AdminLabel>
+                {organizationsQuery.isPending ? (
+                  <div className="text-subtle text-sm">
+                    <Spinner size="sm" className="me-2" />
+                    {m.admin_edition_loading_organizations()}
+                  </div>
+                ) : (
+                  <form.Field name="selectedOrganizations">
+                    {(field) => (
+                      <>
+                        <Combobox
+                          multiple
+                          items={organizationGroups}
+                          value={field.value}
+                          onValueChange={(options) => {
+                            // Selecting appends and deselecting removes; everyone else keeps their place.
+                            const chosen = new Set(
+                              options.map((option: ItemOption) => option.value),
+                            );
+                            const kept = field.value.filter((option: ItemOption) =>
+                              chosen.has(option.value),
+                            );
+                            const keptIds = new Set(kept.map((option: ItemOption) => option.value));
+                            field.handleChange([
+                              ...kept,
+                              ...options.filter((option: ItemOption) => !keptIds.has(option.value)),
+                            ]);
+                          }}
+                          itemToStringLabel={(option: ItemOption) => option.label}
+                          isItemEqualToValue={(a: ItemOption, b: ItemOption) => a.value === b.value}
+                        >
+                          <ComboboxChips ref={comboboxAnchor}>
+                            <ComboboxValue>
+                              {(options: ItemOption[]) => (
+                                <>
+                                  {options.map((option) => (
+                                    <ComboboxChip
+                                      key={option.value}
+                                      className={
+                                        option.isArchived ? "text-muted-foreground" : undefined
+                                      }
+                                    >
+                                      {option.label}
+                                    </ComboboxChip>
+                                  ))}
+                                  <ComboboxChipsInput
+                                    id="edition-organizations"
+                                    aria-label={m.admin_edition_festival_organizations()}
+                                    onBlur={field.handleBlur}
+                                    placeholder={m.admin_edition_organizations()}
+                                  />
+                                </>
+                              )}
+                            </ComboboxValue>
+                          </ComboboxChips>
+                          <ComboboxContent anchor={comboboxAnchor}>
+                            <ComboboxEmpty>{m.admin_content_no_results()}</ComboboxEmpty>
+                            <ComboboxList>
+                              {(group: { label: string; items: ItemOption[] }) => (
+                                <ComboboxGroup key={group.label} items={group.items}>
+                                  <ComboboxLabel>{group.label}</ComboboxLabel>
+                                  <ComboboxCollection>
+                                    {(option: ItemOption) => (
+                                      <ComboboxItem
+                                        key={option.value}
+                                        value={option}
+                                        className={
+                                          option.isArchived ? "text-muted-foreground" : undefined
+                                        }
+                                      >
+                                        {option.label}
+                                      </ComboboxItem>
+                                    )}
+                                  </ComboboxCollection>
+                                </ComboboxGroup>
+                              )}
+                            </ComboboxList>
+                          </ComboboxContent>
+                        </Combobox>
+                        <EditionLineupOrder
+                          entries={field.value.map((option: ItemOption) => ({
+                            id: option.value,
+                            name: option.label,
+                            type: option.type,
+                          }))}
+                          tiers={sponsorTiers}
+                          onMove={(from, to) => field.handleChange(moved(field.value, from, to))}
+                          onTierChange={(id, tier) => {
+                            const { [id]: _previous, ...others } = sponsorTiers;
+                            form.setFieldValue(
+                              "sponsorTiers",
+                              tier ? { ...others, [id]: tier } : others,
+                            );
+                          }}
+                        />
+                      </>
+                    )}
+                  </form.Field>
+                )}
+              </AdminField>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
+              {m.close()}
+            </Button>
+            <Button
+              type="submit"
+              variant="warning"
+              size="sm"
+              disabled={saveEditionMutation.isPending}
+            >
+              {saveEditionMutation.isPending ? <Spinner size="sm" /> : <Icon icon={SaveIcon} />}
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+      {confirmDialog}
+    </Dialog>
+  );
+}

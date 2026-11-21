@@ -27,10 +27,10 @@ where a collection pays off most. The original deferral reasoning is in Git hist
 The pilot domain is **registrations** (including the table, check-in, strap,
 payment, order and delivery fields carried on each registration).
 
-- `frontend/src/state/adminRegistrationsCollection.ts`: the collection factory,
+- `frontend/src/lib/collections/adminRegistrationsCollection.ts`: the collection factory,
   live-event patching and reset helpers.
-- `frontend/src/hooks/useAdminQueries.ts`: creates the collection and reads it.
-- `frontend/src/state/LiveUpdatesProvider.tsx`: routes live events to the patching
+- `frontend/src/features/admin/shell/useAdminQueries.ts`: creates the collection and reads it.
+- `frontend/src/app/providers/LiveUpdatesProvider.tsx`: routes live events to the patching
   helpers.
 
 ### Collection and reads
@@ -95,12 +95,12 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 `tables` is the second collection-backed domain.
 
-- `frontend/src/state/adminTablesCollection.ts`: the collection factory, write
+- `frontend/src/lib/collections/adminTablesCollection.ts`: the collection factory, write
   helpers, live-event patching and reset. `useAdminQueries` creates it beside the
   registrations collection and registers it for live events.
 - **Rows hold no occupancy.** A stored row is a `FloorTableRecord` (the table
   without `registrationIds`); `apiTableToTable` ignores the server's
-  `registration_ids`. `frontend/src/state/tableOccupancy.ts` groups registration
+  `registration_ids`. `frontend/src/lib/collections/tableOccupancy.ts` groups registration
   ids by `allocation.tableId` over the registrations collection's rows, and
   `useAdminQueries` joins them into the `FloorTable[]` the views already consume.
   Assigning, moving or removing a registration's table is therefore one
@@ -164,7 +164,7 @@ The detailed retired implementation is preserved in
 The venue group is the fourth collection-backed domain: five collections, one per
 resource, built together and registered, reset and fenced as a group.
 
-- `frontend/src/state/adminVenueCollections.ts`: `createAdminVenueCollections`
+- `frontend/src/features/admin/venue/adminVenueCollections.ts`: `createAdminVenueCollections`
   builds the venues, rooms, table types, layouts and areas collections with
   `createAdminCollection` in the default `eager` sync mode (small, rarely changing
   lists). `useAdminQueries` creates the group in one `useMemo`, reads each with
@@ -212,9 +212,9 @@ resource, built together and registered, reset and fenced as a group.
   (`registerAdminVenueCollections`). A local write that fails after the server
   committed is not reported as a failed action; the refetch reconciles.
   `isAuthenticated` turning false empties all five collections and removes their
-  query keys. Tests: `tests/state/adminVenueCollections.test.ts`,
-  `tests/hooks/useAdminVenueCollections.test.tsx`,
-  `tests/hooks/useAdminSignOutCache.test.tsx`.
+  query keys. Tests: `tests/features/admin/venue/adminVenueCollections.test.ts`,
+  `tests/features/admin/shell/useAdminVenueCollections.test.tsx`,
+  `tests/features/admin/shell/useAdminSignOutCache.test.tsx`.
 - **Keys.** `"venues"`, `"rooms"`, `"table-types"`, `"layouts"` and `"areas"` are no
   longer in `ADMIN_RESOURCE_KEYS`; `ADMIN_RESOURCE_KEYS` was then `registrations` and
   `organizations` (organizations left it in [#1184](#organizations-1184)). No `useQuery` or
@@ -272,16 +272,16 @@ migration. They are now one eager collection on the shared factory
   are separate reads of the same endpoint, not a second copy the dashboard patches.
 - **No live events.** The stream carries no topic for organizations.
 - Retry-safety decisions are in `docs/retry-safety.md`. Tests:
-  `tests/state/adminOrganizationsCollection.test.ts`,
-  `tests/hooks/useAdminSignOutCache.test.tsx`,
-  `tests/hooks/useAdminPeopleActions.test.tsx`,
-  `tests/components/admin.ContentManagement.test.tsx`.
+  `tests/lib/collections/adminOrganizationsCollection.test.ts`,
+  `tests/features/admin/shell/useAdminSignOutCache.test.tsx`,
+  `tests/features/admin/shell/useAdminPeopleActions.test.tsx`,
+  `tests/features/admin/editions/ContentManagement.test.tsx`.
 
 ## Shared collection factory and remaining resources ([#1166](https://github.com/tjorim/champagnefestival/issues/1166))
 
 ### Shared collection factory
 
-`frontend/src/state/adminCollectionFactory.ts` holds the lifecycle that the
+`frontend/src/lib/collections/adminCollectionFactory.ts` holds the lifecycle that the
 registrations, tables and people collections each used to copy. A collection
 module is now mostly its data handling.
 
@@ -308,7 +308,7 @@ module is now mostly its data handling.
   public exports (`registerAdmin…Collection`, `resetAdmin…Collection`,
   `captureAdmin…Fence`, `refetchAdmin…`). People uses Query session fencing
   instead; its former collection integration was retired in #1181.
-- Tests: `tests/state/adminCollectionFactory.test.ts`.
+- Tests: `tests/lib/collections/adminCollectionFactory.test.ts`.
 
 ### Sign-out safety for the plain queries
 
@@ -345,7 +345,7 @@ Collections stay what they are: complete, bounded sets of one resource, loaded
 eagerly. A table page is a view of a server query, not an entity set, so it
 lives in the Query cache keyed by the table state.
 
-Proof: `frontend/tests/spikes/membersListOnDemand.spike.test.tsx` runs the
+Proof: `frontend/tests/features/admin/people/membersListOnDemand.spike.test.tsx` runs the
 Members list (page, sort, search, filter, cancellation, sign-out, optimistic
 edit) both ways against one fake paged server on the installed
 `@tanstack/db` 0.14.0, `@tanstack/query-db-collection` 1.4.4 and
@@ -583,14 +583,14 @@ It is outside #1174; list pages must never be persisted.
 - Related issue [#441](https://github.com/tjorim/champagnefestival/issues/441):
   TanStack Router/Query architecture standardization
 - Live-update stream: [#446](https://github.com/tjorim/champagnefestival/issues/446)
-- `frontend/src/state/adminRegistrationsCollection.ts`
-- `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
-- `frontend/src/state/adminPeopleSession.ts`, `frontend/src/utils/optimisticPeoplePages.ts`
-- `frontend/src/state/adminVenueCollections.ts`
-- `frontend/src/state/adminCollectionFactory.ts`
-- `frontend/src/hooks/useAdminQueries.ts`
-- `frontend/src/state/LiveUpdatesProvider.tsx`
-- `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write
+- `frontend/src/lib/collections/adminRegistrationsCollection.ts`
+- `frontend/src/lib/collections/adminTablesCollection.ts`, `frontend/src/lib/collections/tableOccupancy.ts`
+- `frontend/src/features/admin/people/adminPeopleSession.ts`, `frontend/src/features/admin/people/optimisticPeoplePages.ts`
+- `frontend/src/features/admin/venue/adminVenueCollections.ts`
+- `frontend/src/lib/collections/adminCollectionFactory.ts`
+- `frontend/src/features/admin/shell/useAdminQueries.ts`
+- `frontend/src/app/providers/LiveUpdatesProvider.tsx`
+- `frontend/src/features/admin/shell/useAdminRegistrationActions.ts`: current registration write
   patches
 
 ### People Query layer implementation (#1178, 2026-10-06)

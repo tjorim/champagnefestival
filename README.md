@@ -83,9 +83,9 @@ The full command list, with what CI runs, is in [AGENTS.md](AGENTS.md#commands).
 ## Testing
 
 ```bash
-cd frontend && pnpm test          # Vitest
-cd frontend && pnpm test:e2e      # Playwright (see frontend/e2e/README.md)
-cd backend && uv run pytest       # SQLite by default; PostgreSQL via TEST_DATABASE_URL
+(cd frontend && pnpm test)         # Vitest
+(cd frontend && pnpm test:e2e)     # Playwright (see frontend/e2e/README.md)
+(cd backend && uv run pytest)      # SQLite by default; PostgreSQL via TEST_DATABASE_URL
 ```
 
 See [Testing in AGENTS.md](AGENTS.md#testing) for the bundle, UI-inventory and locale checks.
@@ -118,6 +118,7 @@ See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for the production VPS + Caddy setup.
 - **[AGENTS.md](./AGENTS.md)** — repository layout, commands, conventions, CI and release process
 - **[frontend/README.md](./frontend/README.md)** — commands, project structure, i18n, code style
 - **[backend/README.md](./backend/README.md)** — setup, tests, migrations, API overview, deployment options
+- [Architecture and source layout](docs/ARCHITECTURE.md)
 - [Documentation guide](docs/README.md) — operational contracts, current product work and architectural decisions
 - [UI dependency and component maintenance](docs/ui-maintenance.md)
 

@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import StaffTasks from "@/components/StaffTasks";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { m } from "@/paraglide/messages";
 import { renderLocation } from "../utils/locationRouter";
 

@@ -1,0 +1,905 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, productOut } from "@/mocks/data/builders";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import RegistrationModal from "@/features/registration/RegistrationModal";
+import { server } from "@/mocks/server";
+import type { Event, Product } from "@/api-types";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
+import { createTestQueryClientWrapper } from "../../utils/queryClient";
+import { selectAdminOption } from "../../utils/adminSelect";
+import { noEventTranslations } from "../../utils/eventFixtures";
+
+const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
+
+vi.mock("@/app/providers/AuthContext", () => ({
+  useAuth: () => ({ getAccessToken: () => authState.accessToken }),
+}));
+
+vi.mock("@/paraglide/messages", () => ({
+  m: {
+    registration_modal_title: () => "Registration",
+    registration_name: () => "Name",
+    registration_email: () => "Email",
+    registration_phone: () => "Phone Number",
+    registration_preferred_language: () => "Preferred communication language",
+    registration_preferred_language_help: () => "Used for confirmations and messages.",
+    registration_guests: () => "Number of Guests",
+    registration_notes_help: () =>
+      "Tell us about wheelchair access, seating or other support you need.",
+    registration_new_editions_opt_in: () => "Keep me informed about future editions",
+    registration_new_editions_opt_in_help: () =>
+      "Optional and unticked by default — we'll only use this to occasionally email you about a new edition, never for anything else.",
+    registration_order_title: () => "Order",
+    registration_order_description: () => "Order champagne or snacks with your registration",
+    registration_order_required_hint: ({ products }: { products: string }) =>
+      `Add ${products} first to unlock the optional items below.`,
+    registration_order_included_note: ({ count, source }: { count: number; source: string }) =>
+      `Includes ${count} free with your ${source}`,
+    registration_order_sold_out: () => "Sold out",
+    registration_waitlist_join: () => "Join waitlist",
+    registration_waitlist_joined: () => "You're on the waitlist",
+    registration_waitlist_needs_contact_info: () =>
+      "Please fill in your name and a valid email above first.",
+    registration_waitlist_error: () => "Could not join the waitlist. Please try again.",
+    registration_notes: () => "Notes",
+    registration_notes_placeholder: () => "Any special requests...",
+    registration_submit: () => "Place Registration",
+    registration_submitting: () => "Placing registration...",
+    registration_success: () => "Your registration has been received!",
+    registration_reference: ({ reference }: { reference: string }) =>
+      `Booking reference: ${reference}`,
+    registration_view_my_registrations: () => "View my registrations",
+    registration_error: () => "An error occurred. Please try again.",
+    registration_network_error: () => "Network error. Please check your connection.",
+    registration_errors_name_required: () => "Name is required",
+    registration_errors_email_required: () => "Email address is required",
+    registration_errors_email_invalid: () => "Please enter a valid email address",
+    registration_errors_phone_required: () => "Phone number is required",
+    registration_errors_guests_required: () => "Please enter the number of guests",
+    registration_errors_guests_min: () => "Minimum 1 guest required",
+    registration_errors_guests_max: () => "Maximum 20 guests per registration",
+    order_questions_heading: () => "Order questions",
+    order_questions_help: () => "Optional answers per order",
+    poll_answer_none: () => "No answer",
+    close: () => "Close",
+    registration_increase_quantity: ({ name }: { name: string }) => `Increase quantity of ${name}`,
+    registration_decrease_quantity: ({ name }: { name: string }) => `Decrease quantity of ${name}`,
+  },
+}));
+
+vi.mock("@/paraglide/runtime", () => ({
+  getLocale: () => "en",
+  setLocale: vi.fn(),
+}));
+
+const champagneProduct: Product = productOut({
+  id: "champagne-standard",
+  event_id: "fri-vip",
+  ...NO_PRODUCT_TRANSLATIONS,
+  name: "Champagne Bottle (Standard)",
+  description: "",
+  price: "65",
+  category: "champagne",
+  purchasable: true,
+  required: false,
+  created_at: "",
+  updated_at: "",
+});
+
+const vipEvent: Event = eventOut({
+  id: "fri-vip",
+  edition_id: "ed-1",
+  ...noEventTranslations,
+  title: "VIP Reception",
+  start_time: "19:30",
+  description: "VIP event",
+  category: "vip" as const,
+  date: "2025-10-03",
+  registration_required: true,
+  active: true,
+  created_at: "",
+  updated_at: "",
+  products: [champagneProduct],
+});
+
+function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
+  const wrapper = createTestQueryClientWrapper();
+
+  return render(<RegistrationModal show={true} onHide={() => {}} event={vipEvent} {...props} />, {
+    wrapper,
+  });
+}
+
+describe("RegistrationModal component", () => {
+  beforeEach(() => {
+    authState.accessToken = null;
+  });
+
+  it("does not render when show=false", () => {
+    const wrapper = createTestQueryClientWrapper();
+    render(<RegistrationModal show={false} onHide={() => {}} event={vipEvent} />, { wrapper });
+    expect(screen.queryByText("VIP Reception")).not.toBeInTheDocument();
+  });
+
+  it("renders the modal when show=true", () => {
+    renderModal();
+    expect(screen.getByText("VIP Reception")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Name \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Phone Number \*/i)).toBeInTheDocument();
+  });
+
+  it("shows validation errors when submitting empty form", async () => {
+    renderModal();
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Name is required")).toBeInTheDocument();
+      expect(screen.getByText("Email address is required")).toBeInTheDocument();
+      expect(screen.getByText("Phone number is required")).toBeInTheDocument();
+    });
+  });
+
+  it("submits form successfully and shows success message", async () => {
+    // The default MSW POST /api/registrations handler accepts the submission,
+    // stores the new registration, and returns 201 with the created object.
+    // The response includes the persisted booking ID used as the reference.
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Your registration has been received!")).toBeInTheDocument();
+      expect(screen.getByText(/Booking reference: reg-/)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /my registrations/i })).toHaveAttribute(
+        "href",
+        "/me",
+      );
+    });
+  });
+
+  it("defaults the updates opt-in checkbox to unticked, and sends it only when ticked", async () => {
+    let requestBody: { new_editions_opt_in?: boolean } = {};
+    server.use(
+      http.post("/api/registrations", async ({ request }) => {
+        requestBody = (await request.json()) as { new_editions_opt_in?: boolean };
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-opt-in",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    renderModal();
+
+    const checkbox = screen.getByRole("checkbox", {
+      name: "Keep me informed about future editions",
+    });
+    expect(checkbox).not.toBeChecked();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(requestBody.new_editions_opt_in).toBe(true));
+  });
+
+  it("stamps the anti-bot start time when the dialog opens, not when it mounts", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-10-28T10:00:00.000Z"));
+      let requestBody: { form_start_time?: string } = {};
+      server.use(
+        http.post("/api/registrations", async ({ request }) => {
+          requestBody = (await request.json()) as { form_start_time?: string };
+          return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+            {
+              order_answers: [],
+              booked_table_quantity: 0,
+              allocations: [],
+              person_id: "",
+              person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+              event_id: "",
+              event: {
+                title: "",
+                description: "",
+                title_nl: null,
+                title_fr: null,
+                title_en: null,
+                description_nl: null,
+                description_fr: null,
+                description_en: null,
+                id: "",
+                edition_id: "",
+                date: "2026-01-01",
+                start_time: "",
+                end_time: null,
+                category: "",
+                volunteers_only: false,
+                members_only: false,
+                registration_required: false,
+                registrations_open_from: null,
+                registrations_close_at: null,
+                active: false,
+                order_questions: [],
+                products: [],
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-01-01T00:00:00Z",
+              },
+              guest_count: 0,
+              order_items: [],
+              notes: "",
+              table_id: null,
+              status: "pending",
+              payment_status: "unpaid",
+              amount_due: null,
+              amount_paid: "0",
+              refund_due: "0",
+              checked_in: false,
+              checked_in_at: null,
+              strap_issued: false,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+              id: "reg-start-time",
+            },
+            { status: 201 },
+          );
+        }),
+      );
+      const view = renderModal({ show: false });
+
+      vi.setSystemTime(new Date("2026-10-28T11:30:00.000Z"));
+      view.rerender(<RegistrationModal show onHide={() => {}} event={vipEvent} />);
+
+      fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+      fireEvent.change(screen.getByLabelText(/Email \*/i), {
+        target: { value: "jane@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+        target: { value: "+32 123 456 789" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+      await waitFor(() => expect(requestBody.form_start_time).toBe("2026-10-28T11:30:00.000Z"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends the preferred language chosen from the themed select popup", async () => {
+    let requestBody: { preferred_language?: string } = {};
+    server.use(
+      http.post("/api/registrations", async ({ request }) => {
+        requestBody = (await request.json()) as { preferred_language?: string };
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-language",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    renderModal();
+
+    const language = screen.getByRole("combobox", { name: "Preferred communication language" });
+    expect(language).toHaveAccessibleDescription("Used for confirmations and messages.");
+    await selectAdminOption(language, "fr");
+    expect(language).toHaveTextContent("Français");
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(requestBody.preferred_language).toBe("fr"));
+  });
+
+  it("marks invalid fields and associates their error messages", async () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    const name = await screen.findByLabelText(/Name \*/i);
+    await waitFor(() => expect(name).toBeInvalid());
+    expect(name).toHaveAccessibleDescription(expect.stringContaining("Name is required"));
+  });
+
+  it("sends the visitor token when placing a signed-in registration", async () => {
+    authState.accessToken = "visitor-access-token";
+    let authorization = "";
+    server.use(
+      http.post("/api/registrations", ({ request }) => {
+        authorization = request.headers.get("Authorization") ?? "";
+        return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+          {
+            order_answers: [],
+            booked_table_quantity: 0,
+            allocations: [],
+            person_id: "",
+            person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+            event_id: "",
+            event: {
+              title: "",
+              description: "",
+              title_nl: null,
+              title_fr: null,
+              title_en: null,
+              description_nl: null,
+              description_fr: null,
+              description_en: null,
+              id: "",
+              edition_id: "",
+              date: "2026-01-01",
+              start_time: "",
+              end_time: null,
+              category: "",
+              volunteers_only: false,
+              members_only: false,
+              registration_required: false,
+              registrations_open_from: null,
+              registrations_close_at: null,
+              active: false,
+              order_questions: [],
+              products: [],
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+            guest_count: 0,
+            order_items: [],
+            notes: "",
+            table_id: null,
+            status: "pending",
+            payment_status: "unpaid",
+            amount_due: null,
+            amount_paid: "0",
+            refund_due: "0",
+            checked_in: false,
+            checked_in_at: null,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+            id: "reg-owned",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(authorization).toBe("Bearer visitor-access-token"));
+  });
+
+  it("shows order products when the event has active products", () => {
+    renderModal();
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+  });
+
+  it("hides order products when the event has no products", () => {
+    renderModal({ event: { ...vipEvent, products: [] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+  });
+
+  it("does not render a buy control for a hidden product", () => {
+    // Defense in depth: the public API never actually returns a hidden
+    // product, but the component must not offer a buy control for one if it
+    // somehow appeared in the payload.
+    const hiddenProduct: Product = productOut({
+      ...champagneProduct,
+      id: "hidden-champagne",
+      purchasable: false,
+    });
+    renderModal({
+      event: { ...vipEvent, products: [champagneProduct, hiddenProduct] },
+    });
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+    // Only one buy row exists — the purchasable product's — not a second one
+    // for the hidden entry sharing the same name/price.
+    expect(
+      screen.getAllByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("hides order products when the event has only a hidden product", () => {
+    const hiddenProduct: Product = productOut({
+      ...champagneProduct,
+      purchasable: false,
+    });
+    renderModal({ event: { ...vipEvent, products: [hiddenProduct] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+  });
+
+  it("shows a sold-out badge and disables increasing quantity for a sold-out product", () => {
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    expect(increaseButton).toBeDisabled();
+  });
+
+  it("requires a name and valid email before joining the waitlist for a sold-out product", () => {
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Join waitlist" }));
+
+    expect(
+      screen.getByText("Please fill in your name and a valid email above first."),
+    ).toBeInTheDocument();
+  });
+
+  it("joins the waitlist for a sold-out product once contact details are filled in", async () => {
+    let submittedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/api/waitlist", async ({ request }) => {
+        submittedBody = (await request.json()) as Record<string, unknown>;
+        return jsonResponse<import("@/api-types").OkOut>({ ok: true });
+      }),
+    );
+
+    const soldOutProduct: Product = productOut({ ...champagneProduct, sold_out: true });
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Nancy Cattrysse" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), {
+      target: { value: "nancy@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Join waitlist" }));
+
+    expect(await screen.findByText("You're on the waitlist")).toBeInTheDocument();
+    expect(submittedBody).toMatchObject({
+      product_id: "champagne-standard",
+      name: "Nancy Cattrysse",
+      email: "nancy@example.com",
+    });
+  });
+
+  it("shows order products for a non-vip category, as long as it has products", () => {
+    // A Sunday-morning capsule exchange during the festival is not "vip", but can
+    // still sell things — the category label must not gate this.
+    renderModal({ event: { ...vipEvent, category: "exchange" } });
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+  });
+
+  it("hides order products for a vip-categorised event with no products", () => {
+    // The inverse: being labelled "vip" grants nothing by itself.
+    renderModal({ event: { ...vipEvent, category: "vip", products: [] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+  });
+
+  it("shows error message on submission failure (server error)", async () => {
+    server.use(
+      http.post("/api/registrations", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            error: "Internal server error",
+          },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("An error occurred. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByText("Internal server error")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows network error message on network error", async () => {
+    server.use(http.post("/api/registrations", () => HttpResponse.error()));
+
+    renderModal();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Network error. Please check your connection.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error state when event is null", () => {
+    renderModal({ event: null });
+    expect(screen.getByText("An error occurred. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Name \*/i)).not.toBeInTheDocument();
+  });
+
+  it("increments order quantity when + button is clicked", () => {
+    renderModal();
+
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    fireEvent.click(increaseButton);
+
+    const controlsContainer = increaseButton.closest("div") as HTMLElement;
+    expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
+  });
+
+  it("decrements order quantity when - button is clicked", () => {
+    renderModal();
+
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    const decreaseButton = screen.getByRole("button", {
+      name: /Decrease quantity of Champagne Bottle \(Standard\)/i,
+    });
+
+    fireEvent.click(increaseButton);
+    fireEvent.click(increaseButton);
+    fireEvent.click(decreaseButton);
+
+    const controlsContainer = increaseButton.closest("div") as HTMLElement;
+    expect(within(controlsContainer).getByText("1")).toBeInTheDocument();
+  });
+
+  it("does not decrement order quantity below zero", () => {
+    renderModal();
+
+    const decreaseButton = screen.getByRole("button", {
+      name: /Decrease quantity of Champagne Bottle \(Standard\)/i,
+    });
+
+    expect(decreaseButton).toBeDisabled();
+  });
+
+  describe("required products", () => {
+    const vipEntry: Product = productOut({
+      id: "vip-entry",
+      event_id: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
+      name: "VIP Entry",
+      description: "",
+      price: "50",
+      category: "other",
+      purchasable: true,
+      required: true,
+      created_at: "",
+      updated_at: "",
+    });
+    const eventWithRequiredProduct: Event = eventOut({
+      ...vipEvent,
+      products: [vipEntry, champagneProduct],
+    });
+
+    it("disables an optional product's increase button until the required one is added", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      const increaseBottle = screen.getByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      });
+      expect(increaseBottle).toBeDisabled();
+      expect(
+        screen.getByText("Add VIP Entry first to unlock the optional items below."),
+      ).toBeInTheDocument();
+    });
+
+    it("enables the optional product once the required one is selected", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Entry/i }));
+
+      const increaseBottle = screen.getByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      });
+      expect(increaseBottle).not.toBeDisabled();
+      expect(
+        screen.queryByText("Add VIP Entry first to unlock the optional items below."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not lock the required product itself", () => {
+      renderModal({ event: eventWithRequiredProduct });
+
+      const increaseEntry = screen.getByRole("button", {
+        name: /Increase quantity of VIP Entry/i,
+      });
+      expect(increaseEntry).not.toBeDisabled();
+    });
+  });
+
+  describe("bundled products", () => {
+    const bottle: Product = productOut({
+      id: "bottle",
+      event_id: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
+      name: "Champagne Bottle",
+      description: "",
+      price: "65",
+      category: "champagne",
+      purchasable: true,
+      required: false,
+      created_at: "",
+      updated_at: "",
+    });
+    const vipTable: Product = productOut({
+      id: "vip-table",
+      event_id: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
+      name: "VIP Table",
+      description: "",
+      price: "200",
+      category: "other",
+      purchasable: true,
+      required: true,
+      included_product_id: "bottle",
+      included_per_guests: 2,
+      created_at: "",
+      updated_at: "",
+    });
+    const eventWithBundle: Event = eventOut({
+      ...vipEvent,
+      products: [vipTable, bottle],
+    });
+
+    it("shows no included-quantity note before the bundling product is selected", () => {
+      renderModal({ event: eventWithBundle });
+      expect(screen.queryByText(/Includes .* free with your/)).not.toBeInTheDocument();
+    });
+
+    it("shows the computed included quantity once the bundling product is selected", async () => {
+      renderModal({ event: eventWithBundle });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "4" } });
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Table/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Includes 2 free with your VIP Table")).toBeInTheDocument();
+      });
+    });
+
+    it("recomputes the included quantity as guest count changes", async () => {
+      renderModal({ event: eventWithBundle });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "6" } });
+      fireEvent.click(screen.getByRole("button", { name: /Increase quantity of VIP Table/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Includes 3 free with your VIP Table")).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText(/Number of Guests/i), { target: { value: "1" } });
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Includes .* free with your/)).not.toBeInTheDocument();
+      });
+    });
+  });
+});
+
+it("submits optional event answers with the order using translated labels", async () => {
+  let body: Record<string, unknown> | null = null;
+  server.use(
+    http.post("/api/registrations", async ({ request }) => {
+      body = (await request.json()) as Record<string, unknown>;
+      return jsonResponse<import("@/api-types").RegistrationPublicOut>(
+        {
+          order_answers: [],
+          booked_table_quantity: 0,
+          allocations: [],
+          person_id: "",
+          person: { id: "", name: "", email: "", phone: "", preferred_language: null },
+          event_id: "",
+          event: {
+            title: "",
+            description: "",
+            title_nl: null,
+            title_fr: null,
+            title_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            id: "",
+            edition_id: "",
+            date: "2026-01-01",
+            start_time: "",
+            end_time: null,
+            category: "",
+            volunteers_only: false,
+            members_only: false,
+            registration_required: false,
+            registrations_open_from: null,
+            registrations_close_at: null,
+            active: false,
+            order_questions: [],
+            products: [],
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          guest_count: 0,
+          order_items: [],
+          notes: "",
+          table_id: null,
+          status: "pending",
+          payment_status: "unpaid",
+          amount_due: null,
+          amount_paid: "0",
+          refund_due: "0",
+          checked_in: false,
+          checked_in_at: null,
+          strap_issued: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "with-answers",
+        },
+        { status: 201 },
+      );
+    }),
+  );
+  const base = {
+    active: true,
+    title_fr: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+    options: [],
+  };
+  renderModal({
+    event: {
+      ...vipEvent,
+      products: [],
+      order_questions: [
+        { ...base, id: "text", kind: "free_text", title_nl: "Opmerking", title_en: "Comment" },
+        { ...base, id: "rating", kind: "rating", title_nl: "Score", title_en: null },
+        {
+          ...base,
+          id: "choice",
+          kind: "single_choice",
+          title_nl: "Vervoer",
+          title_en: "Transport",
+          options: [{ id: "bike", label_nl: "Fiets", label_fr: null, label_en: "Bike" }],
+        },
+      ],
+    },
+  });
+  fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+  fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+  fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+    target: { value: "+32 123 456 789" },
+  });
+  fireEvent.change(screen.getByLabelText("Comment"), { target: { value: "Extra chairs" } });
+  await selectAdminOption(screen.getByLabelText("Score"), "4");
+  await selectAdminOption(screen.getByLabelText("Transport"), "bike");
+  fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+  await waitFor(() => expect(body).not.toBeNull());
+  expect(body!.order_answers).toEqual([
+    { question_id: "text", text: "Extra chairs" },
+    { question_id: "rating", rating: 4 },
+    { question_id: "choice", option_id: "bike" },
+  ]);
+});

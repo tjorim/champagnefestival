@@ -1,0 +1,79 @@
+import { jsonResponse } from "@/mocks/response";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { http } from "msw/http";
+import { describe, expect, it, vi } from "vitest";
+import { useVenueMutations } from "@/features/admin/venue/useVenueMutations";
+import { server } from "@/mocks/server";
+import { createAdminTablesCollection } from "@/lib/collections/adminTablesCollection";
+import { createAdminVenueCollections } from "@/features/admin/venue/adminVenueCollections";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
+
+describe("useVenueMutations", () => {
+  it("wires create layout requests with the active edition", async () => {
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const venueCollections = createAdminVenueCollections({
+      queryClient,
+      authHeaders: () => ({}),
+      enabled: false,
+    });
+    const refetch = vi.spyOn(venueCollections.layouts.utils, "refetch").mockResolvedValue([]);
+    const seen = {
+      authorization: "",
+      body: {} as Record<string, unknown>,
+    };
+
+    server.use(
+      http.post("/api/layouts", async ({ request }) => {
+        seen.authorization = request.headers.get("authorization") ?? "";
+        seen.body = (await request.json()) as Record<string, unknown>;
+        return jsonResponse<import("@/api-types").LayoutOut>({
+          event_id: "",
+          event_title: "",
+          edition_id: null,
+          room_id: "",
+          date: null,
+          label: "",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          id: "lay_1",
+          ...seen.body,
+        });
+      }),
+    );
+
+    const { result } = renderHook(
+      () =>
+        useVenueMutations({
+          authHeaders: () => ({
+            "Content-Type": "application/json",
+            Authorization: "Bearer test-token",
+          }),
+          tablesCollection: createAdminTablesCollection({
+            queryClient,
+            authHeaders: () => ({}),
+            enabled: false,
+          }),
+          venueCollections,
+        }),
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      await result.current.createLayoutMutation.mutateAsync({
+        roomId: "room-1",
+        eventId: "event-1",
+        label: "  Saturday evening  ",
+      });
+    });
+
+    expect(seen.authorization).toBe("Bearer test-token");
+    expect(seen.body).toEqual({
+      room_id: "room-1",
+      event_id: "event-1",
+      label: "Saturday evening",
+    });
+    await waitFor(() => {
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+  });
+});

@@ -79,7 +79,7 @@ Package, storage backend, size, CSP and workers:
 - **Version mismatch.** `db-sqlite-persistence-core` 0.4.4 depends on
   `@tanstack/db` 0.12.0; we run 0.11.3 (with `@tanstack/react-db` ^0.5.3 and
   `@tanstack/query-db-collection` ^1.3.4). Adoption starts with a coordinated
-  upgrade of all four, re-running `tests/spikes/membersListOnDemand.spike.test.tsx`
+  upgrade of all four, re-running `tests/features/admin/people/membersListOnDemand.spike.test.tsx`
   and the collection tests, which pin 0.11 behavior.
 - **Size.** The registry reports about 2.2 MB unpacked for the browser package and
   the core package each, and 18 MB unpacked for `@journeyapps/wa-sqlite` (several
@@ -322,8 +322,8 @@ measurements separately from those outstanding operational checks.
 - [`@tanstack/browser-db-sqlite-persistence` README](https://github.com/TanStack/db/blob/main/packages/browser-db-sqlite-persistence/README.md)
 - [`db-sqlite-persistence-core` 0.4.0 release (network-first initial render)](https://github.com/TanStack/db/releases/tag/%40tanstack/db-sqlite-persistence-core%400.4.0)
 - [TanStack DB decision](tanstack-db.md), [data retention](934-data-retention-and-erasure.md), [Web Push foundation](941-web-push-foundation.md)
-- `frontend/src/hooks/useAdminQueries.ts` (sign-out reset), `frontend/src/state/epochFence.ts`,
-  `frontend/src/state/LiveUpdatesProvider.tsx`, `frontend/src/components/CheckInPage.tsx`
+- `frontend/src/features/admin/shell/useAdminQueries.ts` (sign-out reset), `frontend/src/lib/collections/epochFence.ts`,
+  `frontend/src/app/providers/LiveUpdatesProvider.tsx`, `frontend/src/features/check-in/CheckInPage.tsx`
 
 ## Implementation verification (#1197, 2026-10-07)
 

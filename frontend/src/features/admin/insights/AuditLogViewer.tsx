@@ -1,0 +1,293 @@
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import {
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+  AdminInput,
+} from "@/components/admin/AdminFields";
+/**
+ * AuditLogViewer — read-only browser for the operational audit trail.
+ *
+ * Every admin create/update/delete mutation writes an AuditEntry server-side
+ * (see backend/app/audit.py). This is the first UI surface that reads it back —
+ * previously the only way to see who did what was a direct DB query.
+ */
+
+import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
+
+import { Spinner } from "@/components/ui/spinner";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { m } from "@/paraglide/messages";
+import { fetchAuditEntries, fetchAuditResourceTypes } from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { devError } from "@/lib/devLog";
+
+const PAGE_SIZE = 50;
+
+interface AuditLogViewerProps {
+  authHeaders: () => Record<string, string>;
+}
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString();
+}
+
+export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
+  const [resourceType, setResourceType] = useState("");
+  const [resourceId, setResourceId] = useState("");
+  const [actor, setActor] = useState("");
+  const [action, setAction] = useState("");
+  const [since, setSince] = useState("");
+  const [until, setUntil] = useState("");
+  const [page, setPage] = useState(1);
+
+  const resourceTypesQuery = useQuery({
+    queryKey: queryKeys.admin.auditResourceTypes,
+    queryFn: () => fetchAuditResourceTypes(authHeaders),
+    staleTime: 60 * 1000,
+  });
+
+  const entriesQuery = useQuery({
+    queryKey: queryKeys.admin.auditEntries({
+      resourceType,
+      resourceId,
+      actor,
+      action,
+      since,
+      until,
+      page,
+    }),
+    queryFn: () =>
+      fetchAuditEntries(authHeaders, {
+        resourceType: resourceType || undefined,
+        resourceId: resourceId.trim() || undefined,
+        actor: actor.trim() || undefined,
+        action: action.trim() || undefined,
+        // The API takes timestamps; a bare date means the whole local day.
+        since: since ? new Date(`${since}T00:00:00`).toISOString() : undefined,
+        until: until ? new Date(`${until}T23:59:59.999`).toISOString() : undefined,
+        limit: PAGE_SIZE,
+        page,
+      }),
+    staleTime: 10 * 1000,
+  });
+
+  const handleResourceTypeChange = useCallback((value: string) => {
+    setResourceType(value);
+    setPage(1);
+  }, []);
+
+  const handleResourceIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setResourceId(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleActorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setActor(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleActionChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAction(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleSinceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSince(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleUntilChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUntil(e.target.value);
+    setPage(1);
+  }, []);
+
+  const hasFilters = Boolean(resourceType || resourceId || actor || action || since || until);
+
+  const handleClearFilters = useCallback(() => {
+    setResourceType("");
+    setResourceId("");
+    setActor("");
+    setAction("");
+    setSince("");
+    setUntil("");
+    setPage(1);
+  }, []);
+
+  const entries = entriesQuery.data ?? [];
+
+  if (entriesQuery.error) {
+    devError("Failed to load audit log", entriesQuery.error);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_audit_log_title()}</h2>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4 mb-4 sm:grid-cols-2 lg:grid-cols-3">
+          <AdminField controlId="audit-resource-type">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_resource_type()}
+            </AdminLabel>
+            <AdminSelect size="sm" value={resourceType} onValueChange={handleResourceTypeChange}>
+              <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
+              {(resourceTypesQuery.data ?? []).map((type) => (
+                <AdminOption key={type} value={type}>
+                  {type}
+                </AdminOption>
+              ))}
+            </AdminSelect>
+          </AdminField>
+          <AdminField controlId="audit-resource-id">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_resource_id()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={resourceId}
+              onChange={handleResourceIdChange}
+              placeholder={m.admin_audit_filter_resource_id_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-actor">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_actor()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={actor}
+              onChange={handleActorChange}
+              placeholder={m.admin_audit_filter_actor_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-action">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_action()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={action}
+              onChange={handleActionChange}
+              placeholder={m.admin_audit_filter_action_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-since">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_since()}
+            </AdminLabel>
+            <AdminInput size="sm" type="date" value={since} onChange={handleSinceChange} />
+          </AdminField>
+          <AdminField controlId="audit-until">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_until()}
+            </AdminLabel>
+            <AdminInput size="sm" type="date" value={until} onChange={handleUntilChange} />
+          </AdminField>
+          {hasFilters && (
+            <AdminField className="sm:self-end">
+              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                {m.admin_content_clear_filters()}
+              </Button>
+            </AdminField>
+          )}
+        </form>
+
+        {entriesQuery.error && (
+          <Alert variant="danger" className="mb-4">
+            {m.admin_error_load_data()}
+          </Alert>
+        )}
+
+        {entriesQuery.isPending ? (
+          <div className="text-center py-12">
+            <Spinner variant="primary" role="status">
+              <span className="sr-only">{m.admin_loading()}</span>
+            </Spinner>
+          </div>
+        ) : entries.length === 0 ? (
+          <AdminEmptyState>{m.admin_audit_no_entries()}</AdminEmptyState>
+        ) : (
+          <>
+            <Table>
+              <caption className="sr-only">{m.admin_audit_table_caption()}</caption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_actor()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_action()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_resource()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_details()}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
+                    <TableCell className="break-words">{entry.actor}</TableCell>
+                    <TableCell>{entry.action}</TableCell>
+                    <TableCell className="break-words">
+                      {entry.resource_type} / {entry.resource_id}
+                    </TableCell>
+                    <TableCell className="break-words">
+                      {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    text={m.admin_audit_previous_page()}
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="px-2 text-subtle text-sm" aria-current="page">
+                    {m.admin_audit_page_label({ page })}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    text={m.admin_audit_next_page()}
+                    size="sm"
+                    disabled={entries.length < PAGE_SIZE}
+                    onClick={() => setPage((p) => p + 1)}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -2,7 +2,7 @@
 
 This module is the single source of truth for which TanStack Query keys
 are invalidated by each domain action.  The ``keys`` list produced here
-must stay in sync with ``frontend/src/utils/queryKeys.ts``.
+must stay in sync with ``frontend/src/lib/query/queryKeys.ts``.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from app.live.events import LiveEvent, LiveScope
 from app.utils import make_id
 
 # ---------------------------------------------------------------------------
-# TanStack Query key constants — must match frontend/src/utils/queryKeys.ts
+# TanStack Query key constants — must match frontend/src/lib/query/queryKeys.ts
 # ---------------------------------------------------------------------------
 
 _K_ADMIN_REGISTRATIONS: tuple[str, ...] = ("admin", "registrations")

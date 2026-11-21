@@ -1,6 +1,6 @@
 """Server-side JSON-LD Event structured data for the active festival edition (#992).
 
-Mirrors ``frontend/src/components/JsonLd.tsx`` field-for-field. The shared
+Mirrors ``frontend/src/features/site/JsonLd.tsx`` field-for-field. The shared
 ``docs/fixtures/jsonld-edition.json`` fixture is exercised by both
 ``backend/tests/test_jsonld_service.py`` and a frontend contract test
 asserting ``EventStructuredData`` reproduces the same structure from the

@@ -31,7 +31,7 @@ vi.mock("react-oidc-context", () => ({
   hasAuthParams: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: vi.fn().mockReturnValue({
     isAuthenticated: true,
     isLoading: false,

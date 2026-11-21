@@ -12,7 +12,7 @@ import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { activeEditionQueryOptions, fetchActiveEdition } from "@/hooks/useActiveEdition";
 import { server } from "@/mocks/server";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 const EDITION: import("@/api-types").EditionPublicOut = {
   vendors: [],

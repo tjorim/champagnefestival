@@ -6,7 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { PublicCheck } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
-import { sendTestPush, subscribeToPush } from "@/utils/pushApi";
+import { sendTestPush, subscribeToPush } from "@/lib/api/pushApi";
 import { getLocale } from "@/paraglide/runtime";
 
 interface PushOptInProps {

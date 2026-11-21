@@ -10,7 +10,7 @@ Toolchain versions live in `frontend/.node-version`, the `packageManager` field 
 
 ## Repository layout
 
-- `frontend/` contains the web app
+- `frontend/` contains the web app; `frontend/src/` is laid out as described in `docs/ARCHITECTURE.md` (`app/`, `features/<domain>/`, `components/`, `hooks/`, `lib/`, `mocks/`, `config/`, `types/`, `styles/`), with tests under `frontend/tests/` mirroring `src/` and end-to-end specs in `frontend/e2e/`
 - `backend/` contains the FastAPI service
 - `android/` contains the event-day Android app
 - `pebble/` contains an experimental, unshipped Pebble (Alloy) companion app scaffold — see `pebble/README.md` (tracks issue #757)
@@ -33,7 +33,7 @@ keys; keep new file-backed features inside them.
 - `frontend/messages/` for translation content
 - `frontend/src/components/ResponsiveImage.tsx` for shared image behavior
 - `backend/` for API shapes: `frontend/openapi.json` is the committed OpenAPI document (`uv run python -m app.openapi_export`), `frontend/src/api-schema/` is generated from it by Orval, and `frontend/src/api-types.ts` is the one place screens import API types from
-- `frontend/src/utils/adminApi.ts` and `frontend/src/utils/adminRegistrationApi.ts` for admin API integration
+- `frontend/src/lib/api/adminApi.ts` and `frontend/src/features/admin/shared/adminRegistrationApi.ts` for admin API integration
 - `docs/floor-plan-coordinates.md` for the `Table`/`Area` `x`/`y`/`rotation` coordinate contract
 - `docs/product-audit-2026-08.md` for the combined product audit, feature-request scope, dependencies, and preferred implementation order
 
@@ -112,7 +112,7 @@ Other frontend scripts follow the shared names: `test:watch`, `test:e2e`, `test:
 - Client code uses the API's own shapes: the types generated from `frontend/openapi.json` (via `@/api-types`) are the client types, with their snake_case field names (`start_date`, `table_type_id`, `width_m`), and responses are read as they arrive. There is no per-field mapper and no camelCase copy of an API record. camelCase is for values that exist only in the interface (component props, form state, local variables); a form draft that is sent to the API is built from, or typed as, the generated request type. Do not declare a hand-written type for an API record
 - Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schema_types.py` constraints and keep defaults and nullability explicit.
 - For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
-- Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/utils/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
+- Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/lib/api/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
 
 ### Styling and UI
 
@@ -198,7 +198,7 @@ backend response models -> uv run python -m app.openapi_export (pnpm api:generat
   explicitly: `HttpResponse.json<Api.Model>(...)`, `jsonResponse<Api.Model>(...)` from `@/mocks/response`, or
   `satisfies Api.Model` at a browser response boundary. `jsonResponse` uses `NoInfer` and defaults to `never`, so a
   payload never infers its own contract. The source guard `frontend/tests/types/fixtureContracts.test.ts` fails on a
-  fixture that is unchecked or erased (`as unknown`, `any`), and `frontend/tests/types/apiFixtures.ts` holds
+  fixture that is unchecked or erased (`as unknown`, `any`), and `frontend/tests/utils/apiFixtures.ts` holds
   compile-only negative checks.
 - A deliberately malformed, error, external-provider, control or persistence fixture is exempt only with a comment
   at the call site that says why, starting `Fixture exception:` or `Deliberately malformed:`.

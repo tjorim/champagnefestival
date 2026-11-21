@@ -61,7 +61,7 @@ venue use. Screens poll every 30 seconds and switch at a cycle boundary.
 
 ## Shared renderer contract
 
-`frontend/src/signage/SlideRenderer.tsx` accepts a public slide and renders its
+`frontend/src/features/signage/SlideRenderer.tsx` accepts a public slide and renders its
 ordered template layers for both playback and future editor previews. Layer
 `x`/`y` place the **top-left** corner in canvas percentages, matching the
 [floor-plan convention](floor-plan-coordinates.md); width/height are percentages
@@ -69,7 +69,7 @@ of the fixed 1920×1080 stage. Rotation is clockwise about each layer's centre.
 Font sizes are stage pixels. Images fit inside their layer; background and image
 slides cover the stage. Later layers paint above earlier layers. The `sponsor`
 binding renders the translated Sponsor label only for sponsors. Lucide sticker
-names come from the shared `frontend/src/signage/icons.ts` catalogue:
+names come from the shared `frontend/src/features/signage/icons.ts` catalogue:
 `accessibility`, `arrow-left`, `arrow-right`, `ban`, `cigarette-off`, `circle-alert`,
 `dog`, `door-open`, `glass-water`, `info`, `map-pin`, `square-parking`,
 `triangle-alert`, `utensils`, and `wine`. The editor should use this same list.

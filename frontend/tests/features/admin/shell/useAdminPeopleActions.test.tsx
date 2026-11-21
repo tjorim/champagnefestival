@@ -1,0 +1,117 @@
+import { jsonResponse } from "@/mocks/response";
+import { seedPeople } from "@/mocks/data/people";
+import { act, renderHook } from "@testing-library/react";
+import { http } from "msw/http";
+import { expect, it, vi } from "vitest";
+import { useAdminPeopleActions } from "@/features/admin/shell/useAdminPeopleActions";
+import type { AdminOrganizationsCollection } from "@/lib/collections/adminOrganizationsCollection";
+import type { AdminRegistrationsCollection } from "@/lib/collections/adminRegistrationsCollection";
+import { resetAdminPeopleSession } from "@/features/admin/people/adminPeopleSession";
+import { server } from "@/mocks/server";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
+
+function harness() {
+  const { queryClient, Wrapper } = createTestQueryClientHarness();
+  const refetchRegistrations = vi.fn().mockResolvedValue(undefined);
+  const refetchOrganizations = vi.fn().mockResolvedValue(undefined);
+  const writeUpsert = vi.fn().mockResolvedValue(undefined);
+  const registrationsCollection = {
+    utils: { refetch: refetchRegistrations },
+    get: vi.fn(),
+  } as unknown as AdminRegistrationsCollection;
+  const organizationsCollection = {
+    utils: { refetch: refetchOrganizations, writeUpsert },
+    values: () => [{ id: 1, name: "House", active: true, contact_person_id: "duplicate" }],
+  } as unknown as AdminOrganizationsCollection;
+  const view = renderHook(
+    () =>
+      useAdminPeopleActions({
+        authHeaders: () => ({
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-token",
+        }),
+        queryClient,
+        registrationsQueryKey: ["admin", "registrations"],
+        registrationsCollection,
+        organizationsCollection,
+        setDetailRegistration: vi.fn(),
+      }),
+    { wrapper: Wrapper },
+  );
+  return { ...view, queryClient, refetchRegistrations, refetchOrganizations, writeUpsert };
+}
+it.each([200, 409])(
+  "reconciles both cascade consumers after a merge returns %s",
+  async (status) => {
+    const h = harness();
+    server.use(
+      http.post("/api/people/:id/merge/:duplicateId", () =>
+        jsonResponse<import("@/api-types").PersonOut>(
+          { ...seedPeople[0]!, id: "canonical", roles: ["volunteer"] },
+          { status },
+        ),
+      ),
+    );
+    await act(async () => {
+      await h.result.current.handleMergePeople("canonical", "duplicate").catch(() => undefined);
+    });
+    expect(h.refetchRegistrations).toHaveBeenCalled();
+    expect(h.refetchOrganizations).toHaveBeenCalled();
+    if (status === 200)
+      expect(h.writeUpsert).toHaveBeenCalledWith([
+        { id: 1, name: "House", active: true, contact_person_id: "canonical" },
+      ]);
+    // No merge response is inserted into a people cache with invented help periods.
+    expect(h.queryClient.getQueryData(["admin", "people"])).toBeUndefined();
+  },
+);
+it("drops a late merge response after sign-out", async () => {
+  const h = harness();
+  let release!: () => void;
+  let started!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const request = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  server.use(
+    http.post("/api/people/:id/merge/:duplicateId", async () => {
+      started();
+      await gate;
+      return jsonResponse<import("@/api-types").PersonOut>({
+        name: "",
+        email: "",
+        phone: "",
+        preferred_language: null,
+        address: "",
+        roles: [],
+        retired_roles: {},
+        role_history: {},
+        national_register_number: null,
+        eid_document_number: null,
+        inactivity_exempt: false,
+        inactivity_exempt_note: "",
+        visits_per_month: null,
+        notes: "",
+        anonymised: false,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+        id: "canonical",
+      });
+    }),
+  );
+  let promise!: Promise<void>;
+  act(() => {
+    promise = h.result.current.handleMergePeople("canonical", "duplicate");
+  });
+  await request;
+  resetAdminPeopleSession();
+  release();
+  await act(async () => {
+    await promise;
+  });
+  expect(h.refetchRegistrations).not.toHaveBeenCalled();
+  expect(h.refetchOrganizations).not.toHaveBeenCalled();
+  expect(h.writeUpsert).not.toHaveBeenCalled();
+});

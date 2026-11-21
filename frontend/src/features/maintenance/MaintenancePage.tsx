@@ -1,0 +1,156 @@
+import { ExternalLinkIcon, ImageIcon, ZoomInIcon } from "lucide-react";
+import BrandWordmark from "@/app/layout/BrandWordmark";
+import LanguageSwitcher from "@/app/layout/LanguageSwitcher";
+import { Icon } from "@/components/Icon";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import { m } from "@/paraglide/messages";
+import { usePublicSettings } from "@/hooks/useMaintenanceMode";
+import { DEFAULT_FLYER, managedArtwork } from "@/lib/editions/editionArtwork";
+import "./maintenancePage.css";
+
+/**
+ * The flyer is the one an admin uploaded for the active edition (the `flyerImage`
+ * prop, #1224), or the static `/images/flyer.jpg` while none is set. If the uploaded
+ * file fails to load the static one is tried next, and if that is missing too the
+ * <img onError> below swaps in a placeholder instead of a broken-image icon.
+ *
+ * Shown instead of the full marketing site while the site is in maintenance
+ * mode (toggled from the admin dashboard's Settings section, or automatically
+ * when the backend can't be reached at all) — a picture with a link to the
+ * festival's Facebook page, plus the current flyer, and nothing else.
+ *
+ * Styled by its own stylesheet (maintenancePage.css) rather than by importing
+ * anything from the swappable theme stylesheets (theme-*.css): those assume this page's
+ * usual header/nav chrome is present (e.g. body's reserved padding-top for
+ * a fixed nav, or riviera's padding-left for a fixed sidebar), neither of
+ * which holds here since there's no header at all on this page — the
+ * useEffect below resets both rather than assuming either theme's layout.
+ * A CTA button that used a theme class (.btn-champagne) directly used to
+ * render invisible under themes that never defined it (classic, cuvée);
+ * the accent colors below are this page's own copies of each theme's real
+ * button treatment, not a dependency on the theme stylesheet actually
+ * defining that class.
+ *
+ * The one intentional coupling to the theme system is reading the same
+ * `data-visual-theme` attribute the ThemeSwitcher sets on <html> (see
+ * useVisualTheme.ts) via the `html[data-visual-theme="..."]` selectors
+ * in that stylesheet, so switching themes while this page is showing is visible here
+ * too — while we're still evaluating which one to keep, this page
+ * shouldn't look like it was only ever tested against one of them.
+ *
+ * `champagne-hero.webp` is a wide (~1.87:1), deliberately asymmetric shot:
+ * roughly its left half is a plain dark table with no subject, its right
+ * half has the bottles/glasses/candles. A narrow (mobile) viewport crops
+ * `background-size: cover` down to a tall sliver near the image's
+ * horizontal center, which lands mostly within that dark half — the plain
+ * background reads as intentional there. A wide (desktop) viewport is
+ * closer to the image's own aspect ratio, so `cover` crops very little:
+ * almost the entire photo is visible at once, dead space included, and
+ * centering the text block in the middle of *that* leaves it floating in
+ * empty space instead of sitting in the dark half the image was framed
+ * for. The 900px media query in maintenancePage.css left-aligns the content
+ * into that dark half instead, rather than fighting the image's own
+ * composition.
+ */
+export default function MaintenancePage({ flyerImage }: { flyerImage?: string | null }) {
+  const { facebook_url: facebookUrl } = usePublicSettings();
+  const [failedSources, setFailedSources] = useState<string[]>([]);
+  const flyerSrc = [managedArtwork(flyerImage), DEFAULT_FLYER].find(
+    (source): source is string => source !== null && !failedSources.includes(source),
+  );
+
+  useEffect(() => {
+    // Several visual themes reserve body padding for their own header/nav
+    // chrome (e.g. riviera's fixed sidebar reserves padding-left: 18rem at
+    // desktop widths) — chrome this page never renders. Left in place, the
+    // reserved gap exposes that theme's own body background/pattern down one
+    // edge instead of this page's full-bleed hero.
+    const previousPaddingTop = document.body.style.paddingTop;
+    const previousPaddingLeft = document.body.style.paddingLeft;
+    document.body.style.paddingTop = "0";
+    document.body.style.paddingLeft = "0";
+    return () => {
+      document.body.style.paddingTop = previousPaddingTop;
+      document.body.style.paddingLeft = previousPaddingLeft;
+    };
+  }, []);
+
+  return (
+    <div className="maintenance-page">
+      <div className="maintenance-page__scrim" aria-hidden="true" />
+      {/* The locale comes from Paraglide (saved choice, then the browser language,
+          then Dutch), so visitors land in their own language and can still switch. */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+      <div className="maintenance-page__content">
+        <span className="maintenance-page__wordmark">
+          <BrandWordmark />
+        </span>
+        <h1 className="maintenance-page__title">{m.maintenance_title()}</h1>
+        <p className="maintenance-page__message">{m.maintenance_message()}</p>
+        {facebookUrl && (
+          <a
+            href={facebookUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="maintenance-page__cta"
+          >
+            <Icon icon={ExternalLinkIcon} />
+            {m.maintenance_facebook_cta()}
+          </a>
+        )}
+
+        {flyerSrc === undefined ? (
+          <div className="maintenance-page__flyer-card">
+            <div className="maintenance-page__flyer-placeholder">
+              <Icon icon={ImageIcon} className="text-3xl" />
+              <span className="maintenance-page__flyer-placeholder-text">
+                {m.maintenance_flyer_placeholder()}
+              </span>
+            </div>
+          </div>
+        ) : (
+          // The dialog owns the focus trap, Escape, scroll lock and focus return to
+          // the trigger; the trigger keeps this page's own card styling.
+          <Dialog>
+            <DialogTrigger
+              aria-label={m.maintenance_flyer_alt()}
+              className="maintenance-page__flyer-card maintenance-page__flyer-trigger"
+            >
+              <img
+                src={flyerSrc}
+                alt=""
+                onError={() => setFailedSources((failed) => [...failed, flyerSrc])}
+                className="maintenance-page__flyer-image"
+              />
+              <span className="maintenance-page__flyer-overlay" aria-hidden="true">
+                <Icon icon={ZoomInIcon} className="text-3xl text-primary-foreground" />
+              </span>
+            </DialogTrigger>
+            <DialogContent size="lg" className="w-fit max-w-full">
+              <DialogHeader>
+                <DialogTitle>{m.maintenance_flyer_alt()}</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+                <img
+                  src={flyerSrc}
+                  alt={m.maintenance_flyer_alt()}
+                  className="maintenance-page__lightbox-image mx-auto h-auto w-auto max-w-full rounded-md object-contain"
+                />
+              </DialogBody>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    </div>
+  );
+}

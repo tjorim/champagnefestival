@@ -1,0 +1,395 @@
+import { useRef } from "react";
+import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
+import type { MemberFormData } from "./MemberFormModal";
+import type { PersonFormData } from "./PersonFormModal";
+import type { VolunteerFormData } from "./VolunteerFormModal";
+import { m } from "@/paraglide/messages";
+import { captureAdminPeopleFence } from "./adminPeopleSession";
+import { localIsoDate, type Person } from "@/types/person";
+import { peopleWrites, type PeopleWrite } from "./optimisticPeoplePages";
+import { queryKeys } from "@/lib/query/queryKeys";
+import {
+  fetchJsonOrThrowWithUnauthorized,
+  fetchVoidOrThrowWithUnauthorized,
+} from "@/lib/api/adminApi";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
+
+interface UsePeopleMutationsOptions {
+  queryClient: QueryClient;
+  authHeaders: () => Record<string, string>;
+  registrationsQueryKey: QueryKey;
+}
+
+/** Mirrors the server: retiring a role records today's date and leaves the role in place. */
+function retireRole(person: Person, role: string): Person {
+  return Object.hasOwn(person.retired_roles, role)
+    ? person
+    : { ...person, retired_roles: { ...person.retired_roles, [role]: localIsoDate() } };
+}
+
+function reactivateRole(person: Person, role: string): Person {
+  const { [role]: _removed, ...retired_roles } = person.retired_roles;
+  return { ...person, retired_roles };
+}
+
+/** Mirrors the server: an open period ends today, but never before its first day. */
+function closedOn(first_help_day: string): string {
+  const today = localIsoDate();
+  return today > first_help_day ? today : first_help_day;
+}
+
+export function usePeopleMutations({
+  queryClient,
+  authHeaders,
+  registrationsQueryKey,
+}: UsePeopleMutationsOptions) {
+  const writes = peopleWrites(queryClient);
+  const fences = useRef(new Map<unknown, (() => boolean)[]>());
+  const variableKey = (variables: unknown) =>
+    typeof variables === "object" && variables !== null && "data" in variables
+      ? variables.data
+      : variables;
+  const takeFence = (key: unknown) => {
+    const queue = fences.current.get(key);
+    const current = queue?.shift() ?? (() => false);
+    if (!queue?.length) fences.current.delete(key);
+    return current;
+  };
+  const refreshPeople = (isCurrent: () => boolean, extraKeys: readonly QueryKey[] = []) => {
+    if (!isCurrent()) return Promise.resolve();
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.people }),
+      invalidateAdmin(queryClient, extraKeys),
+    ]).then(() => undefined);
+  };
+  const optimistic = <T>(
+    toWrite: (variables: T) => PeopleWrite,
+    extraKeys: readonly QueryKey[] = [],
+  ) => ({
+    mutationKey: ["admin", "people", "write"],
+    onMutate: (variables: T) => {
+      const current = captureAdminPeopleFence();
+      const key = variableKey(variables);
+      const queue = fences.current.get(key) ?? [];
+      queue.push(current);
+      fences.current.set(key, queue);
+      return writes.begin(toWrite(variables), current);
+    },
+    onError: (
+      _error: Error,
+      _variables: T,
+      context: Awaited<ReturnType<typeof writes.begin>> | undefined,
+    ) => (context ? writes.settle(context, false) : undefined),
+    onSettled: async (
+      _data: unknown,
+      error: Error | null,
+      _variables: T,
+      context: Awaited<ReturnType<typeof writes.begin>> | undefined,
+    ) => {
+      if (!context) return;
+      if (!error) await writes.settle(context, true);
+      await refreshPeople(context.current, extraKeys);
+    },
+  });
+  const direct = (extraKeys: readonly QueryKey[] = []) => ({
+    onMutate: () => captureAdminPeopleFence(),
+    onSettled: (
+      _data: unknown,
+      _error: Error | null,
+      _variables: unknown,
+      current: (() => boolean) | undefined,
+    ) => (current ? refreshPeople(current, extraKeys) : undefined),
+  });
+
+  const mergePeopleMutation = useMutation({
+    mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+        `/api/people/${canonicalId}/merge/${duplicateId}`,
+        { method: "POST", headers: authHeaders() },
+        m.admin_people_merge_error(),
+      ),
+    ...direct([registrationsQueryKey]),
+    retry: false,
+  });
+
+  const createMemberMutation = useMutation({
+    mutationFn: (data: MemberFormData) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+        "/api/members",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            preferred_language: data.preferred_language,
+            address: data.address,
+            member_since: data.memberSince || undefined,
+            inactivity_exempt: data.inactivity_exempt ?? false,
+            inactivity_exempt_note: data.inactivity_exempt_note ?? "",
+            notes: data.notes,
+          }),
+        },
+        m.admin_members_error_create(),
+      ),
+    ...direct(),
+    retry: false,
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: MemberFormData }) =>
+      writes.persist(id, takeFence(data), () =>
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+          `/api/members/${id}`,
+          {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              name: data.name,
+              email: data.email || null,
+              phone: data.phone,
+              preferred_language: data.preferred_language,
+              address: data.address,
+              member_since: data.memberSince || undefined,
+              inactivity_exempt: data.inactivity_exempt ?? false,
+              inactivity_exempt_note: data.inactivity_exempt_note ?? "",
+              notes: data.notes,
+            }),
+          },
+          m.admin_members_error_update(),
+        ),
+      ),
+    ...optimistic(
+      ({ id, data }: { id: string; data: MemberFormData }) => {
+        // `memberSince` lives in the role history, which the server returns on settlement.
+        const { memberSince: _memberSince, ...fields } = data;
+        return { id, update: (person) => ({ ...person, ...fields }) };
+      },
+      [registrationsQueryKey],
+    ),
+    retry: false,
+  });
+
+  const deactivateMemberMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/members/${id}/deactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_deactivate(),
+        ),
+      ),
+    // Ending a membership retires the member role; the role, the person and their registrations
+    // stay on file, like deactivateVolunteerMutation.
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => retireRole(person, "member"),
+    })),
+    retry: false,
+  });
+
+  const reactivateMemberMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/members/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "member"),
+    })),
+    retry: false,
+  });
+
+  const createPersonMutation = useMutation({
+    mutationFn: (data: PersonFormData) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+        "/api/people",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email || null,
+            phone: data.phone,
+            preferred_language: data.preferred_language,
+            address: data.address,
+            roles: data.roles,
+            notes: data.notes,
+          }),
+        },
+        m.admin_people_error_create(),
+      ),
+    ...direct(),
+    retry: false,
+  });
+
+  const updatePersonMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PersonFormData }) =>
+      writes.persist(id, takeFence(data), () =>
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+          `/api/people/${id}`,
+          {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              name: data.name,
+              email: data.email || null,
+              phone: data.phone,
+              preferred_language: data.preferred_language,
+              address: data.address,
+              roles: data.roles,
+              notes: data.notes,
+            }),
+          },
+          m.admin_people_error_update(),
+        ),
+      ),
+    ...optimistic(
+      ({ id, data }: { id: string; data: PersonFormData }) => ({
+        id,
+        update: (person) => ({ ...person, ...data }),
+      }),
+      [registrationsQueryKey],
+    ),
+    retry: false,
+  });
+
+  const deletePersonMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/people/${id}`,
+          { method: "DELETE", headers: authHeaders() },
+          m.admin_error_delete_person(),
+        ),
+      ),
+    ...optimistic((id: string) => ({ id, update: () => null })),
+    retry: false,
+  });
+
+  const createVolunteerMutation = useMutation({
+    mutationFn: (data: VolunteerFormData) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
+        "/api/volunteers",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            name: data.name,
+            address: data.address,
+            national_register_number: data.national_register_number || null,
+            eid_document_number: data.eid_document_number || null,
+            help_periods: data.help_periods.map((period) => ({
+              first_help_day: period.first_help_day,
+              last_help_day: period.last_help_day,
+              notes: period.notes,
+            })),
+          }),
+        },
+        m.admin_volunteers_error_create(),
+      ),
+    ...direct(),
+    retry: false,
+  });
+
+  const updateVolunteerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: VolunteerFormData }) =>
+      writes.persist(id, takeFence(data), () =>
+        fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
+          `/api/volunteers/${id}`,
+          {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify({
+              name: data.name,
+              address: data.address,
+              national_register_number: data.national_register_number || null,
+              eid_document_number: data.eid_document_number || null,
+              help_periods: data.help_periods.map((period) => ({
+                first_help_day: period.first_help_day,
+                last_help_day: period.last_help_day,
+                notes: period.notes,
+              })),
+            }),
+          },
+          m.admin_volunteers_error_update(),
+        ),
+      ),
+    ...optimistic(
+      ({ id, data }: { id: string; data: VolunteerFormData }) => ({
+        id,
+        update: (person) => ({
+          ...person,
+          ...data,
+          help_periods: data.help_periods.map((period, index) => ({
+            ...period,
+            id: person.help_periods?.[index]?.id ?? -(index + 1),
+          })),
+        }),
+      }),
+      [],
+    ),
+    retry: false,
+  });
+
+  const deactivateVolunteerMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/volunteers/${id}/deactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_deactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => ({
+        // The role and every help period stay on file; the server retires the role and only
+        // closes open periods (today, or on their first day when not started yet).
+        ...retireRole(person, "volunteer"),
+        help_periods: (person.help_periods ?? []).map((period) =>
+          period.last_help_day === null
+            ? { ...period, last_help_day: closedOn(period.first_help_day) }
+            : period,
+        ),
+      }),
+    })),
+    retry: false,
+  });
+
+  const reactivateVolunteerMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/volunteers/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "volunteer"),
+    })),
+    retry: false,
+  });
+
+  return {
+    mergePeopleMutation,
+    createMemberMutation,
+    updateMemberMutation,
+    deactivateMemberMutation,
+    reactivateMemberMutation,
+    createPersonMutation,
+    updatePersonMutation,
+    deletePersonMutation,
+    createVolunteerMutation,
+    updateVolunteerMutation,
+    deactivateVolunteerMutation,
+    reactivateVolunteerMutation,
+  };
+}

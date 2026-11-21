@@ -1,0 +1,858 @@
+import { selectAdminOption } from "../../../utils/adminSelect";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { axe } from "jest-axe";
+import { describe, expect, it, vi, afterEach } from "vitest";
+import VenueManagement from "@/features/admin/venue/VenueManagement";
+import { ApiError } from "@/lib/api/apiErrors";
+import type {
+  FloorTable,
+  Layout,
+  Room,
+  TableType,
+  TableTypeCreate,
+  TableTypeUpdate,
+  Venue,
+} from "@/api-types";
+
+/** The active confirmation, which may be nested inside a form dialog. */
+function latestDialog(): HTMLElement {
+  const dialogs = screen.getAllByRole("alertdialog");
+  return dialogs[dialogs.length - 1] as HTMLElement;
+}
+
+vi.mock("@/paraglide/messages", () => ({
+  m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
+    get(_target, key: string) {
+      return (...args: unknown[]) => (args.length ? `${key}(${JSON.stringify(args[0])})` : key);
+    },
+  }),
+}));
+
+vi.mock("@/components/MapComponent", () => ({
+  default: ({ coordinates }: { coordinates: { lat: number; lng: number } }) => (
+    <div data-testid="venue-map-preview">
+      {coordinates.lat},{coordinates.lng}
+    </div>
+  ),
+}));
+
+const activeVenue: Venue = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "venue-1",
+  name: "Grand Hall",
+  address: "1 Main St",
+  city: "Ghent",
+  postal_code: "9000",
+  country: "BE",
+  lat: 51.05,
+  lng: 3.72,
+  active: true,
+};
+
+const archivedVenue: Venue = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "venue-2",
+  name: "Old Barn",
+  address: "2 Side St",
+  city: "Bruges",
+  postal_code: "8000",
+  country: "BE",
+  lat: 51.21,
+  lng: 3.22,
+  active: false,
+};
+
+const room1: Room = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "room-1",
+  venue_id: "venue-1",
+  name: "Room A",
+  width_m: 20,
+  length_m: 15,
+  color: "#ffc107",
+  active: true,
+  dimensions_placeholder: false,
+};
+
+const room2: Room = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "room-2",
+  venue_id: "venue-1",
+  name: "Room B",
+  width_m: 10,
+  length_m: 10,
+  color: "#123456",
+  active: false,
+  dimensions_placeholder: false,
+};
+
+const activeTableType: TableType = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "tt-1",
+  name: "Standard Rectangle",
+  venue_id: "venue-1",
+  shape: "rectangle",
+  width_m: 0.7,
+  length_m: 1.8,
+  height_type: "low",
+  capacity: 4,
+  active: true,
+};
+
+const archivedTableType: TableType = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "tt-2",
+  name: "Retired Round",
+  venue_id: "venue-1",
+  shape: "round",
+  width_m: 0.9,
+  length_m: 0.9,
+  height_type: "high",
+  capacity: 2,
+  active: false,
+};
+
+const layout1: Layout = {
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "layout-1",
+  event_id: "event-1",
+  event_title: "Saturday",
+  edition_id: "edition-1",
+  room_id: "room-1",
+  date: "2026-08-01",
+  label: "",
+  created_at: "2026-01-01T00:00:00Z",
+};
+
+const tableUsingActiveType: FloorTable = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  event_id: "event-1",
+  id: "table-1",
+  name: "Table A",
+  capacity: 4,
+  x: 10,
+  y: 10,
+  table_type_id: "tt-1",
+  rotation: 0,
+  layout_id: "layout-1",
+  registration_ids: [],
+};
+
+interface RenderOverrides {
+  venues?: Venue[];
+  rooms?: Room[];
+  tableTypes?: TableType[];
+  tables?: FloorTable[];
+  layouts?: Layout[];
+  onAdd?: (...args: unknown[]) => Promise<void>;
+  onUpdate?: (...args: unknown[]) => Promise<void>;
+  onArchive?: (...args: unknown[]) => Promise<void>;
+  onRestore?: (...args: unknown[]) => Promise<void>;
+  onDelete?: (...args: unknown[]) => Promise<void>;
+  onAddRoom?: (...args: unknown[]) => Promise<void>;
+  onUpdateRoom?: (...args: unknown[]) => Promise<void>;
+  onArchiveRoom?: (...args: unknown[]) => Promise<void>;
+  onRestoreRoom?: (...args: unknown[]) => Promise<void>;
+  onDeleteRoom?: (...args: unknown[]) => Promise<void>;
+  onAddTableType?: (data: TableTypeCreate) => Promise<void>;
+  onUpdateTableType?: (id: string, data: TableTypeUpdate) => Promise<void>;
+  onArchiveTableType?: (id: string) => Promise<void>;
+  onRestoreTableType?: (id: string) => Promise<void>;
+  onDeleteTableType?: (id: string) => Promise<void>;
+}
+
+function renderVenueManagement(overrides: RenderOverrides = {}) {
+  const onAdd = overrides.onAdd ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(undefined);
+  const onArchive = overrides.onArchive ?? vi.fn().mockResolvedValue(undefined);
+  const onRestore = overrides.onRestore ?? vi.fn().mockResolvedValue(undefined);
+  const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined);
+  const onAddRoom = overrides.onAddRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdateRoom = overrides.onUpdateRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onArchiveRoom = overrides.onArchiveRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onRestoreRoom = overrides.onRestoreRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onDeleteRoom = overrides.onDeleteRoom ?? vi.fn().mockResolvedValue(undefined);
+  const onAddTableType = overrides.onAddTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onUpdateTableType = overrides.onUpdateTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onArchiveTableType = overrides.onArchiveTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onRestoreTableType = overrides.onRestoreTableType ?? vi.fn().mockResolvedValue(undefined);
+  const onDeleteTableType = overrides.onDeleteTableType ?? vi.fn().mockResolvedValue(undefined);
+
+  const { container } = render(
+    <VenueManagement
+      venues={overrides.venues ?? [activeVenue, archivedVenue]}
+      rooms={overrides.rooms ?? [room1, room2]}
+      tableTypes={overrides.tableTypes ?? [activeTableType, archivedTableType]}
+      tables={overrides.tables ?? [tableUsingActiveType]}
+      layouts={overrides.layouts ?? [layout1]}
+      onAdd={onAdd}
+      onUpdate={onUpdate}
+      onArchive={onArchive}
+      onRestore={onRestore}
+      onDelete={onDelete}
+      onAddRoom={onAddRoom}
+      onUpdateRoom={onUpdateRoom}
+      onArchiveRoom={onArchiveRoom}
+      onRestoreRoom={onRestoreRoom}
+      onDeleteRoom={onDeleteRoom}
+      onAddTableType={onAddTableType}
+      onUpdateTableType={onUpdateTableType}
+      onArchiveTableType={onArchiveTableType}
+      onRestoreTableType={onRestoreTableType}
+      onDeleteTableType={onDeleteTableType}
+    />,
+  );
+
+  return {
+    container,
+    onAdd,
+    onUpdate,
+    onArchive,
+    onRestore,
+    onDelete,
+    onAddRoom,
+    onUpdateRoom,
+    onArchiveRoom,
+    onRestoreRoom,
+    onDeleteRoom,
+    onAddTableType,
+    onUpdateTableType,
+    onArchiveTableType,
+    onRestoreTableType,
+    onDeleteTableType,
+  };
+}
+
+/** Each venue renders as its own nested `.card`; scope to it via a name inside it. */
+function venueCard(name: string): HTMLElement {
+  return screen.getByText(name).closest('[data-slot="card"]') as HTMLElement;
+}
+
+/** Venue-level actions (Archive/Restore/Delete) live in that card's header, not its
+ * body — scoping here avoids ambiguity with the same-labelled room/table-type actions
+ * inside the body's list groups. */
+function venueCardHeader(name: string): HTMLElement {
+  return screen.getByText(name).closest('[data-slot="card-header"]') as HTMLElement;
+}
+
+/** Room and table-type rows are `ListGroup.Item`s; scope to the specific row via its name. */
+function listItem(name: string): HTMLElement {
+  return screen.getByText(name).closest('[data-slot="presentation-list-item"]') as HTMLElement;
+}
+
+describe("VenueManagement", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("renders a venue card with its location line, room list, and an archived badge on inactive venues", async () => {
+    renderVenueManagement();
+
+    const activeScope = within(venueCard("Grand Hall"));
+    expect(activeScope.getByText("1 Main St, Ghent, 9000, BE")).toBeInTheDocument();
+    expect(activeScope.getByText("Room A")).toBeInTheDocument();
+    expect(activeScope.getByText("Room B")).toBeInTheDocument();
+
+    expect(
+      within(venueCard("Old Barn")).getByText("admin_venue_archived_badge"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the rooms/table-types body for an archived venue", async () => {
+    renderVenueManagement();
+
+    const archivedScope = within(venueCard("Old Barn"));
+    expect(archivedScope.queryByText("admin_rooms_tab")).not.toBeInTheDocument();
+    expect(archivedScope.queryByText("admin_table_types_tab")).not.toBeInTheDocument();
+  });
+
+  it("shows the empty state when there are no venues", async () => {
+    renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
+    expect(screen.getByText("admin_no_venues")).toBeInTheDocument();
+  });
+
+  it("disables Save until name is filled, then calls onAdd with trimmed args and closes the modal", async () => {
+    const { onAdd } = renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_venue_add" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_name_label"), {
+      target: { value: "  New Venue  " },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_city_label"), {
+      target: { value: "  Antwerp  " },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "51.2194" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.4025" },
+    });
+
+    expect(saveButton).not.toBeDisabled();
+    fireEvent.click(saveButton);
+
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", 51.2194, 4.4025),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("edits a venue including its map coordinates", async () => {
+    const { onUpdate } = renderVenueManagement();
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Grand Hall"})',
+      }),
+    );
+    const dialogScope = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "50.8503" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.3517" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        "venue-1",
+        expect.objectContaining({ lat: 50.8503, lng: 4.3517 }),
+      ),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows a live map preview when both coordinates are valid", async () => {
+    renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
+    fireEvent.click(screen.getByRole("button", { name: "admin_venue_add" }));
+    const dialogScope = within(await screen.findByRole("dialog"));
+    expect(dialogScope.queryByTestId("venue-map-preview")).not.toBeInTheDocument();
+
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
+      target: { value: "50.8503" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
+      target: { value: "4.3517" },
+    });
+
+    expect(await dialogScope.findByTestId("venue-map-preview")).toHaveTextContent("50.8503,4.3517");
+  });
+
+  it("does not call onArchive when the confirm dialog is cancelled", async () => {
+    const { onArchive } = renderVenueManagement();
+
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: "admin_content_archive: Grand Hall",
+      }),
+    );
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(dialog.getByText("admin_venue_archive_confirm")).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    expect(onArchive).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  });
+
+  it("calls onArchive with the venue id when the confirm dialog is accepted", async () => {
+    const { onArchive } = renderVenueManagement();
+
+    fireEvent.click(
+      within(venueCardHeader("Grand Hall")).getByRole("button", {
+        name: "admin_content_archive: Grand Hall",
+      }),
+    );
+    const dialog = within(await screen.findByRole("alertdialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_content_archive" }));
+
+    await waitFor(() => expect(onArchive).toHaveBeenCalledWith("venue-1"));
+  });
+
+  it("does not call onDelete when the confirm dialog is cancelled", async () => {
+    const { onDelete } = renderVenueManagement();
+
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Old Barn"})',
+      }),
+    );
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(dialog.getByText('admin_venue_delete_confirm({"name":"Old Barn"})')).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    expect(onDelete).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  });
+
+  it("calls onDelete with the venue id when the confirm dialog is accepted", async () => {
+    const { onDelete } = renderVenueManagement();
+
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Old Barn"})',
+      }),
+    );
+    const dialog = within(await screen.findByRole("alertdialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith("venue-2"));
+  });
+
+  it("calls onRestore immediately with no confirm prompt", async () => {
+    const { onRestore } = renderVenueManagement();
+
+    fireEvent.click(
+      within(venueCardHeader("Old Barn")).getByRole("button", {
+        name: "admin_content_restore: Old Barn",
+      }),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onRestore).toHaveBeenCalledWith("venue-2");
+  });
+
+  it("opens the add-room modal and calls onAddRoom with the expected args", async () => {
+    const { onAddRoom } = renderVenueManagement();
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_room_add" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "New Room" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_room_width_label"), {
+      target: { value: "12" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_room_length_label"), {
+      target: { value: "8" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() =>
+      expect(onAddRoom).toHaveBeenCalledWith("venue-1", "New Room", 12, 8, "#ffc107"),
+    );
+  });
+
+  it("deletes an archived room and surfaces the API's refusal", async () => {
+    // DELETE /api/rooms/{id} 409s while layouts still reference the room, so a
+    // failed delete has to explain itself rather than look inert.
+    const onDeleteRoom = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("Cannot delete: layouts are still using this room.", {
+          status: 409,
+          code: "room_has_layouts",
+        }),
+      )
+      .mockResolvedValueOnce(undefined);
+    renderVenueManagement({ onDeleteRoom });
+
+    fireEvent.click(screen.getByRole("button", { name: 'admin_delete_item({"name":"Room B"})' }));
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(dialog.getByText('admin_room_delete_confirm({"name":"Room B"})')).toBeInTheDocument();
+
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+    expect(await dialog.findByText("api_error_room_has_layouts")).toBeInTheDocument();
+
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+    await waitFor(() => expect(onDeleteRoom).toHaveBeenCalledTimes(2));
+    expect(onDeleteRoom).toHaveBeenLastCalledWith("room-2");
+  });
+
+  it("opens the edit-room modal prefilled, and calls onUpdateRoom with the edited fields", async () => {
+    const { onUpdateRoom } = renderVenueManagement();
+
+    fireEvent.click(
+      within(listItem("Room A")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Room A"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    expect(dialogScope.getByText("admin_edit_room")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A"),
+    );
+    expect(dialogScope.getByLabelText("admin_room_width_label")).toHaveValue(20);
+    expect(dialogScope.getByLabelText("admin_room_length_label")).toHaveValue(15);
+
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "Room A (renamed)" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_room_width_label"), {
+      target: { value: "22" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() =>
+      expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+        venue_id: "venue-1",
+        name: "Room A (renamed)",
+        width_m: 22,
+        length_m: 15,
+        color: "#ffc107",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("omits width/length from onUpdateRoom when an edit doesn't touch dimensions, preserving dimensionsPlaceholder", async () => {
+    const { onUpdateRoom } = renderVenueManagement({
+      rooms: [{ ...room1, dimensions_placeholder: true }, room2],
+    });
+
+    fireEvent.click(
+      within(listItem("Room A")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Room A"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A"),
+    );
+    fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
+      target: { value: "Room A (renamed)" },
+    });
+
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() =>
+      expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+        venue_id: "venue-1",
+        name: "Room A (renamed)",
+        color: "#ffc107",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", async () => {
+    renderVenueManagement({
+      rooms: [{ ...room1, dimensions_placeholder: true }, room2],
+    });
+
+    expect(screen.getByLabelText("admin_room_dimensions_placeholder_badge")).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Table types (nested under each venue, #858)
+  // ---------------------------------------------------------------------------
+
+  it("renders table type rows within the venue card, with the archived one dimmed", async () => {
+    renderVenueManagement();
+
+    const activeScope = within(venueCard("Grand Hall"));
+    expect(activeScope.getByText("Standard Rectangle")).toBeInTheDocument();
+    expect(activeScope.getByText("Retired Round")).toBeInTheDocument();
+
+    expect(listItem("Retired Round").className).toContain("opacity-50");
+  });
+
+  it("disables Save until name/venue/dimensions are valid, then calls onAddTableType prefilled with the clicked venue", async () => {
+    const { onAddTableType } = renderVenueManagement({ tableTypes: [], tables: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
+    expect(saveButton).toBeDisabled();
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveTextContent("Grand Hall"),
+    );
+
+    fireEvent.change(dialogScope.getByLabelText("admin_table_type_name_label"), {
+      target: { value: "Banquet Rect" },
+    });
+    expect(saveButton).toBeDisabled();
+
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.8" },
+    });
+    fireEvent.change(dialogScope.getByLabelText("admin_table_length_label"), {
+      target: { value: "2" },
+    });
+    expect(saveButton).not.toBeDisabled();
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() =>
+      expect(onAddTableType).toHaveBeenCalledWith({
+        venue_id: "venue-1",
+        name: "Banquet Rect",
+        shape: "rectangle",
+        width_m: 0.8,
+        length_m: 2,
+        height_type: "low",
+        capacity: 4,
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("switching the shape select to round swaps the width/length fields for a single blank diameter field", async () => {
+    renderVenueManagement({ tableTypes: [], tables: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_add_table_type" }));
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+
+    expect(dialogScope.queryByLabelText("admin_table_diameter_label")).not.toBeInTheDocument();
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.8" },
+    });
+    await selectAdminOption(dialogScope.getByLabelText("admin_table_shape_label"), "round");
+
+    // Switching shape invalidates whatever was entered — no generic replacement
+    // is defensible (#833/#835), so it blanks rather than inventing a diameter.
+    expect(dialogScope.queryByLabelText("admin_table_width_label")).not.toBeInTheDocument();
+    const diameterField = dialogScope.getByLabelText(
+      "admin_table_diameter_label",
+    ) as HTMLInputElement;
+    expect(diameterField.value).toBe("");
+  });
+
+  it("pre-fills the edit form from the row's existing values and calls onUpdateTableType without the active field", async () => {
+    const { onUpdateTableType } = renderVenueManagement({ tables: [] });
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    const nameInput = dialogScope.getByLabelText("admin_table_type_name_label") as HTMLInputElement;
+    await waitFor(() => expect(nameInput.value).toBe("Standard Rectangle"));
+
+    fireEvent.change(nameInput, { target: { value: "Renamed Rectangle" } });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() =>
+      expect(onUpdateTableType).toHaveBeenCalledWith("tt-1", {
+        venue_id: "venue-1",
+        name: "Renamed Rectangle",
+        shape: "rectangle",
+        width_m: 0.7,
+        length_m: 1.8,
+        height_type: "low",
+        capacity: 4,
+      }),
+    );
+    const callArgs = vi.mocked(onUpdateTableType).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(callArgs).not.toHaveProperty("active");
+  });
+
+  it("confirms the affected table/room count before saving a dimension change on an in-use type, and proceeds when accepted", async () => {
+    const { onUpdateTableType } = renderVenueManagement();
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
+    const confirmDialog = within(latestDialog());
+    expect(
+      confirmDialog.getByText(
+        'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("confirms the affected table/room count when only the shape changes", async () => {
+    const { onUpdateTableType } = renderVenueManagement();
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
+    await selectAdminOption(dialogScope.getByLabelText("admin_table_shape_label"), "round");
+    // Switching shape blanks the dimensions (see the shape-swap test above), so a
+    // diameter has to be re-entered before Save is even enabled.
+    fireEvent.change(dialogScope.getByLabelText("admin_table_diameter_label"), {
+      target: { value: "1.2" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
+    const confirmDialog = within(latestDialog());
+    expect(
+      confirmDialog.getByText(
+        'admin_table_type_dimension_change_confirm({"tableCount":1,"roomCount":1})',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("cancels the save when the dimension-change confirmation is declined", async () => {
+    const { onUpdateTableType } = renderVenueManagement();
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
+    const confirmDialog = within(latestDialog());
+    fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_cancel" }));
+
+    expect(onUpdateTableType).not.toHaveBeenCalled();
+    // The edit dialog is still open, just the confirm dialog closed.
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("saves a dimension change without confirmation when no tables use the type", async () => {
+    const { onUpdateTableType } = renderVenueManagement({ tables: [] });
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: 'admin_edit_item({"name":"Standard Rectangle"})',
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
+    fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
+      target: { value: "0.9" },
+    });
+    fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
+  });
+
+  it("archives an active table type immediately, with no confirm prompt", async () => {
+    const { onArchiveTableType } = renderVenueManagement();
+
+    fireEvent.click(
+      within(listItem("Standard Rectangle")).getByRole("button", {
+        name: "admin_content_archive: Standard Rectangle",
+      }),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onArchiveTableType).toHaveBeenCalledWith("tt-1");
+  });
+
+  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived rows", async () => {
+    const { onRestoreTableType } = renderVenueManagement();
+
+    const row = listItem("Retired Round");
+    expect(within(row).queryByRole("button", { name: /admin_edit_item/ })).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(row).getByRole("button", { name: "admin_content_restore: Retired Round" }),
+    );
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onRestoreTableType).toHaveBeenCalledWith("tt-2");
+  });
+
+  it("offers delete on archived table types only, and asks for confirmation first", async () => {
+    const { onDeleteTableType } = renderVenueManagement();
+
+    expect(
+      within(listItem("Standard Rectangle")).queryByRole("button", { name: /admin_delete/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(listItem("Retired Round")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Retired Round"})',
+      }),
+    );
+
+    const dialog = within(await screen.findByRole("alertdialog"));
+    expect(
+      dialog.getByText('admin_table_type_delete_confirm({"name":"Retired Round"})'),
+    ).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+
+    await waitFor(() => expect(onDeleteTableType).toHaveBeenCalledWith("tt-2"));
+  });
+
+  it("surfaces the API's refusal when tables still use the table type", async () => {
+    const onDeleteTableType = vi.fn().mockRejectedValue(
+      new ApiError("Cannot delete: tables are still using this type.", {
+        status: 409,
+        code: "table_type_in_use",
+      }),
+    );
+    renderVenueManagement({ onDeleteTableType });
+
+    fireEvent.click(
+      within(listItem("Retired Round")).getByRole("button", {
+        name: 'admin_delete_item({"name":"Retired Round"})',
+      }),
+    );
+    const dialog = within(await screen.findByRole("alertdialog"));
+    fireEvent.click(dialog.getByRole("button", { name: "admin_delete" }));
+
+    expect(await screen.findByText("api_error_table_type_in_use")).toBeInTheDocument();
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = renderVenueManagement();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});

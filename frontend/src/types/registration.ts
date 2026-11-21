@@ -5,7 +5,7 @@ import type {
   RegistrationOutWithToken,
   TableAllocation,
 } from "@/api-types";
-import type { OrderAnswer } from "@/utils/orderQuestions";
+import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 
 export interface BookingUpdate {
   orderAnswers?: OrderAnswer[];

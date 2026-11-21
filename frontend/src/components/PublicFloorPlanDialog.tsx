@@ -14,7 +14,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
-import { getCanvasSizePx, safeRoomColor } from "@/utils/layoutUtils";
+import { getCanvasSizePx, safeRoomColor } from "@/lib/venue/layoutUtils";
 import {
   editionPlanQueryOptions,
   initialPlanSelection,
@@ -24,8 +24,8 @@ import {
   type PlanRoom,
   type PlanSelection,
   type PlanTarget,
-} from "@/utils/planApi";
-import { formatStandDay } from "@/utils/standsApi";
+} from "@/lib/api/planApi";
+import { formatStandDay } from "@/lib/api/standsApi";
 
 interface PublicFloorPlanDialogProps {
   editionId: string;

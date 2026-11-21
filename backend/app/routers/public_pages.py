@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["public-pages"])
 
 # The static photo the themes fall back to while an edition has no uploaded hero
-# (`DEFAULT_HERO` in frontend/src/utils/editionArtwork.ts).
+# (`DEFAULT_HERO` in frontend/src/lib/editions/editionArtwork.ts).
 DEFAULT_HERO_IMAGE = "/images/champagne-hero.webp"
 
 

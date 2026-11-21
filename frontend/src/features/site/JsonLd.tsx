@@ -1,0 +1,152 @@
+import React from "react";
+import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
+import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
+import { baseUrl } from "@/config/site";
+import type { EventPublicOut as Event } from "@/api-types";
+import { DEFAULT_SHARE, editionShareImage } from "@/lib/editions/editionArtwork";
+import { eventDescription, eventTitle, productName } from "@/lib/editions/eventText";
+
+/** Marks the JSON-LD <script> the backend renders into <head> for GET /.
+ * Kept in sync with
+ * backend/app/services/public_render.py's json_ld_script. */
+const SSR_JSON_LD_SELECTOR = 'script[data-ssr-jsonld="true"]';
+
+/** Local date + "HH:MM" as an instant, like the backend's Europe/Brussels one in the contract test. */
+function localInstant(date: string, clock: string): string {
+  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
+  const [hours = 0, minutes = 0] = clock.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes).toISOString();
+}
+
+/** The edition's events as schema.org `subEvent` entries, titled in the visitor's language. */
+function subEvents(events: Event[], locale: string) {
+  return events.map((event) => {
+    const description = eventDescription(event, locale);
+    return {
+      "@type": "Event",
+      name: eventTitle(event, locale),
+      startDate: localInstant(event.date, event.start_time),
+      ...(event.end_time ? { endDate: localInstant(event.date, event.end_time) } : {}),
+      ...(description ? { description } : {}),
+    };
+  });
+}
+
+const IN_STOCK = "https://schema.org/InStock";
+const SOLD_OUT = "https://schema.org/SoldOut";
+
+/**
+ * One `Offer` per distinct required (entry) product, with its real price; a product is sold
+ * out only when every event offering it is. Optional extras are not advertised. Mirrors
+ * `_offers` in backend/app/services/jsonld_service.py.
+ */
+function offers(events: Event[], locale: string) {
+  const seen = new Map<string, Record<string, string>>();
+  for (const event of events) {
+    for (const product of event.products ?? []) {
+      if (!product.required) continue;
+      const name = productName(product, locale);
+      const price = Number(product.price).toFixed(2);
+      const key = JSON.stringify([name, price]);
+      const available = !product.sold_out;
+      const existing = seen.get(key);
+      if (existing) {
+        if (available) existing.availability = IN_STOCK;
+        continue;
+      }
+      seen.set(key, {
+        "@type": "Offer",
+        name,
+        url: baseUrl,
+        price,
+        priceCurrency: "EUR",
+        availability: available ? IN_STOCK : SOLD_OUT,
+      });
+    }
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Renders JSON-LD structured data for the active festival edition. Renders nothing
+ * when there's no active/upcoming edition, so it never advertises a fake event —
+ * and nothing when the backend already rendered one into <head> on this page
+ * load, so a crawler never sees two conflicting Event objects.
+ *
+ * Known limitation, accepted deliberately: the SSR marker is checked once
+ * per mount and never cleared, so a visitor who navigates away from `/` and
+ * back via client-side routing (no full page load) keeps seeing the
+ * original server-rendered JSON-LD even if the edition data has since
+ * changed. This is invisible metadata with no effect on what a visitor
+ * actually sees, and crawlers — the audience this data is for — always
+ * fetch `/` fresh rather than navigating client-side, so they never hit
+ * this path. Revisit only if that stops being true.
+ */
+const EventStructuredData: React.FC = () => {
+  const { edition, hasEdition } = useActiveEdition();
+
+  if (document.querySelector(SSR_JSON_LD_SELECTOR)) {
+    return null;
+  }
+
+  if (!hasEdition) {
+    return null;
+  }
+
+  const { start: festivalDate, end: festivalEndDate } = getFestivalDateRange(edition);
+  const festivalName = m.festival_name();
+  const { name: venueName, address, city, country, postal_code: postalCode } = edition.venue;
+  const coordinates = { lat: edition.venue.lat, lng: edition.venue.lng };
+
+  const ticketOffers = offers(edition.events, getLocale());
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: `${festivalName} ${edition.year}`,
+    startDate: festivalDate.toISOString(),
+    endDate: festivalEndDate.toISOString(),
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: venueName,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: address,
+        addressLocality: city,
+        postalCode: postalCode,
+        addressCountry: country,
+      },
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
+      },
+    },
+    image: [`${baseUrl}${editionShareImage(edition) ?? DEFAULT_SHARE}`],
+    description: m.welcome_subtitle(),
+    ...(ticketOffers.length > 0 ? { offers: ticketOffers } : {}),
+    inLanguage: getLocale(),
+    organizer: {
+      "@type": "Organization",
+      name: festivalName,
+      url: baseUrl,
+    },
+    ...(edition.events.length > 0 ? { subEvent: subEvents(edition.events, getLocale()) } : {}),
+  };
+
+  // Use React.createElement instead of JSX to avoid potential issues with SSR
+  // SECURITY NOTE: dangerouslySetInnerHTML is used here to render JSON-LD. The
+  // object holds translations and admin-authored event text, so "<" is escaped
+  // in the serialized JSON (as the backend does) and a "</script>" in a title
+  // cannot end the element. Keep escaping if the data sources change.
+  return React.createElement("script", {
+    type: "application/ld+json",
+    dangerouslySetInnerHTML: {
+      __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+    },
+  });
+};
+
+export default EventStructuredData;

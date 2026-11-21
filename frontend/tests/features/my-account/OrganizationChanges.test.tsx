@@ -1,0 +1,273 @@
+import { jsonResponse } from "@/mocks/response";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import { server } from "@/mocks/server";
+import { setLocale } from "@/paraglide/runtime";
+import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
+import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
+
+const texts = {
+  image: "",
+  website: "https://old.example",
+  description_nl: "Live Dutch",
+  description_fr: null,
+  description_en: null,
+};
+const row = { id: 42, name: "House", type: "producer", active: true, ...texts };
+const change: import("@/api-types").OrganizationChangeOut = {
+  created_at: "2026-01-01T00:00:00Z",
+  id: "proposal",
+  organization_id: 42,
+  organization_name: "House",
+  status: "pending",
+  current: texts,
+  proposed: {
+    website: "https://new.example",
+    description_fr: "Proposed French",
+  },
+  superseded_fields: [],
+  reason: null,
+};
+function mount(child: React.ReactNode) {
+  setLocale("en", { reload: false });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={client}>{child}</QueryClientProvider>);
+}
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+describe("organization proposals", () => {
+  it("shows saved content before editing and keeps the pending proposal separate", async () => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
+    mount(
+      <MyOrganizationsSection
+        organizations={[{ ...row, image: "/saved.svg" }]}
+        headers={() => ({})}
+      />,
+    );
+    expect(screen.getByText("Saved public content")).toBeInTheDocument();
+    expect(screen.getByText("Live Dutch")).toBeInTheDocument();
+    expect(screen.getByText("https://old.example")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "House" })).toHaveAttribute("src", "/saved.svg");
+    expect(await screen.findByText("Awaiting review")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Website URL" })).not.toBeInTheDocument();
+  });
+  it.each([409, 500])("explains manager submission errors for HTTP %s", async (status) => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
+      http.post("/api/me/organizations/42/changes", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "Submission failed",
+            ...(status === 409 ? { code: "organization_change_conflict" } : {}),
+          },
+          { status },
+        ),
+      ),
+    );
+    mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
+    const edit = await screen.findByRole("button", { name: "Edit website and description" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByLabelText("Website URL"), {
+      target: { value: "https://new.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    const alert = await screen.findByRole("alert");
+    if (status === 409) expect(alert).toHaveTextContent("Refresh the list before deciding.");
+    else
+      expect(alert).toHaveTextContent(
+        "Unable to complete this request. Please try again or request a new link.",
+      );
+  });
+
+  it("falls back to the generic message for a conflict whose code is unknown", async () => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
+      http.post("/api/me/organizations/42/changes", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "A brand new English rule.",
+            code: "not_yet_translated",
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
+    const edit = await screen.findByRole("button", { name: "Edit website and description" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByLabelText("Website URL"), {
+      target: { value: "https://new.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Unable to complete this request. Please try again or request a new link.",
+    );
+    expect(alert).not.toHaveTextContent("A brand new English rule.");
+  });
+
+  it("sends a reason only for rejection even if text was entered before acceptance", async () => {
+    server.use(
+      http.get("/api/organizations/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
+    const bodies: unknown[] = [];
+    server.use(
+      http.post("/api/organizations/changes/proposal/decision", async ({ request }) => {
+        bodies.push(await request.json());
+        return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+          ...change,
+          status: "accepted",
+        });
+      }),
+    );
+    mount(<OrganizationChangeReview authHeaders={() => ({})} onDecided={() => {}} />);
+    fireEvent.change(await screen.findByLabelText("Rejection reason (optional)"), {
+      target: { value: "Rejection-only text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(bodies).toEqual([{ decision: "accepted", reason: null }]));
+  });
+
+  it("only submits changed allowed fields and reuses the ID after an ambiguous failure", async () => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([]),
+      ),
+    );
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      http.post("/api/me/organizations/42/changes", async ({ request }) => {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.error();
+      }),
+    );
+    mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
+    const edit = await screen.findByRole("button", { name: "Edit website and description" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByLabelText("Website URL"), {
+      target: { value: "https://new.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[0]).toEqual({
+      website: "https://new.example",
+      submission_id: expect.any(String),
+    });
+    expect(bodies[1]).toEqual(bodies[0]);
+  });
+
+  it("shows rejected state and reason, and identifies superseded fields", async () => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([
+          {
+            ...change,
+            status: "rejected",
+            reason: "Please correct this",
+            superseded_fields: ["website"],
+          },
+        ]),
+      ),
+    );
+    mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
+    expect(await screen.findByText("Rejected")).toBeInTheDocument();
+    expect(screen.getByText("Please correct this")).toBeInTheDocument();
+    expect(screen.getByText("Superseded by an admin edit: Website URL")).toBeInTheDocument();
+  });
+
+  it("reviews current and proposed text in every language and sends rejection reason", async () => {
+    server.use(
+      http.get("/api/organizations/changes", () =>
+        jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+      ),
+    );
+    const bodies: unknown[] = [];
+    server.use(
+      http.post("/api/organizations/changes/proposal/decision", async ({ request }) => {
+        bodies.push(await request.json());
+        return jsonResponse<import("@/api-types").OrganizationChangeOut>({
+          ...change,
+          status: "rejected",
+        });
+      }),
+    );
+    const onDecided = vi.fn();
+    mount(
+      <OrganizationChangeReview
+        authHeaders={() => ({ Authorization: "Bearer token" })}
+        onDecided={onDecided}
+      />,
+    );
+    const table = await screen.findByRole("table");
+    expect(within(table).getByText("Current")).toBeInTheDocument();
+    expect(within(table).getByText("Proposed")).toBeInTheDocument();
+    expect(within(table).getByText("Dutch")).toBeInTheDocument();
+    expect(within(table).getByText("French")).toBeInTheDocument();
+    expect(within(table).getByText("English")).toBeInTheDocument();
+    expect(within(table).getByText("Proposed French")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Rejection reason (optional)"), {
+      target: { value: "Please correct this" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+    await waitFor(() =>
+      expect(bodies).toEqual([{ decision: "rejected", reason: "Please correct this" }]),
+    );
+    await waitFor(() => expect(onDecided).toHaveBeenCalledOnce());
+  });
+});
+
+it("explains a stale review decision and requires refreshing instead of applying again", async () => {
+  server.use(
+    http.get("/api/organizations/changes", () =>
+      jsonResponse<import("@/api-types").OrganizationChangeOut[]>([change]),
+    ),
+  );
+  const decision = vi.fn();
+  server.use(
+    http.post("/api/organizations/changes/proposal/decision", () => {
+      decision();
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "Already replaced",
+          code: "organization_change_conflict",
+        },
+        { status: 409 },
+      );
+    }),
+  );
+  const onDecided = vi.fn();
+  mount(
+    <OrganizationChangeReview
+      authHeaders={() => ({ Authorization: "Bearer token" })}
+      onDecided={onDecided}
+    />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Accept" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "This proposal has changed or has already been reviewed. Refresh the list before deciding.",
+  );
+  expect(decision).toHaveBeenCalledOnce();
+  expect(onDecided).not.toHaveBeenCalled();
+});

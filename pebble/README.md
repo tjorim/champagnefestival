@@ -59,7 +59,7 @@ real device.
    classic Pebble app-configuration flow:
    - The user taps "Settings" for the app in the phone's Pebble app, firing
      `showConfiguration` in `src/pkjs/index.js`, which calls
-     `Pebble.openURL()` to open `frontend/src/components/PebblePairPage.tsx`
+     `Pebble.openURL()` to open `frontend/src/features/pebble/PebblePairPage.tsx`
      (route: `/pebble-pair`).
    - That page signs the user in via the site's existing OIDC flow, rotates a
      long-lived `cfpat_...` credential through `POST /api/me/pebble-token`,

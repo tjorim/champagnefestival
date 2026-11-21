@@ -10,7 +10,7 @@ import type {
   TableTypeOut,
   VenueOut,
 } from "@/api-types";
-import type { StampCard, StampCardType } from "@/utils/stampCards";
+import type { StampCard, StampCardType } from "@/lib/editions/stampCards";
 import { http, HttpResponse } from "msw/http";
 import { orderItemOut, registrationOut } from "../data/builders";
 import {
