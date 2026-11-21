@@ -32,6 +32,10 @@ coverage
 # nyc test coverage
 .nyc_output
 
+# MSW worker script: never tracked. The `msw()` Vite plugin serves it from the msw package in dev; a copy generated
+# into public/ (`msw init`) would be a stale duplicate.
+frontend/public/mockServiceWorker.js
+
 # Python coverage (pytest --cov)
 .coverage
 .coverage.*

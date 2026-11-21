@@ -228,8 +228,9 @@ Third-party actions are pinned to full commit SHAs with inline version comments.
 a single `CI gate` job that fails when any needed job failed or was cancelled (a job skipped because its component
 did not change is fine). No branch protection is configured. Component workflows are `backend-ci.yml` (shown as
 `Backend / Checks`), `frontend-ci.yml` (shown as `Frontend / Checks`, plus the `E2E` jobs: pull requests run the default theme only, `main` and
-manual runs run all themes, see `frontend/e2e/README.md`), `android.yml`, `pebble.yml`, `pr-preview.yml` and the
-`codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` analyses. The E2E jobs are shown as
+manual runs run all themes, see `frontend/e2e/README.md`), `android.yml`, `pebble.yml` and `pr-preview.yml`. CodeQL code
+scanning runs through GitHub's default setup (repository settings), so there are no `codeql-*.yml` files here; do not add
+them while the default setup is on, because GitHub rejects advanced-workflow uploads in that case. The E2E jobs are shown as
 `Frontend / E2E ...`, for example `Frontend / E2E Tests (Chromium)` (the calling job in `ci.yml` supplies the
 `Frontend` prefix, so the jobs inside `frontend-ci.yml` must not repeat it).
 
