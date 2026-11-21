@@ -2,7 +2,8 @@
 
 Every failure body is JSON with ``detail`` and a stable machine-readable ``code`` (``ApiHTTPException`` in
 ``app.services.errors`` for the codes the application chooses); clients translate ``code`` and treat ``detail`` as an
-English diagnostic. The handlers here cover the failures nothing in the application raised with a code.
+English diagnostic. The handlers here cover the failures nothing in the application raised with a code: an unhandled
+exception and a framework or dependency ``HTTPException``.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import uuid
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -41,3 +43,36 @@ async def handle_unhandled_exception(request: Request, exc: Exception) -> Respon
     response = internal_error_response()
     response.headers[REQUEST_ID_HEADER] = request_id
     return response
+
+
+_STATUS_CODES = {
+    400: "bad_request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not_found",
+    405: "method_not_allowed",
+}
+
+
+def default_error_code(status_code: int) -> str:
+    """The stable ``code`` for an HTTP error that carries none of its own (``http_<status>`` when not listed)."""
+    return _STATUS_CODES.get(status_code, f"http_{status_code}")
+
+
+async def handle_http_exception(request: Request, exc: Exception) -> Response:
+    """Render a framework or dependency ``HTTPException`` with its ``detail`` unchanged and a ``code`` added.
+
+    Replaces FastAPI's default handler (unknown route, wrong method, a bare ``HTTPException``). A ``code`` the
+    exception already carries (``ApiHTTPException``) is kept, and its headers (``WWW-Authenticate``, ``Retry-After``,
+    ``Allow``) are passed on; a bodiless status (1xx, 204, 304) stays bodiless.
+    """
+    if not isinstance(exc, StarletteHTTPException):
+        raise exc
+    headers = getattr(exc, "headers", None)
+    if exc.status_code < 200 or exc.status_code in (204, 304):
+        return Response(status_code=exc.status_code, headers=headers)
+    return JSONResponse(
+        {"detail": exc.detail, "code": getattr(exc, "code", None) or default_error_code(exc.status_code)},
+        status_code=exc.status_code,
+        headers=headers,
+    )

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
+from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from app.core.errors import handle_unhandled_exception
+from app.core.errors import default_error_code, handle_http_exception, handle_unhandled_exception
+from app.services.errors import ApiHTTPException
 
 
 class _SetRequestId:
@@ -66,3 +69,65 @@ async def test_the_outermost_500_gets_a_fresh_id_when_no_middleware_set_one():
     assert response.status_code == 500
     assert response.headers["x-request-id"]
     assert response.json() == {"detail": "Internal server error", "code": "internal_error"}
+
+
+def _request() -> Request:
+    return Request({"type": "http", "method": "GET", "path": "/api/x", "headers": []})
+
+
+@pytest.mark.parametrize(
+    ("status_code", "code"),
+    [
+        (400, "bad_request"),
+        (401, "unauthorized"),
+        (403, "forbidden"),
+        (404, "not_found"),
+        (405, "method_not_allowed"),
+        (409, "http_409"),
+        (429, "http_429"),
+        (503, "http_503"),
+    ],
+)
+def test_default_error_code(status_code, code):
+    assert default_error_code(status_code) == code
+
+
+@pytest.mark.anyio
+async def test_a_bare_http_exception_keeps_its_detail_and_headers_and_gains_a_code():
+    exc = HTTPException(429, "Slow down", headers={"Retry-After": "7", "WWW-Authenticate": "Bearer"})
+    response = await handle_http_exception(_request(), exc)
+
+    assert response.status_code == 429
+    assert json.loads(bytes(response.body)) == {"detail": "Slow down", "code": "http_429"}
+    assert response.headers["retry-after"] == "7"
+    assert response.headers["www-authenticate"] == "Bearer"
+
+
+@pytest.mark.anyio
+async def test_a_structured_detail_is_kept():
+    response = await handle_http_exception(_request(), HTTPException(409, {"conflicts": [1, 2]}))
+
+    assert json.loads(bytes(response.body)) == {"detail": {"conflicts": [1, 2]}, "code": "http_409"}
+
+
+@pytest.mark.anyio
+async def test_a_code_the_exception_carries_is_never_replaced():
+    exc = ApiHTTPException(404, "registration_not_found", "Nope")
+    response = await handle_http_exception(_request(), exc)
+
+    assert json.loads(bytes(response.body)) == {"detail": "Nope", "code": "registration_not_found"}
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status_code", [204, 304])
+async def test_bodiless_statuses_stay_bodiless(status_code):
+    response = await handle_http_exception(_request(), HTTPException(status_code))
+
+    assert response.status_code == status_code
+    assert bytes(response.body) == b""
+
+
+@pytest.mark.anyio
+async def test_a_foreign_exception_is_not_swallowed():
+    with pytest.raises(ValueError, match="x"):
+        await handle_http_exception(_request(), ValueError("x"))

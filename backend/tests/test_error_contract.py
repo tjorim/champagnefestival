@@ -4,10 +4,12 @@
 these tests go through ``app.main:app`` so a middleware or a router that changes the shape is caught. The wording of
 ``detail`` is not part of the contract, ``code`` is.
 
-The body of a failure is ``{"detail": str, "code": str}`` when the app raised it with a stable code (clients translate
-the code). Failures the framework or an uncoded service error produces carry ``detail`` only, validation failures
-FastAPI's list of field errors, and the general rate limiter answers ``{"error": str}``. Those deviations are pinned
-below (not changed here: clients read them) so that changing one is a decision.
+The body of a failure is ``{"detail": str, "code": str}`` (clients translate the code): the app's own code when it
+raised the failure with one, otherwise a code from the status (``not_found``, ``method_not_allowed``, ``unauthorized``,
+``forbidden``, ``bad_request``, else ``http_<status>``) for what the framework or an uncoded service error produces,
+and ``internal_error`` for an unhandled exception. Validation failures are FastAPI's list of field errors, and the
+general rate limiter answers ``{"error": str}``. The remaining deviations are pinned below (clients read them) so that
+changing one is a decision.
 """
 
 from __future__ import annotations
@@ -60,38 +62,40 @@ async def test_app_raised_failures_use_one_shape_with_stable_codes(client):
 
 
 @pytest.mark.anyio
-async def test_uncoded_service_errors_carry_a_detail_only(client):
+async def test_uncoded_service_errors_get_a_code_from_their_status(client):
     response = await client.get("/api/events/999999")
 
     assert response.status_code == 404
     assert response.headers["content-type"] == "application/json"
-    assert set(response.json()) == {"detail"}
-    assert isinstance(response.json()["detail"], str)
+    assert_coded_error(response.json())
+    assert response.json()["code"] == "not_found"
 
 
 @pytest.mark.anyio
-async def test_framework_failures_are_json_with_a_detail(client):
-    # Unknown paths and wrong methods are answered by Starlette before any app handler: ``detail`` only, no ``code``
-    # (recorded as a follow-up; adding one changes the body clients see).
-    for response, status in (
-        (await client.get("/api/does-not-exist"), 404),
-        (await client.delete("/api/health"), 405),
+async def test_framework_failures_are_json_with_a_detail_and_a_status_code(client):
+    # Unknown paths and wrong methods are answered by Starlette before any app handler; the code comes from the status
+    # and the headers (``Allow``) are kept.
+    for response, status, code in (
+        (await client.get("/api/does-not-exist"), 404, "not_found"),
+        (await client.delete("/api/health"), 405, "method_not_allowed"),
     ):
         assert response.status_code == status
         assert response.headers["content-type"] == "application/json"
-        assert set(response.json()) == {"detail"}
-        assert isinstance(response.json()["detail"], str)
+        assert_coded_error(response.json())
+        assert response.json()["code"] == code
+    assert "GET" in (await client.delete("/api/health")).headers["allow"]
 
 
 @pytest.mark.anyio
-async def test_missing_and_invalid_credentials_are_401_with_a_detail(real_auth_client):
+async def test_missing_and_invalid_credentials_are_401_with_a_code(real_auth_client):
     missing = await real_auth_client.get("/api/registrations")
     invalid = await real_auth_client.get("/api/registrations", headers={"Authorization": f"Bearer {SECRET}"})
 
     for response in (missing, invalid):
         assert response.status_code in (401, 403)
         assert response.headers["content-type"] == "application/json"
-        assert set(response.json()) == {"detail"}
+        assert_coded_error(response.json())
+        assert response.json()["code"] == {401: "unauthorized", 403: "forbidden"}[response.status_code]
         assert SECRET not in response.text
     assert invalid.status_code == 401
     assert invalid.headers["www-authenticate"] == "Bearer"
