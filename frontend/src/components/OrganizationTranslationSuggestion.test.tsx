@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationTranslationSuggestion from "./OrganizationTranslationSuggestion";
-import MyOrganizationsSection from "./MyOrganizationsSection";
+import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
 import ItemModal from "./admin/ItemModal";
 
 const url = "/api/organizations/translation";

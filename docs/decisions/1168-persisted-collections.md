@@ -323,7 +323,7 @@ measurements separately from those outstanding operational checks.
 - [`db-sqlite-persistence-core` 0.4.0 release (network-first initial render)](https://github.com/TanStack/db/releases/tag/%40tanstack/db-sqlite-persistence-core%400.4.0)
 - [TanStack DB decision](tanstack-db.md), [data retention](934-data-retention-and-erasure.md), [Web Push foundation](941-web-push-foundation.md)
 - `frontend/src/features/admin/shell/useAdminQueries.ts` (sign-out reset), `frontend/src/lib/collections/epochFence.ts`,
-  `frontend/src/app/providers/LiveUpdatesProvider.tsx`, `frontend/src/components/CheckInPage.tsx`
+  `frontend/src/app/providers/LiveUpdatesProvider.tsx`, `frontend/src/features/check-in/CheckInPage.tsx`
 
 ## Implementation verification (#1197, 2026-10-07)
 

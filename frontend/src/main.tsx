@@ -1,4 +1,4 @@
-import { PublicOfflineNotice } from "@/components/PublicOfflineNotice";
+import { PublicOfflineNotice } from "@/features/site/PublicOfflineNotice";
 import { useNow } from "@/hooks/useNow";
 import StaffTasks from "@/components/StaffTasks";
 import {
@@ -37,27 +37,27 @@ import Footer from "@/app/layout/Footer";
 import Header from "@/app/layout/Header";
 import HeaderClassic from "@/app/layout/HeaderClassic";
 import ThemeSwitcher from "@/app/theme/ThemeSwitcher";
-import RivieraFeatureGrid from "./components/riviera/RivieraFeatureGrid";
-import RivieraHero from "./components/riviera/RivieraHero";
-import CuveeHero from "./components/cuvee/CuveeHero";
-import AfficheHero from "./components/affiche/AfficheHero";
-import BilletHero from "./components/billet/BilletHero";
-import BilletProgramme from "./components/billet/BilletProgramme";
-import type { HeroRegistrationProps } from "./components/heroRegistration";
-import RemuageFeatureRack from "./components/remuage/RemuageFeatureRack";
-import RemuageHero from "./components/remuage/RemuageHero";
-import EventStructuredData from "./components/JsonLd";
-import FestivalFacts from "./components/FestivalFacts";
-import FestivalMascot from "./components/FestivalMascot";
-import ContactInfo from "./components/ContactInfo";
-import SectionHeading from "./components/SectionHeading";
+import RivieraFeatureGrid from "@/features/site/riviera/RivieraFeatureGrid";
+import RivieraHero from "@/features/site/riviera/RivieraHero";
+import CuveeHero from "@/features/site/cuvee/CuveeHero";
+import AfficheHero from "@/features/site/affiche/AfficheHero";
+import BilletHero from "@/features/site/billet/BilletHero";
+import BilletProgramme from "@/features/site/billet/BilletProgramme";
+import type { HeroRegistrationProps } from "@/features/site/heroRegistration";
+import RemuageFeatureRack from "@/features/site/remuage/RemuageFeatureRack";
+import RemuageHero from "@/features/site/remuage/RemuageHero";
+import EventStructuredData from "@/features/site/JsonLd";
+import FestivalFacts from "@/features/site/FestivalFacts";
+import FestivalMascot from "@/features/site/FestivalMascot";
+import ContactInfo from "@/features/site/ContactInfo";
+import SectionHeading from "@/features/site/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
-import LoadWhenVisible from "./components/LoadWhenVisible";
-import LazyRegistrationModal from "./components/LazyRegistrationModal";
-import AnnouncementBanner from "./components/AnnouncementBanner";
+import LoadWhenVisible from "@/features/site/LoadWhenVisible";
+import LazyRegistrationModal from "@/features/registration/LazyRegistrationModal";
+import AnnouncementBanner from "@/features/site/AnnouncementBanner";
 
 import LanguageSwitcher from "@/app/layout/LanguageSwitcher";
-import MaintenancePage from "./components/MaintenancePage";
+import MaintenancePage from "@/features/maintenance/MaintenancePage";
 import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { useNoIndex } from "@/app/layout/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "@/app/theme/useVisualTheme";
@@ -83,24 +83,28 @@ const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {
 initializeVisualTheme();
 
 // Components - Lazy loaded
-const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
+const BubbleBackground = lazy(() => import("@/features/site/BubbleBackground"));
 // Important visible components with deferred loading
-const Countdown = lazy(() => import("./components/Countdown"));
-const FAQ = lazy(() => import("./components/FAQ"));
-const ContactForm = lazy(() => import("./components/ContactForm"));
+const Countdown = lazy(() => import("@/features/site/Countdown"));
+const FAQ = lazy(() => import("@/features/site/FAQ"));
+const ContactForm = lazy(() => import("@/features/site/ContactForm"));
 const PushOptIn = lazy(() => import("./components/PushOptIn"));
-const Schedule = lazy(() => import("./components/Schedule"));
-const OtherEvents = lazy(() => import("./components/OtherEvents"));
+const Schedule = lazy(() => import("@/features/site/Schedule"));
+const OtherEvents = lazy(() => import("@/features/site/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
-const CheckInPage = lazy(() => import("./components/CheckInPage"));
-const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
-const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
-const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
-const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
-const EmailConsentConfirmPage = lazy(() => import("./components/EmailConsentConfirmPage"));
-const EmailUnsubscribePage = lazy(() => import("./components/EmailUnsubscribePage"));
+const CheckInPage = lazy(() => import("@/features/check-in/CheckInPage"));
+const VenuePlanPage = lazy(() => import("@/features/venue-plan/VenuePlanPage"));
+const PrivacyPolicyPage = lazy(() => import("@/features/legal/PrivacyPolicyPage"));
+const PebblePairPage = lazy(() => import("@/features/pebble/PebblePairPage"));
+const MyAccountPage = lazy(() => import("@/features/my-account/MyAccountPage"));
+const EmailConsentConfirmPage = lazy(
+  () => import("@/features/email-preferences/EmailConsentConfirmPage"),
+);
+const EmailUnsubscribePage = lazy(
+  () => import("@/features/email-preferences/EmailUnsubscribePage"),
+);
 // Below-the-fold components
-const LogoWall = lazy(() => import("./components/LogoWall"));
+const LogoWall = lazy(() => import("@/features/site/LogoWall"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
 
 interface AppSuspenseProps {

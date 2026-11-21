@@ -1,0 +1,685 @@
+import { jsonResponse } from "@/mocks/response";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { axe } from "jest-axe";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  Outlet,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { http, HttpResponse } from "msw/http";
+import CheckInPage from "@/features/check-in/CheckInPage";
+import { useAuth } from "@/app/providers/AuthContext";
+import { server } from "@/mocks/server";
+import { seedRegistrations } from "@/mocks/data/registrations";
+import { validateCheckInSearch } from "@/app/router";
+import {
+  createTestQueryClientHarness,
+  createTestQueryClientWrapper,
+} from "../../utils/queryClient";
+
+// Use the first seed registration — reg-01 (Alice Dupont, Grand Opening, not yet checked in).
+const seedReg = seedRegistrations[0]!;
+const SEED_REG_ID = seedReg.id;
+const SEED_REG_TOKEN = seedReg.check_in_token;
+const SEED_REG_NAME = seedReg.person.name;
+const SEED_EVENT_TITLE = seedReg.event.title;
+
+vi.mock("@/paraglide/messages", () => ({
+  m: {
+    stamp_progress: ({ count, total }: { count: number; total: number }) =>
+      `Stamps: ${count}/${total}`,
+    stamp_reward_earned: () => "Reward earned!",
+    venue_plan_show_table: () => "Show table",
+    checkin_title: () => "Check-in",
+    checkin_lookup_method: () => "Find a guest",
+    checkin_scan_method: () => "Scan a QR code",
+    checkin_scan_prompt: () => "Scan a QR code to begin.",
+    checkin_not_found: () => "Registration not found.",
+    checkin_error: () => "Something went wrong.",
+    checkin_invalid_token: () => "Invalid token.",
+    checkin_looking_up: () => "Looking up registration...",
+    checkin_success: () => "Checked in successfully!",
+    checkin_strap_issued: () => "Strap issued.",
+    checkin_already_in: () => "Already checked in at",
+    checkin_event: () => "Event",
+    checkin_guests: () => "Guests",
+    checkin_table: () => "Table",
+    checkin_order_items: () => "Order items",
+    checkin_do_checkin: () => "Check in now",
+    checkin_actions_login_required: () => "Login for entrance actions.",
+    checkin_actions_unauthorized: () => "Unauthorized entrance action.",
+    checkin_actions_session_expired: () => "Volunteer session expired for entrance actions.",
+    checkin_manual_search_title: () => "Find guest manually",
+    checkin_manual_search_heading: () => "Search by name or email",
+    checkin_manual_search_login_required: () => "Volunteer login required.",
+    checkin_manual_search_label: () => "Guest name or email",
+    checkin_manual_search_placeholder: () => "Search by guest name or email…",
+    checkin_manual_search_help: () => "PII-minimal results.",
+    checkin_manual_search_min_chars: () => "Enter at least 2 characters to search.",
+    checkin_manual_search_loading: () => "Searching registrations…",
+    checkin_manual_search_no_results: () => "No matching registrations found.",
+    checkin_manual_search_unauthorized: () => "Sign in as a volunteer or admin.",
+    checkin_manual_search_session_expired: () => "Volunteer session expired for search.",
+    checkin_manual_not_checked_in: () => "Not checked in",
+    checkin_search_error: () => "Could not search registrations.",
+    checkin_scanner_starting: () => "Starting camera…",
+    checkin_scanner_scanning: () => "Point the camera at the guest's QR code.",
+    checkin_scanner_permission_denied: () => "Camera access was denied.",
+    checkin_scanner_unavailable: () => "Camera scanning isn't available.",
+    checkin_scan_next: () => "Scan next",
+    checkin_offline_banner: () => "You're offline.",
+    admin_login_button: () => "Login",
+    auth_error_title: () => "Authentication problem",
+    admin_loading: () => "Loading…",
+    admin_checked_in: () => "Checked in",
+    admin_status_confirmed: () => "Confirmed",
+    admin_status_pending: () => "Pending",
+    admin_strap_issued: () => "Strap issued",
+    admin_issue_strap: () => "Issue strap",
+    admin_bottle_delivered: () => "Delivered",
+    admin_bottle_not_delivered: () => "Pending",
+    admin_mark_delivered: () => "Mark as delivered",
+    admin_mark_not_delivered: () => "Mark as not delivered",
+    admin_error_update_registration: () => "Failed to update registration.",
+  },
+}));
+
+function createCheckInTestRouter(initialEntry: string) {
+  const rootRoute = createRootRoute();
+  const adminLayoutRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    id: "admin-layout",
+    component: () => <Outlet />,
+  });
+  const checkInRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
+    path: "/check-in",
+    validateSearch: validateCheckInSearch,
+    component: CheckInPage,
+  });
+  const routeTree = rootRoute.addChildren([adminLayoutRoute.addChildren([checkInRoute])]);
+  const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
+
+  return createRouter({ routeTree, history: memoryHistory });
+}
+
+describe("CheckInPage", () => {
+  beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
+      roles: ["admin"],
+      hasRole: vi.fn((role: string) => role === "admin"),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+  });
+
+  async function renderPage(initialEntry = `/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}`) {
+    const router = createCheckInTestRouter(initialEntry);
+    await router.load();
+    const Wrapper = createTestQueryClientWrapper();
+
+    return render(<RouterProvider router={router} />, { wrapper: Wrapper });
+  }
+
+  it("keeps reward feedback after the lookup refresh", async () => {
+    server.use(
+      http.post(`/api/check-in/${SEED_REG_ID}`, () =>
+        jsonResponse<import("@/api-types").CheckInOut>({
+          already_checked_in: false,
+          registration: {
+            event_id: "event-1",
+            edition_id: null,
+            event_title: SEED_EVENT_TITLE,
+            table_id: null,
+            table_name: null,
+            guest_count: 1,
+            order_items: [],
+            notes: "",
+            checked_in_at: null,
+            strap_issued: false,
+            id: SEED_REG_ID,
+            name: SEED_REG_NAME,
+            checked_in: true,
+            status: "confirmed",
+          },
+          stamp_progress: { card_id: "card", stamps: 10, box_count: 10, reward_earned: true },
+        }),
+      ),
+    );
+    await renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Check in now" }));
+    expect(await screen.findByText("Stamps: 10/10")).toBeInTheDocument();
+    expect(screen.getByText("Reward earned!")).toBeInTheDocument();
+  });
+
+  it("loads the registration via the lookup query", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+      expect(screen.getByText("T1")).toBeInTheDocument();
+    });
+  });
+
+  it("loads a QR credential from the fragment", async () => {
+    await renderPage(`/check-in?id=${SEED_REG_ID}#token=${encodeURIComponent(SEED_REG_TOKEN)}`);
+
+    await waitFor(() => {
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+    });
+  });
+
+  it("does not accept a check-in credential from the query string", async () => {
+    await renderPage(`/check-in?id=${SEED_REG_ID}&token=${SEED_REG_TOKEN}`);
+
+    // Without a camera the scanner's own alert explains the fallback; the generic prompt is not repeated.
+    expect(screen.getByText("Camera scanning isn't available.")).toBeInTheDocument();
+    expect(screen.queryByText("Scan a QR code to begin.")).not.toBeInTheDocument();
+  });
+
+  it("submits check-in via the mutation", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
+    });
+  });
+
+  it("invalidates the checked-in registration query after submitting", async () => {
+    const router = createCheckInTestRouter(`/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}`);
+    await router.load();
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<RouterProvider router={router} />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["check-in", SEED_REG_ID, SEED_REG_TOKEN],
+      });
+    });
+  });
+
+  it("searches and selects a registration when the QR code is unavailable", async () => {
+    await renderPage("/check-in");
+
+    // Without a camera the scanner's own alert explains the fallback; the generic prompt is not repeated.
+    expect(screen.getByText("Camera scanning isn't available.")).toBeInTheDocument();
+    expect(screen.queryByText("Scan a QR code to begin.")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+      expect(screen.getByText("Not checked in")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+
+    expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+  });
+
+  it("does not search manually for authenticated users without entrance roles", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue("mock-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+
+    await renderPage("/check-in");
+
+    const searchInput = screen.getByLabelText("Guest name or email");
+    expect(searchInput).toBeDisabled();
+    expect(screen.getByText("Sign in as a volunteer or admin.")).toBeInTheDocument();
+  });
+
+  it("shows an auth loading gate before rendering manual entrance controls", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+
+    await renderPage("/check-in");
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(screen.queryByText("Volunteer login required.")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+  });
+
+  it("returns volunteers to check-in after signing in for manual search", async () => {
+    const login = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-user",
+      roles: [],
+      hasRole: vi.fn().mockReturnValue(false),
+      getAccessToken: vi.fn().mockReturnValue(null),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login,
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+
+    await renderPage("/check-in");
+
+    fireEvent.click(screen.getByRole("button", { name: /login/i }));
+
+    expect(login).toHaveBeenCalledWith("/check-in");
+  });
+
+  it("submits manual check-in for a selected volunteer search result", async () => {
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    const entrance = screen.getByRole("button", { name: /check in now/i });
+    const fulfilment = screen.getByText("Order items");
+    expect(
+      entrance.compareDocumentPosition(fulfilment) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+    expect(screen.queryByText("Camera scanning isn't available.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
+    });
+  });
+
+  it("returns from a selected guest to manual lookup before checking in", async () => {
+    await renderPage("/check-in");
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+    await waitFor(() => expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument());
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    expect(screen.queryByLabelText("Guest name or email")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /scan next/i }));
+    expect(screen.getByLabelText("Guest name or email")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /check in now/i })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Scan a QR code" })).toHaveFocus(),
+    );
+  });
+
+  it("issues a strap after check-in from the card", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /check in now/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /issue strap/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /issue strap/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Strap issued")).toBeInTheDocument();
+    });
+  });
+
+  it("updates delivered order-item quantities from the check-in card", async () => {
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 2/4")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Mark as delivered"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 3/4")).toBeInTheDocument();
+    });
+  });
+
+  it("updates delivered order-item quantities from the numeric input", async () => {
+    await renderPage();
+
+    const quantityInput = await screen.findByRole("spinbutton", {
+      name: "Delivered Champagne Glass",
+    });
+
+    fireEvent.change(quantityInput, { target: { value: "4" } });
+    fireEvent.blur(quantityInput);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 4/4")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error when the token is invalid", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid token.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error when the registration is not found", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        ),
+      ),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Registration not found.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when volunteer search returns 401", async () => {
+    server.use(
+      http.get("/api/volunteer/registrations", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Volunteer session expired for search.")).toBeInTheDocument();
+    });
+  });
+
+  it.each([
+    [401, "Volunteer session expired for entrance actions."],
+    [500, "Something went wrong."],
+  ])("shows the action error when volunteer check-in returns %s", async (status, message) => {
+    server.use(
+      http.post("/api/volunteer/registrations/:id/check-in", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status },
+        ),
+      ),
+    );
+
+    await renderPage("/check-in");
+
+    fireEvent.change(screen.getByLabelText("Guest name or email"), {
+      target: { value: SEED_REG_NAME },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(new RegExp(SEED_EVENT_TITLE))).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(SEED_REG_NAME));
+    fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(message)).toBeInTheDocument();
+    });
+  });
+
+  it("shows an expired-session message when entrance action returns 401", async () => {
+    server.use(
+      http.put("/api/volunteer/registrations/:id", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 401 },
+        ),
+      ),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Delivered: 2/4")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle("Mark as delivered"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Volunteer session expired for entrance actions."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("has no axe violations on the QR check-in flow with a loaded registration", async () => {
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations on the manual search flow", async () => {
+    const { container } = await renderPage("/check-in");
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it("has no axe violations when showing an error", async () => {
+    server.use(
+      http.post("/api/check-in/:id/lookup", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ null,
+          { status: 404 },
+        ),
+      ),
+    );
+
+    const { container } = await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Registration not found.")).toBeInTheDocument();
+    });
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  describe("connectivity banner", () => {
+    afterEach(() => {
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+    });
+
+    it("does not queue a check-in while offline or replay it on reconnect", async () => {
+      const submit = vi.fn(() =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {},
+          { status: 500 },
+        ),
+      );
+      server.use(http.post(`/api/check-in/${SEED_REG_ID}`, submit));
+      await renderPage();
+      const button = await screen.findByRole("button", { name: /check in now/i });
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+      fireEvent(window, new Event("offline"));
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+      fireEvent(window, new Event("online"));
+      await waitFor(() => expect(button).toBeEnabled());
+      expect(submit).not.toHaveBeenCalled();
+      expect(screen.queryByText("Checked in successfully!")).not.toBeInTheDocument();
+    });
+
+    it("shows an offline banner when the connection drops and hides it when it returns", async () => {
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+
+      await renderPage("/check-in");
+
+      expect(screen.getByText("You're offline.")).toBeInTheDocument();
+
+      Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
+      fireEvent(window, new Event("online"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("You're offline.")).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("in-page QR scanning", () => {
+    const originalMediaDevices = navigator.mediaDevices;
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: originalMediaDevices,
+        configurable: true,
+      });
+    });
+
+    it("stops the camera for manual lookup and restarts it only when scanning is chosen", async () => {
+      const track = { stop: vi.fn() };
+      const stream = new MediaStream();
+      Object.defineProperty(stream, "getTracks", { value: () => [track] });
+      const getUserMedia = vi.fn().mockResolvedValue(stream);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia },
+        configurable: true,
+      });
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+      await renderPage("/check-in");
+      await waitFor(() =>
+        expect(screen.getByText("Point the camera at the guest's QR code.")).toBeInTheDocument(),
+      );
+      fireEvent.click(screen.getAllByRole("button", { name: "Find guest manually" })[0]!);
+      await waitFor(() => expect(track.stop).toHaveBeenCalledOnce());
+      expect(document.querySelector("video")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: "Find guest manually" })[0]).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Scan a QR code" }));
+      await waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(2));
+    });
+
+    it("looks up a registration decoded by the in-page scanner without navigating", async () => {
+      const track = { stop: vi.fn() };
+      const stream = new MediaStream();
+      Object.defineProperty(stream, "getTracks", { value: () => [track] });
+      const getUserMedia = vi.fn().mockResolvedValue(stream);
+      Object.defineProperty(navigator, "mediaDevices", {
+        value: { getUserMedia },
+        configurable: true,
+      });
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+
+      class FakeBarcodeDetector {
+        detect() {
+          return Promise.resolve([
+            { rawValue: `https://example.com/check-in?id=${SEED_REG_ID}#token=${SEED_REG_TOKEN}` },
+          ]);
+        }
+      }
+      vi.stubGlobal("BarcodeDetector", FakeBarcodeDetector);
+
+      const { container } = await renderPage("/check-in");
+      const video = container.querySelector("video");
+      expect(video).not.toBeNull();
+      Object.defineProperty(video, "readyState", { value: 4, configurable: true });
+
+      await waitFor(() => {
+        expect(screen.getByText(SEED_REG_NAME)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Checked in successfully!")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /scan next/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Scan a QR code to begin.")).toBeInTheDocument();
+      });
+    });
+  });
+});

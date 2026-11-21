@@ -1,0 +1,120 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import AnnouncementBanner from "@/features/site/AnnouncementBanner";
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
+
+function renderBanner(items: object[]) {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(items))));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <AnnouncementBanner />
+    </QueryClientProvider>,
+  );
+}
+
+describe("AnnouncementBanner", () => {
+  it("renders info/warning announcements in a pausable ticker", async () => {
+    const view = renderBanner([
+      { id: "one", text: "Entrance changed", level: "info", link_url: null, link_label: null },
+    ]);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Entrance changed"));
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "off");
+    // Content is duplicated for a seamless scroll loop; the second copy must
+    // be hidden from assistive tech (and unclickable) so it isn't announced
+    // or focused twice.
+    const items = view.container.querySelectorAll(".announcement-ticker__item");
+    expect(items).toHaveLength(2);
+    expect(items[1]).toHaveAttribute("aria-hidden", "true");
+    expect(items[1]?.querySelector("button")).toBeNull();
+  });
+
+  it("blends adjacent levels through seams keyed by data attributes, not inline styles", async () => {
+    const view = renderBanner([
+      { id: "a", text: "First", level: "info", link_url: null, link_label: null },
+      { id: "b", text: "Second", level: "urgent", link_url: null, link_label: null },
+    ]);
+    await waitFor(() => expect(screen.getAllByText("Second")).toHaveLength(2));
+    const seams = [...view.container.querySelectorAll(".announcement-ticker__seam")];
+    // Two copies of two items; every seam, including the wrap-around, is typed.
+    expect(
+      seams.map((seam) => [seam.getAttribute("data-from"), seam.getAttribute("data-to")]),
+    ).toEqual([
+      ["urgent", "info"],
+      ["info", "urgent"],
+      ["urgent", "info"],
+      ["info", "urgent"],
+    ]);
+    for (const seam of seams) expect(seam).not.toHaveAttribute("style");
+  });
+
+  it("announces an urgent message once with an alert live region, still scrolling with the rest", async () => {
+    renderBanner([
+      { id: "urgent", text: "Festival closing", level: "urgent", link_url: null, link_label: null },
+    ]);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Festival closing"));
+    expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
+  });
+
+  it("opens an overview of every active announcement, whichever item is clicked", async () => {
+    const user = userEvent.setup();
+    renderBanner([
+      {
+        id: "one",
+        text: "Entrance changed",
+        level: "warning",
+        link_url: "https://example.com/map",
+        link_label: "View map",
+      },
+      { id: "two", text: "Festival closing", level: "urgent", link_url: null, link_label: null },
+    ]);
+    // Click the urgent item specifically — the overview it opens must still
+    // include the other (warning) announcement, not just this one.
+    const button = await screen.findByRole("button", { name: /Festival closing/ });
+    await user.click(button);
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Entrance changed");
+    expect(dialog).toHaveTextContent("Festival closing");
+    expect(screen.getByRole("link", { name: "View map" })).toHaveAttribute(
+      "href",
+      "https://example.com/map",
+    );
+  });
+
+  it("refreshes scheduled announcements every minute", async () => {
+    const mockedFetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("[]"))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { id: "now", text: "Now visible", level: "info", link_url: null, link_label: null },
+          ]),
+        ),
+      );
+    vi.stubGlobal("fetch", mockedFetch);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.useFakeTimers();
+    render(
+      <QueryClientProvider client={client}>
+        <AnnouncementBanner />
+      </QueryClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+});

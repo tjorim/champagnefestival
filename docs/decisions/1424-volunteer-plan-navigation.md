@@ -43,7 +43,7 @@ plan; the admin preparation workspace remains #1430.
   registration return link.
 
 Coverage lives in `frontend/e2e/venue-plan.authenticated.spec.ts` and
-`frontend/tests/components/VenuePlanPage.test.tsx`. The phone zoom case reflows
+`frontend/tests/features/venue-plan/VenuePlanPage.test.tsx`. The phone zoom case reflows
 below the themes’ 320px body floor using the same scoped rule as check-in.
 The view selectors use semantic foreground/background colours for selected
 state after axe detected insufficient contrast with the active primary pair.

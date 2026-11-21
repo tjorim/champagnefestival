@@ -1,0 +1,137 @@
+import { jsonResponse } from "@/mocks/response";
+import type { VolunteerPollQuestionOut, VolunteerPollOut } from "@/api-types";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { http, HttpResponse } from "msw/http";
+import { describe, expect, it, vi } from "vitest";
+import MyPollSection from "@/features/my-account/MyPollSection";
+import { server } from "@/mocks/server";
+import { createTestQueryClient } from "../../utils/queryClient";
+
+vi.mock("@/paraglide/messages", () => ({
+  m: new Proxy({}, { get: (_target, key) => () => String(key) }),
+}));
+
+function setup(closed = false) {
+  const questions: VolunteerPollQuestionOut[] = (
+    [
+      {
+        id: "choice",
+        kind: "single_choice",
+        title: "Vervoer",
+        closed,
+        options: [{ id: "bus", label: "Bus", dietary_tags: [] }],
+        option_id: null,
+      },
+      { id: "text", kind: "free_text", title: "Suggestie", closed, text: null },
+      { id: "rating", kind: "rating", title: "Score", closed, rating: null },
+    ] satisfies (Partial<VolunteerPollQuestionOut> &
+      Pick<VolunteerPollQuestionOut, "id" | "kind" | "title" | "closed">)[]
+  ).map((question): VolunteerPollQuestionOut => ({
+    event_id: null,
+    description: "",
+    closes_at: null,
+    options: [],
+    selections: [],
+    attending: null,
+    people: 0,
+    option_id: null,
+    text: null,
+    rating: null,
+    ...question,
+  }));
+  const writes: unknown[] = [];
+  server.use(
+    http.get("/api/me/volunteer/poll", () =>
+      jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null }),
+    ),
+    http.put("/api/me/volunteer/poll/questions/:id", async ({ request, params }) => {
+      const body = await request.json();
+      writes.push(body);
+      Object.assign(
+        questions.find((q) => q.id === params.id)!,
+        body,
+      );
+      return jsonResponse<VolunteerPollOut>({ edition_id: "edition", questions, note: null });
+    }),
+  );
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MyPollSection getAccessToken={() => "token"} />
+    </QueryClientProvider>,
+  );
+  return writes;
+}
+
+describe("additional volunteer poll answers", () => {
+  it("saves, displays and clears each typed answer through the API", async () => {
+    const writes = setup();
+    const user = userEvent.setup();
+    const choice = await screen.findByRole("region", { name: "Vervoer" });
+    const { within } = await import("@testing-library/react");
+    await user.click(within(choice).getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Bus" }));
+    await waitFor(() => expect(writes).toEqual([{ option_id: "bus" }]));
+    expect(within(choice).getByRole("combobox")).toHaveTextContent("Bus");
+    const text = screen.getByRole("textbox");
+    await user.type(text, "  Meer soep  ");
+    await user.click(screen.getByRole("button", { name: "poll_answer_save" }));
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(writes[1]).toEqual({ text: "Meer soep" });
+    await user.clear(text);
+    await user.click(screen.getByRole("button", { name: "poll_answer_save" }));
+    await waitFor(() => expect(writes).toHaveLength(3));
+    expect(writes[2]).toEqual({ text: null });
+    const rating = screen.getByRole("region", { name: "Score" });
+    await user.click(within(rating).getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /^5$/ }));
+    await waitFor(() => expect(writes).toHaveLength(4));
+    expect(writes[3]).toEqual({ rating: 5 });
+    await user.click(within(rating).getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "poll_answer_none" }));
+    await waitFor(() => expect(writes).toHaveLength(5));
+    expect(writes[4]).toEqual({ rating: null });
+    await user.click(within(choice).getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "poll_answer_none" }));
+    await waitFor(() => expect(writes).toHaveLength(6));
+    expect(writes[5]).toEqual({ option_id: null });
+  });
+
+  it("locks all inputs after closing", async () => {
+    setup(true);
+    const inputs = await screen.findAllByRole("combobox");
+    for (const input of inputs) expect(input).toBeDisabled();
+    expect(screen.getByRole("textbox")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "poll_answer_save" })).toBeDisabled();
+  });
+});
+
+it("preserves a failed draft while serializing delayed saves", async () => {
+  setup();
+  let finish: (() => void) | undefined;
+  server.use(
+    http.put("/api/me/volunteer/poll/questions/:id", async () => {
+      await new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      return HttpResponse.json(
+        /* Fixture exception: error response; intentionally outside the success schema. */ {
+          detail: "PRIVATE DIAGNOSTIC",
+        },
+        { status: 500 },
+      );
+    }),
+  );
+  const user = userEvent.setup();
+  const text = await screen.findByRole("textbox");
+  await user.type(text, "Keep my draft");
+  await user.click(screen.getByRole("button", { name: "poll_answer_save" }));
+  await screen.findByText("my_poll_pending");
+  for (const input of screen.getAllByRole("combobox")) expect(input).toBeDisabled();
+  finish!();
+  await screen.findByText("my_poll_save_error");
+  expect(text).toHaveValue("Keep my draft");
+  expect(screen.queryByText("PRIVATE DIAGNOSTIC")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "poll_answer_save" })).toBeEnabled();
+});
