@@ -61,7 +61,7 @@ the complete-pair fallback above. The API supports future scheduling; the
 current UI sends with an empty scheduling body (“now”).
 
 Tests: `backend/tests/test_composer.py` and
-`frontend/tests/components/admin.ComposerManagement.test.tsx` cover validation,
+`frontend/tests/features/admin/shared/ComposerManagement.test.tsx` cover validation,
 state transitions, audience timing, delivery outcomes, repeat-submit protection,
 error handling and accessibility. Shared delivery rules are in the
 [Web Push decision](941-web-push-foundation.md).

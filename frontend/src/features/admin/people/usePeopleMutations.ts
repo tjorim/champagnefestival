@@ -1,8 +1,8 @@
 import { useRef } from "react";
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { MemberFormData } from "@/components/admin/MemberFormModal";
-import type { PersonFormData } from "@/components/admin/PersonFormModal";
-import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
+import type { MemberFormData } from "./MemberFormModal";
+import type { PersonFormData } from "./PersonFormModal";
+import type { VolunteerFormData } from "./VolunteerFormModal";
 import { m } from "@/paraglide/messages";
 import { captureAdminPeopleFence } from "./adminPeopleSession";
 import { localIsoDate, type Person } from "@/types/person";

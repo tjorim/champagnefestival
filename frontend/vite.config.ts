@@ -74,7 +74,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     server: {
       // Transform the heavy lazy admin graph before the first staff navigation.
       // This avoids cold dev-server waterfalls without changing production splitting.
-      warmup: { clientFiles: ["./src/components/admin/AdminDashboard.tsx"] },
+      warmup: { clientFiles: ["./src/features/admin/shell/AdminDashboard.tsx"] },
       port: 5173,
       open: true,
       proxy: {

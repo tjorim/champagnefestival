@@ -7,7 +7,7 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationTranslationSuggestion from "./OrganizationTranslationSuggestion";
 import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
-import ItemModal from "./admin/ItemModal";
+import ItemModal from "@/features/admin/editions/ItemModal";
 
 const url = "/api/organizations/translation";
 const props = {

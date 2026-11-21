@@ -91,7 +91,7 @@ const ContactForm = lazy(() => import("@/features/site/ContactForm"));
 const PushOptIn = lazy(() => import("./components/PushOptIn"));
 const Schedule = lazy(() => import("@/features/site/Schedule"));
 const OtherEvents = lazy(() => import("@/features/site/OtherEvents"));
-const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
+const AdminDashboard = lazy(() => import("@/features/admin/shell/AdminDashboard"));
 const CheckInPage = lazy(() => import("@/features/check-in/CheckInPage"));
 const VenuePlanPage = lazy(() => import("@/features/venue-plan/VenuePlanPage"));
 const PrivacyPolicyPage = lazy(() => import("@/features/legal/PrivacyPolicyPage"));

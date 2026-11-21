@@ -1,0 +1,721 @@
+import { jsonResponse } from "@/mocks/response";
+import { eventOut, productOut } from "@/mocks/data/builders";
+import { readAdminOptions } from "../../../helpers/adminSelect";
+import { selectAdminOption } from "../../../helpers/adminSelect";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { describe, it, expect, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import EventProductsModal from "@/features/admin/editions/EventProductsModal";
+import { server } from "@/mocks/server";
+import type { Event } from "@/api-types";
+
+import { createTestQueryClient } from "../../../utils/queryClient";
+import { noEventTranslations } from "../../../utils/eventFixtures";
+
+vi.mock("@/paraglide/messages", () => ({
+  m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
+    get(_target, key: string) {
+      return (...args: unknown[]) => (args.length ? `${key}(${JSON.stringify(args[0])})` : key);
+    },
+  }),
+}));
+
+const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
+
+const event: Event = eventOut({
+  id: "event-01",
+  edition_id: "edition-01",
+  ...noEventTranslations,
+  title: "VIP Evening",
+  description: "",
+  date: "2027-03-07",
+  start_time: "18:00",
+  category: "vip",
+  registration_required: true,
+  active: true,
+  created_at: "",
+  updated_at: "",
+  products: [],
+});
+
+const nameIn = (language: string) =>
+  `admin_products_name_in({"language":"admin_language_${language}"})`;
+
+function renderModal(products: import("@/api-types").ProductOut[]) {
+  server.use(
+    http.get("/api/products", ({ request }) => {
+      const eventId = new URL(request.url).searchParams.get("event_id");
+      // The API always returns the Dutch name next to the translations.
+      return jsonResponse<import("@/api-types").ProductOut[]>(
+        products
+          .filter((p) => p.event_id === eventId)
+          .map((p) => ({ ...p, name_nl: p.name_nl || p.name })),
+      );
+    }),
+  );
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <EventProductsModal show event={event} authHeaders={authHeaders} onHide={() => {}} />
+    </QueryClientProvider>,
+  );
+}
+
+describe("EventProductsModal", () => {
+  it("shows a required badge on required products", async () => {
+    renderModal([
+      productOut({
+        id: "prod-entry",
+        event_id: "event-01",
+        name: "VIP Entry",
+        price: "50",
+        category: "other",
+        purchasable: true,
+        required: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+
+    await screen.findByText("VIP Entry");
+    expect(screen.getByText("admin_products_required_badge")).toBeInTheDocument();
+  });
+
+  it("shows a purchasable badge and a sold-out badge for a sold-out purchasable product", async () => {
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        stock: 0,
+        reserved_quantity: 0,
+        sold_out: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+
+    await screen.findByText("Champagne Bottle");
+    expect(screen.getByText("admin_products_purchasable")).toBeInTheDocument();
+    expect(screen.getByText("admin_products_sold_out")).toBeInTheDocument();
+  });
+
+  it("shows a hidden badge without a sold-out badge for a hidden product", async () => {
+    renderModal([
+      productOut({
+        id: "prod-supply",
+        event_id: "event-01",
+        name: "Kitchen Supply",
+        price: "1",
+        category: "other",
+        purchasable: false,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+
+    await screen.findByText("Kitchen Supply");
+    expect(screen.getByText("admin_products_hidden")).toBeInTheDocument();
+    expect(screen.queryByText("admin_products_sold_out")).not.toBeInTheDocument();
+  });
+
+  it("submits purchasable=false when editing a product to hidden", async () => {
+    let saved: Record<string, unknown> | null = null;
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    server.use(
+      http.post("/api/products/prod-bottle/preview", () =>
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
+          preview_token: "token-1",
+          bookings: [],
+          price_changed: false,
+          contents_changed: true,
+          shortages: [],
+        }),
+      ),
+      http.put("/api/products/prod-bottle", async ({ request }) => {
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "prod-bottle",
+          event_id: "event-01",
+        });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_purchasable_label" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(saved).not.toBeNull());
+    expect(saved).toMatchObject({ purchasable: false, preview_token: "token-1" });
+  });
+
+  it("sends the translations and clears a blank one when editing a product", async () => {
+    let saved: Record<string, unknown> | null = null;
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Fles",
+        name_nl: "Fles",
+        name_en: "Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Fles");
+    server.use(
+      http.post("/api/products/prod-bottle/preview", () =>
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
+          preview_token: "token-2",
+          bookings: [],
+          price_changed: false,
+          contents_changed: false,
+          shortages: [],
+        }),
+      ),
+      http.put("/api/products/prod-bottle", async ({ request }) => {
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "prod-bottle",
+          event_id: "event-01",
+        });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Fles"})'));
+    expect((screen.getByLabelText(nameIn("en")) as HTMLInputElement).value).toBe("Bottle");
+    fireEvent.change(screen.getByLabelText(nameIn("en")), { target: { value: " " } });
+    fireEvent.change(screen.getByLabelText(nameIn("fr")), { target: { value: "Bouteille" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(saved).not.toBeNull());
+    expect(saved).toMatchObject({
+      name_nl: "Fles",
+      name_fr: "Bouteille",
+      name_en: null,
+    });
+  });
+
+  it("requires the Dutch name", async () => {
+    renderModal([]);
+    await screen.findByText("admin_products_empty");
+    fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
+    fireEvent.change(screen.getByLabelText(nameIn("en")), {
+      target: { value: "Only English" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    expect(await screen.findByText("admin_products_name_required")).toBeInTheDocument();
+    // The Dutch field takes focus, not the footer Save button.
+    await waitFor(() => expect(screen.getByLabelText(nameIn("nl"))).toHaveFocus());
+  });
+
+  it("unticking purchasable forces required off and disables its checkbox", async () => {
+    renderModal([
+      productOut({
+        id: "prod-entry",
+        event_id: "event-01",
+        name: "VIP Entry",
+        price: "50",
+        category: "other",
+        purchasable: true,
+        required: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("VIP Entry");
+
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"VIP Entry"})'));
+    const requiredCheckbox = screen.getByRole("checkbox", {
+      name: "admin_products_required_label",
+    });
+    expect(requiredCheckbox).toBeChecked();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_purchasable_label" }));
+
+    expect(requiredCheckbox).not.toBeChecked();
+    expect(requiredCheckbox).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("admin_products_required_needs_purchasable")).toBeInTheDocument();
+  });
+
+  it("opens a dedicated editor and returns to the list on Close", async () => {
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+      productOut({
+        id: "prod-cheese",
+        event_id: "event-01",
+        name: "Cheese Platter",
+        price: "25",
+        category: "food",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
+
+    const nameField = screen.getByLabelText(nameIn("nl")) as HTMLInputElement;
+    expect(nameField.value).toBe("Champagne Bottle");
+    expect(screen.queryByText("Cheese Platter")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "admin_products_add" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "admin_editor_product_edit" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_cancel" }));
+    expect(await screen.findByText("Cheese Platter")).toBeInTheDocument();
+    expect(screen.queryByLabelText(nameIn("nl"))).not.toBeInTheDocument();
+  });
+
+  it("shows the bundle note for a product that includes another", async () => {
+    renderModal([
+      productOut({
+        id: "prod-entry",
+        event_id: "event-01",
+        name: "VIP Table",
+        price: "200",
+        category: "other",
+        purchasable: true,
+        required: true,
+        included_product_id: "prod-bottle",
+        included_per_guests: 2,
+        created_at: "",
+        updated_at: "",
+      }),
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+
+    await screen.findByText("VIP Table");
+    expect(
+      screen.getByText('admin_products_bundle_note({"target":"Champagne Bottle","ratio":2})'),
+    ).toBeInTheDocument();
+  });
+
+  it("submits required and bundle fields when adding a product", async () => {
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    let capturedBody: import("@/api-types").ProductCreate | null = null;
+    server.use(
+      http.post("/api/products", async ({ request }) => {
+        capturedBody = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>(
+          {
+            unit: "item",
+            stock: null,
+            reserved_quantity: 0,
+            available_quantity: null,
+            shortage: 0,
+            sold_out: false,
+            inclusions: null,
+            description: "",
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            id: "prod-new",
+            event_id: "event-01",
+            name: capturedBody.name_nl ?? "",
+            name_nl: capturedBody.name_nl ?? null,
+            price: String(capturedBody.price),
+            category: capturedBody.category ?? "",
+            purchasable: true,
+            required: capturedBody.required ?? false,
+            included_product_id: capturedBody.included_product_id ?? null,
+            included_per_guests: capturedBody.included_per_guests ?? null,
+            created_at: "",
+            updated_at: "",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
+    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
+      target: { value: "VIP Table" },
+    });
+    fireEvent.change(screen.getByLabelText("admin_products_price"), {
+      target: { value: "200" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_required_label" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
+    await selectAdminOption(screen.getByLabelText("admin_products_bundle_target"), "prod-bottle");
+    fireEvent.change(screen.getByLabelText("admin_inventory_per_quantity"), {
+      target: { value: "2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => {
+      expect(capturedBody).not.toBeNull();
+    });
+    expect(capturedBody).toMatchObject({
+      name_nl: "VIP Table",
+      name_fr: null,
+      name_en: null,
+      price: 200,
+      required: true,
+      inclusions: [{ product_id: "prod-bottle", quantity: 1, per_quantity: 2, rounding: "down" }],
+    });
+  });
+
+  it("does not offer a product being edited as its own bundle target", async () => {
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
+    fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
+    const select = screen.getByLabelText("admin_products_bundle_target") as HTMLSelectElement;
+    const optionLabels = (await readAdminOptions(select)).map((o) => o.label);
+    expect(optionLabels).not.toContain("Champagne Bottle");
+  });
+
+  it("requires reviewing stock shortages before saving an edit", async () => {
+    renderModal([
+      productOut({
+        id: "stocked",
+        event_id: event.id,
+        name: "Tables",
+        price: "50",
+        category: "other",
+        purchasable: true,
+        required: false,
+        unit: "table",
+        stock: 10,
+        inclusions: [],
+        reserved_quantity: 3,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    let saved: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/api/products/stocked/preview", () =>
+        jsonResponse<import("@/api-types").ProductChangePreviewOut>({
+          preview_token: "reviewed-state",
+          bookings: [],
+          price_changed: false,
+          contents_changed: false,
+          shortages: [
+            { product_id: "stocked", name: "Tables", stock: 1, reserved: 3, shortage: 2 },
+          ],
+        }),
+      ),
+      http.put("/api/products/stocked", async ({ request }) => {
+        saved = (await request.json()) as import("@/api-types").ProductCreate;
+        return jsonResponse<import("@/api-types").ProductOut>({
+          unit: "item",
+          stock: null,
+          reserved_quantity: 0,
+          available_quantity: null,
+          shortage: 0,
+          sold_out: false,
+          inclusions: null,
+          name: "",
+          description: "",
+          name_nl: null,
+          name_fr: null,
+          name_en: null,
+          description_nl: null,
+          description_fr: null,
+          description_en: null,
+          price: "",
+          category: "",
+          purchasable: false,
+          required: false,
+          included_product_id: null,
+          included_per_guests: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+          ...saved,
+          id: "stocked",
+          event_id: event.id,
+        });
+      }),
+    );
+    await screen.findByText("Tables");
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Tables"})'));
+    fireEvent.change(screen.getByLabelText("admin_inventory_stock"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    expect(saved).toBeNull();
+    expect(screen.getByRole("button", { name: "admin_save" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_inventory_confirm_shortage" }));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() =>
+      expect(saved).toMatchObject({
+        stock: 1,
+        preview_token: "reviewed-state",
+        confirm_shortage: true,
+        update_existing_contents: false,
+        update_existing_prices: false,
+      }),
+    );
+  });
+
+  it("rejects a blank price instead of silently saving it as free", async () => {
+    renderModal([]);
+    await screen.findByText("admin_products_empty");
+
+    let postCalled = false;
+    server.use(
+      http.post("/api/products", () => {
+        postCalled = true;
+        return jsonResponse<import("@/api-types").ProductOut>(
+          {
+            unit: "item",
+            stock: null,
+            reserved_quantity: 0,
+            available_quantity: null,
+            shortage: 0,
+            sold_out: false,
+            inclusions: null,
+            id: "",
+            event_id: "",
+            name: "",
+            description: "",
+            name_nl: null,
+            name_fr: null,
+            name_en: null,
+            description_nl: null,
+            description_fr: null,
+            description_en: null,
+            price: "",
+            category: "",
+            purchasable: false,
+            required: false,
+            included_product_id: null,
+            included_per_guests: null,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+          { status: 201 },
+        );
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
+    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
+      target: { value: "Free Sample" },
+    });
+    fireEvent.change(screen.getByLabelText("admin_products_price"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await screen.findByText("admin_products_price_invalid");
+    expect(postCalled).toBe(false);
+  });
+
+  it("asks for confirmation before deleting a product, and cancelling keeps it", async () => {
+    renderModal([
+      productOut({
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: "65",
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      }),
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    let deleteCalled = false;
+    server.use(
+      http.delete("/api/products/prod-bottle", () => {
+        deleteCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText('admin_delete_item({"name":"Champagne Bottle"})'));
+    await screen.findByText("admin_products_delete_title");
+    expect(
+      screen.getByText('admin_products_delete_confirm({"name":"Champagne Bottle"})'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByText("admin_products_delete_title")).not.toBeInTheDocument(),
+    );
+    expect(deleteCalled).toBe(false);
+    expect(screen.getByText("Champagne Bottle")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('admin_delete_item({"name":"Champagne Bottle"})'));
+    await screen.findByText("admin_products_delete_title");
+    fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
+
+    await waitFor(() => expect(deleteCalled).toBe(true));
+    await waitFor(() => expect(screen.queryByText("Champagne Bottle")).not.toBeInTheDocument());
+  });
+
+  it("shows an error state and disables adding when the products query fails", async () => {
+    server.use(
+      http.get("/api/products", () =>
+        HttpResponse.json(
+          /* Fixture exception: error response; intentionally outside the success schema. */ {
+            detail: "boom",
+          },
+          { status: 500 },
+        ),
+      ),
+    );
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EventProductsModal show event={event} authHeaders={authHeaders} onHide={() => {}} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText("admin_content_error_load");
+    expect(screen.queryByText("admin_products_empty")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
+  });
+});

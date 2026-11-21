@@ -1,0 +1,102 @@
+import { jsonResponse } from "@/mocks/response";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { http } from "msw/http";
+import FaqManagement from "@/features/admin/content/FaqManagement";
+import { server } from "@/mocks/server";
+import { setLocale } from "@/paraglide/runtime";
+import { createTestQueryClientWrapper } from "../../../utils/queryClient";
+
+const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
+
+const item = {
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+  id: "faq-1",
+  question_nl: "Wanneer?",
+  question_fr: null,
+  question_en: "When?",
+  answer_nl: "Op 2 oktober.",
+  answer_fr: null,
+  answer_en: "On 2 October.",
+  sort_order: 0,
+  active: true,
+};
+
+function mount() {
+  render(<FaqManagement authHeaders={authHeaders} />, { wrapper: createTestQueryClientWrapper() });
+}
+
+beforeEach(() => {
+  setLocale("en", { reload: false });
+  server.use(http.get("/api/faq", () => jsonResponse<import("@/api-types").FaqItemOut[]>([item])));
+});
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+describe("FaqManagement", () => {
+  it("lists an item in Dutch and marks which languages are translated", async () => {
+    mount();
+
+    expect(await screen.findByText("Wanneer?")).toBeInTheDocument();
+    expect(screen.getByText("Op 2 oktober.")).toBeInTheDocument();
+    expect(screen.getByText("NL")).toHaveAttribute("data-variant", "success");
+    expect(screen.getByText("FR")).toHaveAttribute("data-variant", "outline");
+  });
+
+  it("requires the Dutch question and answer", async () => {
+    const post = vi.fn();
+    server.use(
+      http.post("/api/faq", () => {
+        post();
+        return jsonResponse<import("@/api-types").FaqItemOut>(item, { status: 201 });
+      }),
+    );
+    mount();
+    await screen.findByText("Wanneer?");
+
+    fireEvent.click(screen.getByRole("button", { name: "Add question" }));
+    // Dutch stays empty; only English is filled in.
+    fireEvent.change(await screen.findByLabelText("Question (English)"), {
+      target: { value: "Where?" },
+    });
+    fireEvent.change(screen.getByLabelText("Answer (English)"), { target: { value: "Ostend." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("Question is required.")).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("saves every language with blank translations as null", async () => {
+    let sent: unknown;
+    server.use(
+      http.put("/api/faq/:id", async ({ request }) => {
+        sent = await request.json();
+        return jsonResponse<import("@/api-types").FaqItemOut>(item);
+      }),
+    );
+    mount();
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Edit/ }));
+    fireEvent.change(await screen.findByLabelText("Question (French)"), {
+      target: { value: "Quand ?" },
+    });
+    fireEvent.change(screen.getByLabelText("Answer (French)"), {
+      target: { value: "Le 2 octobre." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(sent).toBeDefined());
+    expect(sent).toEqual({
+      question_nl: "Wanneer?",
+      question_fr: "Quand ?",
+      question_en: "When?",
+      answer_nl: "Op 2 oktober.",
+      answer_fr: "Le 2 octobre.",
+      answer_en: "On 2 October.",
+    });
+  });
+});

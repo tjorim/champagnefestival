@@ -7,7 +7,7 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationLogoUpload from "./OrganizationLogoUpload";
 import OrganizationLogoPreview from "./OrganizationLogoPreview";
-import OrganizationChangeReview from "./admin/OrganizationChangeReview";
+import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
 
 function mount(child: React.ReactNode) {
   setLocale("en", { reload: false });

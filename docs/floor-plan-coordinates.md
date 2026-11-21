@@ -5,7 +5,7 @@ and `Area.x`/`Area.y`/`Area.rotation` — the fields that place a table or area 
 floor-plan `Layout`. It is the single source of truth referenced by the model
 docstrings (`backend/app/models.py`), the Pydantic schema field descriptions
 (`backend/app/schemas.py`), the MCP tool docstrings (`backend/app/mcp_server.py`),
-and the web admin floor-plan editor (`frontend/src/components/admin/LayoutEditor.tsx`).
+and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx`).
 
 It does **not** cover `Room.width_m`/`length_m`, `TableType.width_m`/`length_m`, or
 `Area.width_m`/`length_m` — those are real physical measurements in metres (see #835)

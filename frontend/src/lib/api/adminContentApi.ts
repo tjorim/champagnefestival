@@ -3,7 +3,7 @@ import type { PollOptionOut, PollQuestionOut } from "@/api-types";
 import type { EventCreate, ProductCreate, ProductUpdate } from "@/api-types";
 import type { Edition } from "@/api-types";
 
-import type { ItemDraft } from "@/components/admin/itemTypes";
+import type { ItemDraft } from "@/types/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";

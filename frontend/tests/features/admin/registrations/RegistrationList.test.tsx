@@ -1,0 +1,142 @@
+import { editionOut, venueOut } from "@/mocks/data/builders";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { axe } from "jest-axe";
+import { describe, expect, it, vi } from "vitest";
+import RegistrationList from "@/features/admin/registrations/RegistrationList";
+import type { ActiveEdition } from "@/hooks/useActiveEdition";
+import { createTestQueryClient } from "../../../utils/queryClient";
+
+vi.mock("@/paraglide/messages", () => ({
+  m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
+    get(_target, key: string) {
+      return (...args: unknown[]) => (args.length ? `${key}(${JSON.stringify(args[0])})` : key);
+    },
+  }),
+}));
+
+const mockActiveEdition: ActiveEdition = {
+  ...editionOut(),
+  id: "test-edition",
+  year: 2025,
+  edition_type: "festival",
+  month: "march",
+  dates: [],
+  venue: venueOut(),
+  events: [],
+  producers: [],
+  sponsors: [],
+};
+
+function renderRegistrationList({
+  sectionError,
+  onClearSectionError,
+}: { sectionError?: string; onClearSectionError?: () => void } = {}) {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RegistrationList
+        registrations={[]}
+        tables={[]}
+        organizations={[]}
+        filter="all"
+        onFilterChange={vi.fn()}
+        onUpdateStatus={vi.fn()}
+        onRecordPayment={vi.fn()}
+        onAssignTable={vi.fn()}
+        onViewDetail={vi.fn()}
+        onCheckIn={vi.fn()}
+        onIssueStrap={vi.fn()}
+        onAddRegistration={vi.fn()}
+        authHeaders={() => ({})}
+        activeEdition={mockActiveEdition}
+        applyActiveEditionFilterRequest={0}
+        sectionError={sectionError}
+        onClearSectionError={onClearSectionError}
+      />
+    </QueryClientProvider>,
+  );
+}
+
+describe("RegistrationList — scoped error display", () => {
+  it("clears an active-edition restriction when choosing standalone events", async () => {
+    renderRegistrationList();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "admin_registration_filters" }));
+    const active = screen.getByRole("button", { name: /admin_filter_active_edition.*2025/ });
+    await user.click(active);
+    expect(active).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: /admin_filter_edition_standalone/ }));
+    expect(active).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows sectionError alert inline when a mutation fails", () => {
+    renderRegistrationList({ sectionError: "Check-in failed." });
+    expect(screen.getByRole("alert")).toHaveTextContent("Check-in failed.");
+  });
+
+  it("calls onClearSectionError when the alert is dismissed", () => {
+    const onClear = vi.fn();
+    renderRegistrationList({
+      sectionError: "Failed to assign table.",
+      onClearSectionError: onClear,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders no error alert when sectionError is not provided", () => {
+    renderRegistrationList();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("labels the filter groups and moves aria-pressed when a filter is chosen", () => {
+    renderRegistrationList();
+    fireEvent.click(screen.getByRole("button", { name: "admin_registration_filters" }));
+    const group = screen.getByRole("group", { name: "admin_filter_edition_aria" });
+    const all = within(group).getByRole("button", { name: /admin_filter_edition_all/ });
+    const festivals = within(group).getByRole("button", { name: /admin_filter_edition_festivals/ });
+    expect(all).toHaveAttribute("aria-pressed", "true");
+    expect(festivals).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(festivals);
+    expect(festivals).toHaveAttribute("aria-pressed", "true");
+    expect(all).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("group", { name: "admin_filter_status_aria" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin_registration_filters" }));
+    expect(
+      screen.queryByRole("group", { name: "admin_filter_edition_aria" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) => status.textContent?.includes("admin_filter_edition_festivals")),
+    ).toBe(true);
+  });
+
+  it("saves column choices without persisting the temporary empty-table default", async () => {
+    const key = "admin-col-vis-registrations";
+    localStorage.removeItem(key);
+    const user = userEvent.setup();
+    renderRegistrationList();
+    await user.click(screen.getByRole("button", { name: "admin_columns" }));
+    const tableColumn = document.getElementById("col-vis-registrations-table")!;
+    expect(tableColumn).toHaveAttribute("aria-checked", "false");
+    const otherColumn = screen
+      .getAllByRole("menuitemcheckbox")
+      .find((item) => item !== tableColumn)!;
+    await user.click(otherColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).not.toHaveProperty("table");
+    await user.click(tableColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).toHaveProperty("table", true);
+    await user.click(tableColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).toHaveProperty("table", false);
+    localStorage.removeItem(key);
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = renderRegistrationList({ sectionError: "Check-in failed." });
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+});

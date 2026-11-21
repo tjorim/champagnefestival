@@ -345,7 +345,7 @@ Collections stay what they are: complete, bounded sets of one resource, loaded
 eagerly. A table page is a view of a server query, not an entity set, so it
 lives in the Query cache keyed by the table state.
 
-Proof: `frontend/tests/spikes/membersListOnDemand.spike.test.tsx` runs the
+Proof: `frontend/tests/features/admin/people/membersListOnDemand.spike.test.tsx` runs the
 Members list (page, sort, search, filter, cancellation, sign-out, optimistic
 edit) both ways against one fake paged server on the installed
 `@tanstack/db` 0.14.0, `@tanstack/query-db-collection` 1.4.4 and

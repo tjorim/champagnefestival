@@ -1,0 +1,486 @@
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  EyeIcon,
+  EyeOffIcon,
+  PencilIcon,
+  TrashIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
+import {
+  EMPTY_LOCALIZED_TEXT,
+  LocalizedInputs,
+  hasDutch,
+  type LocalizedText,
+} from "@/components/admin/LocalizedFields";
+/**
+ * FaqManagement — CRUD for the public FAQ section's question/answer pairs.
+ *
+ * Self-contained (own query + mutations, like AuditLogViewer/EditionsSection)
+ * rather than wired through the central useAdminQueries/useAdminVenueActions
+ * stack, since it's a single flat resource with no cross-entity dependencies.
+ *
+ * Each item needs its Dutch question and answer; the other languages are
+ * optional translations. A language is shown to visitors only when both its
+ * question and answer are filled, otherwise they see Dutch (same rule as event
+ * titles).
+ */
+
+import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import type { FaqItemOut } from "@/api-types";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { fetchFaqItemsAdmin } from "@/lib/api/adminFetch";
+import {
+  fetchJsonOrThrowWithUnauthorized,
+  fetchVoidOrThrowWithUnauthorized,
+} from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
+import { useAppTable, createAppColumnHelper } from "../shared/useAdminTable";
+
+interface FaqManagementProps {
+  authHeaders: () => Record<string, string>;
+}
+
+interface FaqFormState {
+  question: LocalizedText;
+  answer: LocalizedText;
+}
+
+const emptyForm: FaqFormState = {
+  question: EMPTY_LOCALIZED_TEXT,
+  answer: EMPTY_LOCALIZED_TEXT,
+};
+
+const columnHelper = createAppColumnHelper<FaqItemOut>();
+
+/** Blank translations are sent as `null`, which clears them on update. */
+function faqPayload(form: FaqFormState) {
+  const text = (value: string) => value.trim() || null;
+  return {
+    question_nl: text(form.question.nl),
+    question_fr: text(form.question.fr),
+    question_en: text(form.question.en),
+    answer_nl: text(form.answer.nl),
+    answer_fr: text(form.answer.fr),
+    answer_en: text(form.answer.en),
+  };
+}
+
+function toForm(item: FaqItemOut): FaqFormState {
+  return {
+    question: {
+      nl: item.question_nl ?? "",
+      fr: item.question_fr ?? "",
+      en: item.question_en ?? "",
+    },
+    answer: { nl: item.answer_nl ?? "", fr: item.answer_fr ?? "", en: item.answer_en ?? "" },
+  };
+}
+
+/** The item's Dutch text, for the list. */
+function dutchText(item: FaqItemOut) {
+  return { question: item.question_nl ?? "", answer: item.answer_nl ?? "" };
+}
+
+export default function FaqManagement({ authHeaders }: FaqManagementProps) {
+  const queryClient = useQueryClient();
+  const faqItemsQueryKey = queryKeys.admin.faqItems;
+
+  const faqItemsQuery = useQuery({
+    queryKey: faqItemsQueryKey,
+    queryFn: () => fetchFaqItemsAdmin(authHeaders),
+  });
+  const faqItems = useMemo(() => faqItemsQuery.data ?? [], [faqItemsQuery.data]);
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FaqFormState>(emptyForm);
+  const [error, setError] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
+
+  const saveMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | null; data: Record<string, unknown> }) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
+        id ? `/api/faq/${id}` : "/api/faq",
+        {
+          method: id ? "PUT" : "POST",
+          headers: authHeaders(),
+          body: JSON.stringify(data),
+        },
+        id ? m.admin_error_update_faq_item() : m.admin_error_add_faq_item(),
+      ),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
+    retry: false,
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) =>
+      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
+        "/api/faq/reorder",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ ordered_ids: orderedIds }),
+        },
+        m.admin_error_reorder_faq_items(),
+      ),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
+    retry: false,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetchVoidOrThrowWithUnauthorized(
+        `/api/faq/${id}`,
+        { method: "DELETE", headers: authHeaders() },
+        m.admin_error_delete_faq_item(),
+      ),
+    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
+    retry: false,
+  });
+
+  const openAdd = useCallback(() => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setError(null);
+    setShowModal(true);
+  }, []);
+
+  const openEdit = useCallback((item: FaqItemOut) => {
+    setEditingId(item.id);
+    setForm(toForm(item));
+    setError(null);
+    setShowModal(true);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!hasDutch(form.question)) {
+      setError(m.admin_faq_question_required());
+      return;
+    }
+    if (!hasDutch(form.answer)) {
+      setError(m.admin_faq_answer_required());
+      return;
+    }
+    setError(null);
+    try {
+      await saveMutation.mutateAsync({ id: editingId, data: faqPayload(form) });
+      setShowModal(false);
+    } catch (err) {
+      setError(apiErrorMessage(err, m.admin_content_error_save()));
+    }
+  }, [form, editingId, saveMutation]);
+
+  const handleToggleActive = useCallback(
+    async (item: FaqItemOut) => {
+      setRowError(null);
+      try {
+        await saveMutation.mutateAsync({ id: item.id, data: { active: !item.active } });
+      } catch (err) {
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
+      }
+    },
+    [saveMutation],
+  );
+
+  const handleDelete = useCallback(
+    async (item: FaqItemOut) => {
+      const confirmed = await confirm({
+        title: m.admin_faq_delete_title(),
+        body: m.admin_faq_delete_confirm({ question: dutchText(item).question }),
+        confirmLabel: m.admin_delete(),
+        errorFallback: m.admin_error_delete_faq_item(),
+      });
+      if (!confirmed) return;
+      setRowError(null);
+      try {
+        await deleteMutation.mutateAsync(item.id);
+      } catch (err) {
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
+      }
+    },
+    [confirm, deleteMutation],
+  );
+
+  const handleMove = useCallback(
+    async (item: FaqItemOut, direction: "up" | "down") => {
+      const sorted = [...faqItems].sort((a, b) => a.sort_order - b.sort_order);
+      const index = sorted.findIndex((i) => i.id === item.id);
+      const swapIndex = direction === "up" ? index - 1 : index + 1;
+      if (index === -1 || swapIndex < 0 || swapIndex >= sorted.length) return;
+      const reordered = sorted.map((entry, i) => {
+        if (i === index) return sorted[swapIndex]!;
+        if (i === swapIndex) return sorted[index]!;
+        return entry;
+      });
+      setRowError(null);
+      try {
+        // One atomic call for the whole list rather than two independent
+        // per-item writes — the backend rejects a stale/partial list outright
+        // instead of risking an ambiguous half-applied order (#836).
+        await reorderMutation.mutateAsync(reordered.map((i) => i.id));
+      } catch (err) {
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
+      }
+    },
+    [faqItems, reorderMutation],
+  );
+
+  const sortedItems = useMemo(
+    () => [...faqItems].sort((a, b) => a.sort_order - b.sort_order),
+    [faqItems],
+  );
+
+  const isMutating =
+    saveMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
+
+  const languageBadge = (label: string, translated: boolean) => (
+    <Badge
+      key={label}
+      variant={translated ? "success" : "outline"}
+      className="ms-1 text-tiny"
+      title={translated ? undefined : m.admin_faq_locale_missing_title({ locale: label })}
+    >
+      {label}
+    </Badge>
+  );
+
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "reorder",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="flex flex-col">
+              <Button
+                size="sm"
+                variant="link"
+                className="p-0 text-content"
+                disabled={row.index === 0 || isMutating}
+                onClick={() => handleMove(row.original, "up")}
+                aria-label={m.admin_faq_move_up_named({ name: dutchText(row.original).question })}
+                title={m.admin_faq_move_up_named({ name: dutchText(row.original).question })}
+              >
+                <Icon icon={ChevronUpIcon} />
+              </Button>
+              <Button
+                size="sm"
+                variant="link"
+                className="p-0 text-content"
+                disabled={row.index === sortedItems.length - 1 || isMutating}
+                onClick={() => handleMove(row.original, "down")}
+                aria-label={m.admin_faq_move_down_named({ name: dutchText(row.original).question })}
+                title={m.admin_faq_move_down_named({ name: dutchText(row.original).question })}
+              >
+                <Icon icon={ChevronDownIcon} />
+              </Button>
+            </div>
+          ),
+        }),
+        columnHelper.display({
+          id: "content",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            const original = dutchText(item);
+            return (
+              <>
+                <div className="font-semibold">
+                  {original.question}
+                  {!item.active && (
+                    <Badge variant="secondary" className="ms-2 text-tiny">
+                      {m.admin_faq_hidden_badge()}
+                    </Badge>
+                  )}
+                  {languageBadge("NL", Boolean(item.question_nl && item.answer_nl))}
+                  {languageBadge("FR", Boolean(item.question_fr && item.answer_fr))}
+                  {languageBadge("EN", Boolean(item.question_en && item.answer_en))}
+                </div>
+                <div className="text-subtle text-sm">{original.answer}</div>
+              </>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            const name = dutchText(item).question;
+            return (
+              <RowActions
+                destructive={
+                  <RowActionButton
+                    destructive
+                    icon={TrashIcon}
+                    label={m.admin_delete_item({ name })}
+                    disabled={isMutating}
+                    onClick={() => handleDelete(item)}
+                  />
+                }
+              >
+                <RowActionButton
+                  icon={PencilIcon}
+                  label={m.admin_edit_item({ name })}
+                  disabled={isMutating}
+                  onClick={() => openEdit(item)}
+                />
+                <RowActionButton
+                  icon={item.active ? EyeOffIcon : EyeIcon}
+                  label={
+                    item.active ? m.admin_faq_hide_item({ name }) : m.admin_faq_show_item({ name })
+                  }
+                  disabled={isMutating}
+                  onClick={() => handleToggleActive(item)}
+                />
+              </RowActions>
+            );
+          },
+        }),
+      ]),
+    [sortedItems.length, isMutating, handleMove, openEdit, handleToggleActive, handleDelete],
+  );
+
+  const table = useAppTable({ data: sortedItems, columns, getRowId: (row) => row.id }, () => ({}));
+
+  return (
+    <>
+      <Card tone="secondary">
+        <CardHeader className="flex items-center justify-between">
+          <span className="font-semibold">{m.admin_content_faq_section()}</span>
+          <AdminAddButton onClick={openAdd}>{m.admin_add_faq_item()}</AdminAddButton>
+        </CardHeader>
+        <CardContent className="p-0">
+          {rowError && (
+            <Alert variant="danger" className="m-4 py-1 text-sm">
+              {rowError}
+            </Alert>
+          )}
+          {faqItemsQuery.isError ? (
+            <Alert variant="danger" className="m-4 py-1 text-sm">
+              {m.admin_error_load_data()}
+            </Alert>
+          ) : faqItemsQuery.isPending ? (
+            <div className="text-center py-12">
+              <Spinner size="sm" role="status">
+                <span className="sr-only">{m.admin_loading()}</span>
+              </Spinner>
+            </div>
+          ) : sortedItems.length === 0 ? (
+            <AdminEmptyState>{m.admin_no_faq_items()}</AdminEmptyState>
+          ) : (
+            <div className="w-full">
+              <Table>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      className={!row.original.active ? "opacity-50" : undefined}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={
+                            cell.column.id === "reorder" || cell.column.id === "actions"
+                              ? "w-px whitespace-nowrap"
+                              : undefined
+                          }
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showModal}
+        onOpenChange={(open) => {
+          if (!open) setShowModal(false);
+        }}
+      >
+        <DialogContent admin size="lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? m.admin_edit_faq_item() : m.admin_add_faq_item()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {error && (
+              <Alert variant="danger" className="py-1 mb-4 text-sm">
+                {error}
+              </Alert>
+            )}
+
+            <p className="text-sm text-subtle mb-4">{m.admin_faq_text_help()}</p>
+            <LocalizedInputs
+              idPrefix="faq-question"
+              label={(language) => m.admin_faq_question_label_in({ language })}
+              values={form.question}
+              maxLength={500}
+              onChange={(language, text) =>
+                setForm((previous) => ({
+                  ...previous,
+                  question: { ...previous.question, [language]: text },
+                }))
+              }
+            />
+            <LocalizedInputs
+              idPrefix="faq-answer"
+              label={(language) => m.admin_faq_answer_label_in({ language })}
+              values={form.answer}
+              multiline
+              maxLength={10000}
+              onChange={(language, text) =>
+                setForm((previous) => ({
+                  ...previous,
+                  answer: { ...previous.answer, [language]: text },
+                }))
+              }
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" onClick={handleSave} disabled={saveMutation.isPending}>
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {confirmDialog}
+    </>
+  );
+}
