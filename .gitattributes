@@ -1,3 +1,18 @@
+# Normalise text to LF on commit and checkout. The only tracked CRLF file is android/gradlew.bat; it is left alone
+# (`-text`: no conversion either way, so it stays CRLF in the repository and the checkout), so this changes no file.
 * text=auto eol=lf
-*.{png,jpg,jpeg,gif,webp,svg,ico} binary
-*.{woff,woff2,eot,ttf,otf} binary
+*.bat -text
+
+# Binary assets (listed one per pattern: .gitattributes has no brace expansion, so a `*.{png,jpg}` line matches nothing).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.pdf binary

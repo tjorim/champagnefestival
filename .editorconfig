@@ -1,0 +1,25 @@
+# https://editorconfig.org. Matches oxfmt (2 spaces, LF) and ruff format (4 spaces, LF) so editors agree with the formatters.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+# Markdown keeps trailing double spaces as line breaks.
+[*.md]
+trim_trailing_whitespace = false
+
+# Kotlin/Gradle follow the Android conventions.
+[*.{kt,kts}]
+indent_size = 4
+
+# Windows batch files keep their CRLF line endings (see .gitattributes).
+[*.bat]
+end_of_line = crlf
