@@ -226,8 +226,8 @@ a single `CI gate` job that fails when any needed job failed or was cancelled (a
 did not change is fine). No branch protection is configured. Component workflows are `backend-ci.yml` (job
 `Backend`), `frontend-ci.yml` (job `Frontend`, plus the `E2E` jobs: pull requests run the default theme only, `main` and
 manual runs run all themes, see `frontend/e2e/README.md`), `android.yml`, `pebble.yml`, `pr-preview.yml` and the
-`codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` analyses. Checks appear as
-`<ci.yml job> / <workflow job>`, for example `Frontend / E2E Tests (Chromium)`.
+`codeql-actions.yml`, `codeql-javascript.yml`, `codeql-python.yml` and `codeql-android.yml` analyses. The E2E jobs are named
+`Frontend / E2E ...`, for example `Frontend / E2E Tests (Chromium)`.
 
 The frontend job runs, in order: `pnpm install --frozen-lockfile`, `typecheck`, `lint`, `format:check`,
 `format:repo:check`, `test`, `build`, `bundle:test` and `bundle:check`, `locale:audit`, `check-message-parity` and
