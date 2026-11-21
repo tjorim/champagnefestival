@@ -9,6 +9,8 @@ never the cause.
 from __future__ import annotations
 
 import json
+import logging
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -69,3 +71,40 @@ async def test_unknown_sqlstate_falls_back_without_guessing():
     status_code, detail = await _detail(None)
     assert status_code == 409
     assert detail == "Cannot complete this operation because it violates a database constraint."
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("pgcode", "code"),
+    [
+        ("23502", "required_field_missing"),
+        ("23503", "related_records_exist"),
+        ("23505", "duplicate_value"),
+        ("23514", "constraint_violation"),
+        (None, "constraint_violation"),
+    ],
+)
+async def test_every_constraint_failure_carries_a_stable_code(pgcode: str | None, code: str):
+    exc = IntegrityError("UPDATE people SET ...", {}, _DriverError("boom", pgcode))
+    response = await integrity_error_handler(_request(), exc)
+
+    assert json.loads(bytes(response.body))["code"] == code
+
+
+@pytest.mark.anyio
+async def test_the_log_names_the_route_template_not_the_raw_path(caplog: pytest.LogCaptureFixture):
+    # A path can carry a credential (an access or check-in token), so the log must never contain it.
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/check-in/secret-path-token",
+        "headers": [],
+        "route": SimpleNamespace(path="/check-in/{token}"),
+    }
+    exc = IntegrityError("UPDATE people SET ...", {}, _DriverError("boom", "23505"))
+    with caplog.at_level(logging.WARNING):
+        await integrity_error_handler(Request(scope), exc)
+
+    message = next(r.getMessage() for r in caplog.records if "IntegrityError" in r.getMessage())
+    assert "/check-in/{token}" in message
+    assert "secret-path-token" not in message

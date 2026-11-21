@@ -208,16 +208,31 @@ app.add_middleware(RequestTimingMiddleware)
 add_trusted_host_middleware(app, settings)
 
 
-# Postgres SQLSTATE codes worth naming. The catch-all used to describe every
-# constraint failure as a foreign-key problem, which sent admins looking for
-# related records after what was really a duplicate value.
-_INTEGRITY_DETAILS = {
-    "23502": "Cannot complete this operation because a required field is missing.",
-    "23503": "Cannot complete this operation because related records exist.",
-    "23505": "Cannot complete this operation because another record already uses one of these values.",
-    "23514": "Cannot complete this operation because a value fails a database constraint.",
+# Postgres SQLSTATE codes worth naming, each with a stable ``code`` clients can translate. The catch-all used to
+# describe every constraint failure as a foreign-key problem, which sent admins looking for related records after what
+# was really a duplicate value.
+_INTEGRITY_ERRORS = {
+    "23502": (
+        "required_field_missing",
+        "Cannot complete this operation because a required field is missing.",
+    ),
+    "23503": (
+        "related_records_exist",
+        "Cannot complete this operation because related records exist.",
+    ),
+    "23505": (
+        "duplicate_value",
+        "Cannot complete this operation because another record already uses one of these values.",
+    ),
+    "23514": (
+        "constraint_violation",
+        "Cannot complete this operation because a value fails a database constraint.",
+    ),
 }
-_INTEGRITY_FALLBACK = "Cannot complete this operation because it violates a database constraint."
+_INTEGRITY_FALLBACK = (
+    "constraint_violation",
+    "Cannot complete this operation because it violates a database constraint.",
+)
 
 
 @app.exception_handler(IntegrityError)
@@ -225,11 +240,16 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     # The asyncpg dialect copies the driver's SQLSTATE onto the wrapped error as
     # both pgcode and sqlstate; psycopg only sets pgcode.
     sqlstate = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
-    logger.warning("IntegrityError (%s) on %s: %s", sqlstate or "no sqlstate", request.url.path, exc.orig)
-    return JSONResponse(
-        status_code=409,
-        content={"detail": _INTEGRITY_DETAILS.get(sqlstate or "", _INTEGRITY_FALLBACK)},
+    # Log the route template, never the raw path: a path can carry a credential (an access or check-in token).
+    route = getattr(request.scope.get("route"), "path", None)
+    logger.warning(
+        "IntegrityError (%s) on %s: %s",
+        sqlstate or "no sqlstate",
+        route if isinstance(route, str) else "unmatched",
+        exc.orig,
     )
+    code, detail = _INTEGRITY_ERRORS.get(sqlstate or "", _INTEGRITY_FALLBACK)
+    return JSONResponse(status_code=409, content={"detail": detail, "code": code})
 
 
 @app.exception_handler(ApiHTTPException)
