@@ -86,8 +86,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
-    "@vitest/coverage-v8": "5.1.0",
-    "@vitest/ui": "^5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
+    "@vitest/ui": "^5.1.1",
     "fake-indexeddb": "^6.2.8",
     "happy-dom": "^21.0.4",
     "jest-axe": "^11.0.0",
@@ -100,7 +100,7 @@
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   },
   "engines": {
     "node": ">=26.0.0"
