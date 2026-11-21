@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { CheckIcon, MailDotIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import { createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import { fetchQueuePage, queueSearchParams, queueStatus } from "@/features/admin/shared/adminQueue";

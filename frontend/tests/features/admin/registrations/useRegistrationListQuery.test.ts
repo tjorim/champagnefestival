@@ -3,8 +3,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw/http";
 import { expect, it } from "vitest";
 import { server } from "@/mocks/server";
-import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { useRegistrationCountsQuery } from "@/features/admin/registrations/useRegistrationListQuery";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 it("counts historical facets on the server with bounded reads", async () => {
   const requests: URLSearchParams[] = [];

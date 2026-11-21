@@ -5,8 +5,11 @@ import { useIsMutating } from "@tanstack/react-query";
 import { AdminDataTable } from "./AdminDataTable";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import type { AdminTableFeatures } from "@/hooks/useAdminTable";
-import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
+import type { AdminTableFeatures } from "@/features/admin/shared/useAdminTable";
+import {
+  usePeopleCountsQuery,
+  usePeopleListQuery,
+} from "@/features/admin/people/usePeopleListQuery";
 import type { AdminTableState } from "@/features/admin/shared/adminTableState";
 import {
   fetchPeoplePage,

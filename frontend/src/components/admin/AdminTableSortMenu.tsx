@@ -1,5 +1,5 @@
 import type { RowData, Table } from "@tanstack/react-table";
-import type { AdminTableFeatures } from "@/hooks/useAdminTable";
+import type { AdminTableFeatures } from "@/features/admin/shared/useAdminTable";
 import { ArrowUpDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

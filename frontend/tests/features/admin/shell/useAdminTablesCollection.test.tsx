@@ -2,13 +2,13 @@ import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it } from "vitest";
-import { useAdminQueries } from "@/hooks/useAdminQueries";
-import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
+import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
+import { useAdminVenueActions } from "@/features/admin/shell/useAdminVenueActions";
 import { seedTables } from "@/mocks/data/venue";
 import { server } from "@/mocks/server";
 import { patchAdminRegistrationLiveEvent } from "@/lib/collections/adminRegistrationsCollection";
 import type { LiveEnvelope } from "@/lib/api/liveStream";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

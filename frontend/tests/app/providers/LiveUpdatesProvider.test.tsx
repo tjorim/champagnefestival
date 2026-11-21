@@ -2,7 +2,7 @@ import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { usePeopleListQuery } from "@/hooks/usePeopleListQuery";
+import { usePeopleListQuery } from "@/features/admin/people/usePeopleListQuery";
 import { useAuth } from "@/app/providers/AuthContext";
 import { LiveUpdatesProvider } from "@/app/providers/LiveUpdatesProvider";
 import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/lib/api/liveStream";

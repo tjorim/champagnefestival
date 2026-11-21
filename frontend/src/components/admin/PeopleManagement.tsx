@@ -50,7 +50,7 @@ import {
   LEDGER_PAGE_SIZE,
 } from "@/lib/api/adminFetch";
 import { devError } from "@/lib/editions/devLog";
-import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import { createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import PersonEmailConsents from "./PersonEmailConsents";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";

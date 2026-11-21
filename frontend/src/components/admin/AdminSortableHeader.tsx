@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import type { Column, RowData } from "@tanstack/react-table";
-import type { AdminTableFeatures } from "@/hooks/useAdminTable";
+import type { AdminTableFeatures } from "@/features/admin/shared/useAdminTable";
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react";
 import { TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";

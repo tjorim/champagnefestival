@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/accordion";
 import { Alert } from "@/components/ui/alert";
 
-import { useFaq } from "@/hooks/useFaq";
+import { useFaq } from "@/features/site/useFaq";
 import { m } from "@/paraglide/messages";
 
 /**

@@ -38,7 +38,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useRegistrationListQuery,
   useRegistrationCountsQuery,
-} from "@/hooks/useRegistrationListQuery";
+} from "@/features/admin/registrations/useRegistrationListQuery";
 import { useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { Alert } from "@/components/ui/alert";
@@ -64,7 +64,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { FloorTable } from "@/api-types";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import { exportToCsv } from "@/features/admin/shared/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";

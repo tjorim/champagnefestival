@@ -26,7 +26,7 @@ import {
 import { queryKeys } from "@/lib/query/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 type Locale = "nl" | "en" | "fr";
 const LOCALES: Locale[] = ["nl", "en", "fr"];
 

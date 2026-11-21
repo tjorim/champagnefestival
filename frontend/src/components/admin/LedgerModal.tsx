@@ -26,7 +26,7 @@ import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
 import { m } from "@/paraglide/messages";
 import type { LedgerSortKey } from "@/lib/api/adminFetch";
 import type { LedgerTransaction } from "@/api-types";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import { transactionAmountLabel } from "@/features/admin/shared/paymentTransactionLabels";
 
 // Maps a sortable table column's id to the backend `sort` query param it

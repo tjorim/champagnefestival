@@ -2,11 +2,11 @@ import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
-import { useVenueMutations } from "@/hooks/useVenueMutations";
+import { useVenueMutations } from "@/features/admin/venue/useVenueMutations";
 import { server } from "@/mocks/server";
 import { createAdminTablesCollection } from "@/lib/collections/adminTablesCollection";
 import { createAdminVenueCollections } from "@/features/admin/venue/adminVenueCollections";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 describe("useVenueMutations", () => {
   it("wires create layout requests with the active edition", async () => {

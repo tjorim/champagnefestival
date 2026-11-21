@@ -22,13 +22,13 @@ import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
 import type { Registration, RegistrationStatus } from "@/types/registration";
 import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
-import { useAdminDashboardData } from "@/hooks/useAdminDashboardData";
-import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
-import { useAdminQueries } from "@/hooks/useAdminQueries";
-import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
-import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
+import { useAdminDashboardData } from "@/features/admin/shell/useAdminDashboardData";
+import { useAdminPeopleActions } from "@/features/admin/shell/useAdminPeopleActions";
+import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
+import { useAdminRegistrationActions } from "@/features/admin/shell/useAdminRegistrationActions";
+import { useAdminSessionRecovery } from "@/features/admin/shell/useAdminSessionRecovery";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
+import { useAdminVenueActions } from "@/features/admin/shell/useAdminVenueActions";
 import {
   applyAdminOrganizationDeleted,
   applyAdminOrganizationSaved,

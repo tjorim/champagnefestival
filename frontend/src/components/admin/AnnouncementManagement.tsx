@@ -35,7 +35,7 @@ import AdminEditorDialog from "./AdminEditorDialog";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 
 type Announcement = import("@/api-types").AnnouncementOut;
 type Draft = Required<Omit<import("@/api-types").AnnouncementCreate, "sort_order">>;

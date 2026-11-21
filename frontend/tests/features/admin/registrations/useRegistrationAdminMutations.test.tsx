@@ -3,9 +3,9 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
-import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
+import { useRegistrationAdminMutations } from "@/features/admin/registrations/useRegistrationAdminMutations";
 import { server } from "@/mocks/server";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 describe("useRegistrationAdminMutations", () => {
   it("wires registration updates and invalidates only the registrations key", async () => {

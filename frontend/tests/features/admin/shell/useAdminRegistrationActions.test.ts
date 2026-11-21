@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingUpdatePayload } from "@/hooks/useAdminRegistrationActions";
+import { bookingUpdatePayload } from "@/features/admin/shell/useAdminRegistrationActions";
 
 describe("bookingUpdatePayload", () => {
   it("sends quantities, notes and the chosen table release as one absolute update", () => {

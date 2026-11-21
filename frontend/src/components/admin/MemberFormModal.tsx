@@ -28,7 +28,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
+import { usePersonFieldErrors } from "@/features/admin/shared/usePersonFieldErrors";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { devError } from "@/lib/editions/devLog";
 import { EMAIL_REGEX } from "@/config/constants";

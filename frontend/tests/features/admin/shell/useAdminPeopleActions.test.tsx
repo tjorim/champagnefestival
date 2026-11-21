@@ -3,12 +3,12 @@ import { seedPeople } from "@/mocks/data/people";
 import { act, renderHook } from "@testing-library/react";
 import { http } from "msw/http";
 import { expect, it, vi } from "vitest";
-import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
+import { useAdminPeopleActions } from "@/features/admin/shell/useAdminPeopleActions";
 import type { AdminOrganizationsCollection } from "@/lib/collections/adminOrganizationsCollection";
 import type { AdminRegistrationsCollection } from "@/lib/collections/adminRegistrationsCollection";
 import { resetAdminPeopleSession } from "@/features/admin/people/adminPeopleSession";
 import { server } from "@/mocks/server";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 function harness() {
   const { queryClient, Wrapper } = createTestQueryClientHarness();

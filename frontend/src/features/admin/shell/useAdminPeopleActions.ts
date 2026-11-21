@@ -10,8 +10,8 @@ import type { MemberFormData } from "@/components/admin/MemberFormModal";
 import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import type { Registration } from "@/types/registration";
-import { usePeopleMutations } from "@/hooks/usePeopleMutations";
-import { captureAdminPeopleFence } from "@/features/admin/people/adminPeopleSession";
+import { usePeopleMutations } from "../people/usePeopleMutations";
+import { captureAdminPeopleFence } from "../people/adminPeopleSession";
 import {
   applyAdminOrganizationContactsMerged,
   captureAdminOrganizationsFence,

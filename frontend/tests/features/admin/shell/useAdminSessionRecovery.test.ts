@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
+import { useAdminSessionRecovery } from "@/features/admin/shell/useAdminSessionRecovery";
 
 const unauthorized = new Error("unauthorized");
 const otherError = new Error("boom");

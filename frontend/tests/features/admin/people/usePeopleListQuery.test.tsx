@@ -4,10 +4,13 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
+import {
+  usePeopleCountsQuery,
+  usePeopleListQuery,
+} from "@/features/admin/people/usePeopleListQuery";
 import { peopleListSearchParams, type PeopleListParams } from "@/lib/query/adminPeopleQueries";
 import { queryKeys } from "@/lib/query/queryKeys";
-import { createTestQueryClientHarness } from "./utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const headers = () => ({ Authorization: "Bearer session" });
 const page = (name: string, params: PeopleListParams) => ({

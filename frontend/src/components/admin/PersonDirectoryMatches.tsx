@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { usePeopleListQuery } from "@/hooks/usePeopleListQuery";
+import { usePeopleListQuery } from "@/features/admin/people/usePeopleListQuery";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";

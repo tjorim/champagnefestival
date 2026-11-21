@@ -3,11 +3,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
 import { delay } from "msw/utils/delay";
 import { describe, expect, it, vi } from "vitest";
-import { useAdminQueries } from "@/hooks/useAdminQueries";
-import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
+import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
+import { useAdminVenueActions } from "@/features/admin/shell/useAdminVenueActions";
 import { seedAreas, seedLayouts, seedRooms, seedTables, seedVenues } from "@/mocks/data/venue";
 import { server } from "@/mocks/server";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

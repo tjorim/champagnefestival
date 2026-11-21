@@ -2,9 +2,9 @@ import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
-import { useAdminQueries } from "@/hooks/useAdminQueries";
+import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
 import { server } from "@/mocks/server";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

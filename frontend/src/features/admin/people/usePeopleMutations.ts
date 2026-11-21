@@ -4,9 +4,9 @@ import type { MemberFormData } from "@/components/admin/MemberFormModal";
 import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
-import { captureAdminPeopleFence } from "@/features/admin/people/adminPeopleSession";
+import { captureAdminPeopleFence } from "./adminPeopleSession";
 import { localIsoDate, type Person } from "@/types/person";
-import { peopleWrites, type PeopleWrite } from "@/features/admin/people/optimisticPeoplePages";
+import { peopleWrites, type PeopleWrite } from "./optimisticPeoplePages";
 import { queryKeys } from "@/lib/query/queryKeys";
 import {
   fetchJsonOrThrowWithUnauthorized,

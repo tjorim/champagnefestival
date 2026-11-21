@@ -20,7 +20,7 @@ import {
   fetchAdminPersonOptions,
   type PersonOption,
 } from "@/features/admin/shared/adminRegistrationApi";
-import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
+import { usePersonFieldErrors } from "@/features/admin/shared/usePersonFieldErrors";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { queryKeys } from "@/lib/query/queryKeys";
 

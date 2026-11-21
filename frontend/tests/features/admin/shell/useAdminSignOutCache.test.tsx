@@ -1,14 +1,14 @@
 import { seedOrganizations } from "@/mocks/data/organizations";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useAdminQueries } from "@/hooks/useAdminQueries";
-import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
+import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
+import { useAdminVenueActions } from "@/features/admin/shell/useAdminVenueActions";
 import {
   applyAdminOrganizationDeleted,
   applyAdminOrganizationSaved,
   captureAdminOrganizationsFence,
 } from "@/lib/collections/adminOrganizationsCollection";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { m } from "@/paraglide/messages";
 import { setLocale } from "@/paraglide/runtime";
-import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
+import { useAdminRegistrationActions } from "@/features/admin/shell/useAdminRegistrationActions";
 
 const registrationsQueryKey = ["admin", "registrations", "test"];
 

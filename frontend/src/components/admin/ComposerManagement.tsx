@@ -45,7 +45,7 @@ import {
   type ComposedMessageState,
 } from "@/features/admin/shared/composedMessage";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import { PencilIcon } from "lucide-react";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 

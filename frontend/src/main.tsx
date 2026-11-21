@@ -62,7 +62,7 @@ import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { useNoIndex } from "@/app/layout/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "@/app/theme/useVisualTheme";
 import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
-import { useEditionHeroImage } from "./hooks/useEditionHeroImage";
+import { useEditionHeroImage } from "@/features/site/useEditionHeroImage";
 import { m } from "./paraglide/messages";
 import { getLocale } from "./paraglide/runtime";
 import { featureItems } from "./config/features";

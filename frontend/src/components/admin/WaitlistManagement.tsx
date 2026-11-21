@@ -4,7 +4,7 @@ import { CheckIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/ConfirmModal";
-import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import { createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import { m } from "@/paraglide/messages";
 import {
   fetchJsonOrThrowWithUnauthorized,

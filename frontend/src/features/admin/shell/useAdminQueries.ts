@@ -14,10 +14,10 @@ import {
   registerAdminOrganizationsCollection,
   resetAdminOrganizationsCollection,
 } from "@/lib/collections/adminOrganizationsCollection";
-import { resetAdminPeopleSession } from "@/features/admin/people/adminPeopleSession";
-import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
+import { resetAdminPeopleSession } from "../people/adminPeopleSession";
+import { useRegistrationCountsQuery } from "../registrations/useRegistrationListQuery";
 import { useTodayKey } from "@/hooks/useTodayKey";
-import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
+import { usePeopleCountsQuery } from "../people/usePeopleListQuery";
 import {
   createAdminTablesCollection,
   refetchAdminTables,
@@ -29,7 +29,7 @@ import {
   refetchAdminVenueCollections,
   registerAdminVenueCollections,
   resetAdminVenueCollections,
-} from "@/features/admin/venue/adminVenueCollections";
+} from "../venue/adminVenueCollections";
 import { withTableOccupancy } from "@/lib/collections/tableOccupancy";
 import { queryKeys } from "@/lib/query/queryKeys";
 

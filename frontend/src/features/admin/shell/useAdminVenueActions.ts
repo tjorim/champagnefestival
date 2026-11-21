@@ -10,7 +10,7 @@ import type {
   TableTypeUpdate,
   VenueUpdate,
 } from "@/api-types";
-import { useVenueMutations } from "@/hooks/useVenueMutations";
+import { useVenueMutations } from "../venue/useVenueMutations";
 import {
   addAdminTable,
   captureAdminTablesFence,
@@ -29,7 +29,7 @@ import {
   refetchAdminVenueCollections,
   replaceAdminAreasForLayout,
   type AdminVenueCollections,
-} from "@/features/admin/venue/adminVenueCollections";
+} from "../venue/adminVenueCollections";
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import { devError } from "@/lib/editions/devLog";
 import { getAreaSizePx, getCanvasSizePx } from "@/lib/venue/layoutUtils";

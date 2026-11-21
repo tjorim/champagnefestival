@@ -10,9 +10,9 @@ import type {
   RegistrationOutWithToken,
   TableAllocation,
 } from "@/api-types";
-import { toAmount } from "@/features/admin/shared/money";
+import { toAmount } from "../shared/money";
 import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
-import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
+import { useRegistrationAdminMutations } from "../registrations/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import { fetchRegistration } from "@/lib/api/adminFetch";
 import { toLocalDateKey } from "@/lib/format/dateUtils";

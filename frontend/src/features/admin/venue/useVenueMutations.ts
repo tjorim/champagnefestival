@@ -24,7 +24,7 @@ import {
   refetchAdminVenueCollections,
   type AdminVenueCollectionName,
   type AdminVenueCollections,
-} from "@/features/admin/venue/adminVenueCollections";
+} from "./adminVenueCollections";
 import { saveLayoutRevision, restoreLayoutRevision } from "@/lib/api/adminFetch";
 import { m } from "@/paraglide/messages";
 

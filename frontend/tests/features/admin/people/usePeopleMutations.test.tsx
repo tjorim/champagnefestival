@@ -1,11 +1,11 @@
 import { jsonResponse } from "@/mocks/response";
 import { seedPeople } from "@/mocks/data/people";
-import { makePerson } from "../utils/personFixture";
+import { makePerson } from "../../../utils/personFixture";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useIsMutating } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { beforeEach, describe, expect, it } from "vitest";
-import { usePeopleMutations } from "@/hooks/usePeopleMutations";
+import { usePeopleMutations } from "@/features/admin/people/usePeopleMutations";
 import { server } from "@/mocks/server";
 import {
   captureAdminPeopleFence,
@@ -14,7 +14,7 @@ import {
 import { localIsoDate } from "@/types/person";
 import { fetchPeoplePage, type PeoplePage } from "@/lib/query/adminPeopleQueries";
 import { queryKeys } from "@/lib/query/queryKeys";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const authHeaders = () => ({
   "Content-Type": "application/json",

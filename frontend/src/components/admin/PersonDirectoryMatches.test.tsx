@@ -6,7 +6,7 @@ import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 const guest = { id: "existing", name: "Existing guest", email: "guest@example.com" } as Person;
 const query = vi.hoisted(() => vi.fn());
-vi.mock("@/hooks/usePeopleListQuery", () => ({
+vi.mock("@/features/admin/people/usePeopleListQuery", () => ({
   usePeopleListQuery: (...args: unknown[]) => query(...args),
 }));
 afterEach(cleanup);

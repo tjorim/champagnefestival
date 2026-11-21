@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions";
+import { useAdminRegistrationActions } from "@/features/admin/shell/useAdminRegistrationActions";
 import type { Registration } from "@/types/registration";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
 const registrationsQueryKey = ["admin", "registrations"] as const;
 

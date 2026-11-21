@@ -3,7 +3,7 @@ import ResponsiveImage from "@/components/ResponsiveImage";
 import { useAuth } from "@/app/providers/AuthContext";
 import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 import { useId, useState, type ReactNode } from "react";
-import { createAppColumnHelper, useAppTable } from "@/hooks/useAdminTable";
+import { createAppColumnHelper, useAppTable } from "@/features/admin/shared/useAdminTable";
 import { AdminDataTable } from "./AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";

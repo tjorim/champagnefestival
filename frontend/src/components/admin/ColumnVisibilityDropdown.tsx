@@ -7,7 +7,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { m } from "@/paraglide/messages";
-import type { AdminTableFeatures } from "@/hooks/useAdminTable";
+import type { AdminTableFeatures } from "@/features/admin/shared/useAdminTable";
 import type { RowData, Table } from "@tanstack/react-table";
 
 interface ColumnVisibilityDropdownProps<TData extends RowData> {

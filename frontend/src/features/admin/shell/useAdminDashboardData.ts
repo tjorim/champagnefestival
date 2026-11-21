@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
-import { isRegistrationInEdition } from "@/features/admin/shell/adminUtils";
+import { isRegistrationInEdition } from "./adminUtils";
 import { toLocalDateKey } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 

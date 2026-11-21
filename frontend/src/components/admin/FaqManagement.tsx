@@ -56,7 +56,7 @@ import {
 } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
-import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { useAppTable, createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 
 interface FaqManagementProps {
   authHeaders: () => Record<string, string>;

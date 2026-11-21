@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { useEditionHeroImage } from "@/hooks/useEditionHeroImage";
+import { useEditionHeroImage } from "@/features/site/useEditionHeroImage";
 import { editionShareImage, managedArtwork } from "@/lib/editions/editionArtwork";
 
 const path = (letter: string) => `/uploads/editions/${letter.repeat(32)}-${letter.repeat(64)}.jpg`;

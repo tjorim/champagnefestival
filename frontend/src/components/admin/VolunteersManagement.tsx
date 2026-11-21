@@ -19,7 +19,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { isRoleActive, lastHelpedDay, roleSince, type Person } from "@/types/person";
-import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import { createAppColumnHelper } from "@/features/admin/shared/useAdminTable";
 import PersonEmailConsents from "./PersonEmailConsents";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
