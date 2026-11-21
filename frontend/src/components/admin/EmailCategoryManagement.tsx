@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
-import { fetchVoidOrThrowWithUnauthorized } from "@/utils/adminApi";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
+import { fetchVoidOrThrowWithUnauthorized } from "@/lib/api/adminApi";
 import {
   emailConsentKeys,
   emailRequest,
   type EmailCategory,
   type EmailCategoryWrite,
-} from "@/utils/emailCategories";
+} from "@/features/admin/shared/emailCategories";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

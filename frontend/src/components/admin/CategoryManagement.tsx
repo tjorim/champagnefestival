@@ -40,13 +40,13 @@ import {
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { Category } from "@/api-types";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
+} from "@/lib/api/adminApi";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 export type CategoryKind = "event" | "product";

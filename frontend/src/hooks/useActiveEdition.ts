@@ -7,12 +7,12 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { adminCachePersistence } from "@/state/adminCachePersistence";
+import { adminCachePersistence } from "@/lib/collections/adminCachePersistence";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates } from "@/config/editions";
 import type { EditionPublicOut } from "@/api-types";
-import { endOfDay } from "@/utils/dateUtils";
-import { queryKeys } from "@/utils/queryKeys";
+import { endOfDay } from "@/lib/format/dateUtils";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 /** View model: only calendar dates are derived; every API record keeps its wire shape. */
 export type ActiveEdition = Omit<EditionPublicOut, "dates"> & { dates: EditionDates };

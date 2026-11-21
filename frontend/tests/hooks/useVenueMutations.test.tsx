@@ -4,8 +4,8 @@ import { http } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { server } from "@/mocks/server";
-import { createAdminTablesCollection } from "@/state/adminTablesCollection";
-import { createAdminVenueCollections } from "@/state/adminVenueCollections";
+import { createAdminTablesCollection } from "@/lib/collections/adminTablesCollection";
+import { createAdminVenueCollections } from "@/features/admin/venue/adminVenueCollections";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("useVenueMutations", () => {

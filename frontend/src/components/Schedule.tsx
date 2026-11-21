@@ -6,7 +6,7 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { EventPublicOut as Event } from "@/api-types";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
-import { eventDescription, eventTitle } from "@/utils/eventText";
+import { eventDescription, eventTitle } from "@/lib/editions/eventText";
 
 interface ScheduleProps {
   events: Event[];

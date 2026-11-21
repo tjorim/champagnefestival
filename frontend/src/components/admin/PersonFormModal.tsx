@@ -29,7 +29,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { Person } from "@/types/person";
 import { EMAIL_REGEX } from "@/config/constants";
 

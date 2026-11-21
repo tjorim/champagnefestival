@@ -74,7 +74,7 @@ _AREA_DIFF_FIELDS = ("label", "icon", "x", "y", "rotation", "width_m", "length_m
 _GEOMETRY_TABLE_FIELDS = frozenset({"x", "y", "rotation", "table_type_id"})
 _GEOMETRY_AREA_FIELDS = frozenset({"x", "y", "rotation", "width_m", "length_m"})
 
-# Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
+# Mirror the rendering constants from frontend/src/lib/venue/layoutUtils.ts so that
 # the backend containment check matches the frontend's hit-testing exactly.
 _PX_PER_M: int = 28
 _MIN_CANVAS_WIDTH_PX: int = 280

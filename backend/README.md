@@ -419,7 +419,7 @@ failure the interface can explain carries a stable `code` next to it:
 - Codes are lowercase snake_case, named for the condition (not the endpoint), and
   stable once published: add a new code rather than changing what one means.
   `rate_limited` is shared by every rate-limited route.
-- The frontend maps a code to a translation in `frontend/src/utils/apiErrors.ts`
+- The frontend maps a code to a translation in `frontend/src/lib/api/apiErrors.ts`
   (`apiErrorMessage(error, fallback)`) and shows the caller's translated operation
   message (`m.admin_error_*`) when the code is missing or not yet mapped. Adding a
   backend code therefore never breaks a surface; map it in `API_ERROR_MESSAGES`

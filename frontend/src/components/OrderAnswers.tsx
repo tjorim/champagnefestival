@@ -5,7 +5,7 @@ import {
   questionText,
   type OrderAnswer,
   type OrderQuestion,
-} from "@/utils/orderQuestions";
+} from "@/lib/editions/orderQuestions";
 
 export function OrderAnswerInputs({
   questions,

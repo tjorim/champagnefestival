@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArchiveIcon, TriangleAlertIcon, TrashIcon, LoaderCircleIcon, XIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 interface ConfirmModalProps {
   show: boolean;

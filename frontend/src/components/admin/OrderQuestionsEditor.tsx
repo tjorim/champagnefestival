@@ -12,14 +12,14 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   parseOrderQuestions,
   SCALAR_QUESTION_KINDS,
   type OrderQuestion,
-} from "@/utils/orderQuestions";
-import { POLL_KIND_HAS_OPTIONS, pollKindLabel } from "@/utils/pollKinds";
+} from "@/lib/editions/orderQuestions";
+import { POLL_KIND_HAS_OPTIONS, pollKindLabel } from "@/lib/editions/pollKinds";
 
 const LANGUAGES = [
   { code: "nl", label: m.admin_language_nl },

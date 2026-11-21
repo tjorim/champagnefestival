@@ -49,7 +49,7 @@ import {
   requestBookingChange,
   requestVisitorMagicLink,
   type GuestRegistration,
-} from "@/utils/publicRegistrationApi";
+} from "@/lib/api/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
@@ -57,7 +57,7 @@ import {
   getCommunicationPreference,
   updateCommunicationPreference,
   type CommunicationLanguage,
-} from "@/utils/meApi";
+} from "@/features/my-account/meApi";
 
 function calendarDateRange(date: string): string {
   const start = date.replaceAll("-", "");

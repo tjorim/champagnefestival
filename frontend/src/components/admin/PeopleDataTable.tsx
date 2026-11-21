@@ -1,4 +1,4 @@
-import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
+import { captureAdminPeopleFence } from "@/features/admin/people/adminPeopleSession";
 import { useCallback, type ReactNode } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useIsMutating } from "@tanstack/react-query";
@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import type { AdminTableFeatures } from "@/hooks/useAdminTable";
 import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
-import type { AdminTableState } from "@/utils/adminTableState";
+import type { AdminTableState } from "@/features/admin/shared/adminTableState";
 import {
   fetchPeoplePage,
   peopleListSearchParams,
   type PeopleListParams,
-} from "@/utils/adminPeopleQueries";
-import { downloadFileOrThrow } from "@/utils/adminApi";
+} from "@/lib/query/adminPeopleQueries";
+import { downloadFileOrThrow } from "@/lib/api/adminApi";
 import { isRoleActive, type Person } from "@/types/person";
 import { m } from "@/paraglide/messages";
 

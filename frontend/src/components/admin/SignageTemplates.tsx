@@ -14,8 +14,8 @@ import {
   AdminOption,
   AdminTextarea,
 } from "./AdminFields";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { SlideRenderer } from "@/signage/SlideRenderer";

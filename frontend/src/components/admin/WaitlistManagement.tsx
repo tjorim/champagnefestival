@@ -9,16 +9,16 @@ import { m } from "@/paraglide/messages";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { ApiError } from "@/utils/apiErrors";
+} from "@/lib/api/adminApi";
+import { ApiError } from "@/lib/api/apiErrors";
 import {
   fetchQueuePage,
   queueSearchParams,
   queueStatus,
   type QueueStatus,
-} from "@/utils/adminQueue";
-import type { AdminTableState } from "@/utils/adminTableState";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/features/admin/shared/adminQueue";
+import type { AdminTableState } from "@/features/admin/shared/adminTableState";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { AdminDataTable, type AdminTableFilter } from "./AdminDataTable";
 import { QueueRowAction } from "./QueueRowAction";
 

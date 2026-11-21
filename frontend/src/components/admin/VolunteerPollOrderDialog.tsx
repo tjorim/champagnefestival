@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
-import { setVolunteerPollOrder, type PollOrders } from "@/utils/adminContentApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { setVolunteerPollOrder, type PollOrders } from "@/lib/api/adminContentApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 interface VolunteerPollOrderDialogProps {
   editionId: string;

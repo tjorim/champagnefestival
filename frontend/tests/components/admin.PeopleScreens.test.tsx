@@ -15,7 +15,7 @@ import MembersManagement from "@/components/admin/MembersManagement";
 import VolunteersManagement from "@/components/admin/VolunteersManagement";
 import PeopleManagement from "@/components/admin/PeopleManagement";
 import { server } from "@/mocks/server";
-import { ApiError } from "@/utils/apiErrors";
+import { ApiError } from "@/lib/api/apiErrors";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -28,8 +28,8 @@ vi.mock("@/paraglide/messages", () => ({
   ),
 }));
 const download = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-vi.mock("@/utils/adminApi", async (original) => ({
-  ...(await original<typeof import("@/utils/adminApi")>()),
+vi.mock("@/lib/api/adminApi", async (original) => ({
+  ...(await original<typeof import("@/lib/api/adminApi")>()),
   downloadFileOrThrow: download,
 }));
 const deleteFallback = {

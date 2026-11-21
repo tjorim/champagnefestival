@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { m } from "@/paraglide/messages";
-import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
+import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 
 export default function OrganizationTranslationSuggestion({
   url,

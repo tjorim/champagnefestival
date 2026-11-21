@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
-import { readAdminTableState } from "@/utils/adminTableState";
+import { readAdminTableState } from "@/features/admin/shared/adminTableState";
 import { AdminDataTable } from "./AdminDataTable";
 const route = vi.hoisted(() => ({ search: {} as Record<string, unknown>, navigate: vi.fn() }));
 vi.mock("@tanstack/react-router", () => ({

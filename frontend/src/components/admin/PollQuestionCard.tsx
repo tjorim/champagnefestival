@@ -11,7 +11,7 @@ import {
 } from "@/components/admin/AdminFields";
 import type { Event } from "@/api-types";
 
-import { eventTitle } from "@/utils/eventText";
+import { eventTitle } from "@/lib/editions/eventText";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +24,9 @@ import {
   type PollOption,
   type PollQuestion,
   type PollQuestionWrite,
-} from "@/utils/adminContentApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { pollCountsSummary, pollKindLabel, POLL_KIND_HAS_OPTIONS } from "@/utils/pollKinds";
+} from "@/lib/api/adminContentApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { pollCountsSummary, pollKindLabel, POLL_KIND_HAS_OPTIONS } from "@/lib/editions/pollKinds";
 import { iso, localDate } from "./AnnouncementManagement";
 import PollOptionsEditor from "./PollOptionsEditor";
 

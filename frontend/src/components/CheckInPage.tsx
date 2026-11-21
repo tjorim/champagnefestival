@@ -1,5 +1,5 @@
-import { apiErrorMessage } from "@/utils/apiErrors";
-import type { StampProgress } from "@/utils/stampCards";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import type { StampProgress } from "@/lib/editions/stampCards";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -41,20 +41,20 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { queryKeys } from "@/utils/queryKeys";
-import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/utils/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/lib/api/adminApi";
 import CheckInScanner, { type ScannedCheckInCredentials } from "@/components/CheckInScanner";
 import {
   CheckInError,
   fetchCheckInRegistration,
   submitCheckIn,
   type CheckInData,
-} from "@/utils/publicRegistrationApi";
+} from "@/lib/api/publicRegistrationApi";
 import {
   searchVolunteerRegistrations,
   submitVolunteerCheckIn,
   updateVolunteerRegistration,
-} from "@/utils/volunteerApi";
+} from "@/features/check-in/volunteerApi";
 
 const AUTO_RETURN_TO_SCANNER_MS = 4000;
 

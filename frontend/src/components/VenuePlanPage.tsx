@@ -21,13 +21,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
-import { getCanvasSizePx, safeRoomColor } from "@/utils/layoutUtils";
-import { fetchVenuePlanEditionChoices, venuePlanFailure } from "@/utils/venuePlanEditions";
+import { getCanvasSizePx, safeRoomColor } from "@/lib/venue/layoutUtils";
+import {
+  fetchVenuePlanEditionChoices,
+  venuePlanFailure,
+} from "@/features/venue-plan/venuePlanEditions";
 import {
   type VenuePlanLayout,
   type VenuePlanTable,
   venuePlanQueryOptions,
-} from "@/utils/venuePlanApi";
+} from "@/features/venue-plan/venuePlanApi";
 
 function Loading() {
   return (

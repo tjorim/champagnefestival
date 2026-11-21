@@ -103,7 +103,7 @@ Sentry is initialised at startup if `SENTRY_DSN` is set. The SDK is an optional 
 
 ## Frontend Error Correlation
 
-`extractErrorMessage` in `frontend/src/utils/adminFetch.ts` reads the `X-Request-ID` response header and appends it to every API error string:
+`extractErrorMessage` in `frontend/src/lib/api/adminFetch.ts` reads the `X-Request-ID` response header and appends it to every API error string:
 
 ```
 Registration not found [request-id: 3fa85f64-…]

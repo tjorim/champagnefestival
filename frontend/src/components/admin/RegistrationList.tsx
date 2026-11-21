@@ -3,7 +3,7 @@ import { AdminTableSortMenu } from "./AdminTableSortMenu";
 import { useIsMobile } from "@/components/ui/use-mobile";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { QRCodeSVG } from "qrcode.react";
-import { orderAnswerText, questionText } from "@/utils/orderQuestions";
+import { orderAnswerText, questionText } from "@/lib/editions/orderQuestions";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -61,27 +61,31 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { FloorTable } from "@/api-types";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-import { exportToCsv } from "@/utils/csvExport";
+import { exportToCsv } from "@/features/admin/shared/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
-import { hideColumnUntilUsed, loadColVis, saveColVis } from "@/utils/columnVisibility";
+import {
+  hideColumnUntilUsed,
+  loadColVis,
+  saveColVis,
+} from "@/features/admin/shared/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
   fetchRegistration,
   fetchAllRegistrationPages,
   type RegistrationSortKey,
-} from "@/utils/adminFetch";
-import { queryKeys } from "@/utils/queryKeys";
-import { toLocalDateKey } from "@/utils/dateUtils";
+} from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { toLocalDateKey } from "@/lib/format/dateUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { useTodayKey } from "@/hooks/useTodayKey";
-import { devError } from "@/utils/devLog";
-import { editionDisplayNameWithType } from "@/utils/editionName";
+import { devError } from "@/lib/editions/devLog";
+import { editionDisplayNameWithType } from "@/lib/editions/editionName";
 import { AdminAddButton } from "./RowActions";
 
 const COL_VIS_KEY = "admin-col-vis-registrations";

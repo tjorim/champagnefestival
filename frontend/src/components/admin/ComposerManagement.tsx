@@ -25,11 +25,15 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { queryKeys } from "@/utils/queryKeys";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
 import AdminEditorDialog from "./AdminEditorDialog";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
-import { emailConsentKeys, emailRequest, type EmailCategory } from "@/utils/emailCategories";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
+import {
+  emailConsentKeys,
+  emailRequest,
+  type EmailCategory,
+} from "@/features/admin/shared/emailCategories";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import ComposerSendReview from "./ComposerSendReview";
@@ -39,7 +43,7 @@ import {
   composedStateLabel,
   type ComposedMessage,
   type ComposedMessageState,
-} from "@/utils/composedMessage";
+} from "@/features/admin/shared/composedMessage";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 import { PencilIcon } from "lucide-react";

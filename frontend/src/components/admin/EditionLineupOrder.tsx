@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { SPONSOR_TIERS, type SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
-import { sponsorTierLabel } from "@/utils/sponsorTiers";
+import { sponsorTierLabel } from "@/lib/editions/sponsorTiers";
 
 export interface LineupEntry {
   id: number;

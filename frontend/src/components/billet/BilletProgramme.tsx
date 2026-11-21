@@ -4,7 +4,7 @@ import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { EventPublicOut as Event } from "@/api-types";
-import { eventDescription, eventTitle } from "@/utils/eventText";
+import { eventDescription, eventTitle } from "@/lib/editions/eventText";
 
 interface BilletProgrammeProps {
   events: Event[];

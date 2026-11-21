@@ -7,7 +7,7 @@ import {
   applyAdminOrganizationDeleted,
   applyAdminOrganizationSaved,
   captureAdminOrganizationsFence,
-} from "@/state/adminOrganizationsCollection";
+} from "@/lib/collections/adminOrganizationsCollection";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 const authHeaders = () => ({

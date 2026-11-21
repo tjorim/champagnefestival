@@ -16,7 +16,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { createCollection, eq, ilike, useLiveQuery, type Collection } from "@tanstack/react-db";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { parseLoadSubsetOptions, queryCollectionOptions } from "@tanstack/query-db-collection";
-import { collectionError } from "@/state/adminCollectionFactory";
+import { collectionError } from "@/lib/collections/adminCollectionFactory";
 import { createTestQueryClient, createTestQueryClientHarness } from "../utils/queryClient";
 
 interface Member {

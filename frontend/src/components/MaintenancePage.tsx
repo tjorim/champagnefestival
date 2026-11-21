@@ -13,7 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
-import { DEFAULT_FLYER, managedArtwork } from "@/utils/editionArtwork";
+import { DEFAULT_FLYER, managedArtwork } from "@/lib/editions/editionArtwork";
 import "./maintenancePage.css";
 
 /**

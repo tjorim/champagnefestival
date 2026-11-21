@@ -11,16 +11,20 @@ import type { SliderItem, SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { cn } from "@/lib/utils";
-import { organizationDescription } from "@/utils/organizationDescription";
-import type { PlanTarget } from "@/utils/planApi";
-import { groupSponsorsByTier, sponsorTierLabel, type SponsorGroup } from "@/utils/sponsorTiers";
+import { organizationDescription } from "@/features/site/organizationDescription";
+import type { PlanTarget } from "@/lib/api/planApi";
+import {
+  groupSponsorsByTier,
+  sponsorTierLabel,
+  type SponsorGroup,
+} from "@/lib/editions/sponsorTiers";
 import {
   hasMultipleRooms,
   standsByOrganization,
   summarizeStands,
   type OrganizationStands,
   type Stand,
-} from "@/utils/standsApi";
+} from "@/lib/api/standsApi";
 
 type LogoWallType = "producers" | "sponsors" | "vendors";
 

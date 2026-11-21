@@ -218,7 +218,7 @@ themes, portal scoping and interaction contracts.
 
 ## Query key ownership and invalidation
 
-- Shared query keys are defined in `src/utils/queryKeys.ts`; private account queries
+- Shared query keys are defined in `src/lib/query/queryKeys.ts`; private account queries
   are scoped locally to the account identity and page/session lifetime.
 - Top-level admin resources are owned by `queryKeys.admin.*` and consumed by `useAdminQueries`.
 - `useAdminQueries` centralizes bulk admin refetch behavior via `shouldRefetchAdminResourceQuery`,

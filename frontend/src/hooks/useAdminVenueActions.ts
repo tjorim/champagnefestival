@@ -18,7 +18,7 @@ import {
   removeAdminTablesForLayouts,
   replaceAdminTablesForLayout,
   type AdminTablesCollection,
-} from "@/state/adminTablesCollection";
+} from "@/lib/collections/adminTablesCollection";
 import {
   applyAdminLayoutDeleted,
   applyAdminVenueDeleted,
@@ -29,11 +29,11 @@ import {
   refetchAdminVenueCollections,
   replaceAdminAreasForLayout,
   type AdminVenueCollections,
-} from "@/state/adminVenueCollections";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { devError } from "@/utils/devLog";
-import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
-import { toTableRecord } from "@/state/tableOccupancy";
+} from "@/features/admin/venue/adminVenueCollections";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { devError } from "@/lib/editions/devLog";
+import { getAreaSizePx, getCanvasSizePx } from "@/lib/venue/layoutUtils";
+import { toTableRecord } from "@/lib/collections/tableOccupancy";
 
 interface UseAdminVenueActionsOptions {
   authHeaders: () => Record<string, string>;

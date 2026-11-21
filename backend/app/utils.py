@@ -68,7 +68,7 @@ _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 def edition_display_name(edition: Edition) -> str:
     """The admin's display name for an edition, e.g. ``March 2027``.
 
-    Mirrors ``editionDisplayName`` in ``frontend/src/utils/editionName.ts``; the
+    Mirrors ``editionDisplayName`` in ``frontend/src/lib/editions/editionName.ts``; the
     edition id (``2027-march``) is internal and not shown to people.
     """
     month = edition.month.strip()
@@ -78,7 +78,7 @@ def edition_display_name(edition: Edition) -> str:
 def csv_safe(value: object) -> str:
     """Return a spreadsheet-safe CSV cell value.
 
-    Keep this rule aligned with ``frontend/src/utils/csvExport.ts``.
+    Keep this rule aligned with ``frontend/src/features/admin/shared/csvExport.ts``.
     """
     text = "" if value is None else str(value)
     return f"'{text}" if text.startswith(_CSV_INJECTION_PREFIXES) else text

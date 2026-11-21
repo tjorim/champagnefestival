@@ -4,14 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   canPatchAdminRegistrationLiveEvent,
   patchAdminRegistrationLiveEvent,
-} from "@/state/adminRegistrationsCollection";
+} from "@/lib/collections/adminRegistrationsCollection";
 import {
   canPatchAdminTableLiveEvent,
   isTableRowUnaffectedByLiveEvent,
   patchAdminTableLiveEvent,
-} from "@/state/adminTablesCollection";
-import { queryKeys } from "@/utils/queryKeys";
-import { connectLiveStream } from "@/utils/liveStream";
+} from "@/lib/collections/adminTablesCollection";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { connectLiveStream } from "@/lib/api/liveStream";
 
 const LIVE_STREAM_URL = "/api/live/stream";
 

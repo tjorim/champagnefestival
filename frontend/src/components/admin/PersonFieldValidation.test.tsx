@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import PersonFormModal from "./PersonFormModal";
 import MemberFormModal from "./MemberFormModal";
 import VolunteerFormModal from "./VolunteerFormModal";
-import { ApiError } from "@/utils/apiErrors";
+import { ApiError } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 afterEach(cleanup);
 it.each(["person", "member", "volunteer"])(

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { managedArtwork } from "@/utils/editionArtwork";
+import { managedArtwork } from "@/lib/editions/editionArtwork";
 
 const HERO_VARIABLE = "--edition-hero-image";
 

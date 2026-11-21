@@ -42,12 +42,12 @@ import type { FloorTable } from "@/api-types";
 import type { PaymentTransactionCreate } from "@/api-types";
 import type { OrderItemOut } from "@/api-types";
 import { remainingQuantity, type BookingUpdate, type Registration } from "@/types/registration";
-import { toAmount } from "@/utils/money";
+import { toAmount } from "@/features/admin/shared/money";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
   type RegistrationEmailTemplate,
-} from "@/utils/emailComposer";
+} from "@/features/admin/shared/emailComposer";
 import BookingEditor from "./BookingEditor";
 import EmailComposeModal from "./EmailComposeModal";
 

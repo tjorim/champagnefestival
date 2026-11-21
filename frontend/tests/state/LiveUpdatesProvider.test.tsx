@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePeopleListQuery } from "@/hooks/usePeopleListQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { LiveUpdatesProvider } from "@/state/LiveUpdatesProvider";
-import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/utils/liveStream";
+import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/lib/api/liveStream";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 // ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@ import { createTestQueryClientHarness } from "../utils/queryClient";
 
 let capturedOptions: ConnectLiveStreamOptions | null = null;
 
-vi.mock("@/utils/liveStream", () => ({
+vi.mock("@/lib/api/liveStream", () => ({
   connectLiveStream: vi.fn((options: ConnectLiveStreamOptions) => {
     capturedOptions = options;
     // Return a promise that resolves when the signal is aborted.
@@ -29,7 +29,7 @@ vi.mock("@/utils/liveStream", () => ({
 // flipped on for the one test that exercises the patch branch.
 let canPatch = false;
 
-vi.mock("@/state/adminRegistrationsCollection", () => ({
+vi.mock("@/lib/collections/adminRegistrationsCollection", () => ({
   canPatchAdminRegistrationLiveEvent: () => canPatch,
   patchAdminRegistrationLiveEvent: vi.fn().mockResolvedValue(undefined),
 }));
@@ -38,8 +38,8 @@ vi.mock("@/state/adminRegistrationsCollection", () => ({
 let canPatchTable = false;
 const patchTable = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
-vi.mock("@/state/adminTablesCollection", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/state/adminTablesCollection")>()),
+vi.mock("@/lib/collections/adminTablesCollection", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/collections/adminTablesCollection")>()),
   canPatchAdminTableLiveEvent: () => canPatchTable,
   patchAdminTableLiveEvent: patchTable,
 }));

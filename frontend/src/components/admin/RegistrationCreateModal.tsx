@@ -1,5 +1,5 @@
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
-import type { OrderAnswer } from "@/utils/orderQuestions";
+import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import {
   ADMIN_CONTROL_CLASS,
   ADMIN_LABEL_CLASS,
@@ -47,11 +47,11 @@ import {
 } from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
-import { toAmount } from "@/utils/money";
+import { toAmount } from "@/features/admin/shared/money";
 import { isDraftDirty, useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { queryKeys } from "@/utils/queryKeys";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { queryKeys } from "@/lib/query/queryKeys";
 import {
   draftTotal,
   isValidGuestCount,
@@ -59,14 +59,14 @@ import {
   productDraftState,
   resolveQuantities,
   type ProductQuantities,
-} from "@/utils/registrationDraft";
+} from "@/features/admin/registrations/registrationDraft";
 import {
   createAdminRegistration,
   fetchAdminPersonOptions,
   fetchRegistrableEvents,
   type CreateRegistrationPayload,
   type PersonOption,
-} from "@/utils/adminRegistrationApi";
+} from "@/features/admin/shared/adminRegistrationApi";
 
 const adminActiveEditionEventsQueryKey = queryKeys.admin.activeEditionEvents;
 const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;

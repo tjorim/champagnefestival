@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import AnnouncementManagement from "@/components/admin/AnnouncementManagement";
 import ComposerManagement from "@/components/admin/ComposerManagement";
 import { server } from "@/mocks/server";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 

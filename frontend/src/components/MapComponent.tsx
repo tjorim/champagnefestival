@@ -6,7 +6,7 @@ import L from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-import { generateGoogleMapsUrl } from "@/utils/maps";
+import { generateGoogleMapsUrl } from "@/lib/venue/maps";
 
 // A dedicated icon avoids Leaflet prepending its auto-detected image path to
 // the asset URLs emitted by Vite.

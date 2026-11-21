@@ -1,7 +1,7 @@
 import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import ConfirmModal from "@/components/ConfirmModal";
-import { editionDisplayName } from "@/utils/editionName";
+import { editionDisplayName } from "@/lib/editions/editionName";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -22,15 +22,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   deleteEditionById,
   deleteEditionEvent,
   fetchEditionEvents,
   saveEditionEvent,
-} from "@/utils/adminContentApi";
+} from "@/lib/api/adminContentApi";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import EditionArtwork from "./EditionArtwork";
 import EditionModal from "./EditionModal";
 import EditionPollModal from "./EditionPollModal";

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { describe, expect, it, vi } from "vitest";
 import LogoWall from "@/components/LogoWall";
 import type { SliderItem } from "@/config/editions";
-import type { OrganizationStands } from "@/utils/standsApi";
+import type { OrganizationStands } from "@/lib/api/standsApi";
 
 vi.mock("@/paraglide/runtime", () => ({ getLocale: () => "en" }));
 vi.mock("@/paraglide/messages", () => ({

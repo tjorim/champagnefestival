@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { hasApiErrorCode } from "@/utils/apiErrors";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
-import { confirmEmailConsent } from "@/utils/emailConsentApi";
+import { hasApiErrorCode } from "@/lib/api/apiErrors";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
+import { confirmEmailConsent } from "@/lib/api/emailConsentApi";
 
 /**
  * Target of the confirmation link emailed after the registration form's updates option (#1408).

@@ -7,7 +7,7 @@ import {
   composedSendBlockedByMail,
   composedTextFor,
   type ComposedMessage,
-} from "@/utils/composedMessage";
+} from "@/features/admin/shared/composedMessage";
 
 function levelLabel(level: ComposedMessage["level"]): string {
   switch (level) {

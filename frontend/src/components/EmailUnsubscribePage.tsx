@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { hasApiErrorCode } from "@/utils/apiErrors";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
-import { getUnsubscribeCategory, unsubscribeByToken } from "@/utils/emailUnsubscribeApi";
+import { hasApiErrorCode } from "@/lib/api/apiErrors";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
+import {
+  getUnsubscribeCategory,
+  unsubscribeByToken,
+} from "@/features/email-preferences/emailUnsubscribeApi";
 
 /**
  * Target of the unsubscribe link in member mail (#1407). Mail clients POST to the same address for

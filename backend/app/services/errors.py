@@ -59,7 +59,7 @@ class ApiHTTPException(HTTPException):
     The response body is ``{"detail": <English text>, "code": <code>}``. ``detail``
     stays a developer/log diagnostic (MCP callers and tests read it verbatim);
     clients that show the error to a person map ``code`` to a translated message
-    instead of rendering ``detail`` (see ``frontend/src/utils/apiErrors.ts``).
+    instead of rendering ``detail`` (see ``frontend/src/lib/api/apiErrors.ts``).
     Codes are lowercase snake_case, stable once published, and never reused.
     """
 

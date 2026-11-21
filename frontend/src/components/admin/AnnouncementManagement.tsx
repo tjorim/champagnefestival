@@ -29,10 +29,10 @@ import {
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
 import AdminEditorDialog from "./AdminEditorDialog";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";

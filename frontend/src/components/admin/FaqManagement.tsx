@@ -46,16 +46,16 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { FaqItemOut } from "@/api-types";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { fetchFaqItemsAdmin } from "@/utils/adminFetch";
+import { fetchFaqItemsAdmin } from "@/lib/api/adminFetch";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { queryKeys } from "@/utils/queryKeys";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
+} from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface FaqManagementProps {

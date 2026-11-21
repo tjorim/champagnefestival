@@ -1,8 +1,8 @@
-import { orderAnswersBody } from "@/utils/orderQuestions";
+import { orderAnswersBody } from "@/lib/editions/orderQuestions";
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage, hasApiErrorCode } from "@/utils/apiErrors";
+import { apiErrorMessage, hasApiErrorCode } from "@/lib/api/apiErrors";
 import type {
   OrderItemOut,
   PaymentTransactionCreate,
@@ -10,13 +10,13 @@ import type {
   RegistrationOutWithToken,
   TableAllocation,
 } from "@/api-types";
-import { toAmount } from "@/utils/money";
+import { toAmount } from "@/features/admin/shared/money";
 import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { fetchRegistration } from "@/utils/adminFetch";
-import { toLocalDateKey } from "@/utils/dateUtils";
-import { devError } from "@/utils/devLog";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchRegistration } from "@/lib/api/adminFetch";
+import { toLocalDateKey } from "@/lib/format/dateUtils";
+import { devError } from "@/lib/editions/devLog";
 
 interface UseAdminRegistrationActionsOptions {
   authHeaders: () => Record<string, string>;

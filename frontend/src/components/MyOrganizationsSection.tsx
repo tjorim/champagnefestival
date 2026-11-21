@@ -9,7 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { PublicField, PublicLabel, PublicInput, PublicTextarea } from "@/components/PublicFields";
 import {
   organizationChangesRequest,
@@ -18,7 +18,7 @@ import {
   organizationTextFields,
   type OrganizationChange,
   type OrganizationTexts,
-} from "@/utils/organizationChangesApi";
+} from "@/lib/api/organizationChangesApi";
 
 export type ManagedOrganization = import("@/api-types").ManagedOrganizationOut;
 

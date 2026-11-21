@@ -24,10 +24,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
 import { m } from "@/paraglide/messages";
-import type { LedgerSortKey } from "@/utils/adminFetch";
+import type { LedgerSortKey } from "@/lib/api/adminFetch";
 import type { LedgerTransaction } from "@/api-types";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
+import { transactionAmountLabel } from "@/features/admin/shared/paymentTransactionLabels";
 
 // Maps a sortable table column's id to the backend `sort` query param it
 // corresponds to (see backend/app/services/payments_service.py's

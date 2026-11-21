@@ -19,10 +19,10 @@ import {
   createAdminPerson,
   fetchAdminPersonOptions,
   type PersonOption,
-} from "@/utils/adminRegistrationApi";
+} from "@/features/admin/shared/adminRegistrationApi";
 import { usePersonFieldErrors } from "@/hooks/usePersonFieldErrors";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { queryKeys } from "@/utils/queryKeys";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 type Language = "nl" | "fr" | "en" | null;
 

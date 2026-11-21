@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   stampKeys,
   stampLabel,
@@ -9,8 +9,8 @@ import {
   stampRequest,
   type StampCard,
   type StampReward,
-} from "@/utils/stampCards";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/editions/stampCards";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

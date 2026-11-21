@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import SettingsManagement from "@/components/admin/SettingsManagement";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { server } from "@/mocks/server";
 import { createTestQueryClientHarness, createTestQueryClientWrapper } from "../utils/queryClient";
 

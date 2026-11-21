@@ -4,7 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiErrorFromResponse, apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorFromResponse, apiErrorMessage } from "@/lib/api/apiErrors";
 
 /**
  * Config webview opened from the Pebble phone app (Pebble.openURL, triggered by

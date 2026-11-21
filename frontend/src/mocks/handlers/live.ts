@@ -6,7 +6,7 @@
  * broadcasts without a real backend.
  */
 import { http, HttpResponse } from "msw/http";
-import type { LiveEnvelope } from "@/utils/liveStream";
+import type { LiveEnvelope } from "@/lib/api/liveStream";
 
 const encoder = new TextEncoder();
 let activeController: ReadableStreamDefaultController<Uint8Array> | null = null;

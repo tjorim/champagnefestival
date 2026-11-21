@@ -4,8 +4,8 @@ import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
 import type { EventPublicOut as Event } from "@/api-types";
-import { DEFAULT_SHARE, editionShareImage } from "@/utils/editionArtwork";
-import { eventDescription, eventTitle, productName } from "@/utils/eventText";
+import { DEFAULT_SHARE, editionShareImage } from "@/lib/editions/editionArtwork";
+import { eventDescription, eventTitle, productName } from "@/lib/editions/eventText";
 
 /** Marks the JSON-LD <script> the backend renders into <head> for GET /.
  * Kept in sync with

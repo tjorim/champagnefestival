@@ -1,13 +1,13 @@
 import OrganizationLogoPreview from "@/components/OrganizationLogoPreview";
 import ResponsiveImage from "@/components/ResponsiveImage";
 import { useAuth } from "@/contexts/AuthContext";
-import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
+import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 import { useId, useState, type ReactNode } from "react";
 import { createAppColumnHelper, useAppTable } from "@/hooks/useAdminTable";
 import { AdminDataTable } from "./AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { AdminField, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
@@ -16,7 +16,7 @@ import {
   organizationFieldLabel,
   organizationTextFields,
   type OrganizationChange,
-} from "@/utils/organizationChangesApi";
+} from "@/lib/api/organizationChangesApi";
 
 interface ComparisonRow {
   id: string;

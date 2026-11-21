@@ -30,8 +30,8 @@ import {
   signageOperationErrorMessage,
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
+} from "@/lib/api/adminApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { missingBindings, type Template } from "@/signage/editorModel";
@@ -51,7 +51,7 @@ import { signageIcons } from "@/signage/icons";
 import "@/signage/editor.css";
 import SignageVideoExports from "./SignageVideoExports";
 import AdminEditorDialog from "./AdminEditorDialog";
-import { editionDisplayNameWithType } from "@/utils/editionName";
+import { editionDisplayNameWithType } from "@/lib/editions/editionName";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 
 const channelPath = (slug: string) => `/signage/${slug}`;

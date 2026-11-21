@@ -21,10 +21,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { queryKeys } from "@/utils/queryKeys";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface SettingsManagementProps {

@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/alert";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 type PublicPolicy = import("@/api-types").PolicyPublicOut;
 

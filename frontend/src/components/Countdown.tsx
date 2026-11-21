@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useNow } from "@/hooks/useNow";
-import { dayjs } from "@/utils/dateUtils";
+import { dayjs } from "@/lib/format/dateUtils";
 import { m } from "@/paraglide/messages";
 
 /**

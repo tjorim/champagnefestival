@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getLocale } from "@/paraglide/runtime";
 import { type Category } from "@/api-types";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 async function fetchCategories(path: string): Promise<Category[]> {
   const response = await fetch(path);

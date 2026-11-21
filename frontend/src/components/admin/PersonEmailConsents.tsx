@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
 import {
   emailConsentKeys,
   emailRequest,
   revokedSourceLabel,
   sourceLabel,
   type EmailConsentRecord,
-} from "@/utils/emailCategories";
+} from "@/features/admin/shared/emailCategories";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -17,7 +17,7 @@ const { fetchEditionStats } = vi.hoisted(() => ({
   fetchEditionStats: vi.fn(),
 }));
 
-vi.mock("@/utils/adminFetch", () => ({
+vi.mock("@/lib/api/adminFetch", () => ({
   fetchEditionStats,
 }));
 

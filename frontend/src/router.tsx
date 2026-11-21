@@ -11,10 +11,10 @@ import {
 
 import { useLanguage } from "./hooks/useLanguage";
 
-import { validateAdminSearch } from "./utils/adminTableState";
+import { validateAdminSearch } from "@/features/admin/shared/adminTableState";
 
 import { getStoredAccessToken } from "./config/oidc";
-import { venuePlanQueryOptions } from "./utils/venuePlanApi";
+import { venuePlanQueryOptions } from "@/features/venue-plan/venuePlanApi";
 
 // The live stream patches the admin collections, which pull in TanStack DB:
 // load it with the admin routes, not on every public visit.

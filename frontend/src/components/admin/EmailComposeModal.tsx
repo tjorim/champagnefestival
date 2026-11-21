@@ -12,7 +12,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
-import { buildMailto, MAILTO_MAX_LENGTH, type EmailDraft } from "@/utils/emailComposer";
+import {
+  buildMailto,
+  MAILTO_MAX_LENGTH,
+  type EmailDraft,
+} from "@/features/admin/shared/emailComposer";
 
 interface Props {
   draft: EmailDraft | null;

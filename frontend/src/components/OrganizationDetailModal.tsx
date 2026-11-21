@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import type { SliderItem } from "@/config/editions";
 import { m } from "@/paraglide/messages";
-import { organizationDescription } from "@/utils/organizationDescription";
-import { formatStandDay, type Stand } from "@/utils/standsApi";
+import { organizationDescription } from "@/features/site/organizationDescription";
+import { formatStandDay, type Stand } from "@/lib/api/standsApi";
 
 interface OrganizationDetailModalProps {
   /** The organization to show, or `null` while the dialog is closed. */

@@ -18,7 +18,7 @@ import type { AppSettingsOut } from "@/api-types";
 
 import { useQuery } from "@tanstack/react-query";
 import { contactConfig } from "@/config/contact";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 export type ApiAppSettings = AppSettingsOut;
 

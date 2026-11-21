@@ -18,7 +18,7 @@ const { fetchAuditEntries, fetchAuditResourceTypes } = vi.hoisted(() => ({
   fetchAuditResourceTypes: vi.fn(),
 }));
 
-vi.mock("@/utils/adminFetch", () => ({
+vi.mock("@/lib/api/adminFetch", () => ({
   fetchAuditEntries,
   fetchAuditResourceTypes,
 }));

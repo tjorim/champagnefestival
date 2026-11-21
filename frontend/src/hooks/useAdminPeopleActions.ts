@@ -1,9 +1,9 @@
 import {
   refetchAdminRegistrations,
   type AdminRegistrationsCollection,
-} from "@/state/adminRegistrationsCollection";
-import { queryKeys } from "@/utils/queryKeys";
-import { fetchRegistration } from "@/utils/adminFetch";
+} from "@/lib/collections/adminRegistrationsCollection";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { fetchRegistration } from "@/lib/api/adminFetch";
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { MemberFormData } from "@/components/admin/MemberFormModal";
@@ -11,13 +11,13 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import type { Registration } from "@/types/registration";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
-import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
+import { captureAdminPeopleFence } from "@/features/admin/people/adminPeopleSession";
 import {
   applyAdminOrganizationContactsMerged,
   captureAdminOrganizationsFence,
   refetchAdminOrganizations,
   type AdminOrganizationsCollection,
-} from "@/state/adminOrganizationsCollection";
+} from "@/lib/collections/adminOrganizationsCollection";
 
 interface UseAdminPeopleActionsOptions {
   authHeaders: () => Record<string, string>;

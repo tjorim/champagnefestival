@@ -14,15 +14,18 @@ import type {
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { refetchAdminTables, type AdminTablesCollection } from "@/state/adminTablesCollection";
+} from "@/lib/api/adminApi";
+import {
+  refetchAdminTables,
+  type AdminTablesCollection,
+} from "@/lib/collections/adminTablesCollection";
 import {
   captureAdminVenueFence,
   refetchAdminVenueCollections,
   type AdminVenueCollectionName,
   type AdminVenueCollections,
-} from "@/state/adminVenueCollections";
-import { saveLayoutRevision, restoreLayoutRevision } from "@/utils/adminFetch";
+} from "@/features/admin/venue/adminVenueCollections";
+import { saveLayoutRevision, restoreLayoutRevision } from "@/lib/api/adminFetch";
 import { m } from "@/paraglide/messages";
 
 interface UseVenueMutationsOptions {

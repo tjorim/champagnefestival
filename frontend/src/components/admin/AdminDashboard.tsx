@@ -1,7 +1,7 @@
 import { useSearch } from "@tanstack/react-router";
 import { adminSections, useLocationChoice } from "@/hooks/useLocationChoice";
 import { useSyncExternalStore } from "react";
-import { adminCachePersistence } from "@/state/adminCachePersistence";
+import { adminCachePersistence } from "@/lib/collections/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
 import { usePersonDuplicates } from "./PersonDuplicates";
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
@@ -10,7 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
@@ -34,14 +34,14 @@ import {
   applyAdminOrganizationSaved,
   captureAdminOrganizationsFence,
   refetchAdminOrganizations,
-} from "@/state/adminOrganizationsCollection";
-import { queryKeys } from "@/utils/queryKeys";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
-import { devError } from "@/utils/devLog";
-import { recordSignOutReason } from "@/utils/signOutReason";
+} from "@/lib/collections/adminOrganizationsCollection";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
+import { devError } from "@/lib/editions/devLog";
+import { recordSignOutReason } from "@/features/admin/shell/signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
 import AdminSectionPane from "./AdminSectionPane";
-import { editionDisplayNameWithType } from "@/utils/editionName";
+import { editionDisplayNameWithType } from "@/lib/editions/editionName";
 
 // Keep secondary tools out of the initial registrations download.
 const OrganizationChangeReview = React.lazy(() => import("./OrganizationChangeReview"));

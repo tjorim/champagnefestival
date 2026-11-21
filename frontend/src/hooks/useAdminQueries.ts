@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQueryClient } from "@tanstack/react-query";
-import { collectionError } from "@/state/adminCollectionFactory";
+import { collectionError } from "@/lib/collections/adminCollectionFactory";
 import {
   createAdminRegistrationsCollection,
   refetchAdminRegistrations,
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
-} from "@/state/adminRegistrationsCollection";
+} from "@/lib/collections/adminRegistrationsCollection";
 import {
   createAdminOrganizationsCollection,
   refetchAdminOrganizations,
   registerAdminOrganizationsCollection,
   resetAdminOrganizationsCollection,
-} from "@/state/adminOrganizationsCollection";
-import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
+} from "@/lib/collections/adminOrganizationsCollection";
+import { resetAdminPeopleSession } from "@/features/admin/people/adminPeopleSession";
 import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
@@ -23,15 +23,15 @@ import {
   refetchAdminTables,
   registerAdminTablesCollection,
   resetAdminTablesCollection,
-} from "@/state/adminTablesCollection";
+} from "@/lib/collections/adminTablesCollection";
 import {
   createAdminVenueCollections,
   refetchAdminVenueCollections,
   registerAdminVenueCollections,
   resetAdminVenueCollections,
-} from "@/state/adminVenueCollections";
-import { withTableOccupancy } from "@/state/tableOccupancy";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/features/admin/venue/adminVenueCollections";
+import { withTableOccupancy } from "@/lib/collections/tableOccupancy";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 interface UseAdminQueriesOptions {
   visible: boolean;

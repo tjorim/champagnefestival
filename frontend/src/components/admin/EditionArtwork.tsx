@@ -16,8 +16,13 @@ import {
   clearEditionArtwork,
   uploadEditionArtwork,
   type EditionArtworkSlot,
-} from "@/utils/adminContentApi";
-import { DEFAULT_FLYER, DEFAULT_HERO, DEFAULT_SHARE, managedArtwork } from "@/utils/editionArtwork";
+} from "@/lib/api/adminContentApi";
+import {
+  DEFAULT_FLYER,
+  DEFAULT_HERO,
+  DEFAULT_SHARE,
+  managedArtwork,
+} from "@/lib/editions/editionArtwork";
 import type { Edition } from "@/api-types";
 
 interface SlotConfig {

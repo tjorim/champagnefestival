@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { fetchRegistrationsPage, type RegistrationsPageOptions } from "@/utils/adminFetch";
-import { queryKeys } from "@/utils/queryKeys";
+import { fetchRegistrationsPage, type RegistrationsPageOptions } from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 /** Server-owned membership, order and totals; collections only overlay known rows. */
 export function useRegistrationListQuery(

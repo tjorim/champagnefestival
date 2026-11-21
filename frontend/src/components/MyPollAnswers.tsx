@@ -1,12 +1,12 @@
 import { useState, type ComponentType } from "react";
 import ScalarAnswerFields from "@/components/ScalarAnswerFields";
-import { answerMyScalarQuestion } from "@/utils/myVolunteerApi";
+import { answerMyScalarQuestion } from "@/lib/api/myVolunteerApi";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
-import { dietaryTagLabel } from "@/utils/dietaryTags";
+import { dietaryTagLabel } from "@/lib/editions/dietaryTags";
 import {
   answerMyMealsQuestion,
   answerMyYesNoQuestion,
@@ -14,8 +14,8 @@ import {
   MAX_POLL_QUANTITY,
   type MyPoll,
   type MyPollQuestion,
-} from "@/utils/myVolunteerApi";
-import type { PollQuestionKind } from "@/utils/pollKinds";
+} from "@/lib/api/myVolunteerApi";
+import type { PollQuestionKind } from "@/lib/editions/pollKinds";
 
 type SaveAnswer = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => void;
 

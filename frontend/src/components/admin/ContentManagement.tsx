@@ -37,7 +37,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Spinner } from "@/components/ui/spinner";
 
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
@@ -45,15 +45,15 @@ import type { ItemDraft } from "./itemTypes";
 import type { EditionType } from "./editionTypes";
 import type { Edition } from "@/api-types";
 import type { Venue } from "@/api-types";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import {
   deleteContentSectionItem,
   fetchContentSectionItems,
   fetchEditions,
   saveContentSectionItem,
   updateContentSectionItemActive,
-} from "@/utils/adminContentApi";
-import { editionDisplayName } from "@/utils/editionName";
+} from "@/lib/api/adminContentApi";
+import { editionDisplayName } from "@/lib/editions/editionName";
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 

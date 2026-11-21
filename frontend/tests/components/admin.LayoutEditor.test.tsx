@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 const render = (ui: ReactElement) =>
   renderUI(<QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>);
 
-import { fetchAllRegistrationPages } from "@/utils/adminFetch";
+import { fetchAllRegistrationPages } from "@/lib/api/adminFetch";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LayoutEditor, { getDayLabel } from "@/components/admin/LayoutEditor";
@@ -30,7 +30,7 @@ const { fetchLayoutRevisions, compareLayoutRevisions, previewLayoutRestore } = v
   previewLayoutRestore: vi.fn(),
 }));
 
-vi.mock("@/utils/adminFetch", () => ({
+vi.mock("@/lib/api/adminFetch", () => ({
   fetchLayoutRevisions,
   compareLayoutRevisions,
   previewLayoutRestore,

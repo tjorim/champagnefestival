@@ -5,8 +5,8 @@ import { http } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
-import { peopleListSearchParams, type PeopleListParams } from "@/utils/adminPeopleQueries";
-import { queryKeys } from "@/utils/queryKeys";
+import { peopleListSearchParams, type PeopleListParams } from "@/lib/query/adminPeopleQueries";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { createTestQueryClientHarness } from "./utils/queryClient";
 
 const headers = () => ({ Authorization: "Bearer session" });

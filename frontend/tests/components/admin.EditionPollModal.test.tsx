@@ -10,7 +10,7 @@ import EditionPollModal from "@/components/admin/EditionPollModal";
 import type { Edition } from "@/api-types";
 
 import { server } from "@/mocks/server";
-import { exportToCsv } from "@/utils/csvExport";
+import { exportToCsv } from "@/features/admin/shared/csvExport";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -21,7 +21,7 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-vi.mock("@/utils/csvExport", () => ({ exportToCsv: vi.fn() }));
+vi.mock("@/features/admin/shared/csvExport", () => ({ exportToCsv: vi.fn() }));
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 

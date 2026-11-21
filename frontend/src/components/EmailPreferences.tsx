@@ -6,8 +6,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { PublicCheck, PublicDescription } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
-import { getEmailPreferences, updateEmailPreferences } from "@/utils/emailConsentApi";
+import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
+import { getEmailPreferences, updateEmailPreferences } from "@/lib/api/emailConsentApi";
 
 /**
  * Per-category email consent for the signed-in person (#1408). The backend lists only the

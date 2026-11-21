@@ -66,10 +66,10 @@ import { useEditionHeroImage } from "./hooks/useEditionHeroImage";
 import { m } from "./paraglide/messages";
 import { getLocale } from "./paraglide/runtime";
 import { featureItems } from "./config/features";
-import { dayjs, endOfDay, formatDateRange } from "./utils/dateUtils";
+import { dayjs, endOfDay, formatDateRange } from "@/lib/format/dateUtils";
 import { createAppRouter } from "./router";
-import { generateGoogleMapsUrl } from "./utils/maps";
-import { editionStandsQueryOptions, type OrganizationStands } from "./utils/standsApi";
+import { generateGoogleMapsUrl } from "@/lib/venue/maps";
+import { editionStandsQueryOptions, type OrganizationStands } from "@/lib/api/standsApi";
 import type { SliderItem } from "./config/editions";
 
 const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {

@@ -1,9 +1,9 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { PaymentTransactionCreate, PaymentTransactionOut, RegistrationOut } from "@/api-types";
-import { ApiError } from "@/utils/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
-import { queryKeys } from "@/utils/queryKeys";
+import { ApiError } from "@/lib/api/apiErrors";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 interface UseRegistrationAdminMutationsOptions {
   queryClient: QueryClient;

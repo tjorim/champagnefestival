@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertHeading } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { clearSignOutReason, peekSignOutReason } from "@/utils/signOutReason";
+import { clearSignOutReason, peekSignOutReason } from "@/features/admin/shell/signOutReason";
 
 export default function AdminLoginForm() {
   const auth = useAuth();

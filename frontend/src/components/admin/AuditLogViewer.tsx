@@ -37,9 +37,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { m } from "@/paraglide/messages";
-import { fetchAuditEntries, fetchAuditResourceTypes } from "@/utils/adminFetch";
-import { queryKeys } from "@/utils/queryKeys";
-import { devError } from "@/utils/devLog";
+import { fetchAuditEntries, fetchAuditResourceTypes } from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { devError } from "@/lib/editions/devLog";
 
 const PAGE_SIZE = 50;
 

@@ -4,8 +4,8 @@ import {
   fetchPeoplePage,
   type PeopleCountParams,
   type PeopleListParams,
-} from "@/utils/adminPeopleQueries";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/query/adminPeopleQueries";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 /** Server-owned filtering, ordering and totals; never filter a cached page locally. */
 export function usePeopleListQuery(

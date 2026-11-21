@@ -1,12 +1,12 @@
 import { useSearch } from "@tanstack/react-router";
 import { accountTabs, useLocationChoice } from "@/hooks/useLocationChoice";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import MyMembership from "@/components/MyMembership";
 import EmailPreferences from "@/components/EmailPreferences";
 import MyOrganizationsSection, {
   type ManagedOrganization,
 } from "@/components/MyOrganizationsSection";
-import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicRegistrationApi";
+import { signOutVisitorSession, type GuestRegistration } from "@/lib/api/publicRegistrationApi";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -25,7 +25,7 @@ import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import MyPollSection from "@/components/MyPollSection";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
-import { deleteMyAccount } from "@/utils/meApi";
+import { deleteMyAccount } from "@/features/my-account/meApi";
 import ConfirmModal from "@/components/ConfirmModal";
 import MyRegistrationsPage from "@/components/MyRegistrationsPage";
 import {
@@ -33,12 +33,12 @@ import {
   formatNiss,
   isValidEidNumber,
   isValidNiss,
-} from "@/utils/belgianIdentityNumbers";
+} from "@/features/my-account/belgianIdentityNumbers";
 import {
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
   updateMyEidDocumentNumber,
-} from "@/utils/myVolunteerApi";
+} from "@/lib/api/myVolunteerApi";
 
 /**
  * Unified self-service for visitors, organization contacts and OIDC accounts.

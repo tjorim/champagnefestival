@@ -7,8 +7,8 @@ import {
   signageRequest,
   fetchJsonOrThrowWithUnauthorized,
   downloadFileOrThrow,
-} from "@/utils/adminApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
+} from "@/lib/api/adminApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import type { Channel } from "@/signage/playlistModel";

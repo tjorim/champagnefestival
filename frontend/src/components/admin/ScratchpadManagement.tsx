@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { queryKeys } from "@/utils/queryKeys";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 type ApiScratchpad = import("@/api-types").EditionScratchpadOut;
 

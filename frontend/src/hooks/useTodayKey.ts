@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toLocalDateKey } from "@/utils/dateUtils";
+import { toLocalDateKey } from "@/lib/format/dateUtils";
 
 /**
  * Today's local date key (`YYYY-MM-DD`), kept current across midnight.

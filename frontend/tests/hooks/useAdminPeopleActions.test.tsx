@@ -4,9 +4,9 @@ import { act, renderHook } from "@testing-library/react";
 import { http } from "msw/http";
 import { expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
-import type { AdminOrganizationsCollection } from "@/state/adminOrganizationsCollection";
-import type { AdminRegistrationsCollection } from "@/state/adminRegistrationsCollection";
-import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
+import type { AdminOrganizationsCollection } from "@/lib/collections/adminOrganizationsCollection";
+import type { AdminRegistrationsCollection } from "@/lib/collections/adminRegistrationsCollection";
+import { resetAdminPeopleSession } from "@/features/admin/people/adminPeopleSession";
 import { server } from "@/mocks/server";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 

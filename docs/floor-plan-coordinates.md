@@ -39,7 +39,7 @@ canvas_height_px = max(180, room.length_m * 28)
 ```
 
 The `28` px/metre scale and the `280`/`180` px minimums originate in
-`frontend/src/utils/layoutUtils.ts` (`LAYOUT_PX_PER_M`, `LAYOUT_MIN_CANVAS_WIDTH_PX`,
+`frontend/src/lib/venue/layoutUtils.ts` (`LAYOUT_PX_PER_M`, `LAYOUT_MIN_CANVAS_WIDTH_PX`,
 `LAYOUT_MIN_CANVAS_HEIGHT_PX`) and are intentionally mirrored — same constants, same
 rounding — in `backend/app/services/layouts_service.py` (`_PX_PER_M`,
 `_MIN_CANVAS_WIDTH_PX`, `_MIN_CANVAS_HEIGHT_PX`, `_js_round`) so the backend's
@@ -111,7 +111,7 @@ icon, x, y, rotation, width_m, length_m, organization_id}]}]}]`:
   outside it and an inactive edition returns 404.
 - **Rendering:** `x`/`y`/`rotation` follow the contract above. The frontend
   (`PublicFloorPlanDialog`) converts each area's pixel size to a percentage of the room
-  canvas (`planAreaBox` in `frontend/src/utils/planApi.ts`) so the plan scales with its
+  canvas (`planAreaBox` in `frontend/src/lib/api/planApi.ts`) so the plan scales with its
   container, and keeps the canvas's natural size as a minimum so it scrolls sideways on a
   phone instead of shrinking labels.
 - **Not exposed elsewhere:** the public MCP does not get the plan; `find_stand` already

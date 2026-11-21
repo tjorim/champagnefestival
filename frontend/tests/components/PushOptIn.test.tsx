@@ -4,11 +4,11 @@ import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import PushOptIn from "@/components/PushOptIn";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
-import { sendTestPush, subscribeToPush } from "@/utils/pushApi";
+import { sendTestPush, subscribeToPush } from "@/lib/api/pushApi";
 
 vi.mock("@/hooks/usePushSubscription");
-vi.mock("@/utils/pushApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/utils/pushApi")>()),
+vi.mock("@/lib/api/pushApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/pushApi")>()),
   subscribeToPush: vi.fn(),
   sendTestPush: vi.fn(),
 }));

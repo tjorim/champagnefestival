@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
-import { isRegistrationInEdition } from "@/utils/adminUtils";
-import { toLocalDateKey } from "@/utils/dateUtils";
+import { isRegistrationInEdition } from "@/features/admin/shell/adminUtils";
+import { toLocalDateKey } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 
 interface UseAdminDashboardDataOptions {

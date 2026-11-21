@@ -1,10 +1,10 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
-import * as pushApi from "@/utils/pushApi";
-import { ApiError } from "@/utils/apiErrors";
+import * as pushApi from "@/lib/api/pushApi";
+import { ApiError } from "@/lib/api/apiErrors";
 
-vi.mock("@/utils/pushApi");
+vi.mock("@/lib/api/pushApi");
 
 const VAPID_PUBLIC_KEY = "BNJxw-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQ";
 

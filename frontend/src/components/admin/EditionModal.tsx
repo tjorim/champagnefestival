@@ -46,14 +46,14 @@ import { EditionLineupOrder } from "@/components/admin/EditionLineupOrder";
 import type { SponsorTier } from "@/config/editions";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { ItemDraft } from "./itemTypes";
 import type { EditionType } from "./editionTypes";
 import type { Edition } from "@/api-types";
 import type { Venue } from "@/api-types";
-import { queryKeys } from "@/utils/queryKeys";
-import { fetchEditionModalOrganizations, saveEdition } from "@/utils/adminContentApi";
-import { editionDisplayName } from "@/utils/editionName";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { fetchEditionModalOrganizations, saveEdition } from "@/lib/api/adminContentApi";
+import { editionDisplayName } from "@/lib/editions/editionName";
 
 interface EditionModalProps {
   show: boolean;

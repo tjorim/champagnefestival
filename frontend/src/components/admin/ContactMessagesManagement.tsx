@@ -5,10 +5,10 @@ import { Icon } from "@/components/Icon";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import { m } from "@/paraglide/messages";
-import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { fetchQueuePage, queueSearchParams, queueStatus } from "@/utils/adminQueue";
-import type { AdminTableState } from "@/utils/adminTableState";
-import { queryKeys } from "@/utils/queryKeys";
+import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchQueuePage, queueSearchParams, queueStatus } from "@/features/admin/shared/adminQueue";
+import type { AdminTableState } from "@/features/admin/shared/adminTableState";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { AdminDataTable, type AdminTableFilter } from "./AdminDataTable";
 import { QueueRowAction } from "./QueueRowAction";
 

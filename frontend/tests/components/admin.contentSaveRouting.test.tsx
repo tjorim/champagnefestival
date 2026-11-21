@@ -16,7 +16,7 @@ import { describe, expect, it, vi } from "vitest";
 import { http } from "msw/http";
 import EditionModal from "@/components/admin/EditionModal";
 import ItemModal from "@/components/admin/ItemModal";
-import { saveContentSectionItem } from "@/utils/adminContentApi";
+import { saveContentSectionItem } from "@/lib/api/adminContentApi";
 import { server } from "@/mocks/server";
 import type { Edition } from "@/api-types";
 

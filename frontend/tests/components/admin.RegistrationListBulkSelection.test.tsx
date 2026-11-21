@@ -23,7 +23,7 @@ import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
 
 const exportToCsvMock = vi.fn();
-vi.mock("@/utils/csvExport", () => ({
+vi.mock("@/features/admin/shared/csvExport", () => ({
   exportToCsv: (...args: unknown[]) => exportToCsvMock(...args),
 }));
 

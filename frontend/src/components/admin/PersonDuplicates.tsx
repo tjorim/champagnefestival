@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import type { Person } from "@/types/person";
-import { fetchPeopleByEmail } from "@/utils/adminPeopleQueries";
+import { fetchPeopleByEmail } from "@/lib/query/adminPeopleQueries";
 import { m } from "@/paraglide/messages";
 
 export function usePersonDuplicates(

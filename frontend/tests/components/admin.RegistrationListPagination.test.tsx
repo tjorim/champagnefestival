@@ -1,10 +1,10 @@
 import { jsonResponse } from "@/mocks/response";
 import { editionOut, venueOut } from "@/mocks/data/builders";
 import type { ComponentProps } from "react";
-import type { RegistrationsPage } from "@/utils/adminFetch";
+import type { RegistrationsPage } from "@/lib/api/adminFetch";
 /**
  * GET /api/registrations is now server-paginated (see backend/app/routers/
- * registrations.py and frontend/src/utils/adminFetch.ts's fetchRegistrationsPage).
+ * registrations.py and frontend/src/lib/api/adminFetch.ts's fetchRegistrationsPage).
  * These tests cover RegistrationList's pager: page-size selection, Previous/Next
  * navigation, and button disabled states — the part that regresses silently if
  * someone reverts to rendering the full local `registrations` array again.

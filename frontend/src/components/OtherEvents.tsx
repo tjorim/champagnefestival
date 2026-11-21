@@ -11,7 +11,7 @@ import type { EventPublicOut as Event } from "@/api-types";
 import { type ApiUpcomingEdition, useOtherEventItems } from "@/hooks/useOtherEvents";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { eventDescription, eventTitle } from "@/utils/eventText";
+import { eventDescription, eventTitle } from "@/lib/editions/eventText";
 
 function getEditionTitle(edition_type: ApiUpcomingEdition["edition_type"]) {
   switch (edition_type) {

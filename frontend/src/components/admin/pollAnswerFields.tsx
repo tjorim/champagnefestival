@@ -9,9 +9,9 @@ import {
   AdminTextarea,
 } from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
-import type { PollAttendance, PollOrders } from "@/utils/adminContentApi";
-import { MAX_POLL_PEOPLE, MAX_POLL_QUANTITY } from "@/utils/myVolunteerApi";
-import type { PollQuestionKind } from "@/utils/pollKinds";
+import type { PollAttendance, PollOrders } from "@/lib/api/adminContentApi";
+import { MAX_POLL_PEOPLE, MAX_POLL_QUANTITY } from "@/lib/api/myVolunteerApi";
+import type { PollQuestionKind } from "@/lib/editions/pollKinds";
 
 type Question = PollOrders["questions"][number];
 type Volunteer = PollOrders["volunteers"][number];

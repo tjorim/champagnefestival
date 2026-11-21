@@ -9,7 +9,7 @@ import type { FaqItemPublicOut } from "@/api-types";
 
 import { useQuery } from "@tanstack/react-query";
 import { getLocale } from "@/paraglide/runtime";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 
 export type PublicFaqItem = FaqItemPublicOut;
 

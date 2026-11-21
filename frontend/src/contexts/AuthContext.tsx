@@ -2,11 +2,14 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
 import type { AuthContextProps } from "react-oidc-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "@/state/adminCachePersistence";
+import {
+  adminCachePersistence,
+  ADMIN_CACHE_WIPE_SIGNAL,
+} from "@/lib/collections/adminCachePersistence";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
-import { devError } from "@/utils/devLog";
-import { removeAuthenticatedQueries } from "@/utils/queryInvalidation";
-import { signOutVisitorSession } from "@/utils/publicRegistrationApi";
+import { devError } from "@/lib/editions/devLog";
+import { removeAuthenticatedQueries } from "@/lib/query/queryInvalidation";
+import { signOutVisitorSession } from "@/lib/api/publicRegistrationApi";
 import { m } from "@/paraglide/messages";
 
 export interface AuthContextType {

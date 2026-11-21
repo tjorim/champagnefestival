@@ -38,9 +38,9 @@ import { Icon } from "@/components/Icon";
 
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAllRegistrationPages } from "@/utils/adminFetch";
-import { queryKeys } from "@/utils/queryKeys";
-import { withTableOccupancy } from "@/state/tableOccupancy";
+import { fetchAllRegistrationPages } from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { withTableOccupancy } from "@/lib/collections/tableOccupancy";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
@@ -59,7 +59,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { Registration } from "@/types/registration";
 import type {
   Room,
@@ -70,9 +70,14 @@ import type {
   Layout,
   LayoutRevision,
 } from "@/api-types";
-import { getAreaSizePx, getCanvasSizePx, getTableSizePx, safeRoomColor } from "@/utils/layoutUtils";
-import { getTablesInArea } from "@/utils/layoutGeometry";
-import { devError } from "@/utils/devLog";
+import {
+  getAreaSizePx,
+  getCanvasSizePx,
+  getTableSizePx,
+  safeRoomColor,
+} from "@/lib/venue/layoutUtils";
+import { getTablesInArea } from "@/features/admin/venue/layoutGeometry";
+import { devError } from "@/lib/editions/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
 import LayoutRevisionsModal from "./LayoutRevisionsModal";
 import { AdminAddButton, RowActionDivider } from "./RowActions";

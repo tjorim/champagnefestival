@@ -6,7 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
-import type { EditionPlan } from "@/utils/planApi";
+import type { EditionPlan } from "@/lib/api/planApi";
 import PublicFloorPlanDialog from "./PublicFloorPlanDialog";
 
 const area = (id: string, label: string, organizationId: number | null) => ({

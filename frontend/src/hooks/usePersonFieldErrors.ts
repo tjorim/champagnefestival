@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiError, apiErrorMessage } from "@/utils/apiErrors";
+import { ApiError, apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 
 /** Server validation remains authoritative; never infer fields from English diagnostics. */

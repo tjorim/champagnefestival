@@ -38,19 +38,19 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   downloadPaymentTransactionsCsv,
   fetchEditionStats,
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
-} from "@/utils/adminFetch";
+} from "@/lib/api/adminFetch";
 import type { EditionAttendanceStats } from "@/api-types";
-import { queryKeys } from "@/utils/queryKeys";
-import { devError } from "@/utils/devLog";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { devError } from "@/lib/editions/devLog";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import "./analyticsDashboard.css";
-import { editionDisplayName } from "@/utils/editionName";
+import { editionDisplayName } from "@/lib/editions/editionName";
 
 interface AnalyticsDashboardProps {
   authHeaders: () => Record<string, string>;

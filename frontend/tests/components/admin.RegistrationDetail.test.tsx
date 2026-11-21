@@ -24,7 +24,7 @@ const { fetchPaymentTransactions } = vi.hoisted(() => ({
   fetchPaymentTransactions: vi.fn(),
 }));
 
-vi.mock("@/utils/adminFetch", () => ({ fetchPaymentTransactions }));
+vi.mock("@/lib/api/adminFetch", () => ({ fetchPaymentTransactions }));
 
 const tables: FloorTable[] = [
   {

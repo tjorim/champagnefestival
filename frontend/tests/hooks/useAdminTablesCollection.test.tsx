@@ -6,8 +6,8 @@ import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { seedTables } from "@/mocks/data/venue";
 import { server } from "@/mocks/server";
-import { patchAdminRegistrationLiveEvent } from "@/state/adminRegistrationsCollection";
-import type { LiveEnvelope } from "@/utils/liveStream";
+import { patchAdminRegistrationLiveEvent } from "@/lib/collections/adminRegistrationsCollection";
+import type { LiveEnvelope } from "@/lib/api/liveStream";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 const authHeaders = () => ({

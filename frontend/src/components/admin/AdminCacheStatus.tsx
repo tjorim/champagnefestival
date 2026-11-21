@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { adminCachePersistence } from "@/state/adminCachePersistence";
+import { adminCachePersistence } from "@/lib/collections/adminCachePersistence";
 import { Alert } from "@/components/ui/alert";
 import * as m from "@/paraglide/messages";
 

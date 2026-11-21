@@ -10,9 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import type { PollOrders } from "@/utils/adminContentApi";
-import { exportToCsv } from "@/utils/csvExport";
-import { pollCountsSummary, type PollQuestionKind } from "@/utils/pollKinds";
+import type { PollOrders } from "@/lib/api/adminContentApi";
+import { exportToCsv } from "@/features/admin/shared/csvExport";
+import { pollCountsSummary, type PollQuestionKind } from "@/lib/editions/pollKinds";
 
 type Volunteer = PollOrders["volunteers"][number];
 

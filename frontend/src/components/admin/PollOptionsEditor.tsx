@@ -26,10 +26,10 @@ import {
   type PollOption,
   type PollOptionWrite,
   type PollQuestion,
-} from "@/utils/adminContentApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { dietaryTagLabel } from "@/utils/dietaryTags";
-import { POLL_KIND_HAS_DIETARY_TAGS } from "@/utils/pollKinds";
+} from "@/lib/api/adminContentApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { dietaryTagLabel } from "@/lib/editions/dietaryTags";
+import { POLL_KIND_HAS_DIETARY_TAGS } from "@/lib/editions/pollKinds";
 
 const EMPTY_WRITE: PollOptionWrite = { labelNl: "", labelFr: "", labelEn: "", dietaryTags: [] };
 

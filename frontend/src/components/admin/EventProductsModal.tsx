@@ -36,7 +36,7 @@ import {
   type LocalizedText,
 } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { categoryLabel, useProductCategories } from "@/hooks/useCategories";
 import {
@@ -46,8 +46,8 @@ import {
   previewEventProduct,
   type ProductWrite,
   type ProductChangePreview,
-} from "@/utils/adminContentApi";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/api/adminContentApi";
+import { queryKeys } from "@/lib/query/queryKeys";
 import type { Event, Product, ProductInclusionOut as ProductInclusion } from "@/api-types";
 
 import { AdminAddButton, RowActionButton, RowActions } from "./RowActions";

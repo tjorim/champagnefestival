@@ -46,7 +46,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type {
   FloorTable,
   Layout,
@@ -59,7 +59,7 @@ import type {
   VenueUpdate,
 } from "@/api-types";
 import ConfirmModal from "@/components/ConfirmModal";
-import { safeRoomColor } from "@/utils/layoutUtils";
+import { safeRoomColor } from "@/lib/venue/layoutUtils";
 
 const MapComponent = lazy(() => import("@/components/MapComponent"));
 

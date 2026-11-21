@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { ColumnDef, ColumnVisibilityState, RowData } from "@tanstack/react-table";
 import { useAppTable, type AdminTableFeatures } from "@/hooks/useAdminTable";
-import { readAdminTableState, type AdminTableState } from "@/utils/adminTableState";
-import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+import { readAdminTableState, type AdminTableState } from "@/features/admin/shared/adminTableState";
+import { loadColVis, saveColVis } from "@/features/admin/shared/columnVisibility";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {

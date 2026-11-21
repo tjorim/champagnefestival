@@ -1,5 +1,5 @@
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
-import type { OrderAnswer } from "@/utils/orderQuestions";
+import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import {
   CalendarCheckIcon,
   CircleCheckIcon,
@@ -41,12 +41,12 @@ import { EMAIL_REGEX } from "@/config/constants";
 import type { OrderItemRequest } from "@/api-types";
 import type { RegistrationFormData } from "@/types/registration";
 import type { EventPublicOut as Event } from "@/api-types";
-import { eventTitle, productDescription, productName } from "@/utils/eventText";
+import { eventTitle, productDescription, productName } from "@/lib/editions/eventText";
 import {
   RegistrationSubmitError,
   submitRegistration,
   submitWaitlistEntry,
-} from "@/utils/publicRegistrationApi";
+} from "@/lib/api/publicRegistrationApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
 

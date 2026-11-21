@@ -8,9 +8,9 @@ import {
   stampTypeNameText,
   type StampCardType,
   type StampCardTypeWrite,
-} from "@/utils/stampCards";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/editions/stampCards";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

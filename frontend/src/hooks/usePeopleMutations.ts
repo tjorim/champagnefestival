@@ -4,15 +4,15 @@ import type { MemberFormData } from "@/components/admin/MemberFormModal";
 import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
-import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
+import { captureAdminPeopleFence } from "@/features/admin/people/adminPeopleSession";
 import { localIsoDate, type Person } from "@/types/person";
-import { peopleWrites, type PeopleWrite } from "@/utils/optimisticPeoplePages";
-import { queryKeys } from "@/utils/queryKeys";
+import { peopleWrites, type PeopleWrite } from "@/features/admin/people/optimisticPeoplePages";
+import { queryKeys } from "@/lib/query/queryKeys";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
-} from "@/utils/adminApi";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
+} from "@/lib/api/adminApi";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 
 interface UsePeopleMutationsOptions {
   queryClient: QueryClient;

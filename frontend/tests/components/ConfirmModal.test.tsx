@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import ConfirmModal from "@/components/ConfirmModal";
-import { ApiError } from "@/utils/apiErrors";
+import { ApiError } from "@/lib/api/apiErrors";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {

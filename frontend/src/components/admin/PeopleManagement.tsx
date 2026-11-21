@@ -1,4 +1,4 @@
-import { editionDisplayName } from "@/utils/editionName";
+import { editionDisplayName } from "@/lib/editions/editionName";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { RowActionButton, RowActions } from "./RowActions";
 import { PersonDuplicates } from "./PersonDuplicates";
@@ -37,24 +37,24 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { Person } from "@/types/person";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import {
   fetchAdminPersonRegistrations,
   fetchPersonPaymentSummary,
-} from "@/utils/adminRegistrationApi";
+} from "@/features/admin/shared/adminRegistrationApi";
 import {
   downloadPaymentTransactionsCsv,
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
-} from "@/utils/adminFetch";
-import { devError } from "@/utils/devLog";
+} from "@/lib/api/adminFetch";
+import { devError } from "@/lib/editions/devLog";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import PersonEmailConsents from "./PersonEmailConsents";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
-import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
+import { buildMemberEmailDraft, type EmailDraft } from "@/features/admin/shared/emailComposer";
 import EmailComposeModal from "./EmailComposeModal";
 import { AdminAddButton } from "./RowActions";
 

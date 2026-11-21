@@ -11,7 +11,7 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import "./announcementBanner.css";
 
 export type PublicAnnouncement = import("@/api-types").AnnouncementPublicOut;

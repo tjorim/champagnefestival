@@ -33,15 +33,19 @@ import {
   reorderPollQuestions,
   type PollQuestion,
   type PollQuestionWrite,
-} from "@/utils/adminContentApi";
-import { apiErrorMessage } from "@/utils/apiErrors";
-import { pollKindLabel, POLL_QUESTION_KINDS, type PollQuestionKind } from "@/utils/pollKinds";
-import { queryKeys } from "@/utils/queryKeys";
+} from "@/lib/api/adminContentApi";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
+import {
+  pollKindLabel,
+  POLL_QUESTION_KINDS,
+  type PollQuestionKind,
+} from "@/lib/editions/pollKinds";
+import { queryKeys } from "@/lib/query/queryKeys";
 import PollOrdersTable from "./PollOrdersTable";
 import PollQuestionCard, { QuestionTextFields, PollEventField } from "./PollQuestionCard";
 import VolunteerPollOrderDialog from "./VolunteerPollOrderDialog";
 import type { Edition } from "@/api-types";
-import { editionDisplayName } from "@/utils/editionName";
+import { editionDisplayName } from "@/lib/editions/editionName";
 
 interface EditionPollModalProps {
   show: boolean;

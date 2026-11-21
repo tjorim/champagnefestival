@@ -7,10 +7,13 @@ import { http, HttpResponse } from "msw/http";
 import { beforeEach, describe, expect, it } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
-import { captureAdminPeopleFence, resetAdminPeopleSession } from "@/state/adminPeopleSession";
+import {
+  captureAdminPeopleFence,
+  resetAdminPeopleSession,
+} from "@/features/admin/people/adminPeopleSession";
 import { localIsoDate } from "@/types/person";
-import { fetchPeoplePage, type PeoplePage } from "@/utils/adminPeopleQueries";
-import { queryKeys } from "@/utils/queryKeys";
+import { fetchPeoplePage, type PeoplePage } from "@/lib/query/adminPeopleQueries";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 const authHeaders = () => ({

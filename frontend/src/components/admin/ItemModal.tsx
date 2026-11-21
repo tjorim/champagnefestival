@@ -1,7 +1,7 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
-import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
+import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 import {
   ADMIN_CONTROL_CLASS,
   ADMIN_LABEL_CLASS,
@@ -38,9 +38,12 @@ import {
 } from "@/components/ui/combobox";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import type { ItemDraft } from "./itemTypes";
-import { fetchAdminPersonOptions, type PersonOption } from "@/utils/adminRegistrationApi";
+import {
+  fetchAdminPersonOptions,
+  type PersonOption,
+} from "@/features/admin/shared/adminRegistrationApi";
 
 interface ItemModalProps {
   show: boolean;

@@ -18,17 +18,17 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/api-types";
-import { toAmount } from "@/utils/money";
-import type { OrderAnswer } from "@/utils/orderQuestions";
+import { toAmount } from "@/features/admin/shared/money";
+import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import type { Product } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { PaymentTransactionCreate, TableAllocation } from "@/api-types";
 import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
-import { fetchPaymentTransactions } from "@/utils/adminFetch";
-import { queryKeys } from "@/utils/queryKeys";
-import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
+import { fetchPaymentTransactions } from "@/lib/api/adminFetch";
+import { queryKeys } from "@/lib/query/queryKeys";
+import { transactionAmountLabel } from "@/features/admin/shared/paymentTransactionLabels";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 function invalidProductQuantity(quantity: number): boolean {
   return !Number.isInteger(quantity) || quantity < 0 || quantity > 1000;

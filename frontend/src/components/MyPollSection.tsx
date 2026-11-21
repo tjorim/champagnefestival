@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   getMyPoll,
   saveMyPollNote,
   type MyPoll,
   type MyPollQuestion,
-} from "@/utils/myVolunteerApi";
-import { POLL_KIND_HAS_NOTE } from "@/utils/pollKinds";
+} from "@/lib/api/myVolunteerApi";
+import { POLL_KIND_HAS_NOTE } from "@/lib/editions/pollKinds";
 
 function Closing({ question }: { question: MyPollQuestion }) {
   if (question.closed) {

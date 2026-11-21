@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/utils/queryKeys";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminInput,
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type {
   LayoutRevision,
   LayoutRevisionAreaChange,
@@ -40,8 +40,8 @@ import {
   compareLayoutRevisions,
   fetchLayoutRevisions,
   previewLayoutRestore,
-} from "@/utils/adminFetch";
-import { devError } from "@/utils/devLog";
+} from "@/lib/api/adminFetch";
+import { devError } from "@/lib/editions/devLog";
 
 const CURRENT_REF = "current";
 
