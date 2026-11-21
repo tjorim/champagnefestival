@@ -185,8 +185,10 @@ app.add_middleware(RateLimitHeadersMiddleware, owner=app, check_before_body=gene
 
 @app.exception_handler(GeneralRateLimitExceeded)
 async def general_rate_limit_exceeded(request: Request, exc: GeneralRateLimitExceeded) -> JSONResponse:
+    message = f"Rate limit exceeded: {exc.detail}"
+    # ``error`` is what existing clients read; ``detail`` and ``code`` make the body the shared error shape.
     return JSONResponse(
-        {"error": f"Rate limit exceeded: {exc.detail}"},
+        {"error": message, "detail": message, "code": "rate_limited"},
         status_code=429,
         headers={**exc.rate_headers, "Cache-Control": "no-store"},
     )

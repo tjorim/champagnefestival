@@ -8,8 +8,8 @@ The body of a failure is ``{"detail": str, "code": str}`` (clients translate the
 raised the failure with one, otherwise a code from the status (``not_found``, ``method_not_allowed``, ``unauthorized``,
 ``forbidden``, ``bad_request``, else ``http_<status>``) for what the framework or an uncoded service error produces,
 and ``internal_error`` for an unhandled exception. A validation failure is FastAPI's list of field errors, without the
-submitted values, plus ``code: validation_error``. The general rate limiter answers ``{"error": str}``: that deviation
-is pinned below (clients read it) so that changing it is a decision.
+submitted values, plus ``code: validation_error``. The general rate limiter's 429 also keeps ``error``, which existing
+clients read: ``{"error": str, "detail": str, "code": "rate_limited"}``.
 """
 
 from __future__ import annotations
@@ -130,8 +130,8 @@ async def test_malformed_json_is_a_validation_error_that_does_not_echo_the_body(
 
 
 @pytest.mark.anyio
-async def test_the_rate_limit_answers_error_not_detail(client, monkeypatch):
-    # The one body without ``detail``: kept because clients read ``error`` (recorded as a follow-up).
+async def test_the_rate_limit_keeps_error_and_adds_detail_and_a_code(client, monkeypatch):
+    # ``error`` stays for the clients that read it; ``detail`` (the same text) and ``code`` make it the shared shape.
     monkeypatch.setattr(general_rate_limiter, "limit", parse("1/minute"))
     transport = ASGITransport(app=app, client=("203.0.113.20", 1234))
     async with AsyncClient(transport=transport, base_url="http://test") as limited:
@@ -139,8 +139,12 @@ async def test_the_rate_limit_answers_error_not_detail(client, monkeypatch):
         response = await limited.get("/api/health")
 
     assert response.status_code == 429
-    assert set(response.json()) == {"error"}
+    body = response.json()
+    assert set(body) == {"error", "detail", "code"}
+    assert body["detail"] == body["error"]
+    assert body["code"] == "rate_limited"
     assert response.headers["cache-control"] == "no-store"
+    assert response.headers["retry-after"]
     assert response.headers["x-request-id"]
 
 

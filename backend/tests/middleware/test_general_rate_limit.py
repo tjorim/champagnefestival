@@ -122,7 +122,11 @@ async def test_every_openapi_operation_enforces_general_limit(monkeypatch):
                     assert response.status_code == 422, (method, template, response.text)
                     continue
                 assert response.status_code == 429, (method, template, response.text)
-                assert response.json() == {"error": "Rate limit exceeded: 1 per 1 minute"}
+                assert response.json() == {
+                    "error": "Rate limit exceeded: 1 per 1 minute",
+                    "detail": "Rate limit exceeded: 1 per 1 minute",
+                    "code": "rate_limited",
+                }
 
 
 @pytest.mark.anyio
