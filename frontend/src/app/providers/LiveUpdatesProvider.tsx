@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "./AuthContext";
 import {
   canPatchAdminRegistrationLiveEvent,
   patchAdminRegistrationLiveEvent,

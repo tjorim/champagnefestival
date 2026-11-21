@@ -12,10 +12,10 @@ import {
 } from "@tanstack/react-router";
 import { http, HttpResponse } from "msw/http";
 import CheckInPage from "@/components/CheckInPage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";
-import { validateCheckInSearch } from "@/router";
+import { validateCheckInSearch } from "@/app/router";
 import { createTestQueryClientHarness, createTestQueryClientWrapper } from "../utils/queryClient";
 
 // Use the first seed registration — reg-01 (Alice Dupont, Grand Opening, not yet checked in).

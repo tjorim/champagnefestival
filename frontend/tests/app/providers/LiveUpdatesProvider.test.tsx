@@ -3,10 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePeopleListQuery } from "@/hooks/usePeopleListQuery";
-import { useAuth } from "@/contexts/AuthContext";
-import { LiveUpdatesProvider } from "@/state/LiveUpdatesProvider";
+import { useAuth } from "@/app/providers/AuthContext";
+import { LiveUpdatesProvider } from "@/app/providers/LiveUpdatesProvider";
 import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/lib/api/liveStream";
-import { createTestQueryClientHarness } from "../utils/queryClient";
+import { createTestQueryClientHarness } from "../../utils/queryClient";
 
 // ---------------------------------------------------------------------------
 // Mock connectLiveStream so tests control when events arrive.

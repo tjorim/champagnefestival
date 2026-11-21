@@ -51,7 +51,7 @@ import {
   type GuestRegistration,
 } from "@/lib/api/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
 import {
   getCommunicationPreference,

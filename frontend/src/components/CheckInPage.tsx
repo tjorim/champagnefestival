@@ -39,7 +39,7 @@ import { PresentationList, PresentationListItem } from "@/components/ui/presenta
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { m } from "@/paraglide/messages";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/lib/api/adminApi";

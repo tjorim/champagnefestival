@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import EmailUnsubscribePage from "@/components/EmailUnsubscribePage";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
-import { validateMyRegistrationsSearch } from "@/router";
+import { validateMyRegistrationsSearch } from "@/app/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 async function renderPage(entry: string) {

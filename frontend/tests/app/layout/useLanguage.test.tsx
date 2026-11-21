@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setLocale } from "@/paraglide/runtime";
 import { pickTranslation } from "@/lib/editions/translatedText";
-import { useLanguage } from "./useLanguage";
+import { useLanguage } from "@/app/layout/useLanguage";
 
 function Probe() {
   useLanguage();

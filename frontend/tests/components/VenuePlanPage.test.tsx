@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw/http";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import VenuePlanPage from "@/components/VenuePlanPage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { server } from "@/mocks/server";
 import { m } from "@/paraglide/messages";
 import { createTestQueryClientWrapper } from "../utils/queryClient";

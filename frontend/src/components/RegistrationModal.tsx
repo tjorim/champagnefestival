@@ -47,7 +47,7 @@ import {
   submitRegistration,
   submitWaitlistEntry,
 } from "@/lib/api/publicRegistrationApi";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
 
 export interface RegistrationModalProps {

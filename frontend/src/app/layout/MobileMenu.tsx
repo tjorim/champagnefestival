@@ -2,7 +2,7 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Link } from "@tanstack/react-router";
 import { MenuIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 import { useState } from "react";
-import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { useNavigationItems } from "./useNavigationItems";
 import { cn } from "@/lib/utils";
 import { m } from "@/paraglide/messages";
 import BrandWordmark from "./BrandWordmark";

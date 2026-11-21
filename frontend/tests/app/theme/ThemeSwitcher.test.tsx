@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
+import ThemeSwitcher from "@/app/theme/ThemeSwitcher";
 import { VISUAL_THEMES } from "@/config/visualThemes";
 
 describe("ThemeSwitcher", () => {

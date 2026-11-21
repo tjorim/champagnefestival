@@ -30,7 +30,7 @@ payment, order and delivery fields carried on each registration).
 - `frontend/src/lib/collections/adminRegistrationsCollection.ts`: the collection factory,
   live-event patching and reset helpers.
 - `frontend/src/hooks/useAdminQueries.ts`: creates the collection and reads it.
-- `frontend/src/state/LiveUpdatesProvider.tsx`: routes live events to the patching
+- `frontend/src/app/providers/LiveUpdatesProvider.tsx`: routes live events to the patching
   helpers.
 
 ### Collection and reads
@@ -589,7 +589,7 @@ It is outside #1174; list pages must never be persisted.
 - `frontend/src/features/admin/venue/adminVenueCollections.ts`
 - `frontend/src/lib/collections/adminCollectionFactory.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
-- `frontend/src/state/LiveUpdatesProvider.tsx`
+- `frontend/src/app/providers/LiveUpdatesProvider.tsx`
 - `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write
   patches
 

@@ -12,10 +12,10 @@ import {
 import { http, HttpResponse } from "msw/http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { m } from "@/paraglide/messages";
 import { server } from "@/mocks/server";
-import { validateMyRegistrationsSearch } from "@/router";
+import { validateMyRegistrationsSearch } from "@/app/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const organizations = [

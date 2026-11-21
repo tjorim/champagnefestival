@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw/http";
 import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 

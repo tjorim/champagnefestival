@@ -8,7 +8,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import "./admin.css";

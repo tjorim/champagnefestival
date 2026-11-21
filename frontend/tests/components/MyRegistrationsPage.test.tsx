@@ -12,7 +12,7 @@ import {
 import { http, HttpResponse } from "msw/http";
 import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrationsPage";
 import { server } from "@/mocks/server";
-import { validateMyRegistrationsSearch } from "@/router";
+import { validateMyRegistrationsSearch } from "@/app/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { selectAdminOption } from "../helpers/adminSelect";
 
@@ -28,7 +28,7 @@ const authState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/contexts/AuthContext", async () => {
+vi.mock("@/app/providers/AuthContext", async () => {
   const { useSyncExternalStore } = await import("react");
   return {
     useAuth: () => {

@@ -24,7 +24,7 @@ import {
 import { LoadErrorAlert } from "@/components/LoadErrorAlert";
 import MyPollSection from "@/components/MyPollSection";
 import { m } from "@/paraglide/messages";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { deleteMyAccount } from "@/features/my-account/meApi";
 import ConfirmModal from "@/components/ConfirmModal";
 import MyRegistrationsPage from "@/components/MyRegistrationsPage";

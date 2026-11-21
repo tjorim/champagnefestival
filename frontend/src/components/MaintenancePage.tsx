@@ -1,6 +1,6 @@
 import { ExternalLinkIcon, ImageIcon, ZoomInIcon } from "lucide-react";
-import BrandWordmark from "./BrandWordmark";
-import LanguageSwitcher from "./LanguageSwitcher";
+import BrandWordmark from "@/app/layout/BrandWordmark";
+import LanguageSwitcher from "@/app/layout/LanguageSwitcher";
 import { Icon } from "@/components/Icon";
 import {
   Dialog,

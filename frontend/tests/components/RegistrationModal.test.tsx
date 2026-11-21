@@ -13,7 +13,7 @@ import { noEventTranslations } from "../utils/eventFixtures";
 
 const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => ({ getAccessToken: () => authState.accessToken }),
 }));
 

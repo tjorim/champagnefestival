@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { useNoIndex } from "./useNoIndex";
+import { useNoIndex } from "@/app/layout/useNoIndex";
 
 function getRobotsMeta() {
   return document.querySelector<HTMLMetaElement>('meta[name="robots"]');

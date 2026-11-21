@@ -11,8 +11,9 @@ import {
   adminCachePersistence,
   ADMIN_CACHE_WIPE_SIGNAL,
 } from "@/lib/collections/adminCachePersistence";
-const { AuthProvider, useAuth } =
-  await vi.importActual<typeof import("@/contexts/AuthContext")>("@/contexts/AuthContext");
+const { AuthProvider, useAuth } = await vi.importActual<
+  typeof import("@/app/providers/AuthContext")
+>("@/app/providers/AuthContext");
 
 function Consumer() {
   const auth = useAuth();

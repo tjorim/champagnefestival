@@ -203,7 +203,7 @@ themes, portal scoping and interaction contracts.
 ## Navigation
 
 - The main page (`/`) uses hash-based section navigation via `useScrollNavigation`.
-- TanStack Router is configured in `src/router.tsx`.
+- TanStack Router is configured in `src/app/router.tsx`.
 - Route separation:
   - Public marketing site: `/`
   - Admin dashboard: `/admin`

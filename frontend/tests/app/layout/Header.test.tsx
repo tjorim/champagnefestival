@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
-import Header from "@/components/Header";
+import Header from "@/app/layout/Header";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -26,7 +26,7 @@ vi.mock("@/paraglide/runtime", () => ({
   isLocale: vi.fn().mockReturnValue(true),
 }));
 
-vi.mock("@/components/LanguageSwitcher", () => ({
+vi.mock("@/app/layout/LanguageSwitcher", () => ({
   default: () => <div data-testid="language-switcher" />,
 }));
 

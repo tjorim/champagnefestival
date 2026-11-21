@@ -7,7 +7,7 @@ import { m } from "@/paraglide/messages";
 import { setLocale } from "@/paraglide/runtime";
 import PebblePairPage from "@/components/PebblePairPage";
 
-vi.mock("@/contexts/AuthContext", () => ({
+vi.mock("@/app/providers/AuthContext", () => ({
   useAuth: () => ({
     isAuthenticated: true,
     isLoading: false,

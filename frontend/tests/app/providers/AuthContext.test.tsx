@@ -5,8 +5,9 @@ import type { User } from "oidc-client-ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
-const { AuthProvider, useAuth } =
-  await vi.importActual<typeof import("@/contexts/AuthContext")>("@/contexts/AuthContext");
+const { AuthProvider, useAuth } = await vi.importActual<
+  typeof import("@/app/providers/AuthContext")
+>("@/app/providers/AuthContext");
 
 function renderWithProviders(ui: ReactElement) {
   const queryClient = new QueryClient();

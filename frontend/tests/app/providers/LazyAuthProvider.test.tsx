@@ -4,16 +4,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthContextProps } from "react-oidc-context";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
-import { LazyAuthProvider } from "@/contexts/LazyAuthProvider";
-import { useAuth } from "@/contexts/AuthContext";
+import { LazyAuthProvider } from "@/app/providers/LazyAuthProvider";
+import { useAuth } from "@/app/providers/AuthContext";
 
-vi.unmock("@/contexts/AuthContext");
+vi.unmock("@/app/providers/AuthContext");
 const runtime = vi.hoisted(() => ({
   mounts: 0,
   signinRedirect: vi.fn().mockResolvedValue(undefined),
   signinSilent: vi.fn().mockResolvedValue(null),
 }));
-vi.mock("@/contexts/OidcRuntime", () => ({
+vi.mock("@/app/providers/OidcRuntime", () => ({
   default: ({ onReady }: { onReady: (auth: AuthContextProps) => void }) => {
     useEffect(() => {
       runtime.mounts++;

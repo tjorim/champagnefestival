@@ -9,17 +9,19 @@ import {
   lazyRouteComponent,
 } from "@tanstack/react-router";
 
-import { useLanguage } from "./hooks/useLanguage";
+import { useLanguage } from "./layout/useLanguage";
 
 import { validateAdminSearch } from "@/features/admin/shared/adminTableState";
 
-import { getStoredAccessToken } from "./config/oidc";
+import { getStoredAccessToken } from "@/config/oidc";
 import { venuePlanQueryOptions } from "@/features/venue-plan/venuePlanApi";
 
 // The live stream patches the admin collections, which pull in TanStack DB:
 // load it with the admin routes, not on every public visit.
 const LiveUpdatesProvider = lazy(() =>
-  import("./state/LiveUpdatesProvider").then((module) => ({ default: module.LiveUpdatesProvider })),
+  import("./providers/LiveUpdatesProvider").then((module) => ({
+    default: module.LiveUpdatesProvider,
+  })),
 );
 
 interface RouterContext {
@@ -195,7 +197,7 @@ export function createAppRouter({
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/signage/$channel",
-      component: lazyRouteComponent(() => import("./signage/SignagePage")),
+      component: lazyRouteComponent(() => import("@/signage/SignagePage")),
     }),
     ...(["/en", "/fr"] as const).map((path) =>
       createRoute({

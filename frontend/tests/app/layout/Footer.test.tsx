@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { getLocale } from "@/paraglide/runtime";
-import Footer from "@/components/Footer";
+import Footer from "@/app/layout/Footer";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {

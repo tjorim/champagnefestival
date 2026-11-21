@@ -3,13 +3,13 @@ import { RouterProvider } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createAppRouter } from "./router";
+import { createAppRouter } from "@/app/router";
 
 // A plain flag rather than vi.fn(): mocks are cleared between tests, which
 // would hide a load that happened when this file imported the router.
 const liveUpdates = vi.hoisted(() => ({ loaded: false }));
 
-vi.mock("./state/LiveUpdatesProvider", () => {
+vi.mock("@/app/providers/LiveUpdatesProvider", () => {
   liveUpdates.loaded = true;
   return { LiveUpdatesProvider: () => <div data-testid="live-updates" /> };
 });

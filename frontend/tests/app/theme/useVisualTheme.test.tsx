@@ -1,7 +1,7 @@
 import type { DetachedWindowAPI } from "happy-dom";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { initializeVisualTheme, useVisualTheme } from "@/hooks/useVisualTheme";
+import { initializeVisualTheme, useVisualTheme } from "@/app/theme/useVisualTheme";
 
 const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
 const originalColorScheme = happyDOM.settings.device.prefersColorScheme;

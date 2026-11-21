@@ -1,6 +1,6 @@
 import { accountReturnTo } from "@/hooks/useLocationChoice";
 import { describe, expect, it } from "vitest";
-import { validateCheckInSearch, validateMyRegistrationsSearch } from "@/router";
+import { validateCheckInSearch, validateMyRegistrationsSearch } from "@/app/router";
 
 describe("router search param validation", () => {
   it("keeps check-in deep-link params when they are strings", () => {

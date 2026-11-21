@@ -1,5 +1,5 @@
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { useNavigationItems } from "./useNavigationItems";
 import BrandWordmark from "./BrandWordmark";
 import MobileMenu from "./MobileMenu";
 

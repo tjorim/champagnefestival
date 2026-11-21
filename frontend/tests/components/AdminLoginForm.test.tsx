@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { recordSignOutReason } from "@/features/admin/shell/signOutReason";
 
 const baseAuth = {

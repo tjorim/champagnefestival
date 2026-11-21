@@ -2,7 +2,7 @@ import { RotateCcwClockIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/app/providers/AuthContext";
 import { Alert, AlertHeading } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";

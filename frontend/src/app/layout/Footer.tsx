@@ -1,6 +1,6 @@
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { Link } from "@tanstack/react-router";
-import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { useNavigationItems } from "./useNavigationItems";
 import { getLocale } from "@/paraglide/runtime";
 import { localizedPublicPath } from "@/config/localePath";
 import { m } from "@/paraglide/messages";

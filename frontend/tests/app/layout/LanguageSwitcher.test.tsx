@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import LanguageSwitcher from "@/app/layout/LanguageSwitcher";
 
 vi.mock("@/paraglide/runtime", () => ({
   defineCustomClientStrategy: vi.fn(),
