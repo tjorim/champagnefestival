@@ -344,7 +344,7 @@ def test_policy_history_and_consent_payload_parity():
         "id": "consent",
         "category_key": "parity",
         "category_name": "Nieuws",
-        "source": "visitor",
+        "source": "self_service",
         "granted_at": NOW,
         "revoked_at": None,
         "revoked_source": None,
