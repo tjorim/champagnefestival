@@ -20,7 +20,7 @@ class _CategoryColumns:
     that is still in use cannot be deleted."""
 
     key: Mapped[str] = mapped_column(String(50), primary_key=True)
-    label_nl: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    label_nl: Mapped[str] = mapped_column(String(100), nullable=False)
     label_fr: Mapped[str | None] = mapped_column(String(100), nullable=True)
     label_en: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)

@@ -6,6 +6,7 @@
  * OpenAPI spec version: snapshot
  */
 import type { EditionCreateEditionType } from './editionCreateEditionType';
+import type { EditionCreateMonth } from './editionCreateMonth';
 import type { EditionCreateSponsorTiers } from './editionCreateSponsorTiers';
 
 export type EditionCreate = {
@@ -19,7 +20,7 @@ export type EditionCreate = {
      * @maximum 2100
      */
   year: number;
-  month: string;
+  month: EditionCreateMonth;
   venue_id: string;
   edition_type?: EditionCreateEditionType;
   organizations?: number[];

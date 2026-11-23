@@ -28,7 +28,7 @@ describe("saveEdition", () => {
   const basePayload = {
     id: "2026-march",
     year: 2026,
-    month: "march",
+    month: "march" as const,
     venueId: "venue-1",
     active: true,
   };

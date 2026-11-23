@@ -8,7 +8,7 @@ from datetime import datetime
 from pydantic import ConfigDict
 
 from app.schemas.base import RequestModel, ResponseModel
-from app.schemas.types import NonEmptyText200, Text20, Text100, Text200
+from app.schemas.types import Latitude, Longitude, NonEmptyText200, Text20, Text100, Text200
 
 
 class VenuePlanRoomOut(ResponseModel):
@@ -66,8 +66,8 @@ class VenueCreate(RequestModel):
     city: Text100 = ""
     postal_code: Text20 = ""
     country: Text100 = ""
-    lat: float = 0.0
-    lng: float = 0.0
+    lat: Latitude | None = None
+    lng: Longitude | None = None
     active: bool = True
 
 
@@ -77,8 +77,8 @@ class VenueUpdate(RequestModel):
     city: Text100 | None = None
     postal_code: Text20 | None = None
     country: Text100 | None = None
-    lat: float | None = None
-    lng: float | None = None
+    lat: Latitude | None = None
+    lng: Longitude | None = None
     active: bool | None = None
 
 
@@ -89,8 +89,8 @@ class VenueOut(ResponseModel):
     city: str
     postal_code: str
     country: str
-    lat: float
-    lng: float
+    lat: float | None
+    lng: float | None
     active: bool
     created_at: datetime
     updated_at: datetime

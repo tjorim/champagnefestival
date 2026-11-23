@@ -60,13 +60,13 @@ class Person(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
-    email: Mapped[str] = mapped_column(String(200), default="")
+    email: Mapped[str] = mapped_column(String(320), default="")
     preferred_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     search_name: Mapped[str] = mapped_column(String(200), default="")
     """Trigger-maintained unaccented lower-case name for operational lookup."""
     search_name_alt: Mapped[str] = mapped_column(String(200), default="")
     """Trigger-maintained German-transliteration variant for operational lookup."""
-    search_email: Mapped[str] = mapped_column(String(200), default="", index=True)
+    search_email: Mapped[str] = mapped_column(String(320), default="", index=True)
     """Trigger-maintained lower-case email for authorized operational lookup."""
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")

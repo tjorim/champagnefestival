@@ -25,7 +25,7 @@ class Policy(Base):
     __table_args__ = (CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_policies_title_nl"),)
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

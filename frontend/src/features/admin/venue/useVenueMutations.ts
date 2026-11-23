@@ -79,8 +79,8 @@ export function useVenueMutations({
       city: string;
       postalCode: string;
       country: string;
-      lat: number;
-      lng: number;
+      lat: number | null;
+      lng: number | null;
     }) =>
       fetchJsonOrThrowWithUnauthorized<VenueOut>(
         "/api/venues",

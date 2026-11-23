@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 
 import pytest
 
@@ -25,7 +25,7 @@ async def _seed_event(db_session, *, with_product: bool = True) -> tuple[Person,
         edition_id="edition-1",
         title_nl="Vrijdagavond",
         date=date(2099, 3, 21),
-        start_time="18:00",
+        start_time=time.fromisoformat("18:00"),
         category="general",
         registration_required=True,
     )
@@ -108,7 +108,7 @@ async def test_list_registrations_filters_by_edition_and_event(db_session):
         edition_id="edition-1",
         title_nl="Zaterdagmiddag",
         date=date(2099, 3, 22),
-        start_time="14:00",
+        start_time=time.fromisoformat("14:00"),
         category="general",
         registration_required=True,
     )

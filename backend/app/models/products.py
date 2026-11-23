@@ -64,7 +64,7 @@ class Product(Base):
         .scalar_subquery()
     )
 
-    name_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    name_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     name_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     name_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     description_nl: Mapped[str | None] = mapped_column(String(300), nullable=True)

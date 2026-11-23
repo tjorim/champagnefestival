@@ -22,9 +22,9 @@ class AppSettings(Base):
 
     stamp_card_type_id: Mapped[str | None] = mapped_column(ForeignKey("stamp_card_types.id", ondelete="RESTRICT"))
     maintenance_mode: Mapped[bool] = mapped_column(Boolean, default=False)
-    public_email: Mapped[str] = mapped_column(String(320), default="nancy.cattrysse@telenet.be")
-    public_phone: Mapped[str] = mapped_column(String(30), default="+32 478 48 01 77")
-    facebook_url: Mapped[str] = mapped_column(String(500), default="https://www.facebook.com/champagnefestival.kust")
+    public_email: Mapped[str | None] = mapped_column(String(320))
+    public_phone: Mapped[str | None] = mapped_column(String(30))
+    facebook_url: Mapped[str | None] = mapped_column(String(500))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

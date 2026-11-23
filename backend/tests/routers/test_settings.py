@@ -28,9 +28,9 @@ async def test_get_settings_creates_the_row_lazily(unauth_client):
     r = await unauth_client.get("/api/settings")
     assert r.status_code == 200
     assert r.json()["maintenance_mode"] is False
-    assert r.json()["public_email"] == "nancy.cattrysse@telenet.be"
-    assert r.json()["public_phone"] == "+32 478 48 01 77"
-    assert r.json()["facebook_url"].startswith("https://")
+    assert r.json()["public_email"] == ""
+    assert r.json()["public_phone"] == ""
+    assert r.json()["facebook_url"] == ""
     assert not ({"smtp_host", "smtp_password", "smtp_from", "contact_recipient"} & r.json().keys())
     assert r.headers["cache-control"] == "public, max-age=30"
 

@@ -46,10 +46,11 @@ import { EditionLineupOrder } from "./EditionLineupOrder";
 import type { SponsorTier } from "@/config/editions";
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { ItemDraft } from "@/types/itemTypes";
 import type { EditionType } from "./editionTypes";
-import type { Edition } from "@/api-types";
+import type { Edition, EditionCreate } from "@/api-types";
 import type { Venue } from "@/api-types";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { fetchEditionModalOrganizations, saveEdition } from "@/lib/api/adminContentApi";
@@ -127,6 +128,21 @@ function draftOf<T extends { selectedOrganizations: ItemOption[] }>(values: T) {
   return { ...values, selectedOrganizations: values.selectedOrganizations.map((o) => o.value) };
 }
 
+const EDITION_MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+] as const satisfies readonly EditionCreate["month"][];
+
 export default function EditionModal({
   show,
   initial,
@@ -135,6 +151,7 @@ export default function EditionModal({
   onSaved,
   onHide,
 }: EditionModalProps) {
+  const monthFormat = new Intl.DateTimeFormat(getLocale(), { month: "long", timeZone: "UTC" });
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   // The edition as it was when the editor opened, so a background refresh neither
@@ -155,7 +172,7 @@ export default function EditionModal({
     () => ({
       id: record?.id ?? "",
       year: record?.year ?? currentYear,
-      month: record?.month ?? "",
+      month: record?.month.toLowerCase().trim() ?? "",
       edition_type: (record?.edition_type ?? "festival") as EditionType,
       venueId: record?.venue?.id ?? fallbackVenueId,
       active: record?.active ?? true,
@@ -180,11 +197,16 @@ export default function EditionModal({
         setError(m.admin_edition_id_required());
         return;
       }
+      const month = EDITION_MONTHS.find((option) => option === value.month);
+      if (!month) {
+        setError(m.admin_edition_month_required());
+        return;
+      }
       try {
         const savedEdition = await saveEditionMutation.mutateAsync({
           id: value.id.trim(),
           year: value.year,
-          month: value.month.trim(),
+          month,
           edition_type: value.edition_type,
           venueId: value.venueId,
           active: value.active,
@@ -247,7 +269,7 @@ export default function EditionModal({
     mutationFn: (payload: {
       id: string;
       year: number;
-      month: string;
+      month: EditionCreate["month"];
       edition_type: EditionType;
       venueId: string;
       active: boolean;
@@ -406,15 +428,23 @@ export default function EditionModal({
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <AdminInput
+                        <AdminSelect
                           required
                           className={ADMIN_CONTROL_CLASS}
-                          placeholder={m.admin_edition_month_placeholder()}
                           value={field.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onValueChange={field.handleChange}
                           onBlur={field.handleBlur}
                           aria-invalid={showErr}
-                        />
+                        >
+                          <AdminOption value="" disabled>
+                            {m.admin_edition_month_placeholder()}
+                          </AdminOption>
+                          {EDITION_MONTHS.map((month, index) => (
+                            <AdminOption key={month} value={month}>
+                              {monthFormat.format(new Date(Date.UTC(2000, index, 1)))}
+                            </AdminOption>
+                          ))}
+                        </AdminSelect>
                         {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );

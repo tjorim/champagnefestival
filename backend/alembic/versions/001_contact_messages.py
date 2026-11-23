@@ -45,13 +45,14 @@ def upgrade() -> None:
         sa.Column("handled_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_contact_messages_created_at", "contact_messages", ["created_at"])
+    # Use blank defaults when replaying this revision on a new database (#1653).
     op.add_column(
         "app_settings",
         sa.Column(
             "public_email",
             sa.String(320),
             nullable=False,
-            server_default="nancy.cattrysse@telenet.be",
+            server_default="",
         ),
     )
     op.add_column("people", sa.Column("preferred_language", sa.String(length=2), nullable=True))
@@ -103,7 +104,7 @@ def upgrade() -> None:
     op.create_index("ix_delivery_attempts_job_id", "delivery_attempts", ["job_id"])
     op.add_column(
         "app_settings",
-        sa.Column("public_phone", sa.String(30), nullable=False, server_default="+32 478 48 01 77"),
+        sa.Column("public_phone", sa.String(30), nullable=False, server_default=""),
     )
     op.add_column(
         "app_settings",
@@ -111,7 +112,7 @@ def upgrade() -> None:
             "facebook_url",
             sa.String(500),
             nullable=False,
-            server_default="https://www.facebook.com/champagnefestival.kust",
+            server_default="",
         ),
     )
     op.create_table(

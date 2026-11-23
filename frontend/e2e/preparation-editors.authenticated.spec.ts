@@ -16,7 +16,10 @@ async function editors(page: Page) {
   await expect(editionDialog.getByText(en.admin_edition_id_help, { exact: true })).toBeVisible();
   await expect(editionDialog.getByText(en.admin_edition_month_help, { exact: true })).toBeVisible();
   await expect(editionDialog.getByLabel("ID", { exact: true })).toHaveAttribute("required", "");
-  await expect(editionDialog.getByLabel("Month", { exact: true })).toHaveAttribute("required", "");
+  await expect(editionDialog.getByLabel("Month", { exact: true })).toHaveAttribute(
+    "aria-required",
+    "true",
+  );
   await editionDialog.getByRole("button", { name: "Close", exact: true }).first().click();
   await page.getByRole("button", { name: "March 2027", exact: true }).click();
   await page

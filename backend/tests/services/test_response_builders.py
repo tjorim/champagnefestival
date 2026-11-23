@@ -1,6 +1,6 @@
 """Response-builder parity at model, MCP and internal serialization boundaries."""
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
@@ -173,7 +173,7 @@ def event():
         localized_title=lambda locale: "Feest",
         localized_description=lambda locale: "Welkom",
         date=date(2026, 11, 15),
-        start_time="12:00",
+        start_time=time(12),
         end_time=None,
         category="festival",
         volunteers_only=False,

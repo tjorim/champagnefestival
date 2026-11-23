@@ -28,7 +28,7 @@ class Announcement(Base):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    text_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    text_nl: Mapped[str] = mapped_column(String(500), nullable=False)
     text_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     text_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     level: Mapped[str] = mapped_column(String(10), default="info")
