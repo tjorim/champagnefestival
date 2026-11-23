@@ -531,8 +531,8 @@ class TestAdminToolWiring:
             city="Bredene",
             postal_code="",
             country="",
-            lat=0.0,
-            lng=0.0,
+            lat=None,
+            lng=None,
             active=True,
         )
 
