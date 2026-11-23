@@ -7,11 +7,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal, Self
 
-from pydantic import ConfigDict, Field, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.organizations import SponsorTier
-from app.schemas.types import EditionYear, ResourceKey
+from app.schemas.types import EditionMonth, EditionYear, ResourceKey
 
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 
@@ -26,10 +26,44 @@ class EditionSummaryOut(ResponseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EditionCreate(RequestModel):
+# Older forms invited administrators to enter a month name in their own language.
+_MONTH_ALIASES = {
+    "januari": "january",
+    "janvier": "january",
+    "februari": "february",
+    "février": "february",
+    "maart": "march",
+    "mars": "march",
+    "avril": "april",
+    "mei": "may",
+    "mai": "may",
+    "juni": "june",
+    "juin": "june",
+    "juli": "july",
+    "juillet": "july",
+    "augustus": "august",
+    "août": "august",
+    "oktober": "october",
+    "octobre": "october",
+    "novembre": "november",
+    "décembre": "december",
+}
+
+
+class EditionMonthInput(RequestModel):
+    @field_validator("month", mode="before", check_fields=False)
+    @classmethod
+    def normalize_month(cls, value: object) -> object:
+        if isinstance(value, str):
+            month = value.strip().lower()
+            return _MONTH_ALIASES.get(month, month)
+        return value
+
+
+class EditionCreate(EditionMonthInput):
     id: ResourceKey
     year: EditionYear
-    month: str
+    month: EditionMonth
     venue_id: str
     edition_type: EditionType = "festival"
     organizations: list[int] = Field(default_factory=list)
@@ -41,9 +75,9 @@ class EditionCreate(RequestModel):
     active: bool = True
 
 
-class EditionUpdate(RequestModel):
+class EditionUpdate(EditionMonthInput):
     year: EditionYear | None = None
-    month: str | None = None
+    month: EditionMonth | None = None
     venue_id: str | None = None
     edition_type: EditionType | None = None
     organizations: list[int] | None = None
@@ -58,8 +92,8 @@ class EditionUpdate(RequestModel):
     active: bool | None = None
 
     @model_validator(mode="after")
-    def reject_null_active_and_edition_type(self) -> Self:
-        for field in ("edition_type", "active"):
+    def reject_null_required_fields(self) -> Self:
+        for field in ("month", "edition_type", "active"):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError(f"{field} may be omitted but cannot be null.")
         return self

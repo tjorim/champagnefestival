@@ -28,6 +28,8 @@ class StampCardType(Base):
     reward_label_fr: Mapped[str | None] = mapped_column(String(200))
     reward_label_en: Mapped[str | None] = mapped_column(String(200))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class StampCard(Base):
@@ -61,4 +63,4 @@ class StampCardReward(Base):
     reward_label_en: Mapped[str | None] = mapped_column(String(200))
     earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     handed_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    handed_out_by: Mapped[str | None] = mapped_column(String(200))
+    handed_out_by: Mapped[str | None] = mapped_column(String(255))

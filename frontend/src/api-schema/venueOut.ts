@@ -13,8 +13,8 @@ export type VenueOut = {
   city: string;
   postal_code: string;
   country: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   active: boolean;
   created_at: string;
   updated_at: string;

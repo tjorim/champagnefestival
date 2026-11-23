@@ -33,10 +33,10 @@ class ComposedMessage(Base):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    title_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    title_nl: Mapped[str] = mapped_column(String(500), nullable=False)
     title_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    body_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body_nl: Mapped[str] = mapped_column(String(500), nullable=False)
     body_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     body_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     level: Mapped[str] = mapped_column(String(10), default="info")

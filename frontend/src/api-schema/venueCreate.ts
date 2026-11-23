@@ -20,7 +20,7 @@ export type VenueCreate = {
   postal_code?: string;
   /** @maxLength 100 */
   country?: string;
-  lat?: number;
-  lng?: number;
+  lat?: number | null;
+  lng?: number | null;
   active?: boolean;
 };

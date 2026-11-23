@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 
 import pytest
 
@@ -23,7 +23,7 @@ async def _create_event(db_session, *, event_id: str = "evt-1") -> str:
         edition_id=edition.id,
         title_nl="Vrijdagavond",
         date=date(2099, 3, 21),
-        start_time="18:00",
+        start_time=time.fromisoformat("18:00"),
         category="general",
         registration_required=True,
     )

@@ -1,16 +1,17 @@
 import { jsonResponse } from "@/mocks/response";
 import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
-/**
- * The admin's per-event capacity panel reads GET /api/events/checkin-stats —
- * the endpoint built for it, and the same one the Android entrance display uses
- * — instead of counting whatever registrations this client happens to hold.
- */
-
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/features/admin/registrations/RegistrationList";
+import {
+  summarizeGuestCheckIns,
+  useRegistrationCountsQuery,
+} from "@/features/admin/registrations/useRegistrationListQuery";
+import { useTodayKey } from "@/hooks/useTodayKey";
+import { queryKeys } from "@/lib/query/queryKeys";
+import type { RegistrationDashboardStats } from "@/api-types";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { server } from "@/mocks/server";
@@ -88,10 +89,26 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
   };
 }
 
-function renderRegistrationList(registrations: Registration[]) {
+const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
+
+function EditionCounter() {
+  const stats = useRegistrationCountsQuery(activeEdition.id, useTodayKey(), authHeaders).data;
+  if (!stats) return null;
+  const total = summarizeGuestCheckIns(
+    stats.events.filter((event) => event.edition_id === activeEdition.id),
+  );
+  return (
+    <div data-testid="edition-counter">
+      {total.checkedIn}/{total.total}
+    </div>
+  );
+}
+
+function renderRegistrationList(registrations: Registration[], applyEdition = false) {
   const queryClient = createTestQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
+      <EditionCounter />
       <RegistrationList
         registrations={registrations}
         tables={[]}
@@ -105,88 +122,109 @@ function renderRegistrationList(registrations: Registration[]) {
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         onAddRegistration={vi.fn()}
-        authHeaders={() => ({ Authorization: "Bearer test-token" })}
+        authHeaders={authHeaders}
         activeEdition={activeEdition}
-        applyActiveEditionFilterRequest={0}
+        applyActiveEditionFilterRequest={applyEdition ? 1 : 0}
       />
     </QueryClientProvider>,
   );
+  return queryClient;
 }
 
+const stats: RegistrationDashboardStats = {
+  all: 15,
+  pending: 3,
+  confirmed: 12,
+  active: 10,
+  festival: 5,
+  standalone: 10,
+  today: 0,
+  events: [
+    {
+      event_id: "event-1",
+      event_title: "Collectors Bourse",
+      edition_id: "edition-1",
+      total: 30,
+      checked_in: 12,
+    },
+    {
+      event_id: "historical-event",
+      event_title: "Capsule Exchange",
+      edition_id: "previous-edition",
+      total: 8,
+      checked_in: 8,
+    },
+  ],
+};
+
 describe("RegistrationList — per-event capacity panel", () => {
-  it("reports the server's guest counts, not the ones derivable from the loaded registrations", async () => {
+  it("shares one counts request with the edition banner and refreshes both after invalidation", async () => {
+    let checkedIn = 12;
+    const requests = vi.fn();
     server.use(
-      http.get("/api/events/checkin-stats", () =>
-        jsonResponse<import("@/api-types").EventCheckInStats[]>([
-          {
-            event_id: "historical-event",
-            event_title: "Historical event title",
-            total: 30,
-            checked_in: 12,
-          },
-        ]),
-      ),
+      http.get("/api/registrations/stats", ({ request }) => {
+        requests(new URL(request.url).searchParams.get("edition_id"));
+        return jsonResponse<RegistrationDashboardStats>({
+          ...stats,
+          events: stats.events.map((event) =>
+            event.event_id === "event-1" ? { ...event, checked_in: checkedIn } : event,
+          ),
+        });
+      }),
     );
 
+    const queryClient = renderRegistrationList([buildRegistration()], true);
+    const summary = await screen.findByRole("button", { name: /admin_active_edition_checkins/ });
+    expect(summary).toHaveTextContent('"checkedIn":12,"total":30');
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) => status.textContent?.includes('"checkedIn":12,"total":30')),
+    ).toBe(true);
+    expect(screen.getByTestId("edition-counter")).toHaveTextContent("12/30");
+    expect(requests).toHaveBeenCalledExactlyOnceWith("edition-1");
+    expect(screen.queryByText("Capsule Exchange")).not.toBeInTheDocument();
+
+    checkedIn = 15;
+    await act(() =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrationCounts }),
+    );
+    await waitFor(() => {
+      expect(summary).toHaveTextContent('"checkedIn":15,"total":30');
+      expect(screen.getByTestId("edition-counter")).toHaveTextContent("15/30");
+    });
+    expect(requests).toHaveBeenCalledTimes(2);
+  });
+
+  it("labels the all-events scope and includes historical events without local rows", async () => {
+    server.use(
+      http.get("/api/registrations/stats", () => jsonResponse<RegistrationDashboardStats>(stats)),
+    );
     renderRegistrationList([buildRegistration()]);
 
-    // The one loaded registration would tally 0/2 on its own.
-    expect(screen.getByText(/admin_checked_in: 0\/2/)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText(/admin_checked_in: 12\/30/)).toBeInTheDocument());
-    expect(screen.getByText("Historical event title")).toBeInTheDocument();
-    const summary = screen.getByRole("button", { name: /admin_event_checkin_summary/ });
-    expect(summary).toHaveTextContent('"checkedIn":12,"total":32');
+    const summary = await screen.findByRole("button", { name: /admin_event_checkin_summary/ });
+    expect(summary).toHaveTextContent('"checkedIn":20,"total":38');
     expect(summary).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("Historical event title")).not.toBeVisible();
     fireEvent.click(summary);
-    expect(screen.getByText("Historical event title")).toBeVisible();
+    expect(screen.getByText("Capsule Exchange")).toBeVisible();
+    expect(screen.getByText(/admin_checked_in: 8\/8/)).toHaveTextContent("Capsule Exchange");
   });
 
-  it("falls back to the locally derived counts when the stats request fails", async () => {
+  it("leaves attendance unavailable when the counts request fails", async () => {
+    const requested = vi.fn();
     server.use(
-      http.get("/api/events/checkin-stats", () =>
-        HttpResponse.json(
+      http.get("/api/registrations/stats", () => {
+        requested();
+        return HttpResponse.json(
           /* Fixture exception: error response; intentionally outside the success schema. */ null,
           { status: 500 },
-        ),
-      ),
-    );
-
-    renderRegistrationList([
-      buildRegistration(),
-      buildRegistration({ id: "reg-2", checked_in: true, guest_count: 3 }),
-    ]);
-
-    await waitFor(() => expect(screen.getByText(/admin_checked_in: 3\/5/)).toBeInTheDocument());
-  });
-
-  it("scopes each event's counts separately", async () => {
-    server.use(
-      http.get("/api/events/checkin-stats", () =>
-        jsonResponse<import("@/api-types").EventCheckInStats[]>([
-          { event_title: "Collectors Bourse", event_id: "event-1", total: 30, checked_in: 12 },
-          { event_title: "Capsule Exchange", event_id: "event-2", total: 8, checked_in: 8 },
-        ]),
-      ),
-    );
-
-    renderRegistrationList([
-      buildRegistration(),
-      buildRegistration({
-        id: "reg-2",
-        event_id: "event-2",
-        event: eventOut({
-          ...buildRegistration().event!,
-          id: "event-2",
-          title: "Capsule Exchange",
-        }),
+        );
       }),
-    ]);
-
-    // Each event's counts stay labelled with the event they belong to.
-    await waitFor(() =>
-      expect(screen.getByText(/admin_checked_in: 12\/30/)).toHaveTextContent("Collectors Bourse"),
     );
-    expect(screen.getByText(/admin_checked_in: 8\/8/)).toHaveTextContent("Capsule Exchange");
+    renderRegistrationList([buildRegistration({ checked_in: true })]);
+    await waitFor(() => expect(requested).toHaveBeenCalledOnce());
+    expect(
+      screen.queryByRole("button", { name: /admin_event_checkin_summary/ }),
+    ).not.toBeInTheDocument();
   });
 });

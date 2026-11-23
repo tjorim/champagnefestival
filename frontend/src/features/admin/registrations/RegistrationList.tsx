@@ -35,7 +35,12 @@ import { Icon } from "@/components/Icon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AdminDataTable } from "../shared/AdminDataTable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRegistrationListQuery, useRegistrationCountsQuery } from "./useRegistrationListQuery";
+import {
+  summarizeGuestCheckIns,
+  useRegistrationListQuery,
+  useRegistrationCountsQuery,
+  useVolunteerCheckInStats,
+} from "./useRegistrationListQuery";
 import { useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { Alert } from "@/components/ui/alert";
@@ -68,7 +73,6 @@ import { ColumnVisibilityDropdown } from "../shared/ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "../shared/columnVisibility";
 import {
   downloadRegistrationsCsv,
-  fetchEventCheckInStats,
   fetchRegistration,
   fetchAllRegistrationPages,
   type RegistrationSortKey,
@@ -127,6 +131,8 @@ interface RegistrationListProps {
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
   activeEdition: ActiveEdition;
+  activeEditionLoaded?: boolean;
+  canManageAdminSections?: boolean;
   countedPendingQueue?: boolean;
   applyActiveEditionFilterRequest: number;
   sectionError?: string;
@@ -200,6 +206,8 @@ export default function RegistrationList({
   onAddRegistration,
   authHeaders,
   activeEdition,
+  activeEditionLoaded = true,
+  canManageAdminSections = true,
   countedPendingQueue = false,
   applyActiveEditionFilterRequest,
   sectionError,
@@ -212,7 +220,7 @@ export default function RegistrationList({
   const [qrTargetId, setQrTargetId] = useState<string | null>(null);
   const [allocationFilter, setAllocationFilter] = useState("");
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
-  const [activeEditionOnly, setActiveEditionOnly] = useState(false);
+  const [activeEditionOnly, setActiveEditionOnly] = useState(applyActiveEditionFilterRequest !== 0);
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -271,12 +279,7 @@ export default function RegistrationList({
     return () => clearTimeout(timer);
   }, [q, clearSelection]);
 
-  const checkInStatsQuery = useQuery({
-    queryKey: queryKeys.admin.eventCheckInStats,
-    queryFn: () => fetchEventCheckInStats(authHeaders),
-    staleTime: 30 * 1000,
-    retry: false,
-  });
+  const volunteerStats = useVolunteerCheckInStats(authHeaders, !canManageAdminSections);
 
   const allContactPersonIds = useMemo(
     () =>
@@ -488,7 +491,12 @@ export default function RegistrationList({
     [onAssignTable],
   );
 
-  const countsQuery = useRegistrationCountsQuery(activeEdition.id, todayKey, authHeaders);
+  const countsQuery = useRegistrationCountsQuery(
+    activeEdition.id,
+    todayKey,
+    authHeaders,
+    canManageAdminSections && activeEditionLoaded,
+  );
   const statusCounts = countsQuery.data ?? { all: 0, pending: 0, confirmed: 0 };
   const editionCounts = countsQuery.data ?? { all: 0, festival: 0, standalone: 0, active: 0 };
   const todayCount = countsQuery.data?.today ?? 0;
@@ -924,53 +932,21 @@ export default function RegistrationList({
     }),
   );
 
-  // Built from every registration, not the current page: these counts are a
-  // property of the event, so they must not shift when someone searches,
-  // filters, or pages.
-  //
-  // The counts themselves come from GET /api/events/checkin-stats — the endpoint
-  // built for exactly this, and the one the Android entrance display reads — so
-  // both surfaces report the same numbers, counted server-side over every
-  // registration rather than over whatever this client happens to hold. The
-  // local tally supplies active-edition counts until the query settles; the
-  // server also carries titles so historical events need no registration load.
-  const eventCapacityStats = useMemo(() => {
-    const statsByEvent = new Map<string, { checkedIn: number; total: number; title: string }>();
-
-    for (const registration of registrations) {
-      if (registration.status === "cancelled") continue;
-      if (!registration.event_id) continue;
-      const existing = statsByEvent.get(registration.event_id);
-      const guestCount = Math.max(0, registration.guest_count ?? 0);
-      const checkedInGuests = registration.checked_in ? guestCount : 0;
-      if (existing) {
-        existing.checkedIn += checkedInGuests;
-        existing.total += guestCount;
-        if (existing.title === registration.event_id && registration.event?.title) {
-          existing.title = registration.event.title;
-        }
-      } else {
-        statsByEvent.set(registration.event_id, {
-          checkedIn: checkedInGuests,
-          total: guestCount,
-          title: registration.event?.title ?? registration.event_id,
-        });
-      }
-    }
-
-    for (const serverStats of checkInStatsQuery.data ?? []) {
-      const existing = statsByEvent.get(serverStats.event_id);
-      statsByEvent.set(serverStats.event_id, {
-        checkedIn: serverStats.checked_in,
-        total: serverStats.total,
-        title: serverStats.event_title ?? existing?.title ?? serverStats.event_id,
-      });
-    }
-
-    return [...statsByEvent.entries()]
-      .map(([eventId, stats]) => ({ eventId, ...stats }))
-      .sort((a, b) => a.title.localeCompare(b.title));
-  }, [registrations, checkInStatsQuery.data]);
+  // Attendance is scoped to all events or the selected edition, independently of
+  // the other table filters and pagination.
+  const eventCapacityStats = canManageAdminSections
+    ? countsQuery.data?.events.filter(
+        (event) => !backendEditionId || event.edition_id === backendEditionId,
+      )
+    : volunteerStats.data?.filter(
+        (event) =>
+          !backendEditionId || activeEdition.events.some(({ id }) => id === event.event_id),
+      );
+  const checkInSummary =
+    eventCapacityStats &&
+    (backendEditionId
+      ? `${editionDisplayNameWithType(activeEdition)} · ${m.admin_active_edition_checkins(summarizeGuestCheckIns(eventCapacityStats))}`
+      : m.admin_event_checkin_summary(summarizeGuestCheckIns(eventCapacityStats)));
 
   // Exports every registration matching the current filters, not just the
   // rendered page — see fetchAllMatchingRegistrations.
@@ -1095,8 +1071,7 @@ export default function RegistrationList({
         role="status"
         className={attendanceFeedback ? "mb-2 text-sm text-success-text" : "sr-only"}
       >
-        {attendanceFeedback ||
-          `${pageRegistrations.filter((registration) => registration.checked_in).length} ${m.admin_checked_in()}`}
+        {attendanceFeedback || checkInSummary}
       </p>
       {!isOnline && (
         <Alert variant="warning" role="status">
@@ -1272,59 +1247,56 @@ export default function RegistrationList({
               </div>
             </CollapsibleContent>
           </Collapsible>
-          {eventCapacityStats.length > 0 && (
+          {eventCapacityStats && (eventCapacityStats.length > 0 || backendEditionId) && (
             <Collapsible className="mt-2 pt-2 border-t border-subtle">
               <CollapsibleTrigger
                 render={<Button variant="ghost" size="sm" />}
                 className="h-auto max-w-full whitespace-normal text-left"
               >
-                {m.admin_event_checkin_summary({
-                  checkedIn: eventCapacityStats.reduce((sum, event) => sum + event.checkedIn, 0),
-                  total: eventCapacityStats.reduce((sum, event) => sum + event.total, 0),
-                })}
+                {checkInSummary}
                 <ChevronDownIcon className="size-4 shrink-0" aria-hidden="true" />
               </CollapsibleTrigger>
               <CollapsibleContent keepMounted>
                 <div className="flex flex-col gap-2">
-                  {eventCapacityStats.map((eventStats) => {
-                    const checkInPercent =
-                      eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
+                  {[...eventCapacityStats]
+                    .sort((a, b) => a.event_title.localeCompare(b.event_title))
+                    .map((eventStats) => {
+                      const checkInPercent =
+                        eventStats.total > 0 ? (eventStats.checked_in / eventStats.total) * 100 : 0;
 
-                    return (
-                      <div key={eventStats.eventId}>
-                        <div className="flex justify-between gap-2 text-sm mb-1 flex-wrap">
-                          <span className="text-subtle truncate">
-                            {eventCapacityStats.length > 1 && (
+                      return (
+                        <div key={eventStats.event_id}>
+                          <div className="flex justify-between gap-2 text-sm mb-1 flex-wrap">
+                            <span className="text-subtle truncate">
                               <span className="font-semibold text-content me-2">
-                                {eventStats.title}
+                                {eventStats.event_title}
                               </span>
-                            )}
-                            {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
-                            {m.admin_guests_count()}
-                          </span>
-                          <span className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="py-0 px-1"
-                              disabled={exportingEventId === eventStats.eventId}
-                              onClick={() => void handleExportEventCsv(eventStats.eventId)}
-                              title={m.admin_registrations_export_event_csv()}
-                              aria-label={m.admin_registrations_export_event_csv_for({
-                                event: eventStats.title,
-                              })}
-                            >
-                              <Icon icon={FileSpreadsheetIcon} />
-                            </Button>
-                          </span>
+                              {m.admin_checked_in()}: {eventStats.checked_in}/{eventStats.total}{" "}
+                              {m.admin_guests_count()}
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="py-0 px-1"
+                                disabled={exportingEventId === eventStats.event_id}
+                                onClick={() => void handleExportEventCsv(eventStats.event_id)}
+                                title={m.admin_registrations_export_event_csv()}
+                                aria-label={m.admin_registrations_export_event_csv_for({
+                                  event: eventStats.event_title,
+                                })}
+                              >
+                                <Icon icon={FileSpreadsheetIcon} />
+                              </Button>
+                            </span>
+                          </div>
+                          <Progress
+                            value={checkInPercent}
+                            aria-label={`${eventStats.event_title}: ${eventStats.checked_in}/${eventStats.total} ${m.admin_checked_in()}`}
+                          />
                         </div>
-                        <Progress
-                          value={checkInPercent}
-                          aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               </CollapsibleContent>
             </Collapsible>

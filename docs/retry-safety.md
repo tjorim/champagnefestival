@@ -1272,3 +1272,14 @@ a model between services and is serialized only by the existing REST/MCP boundar
 The final frontend fixture pass changes test data and static checks only. The venue-plan
 edition reader now names its generated response type without changing its request or
 response handling. No production write payload, retry decision or automatic retry changes.
+
+## Venue coordinates, edition months and event clocks (#1653)
+
+Venue create accepts omitted coordinates. REST updates accept explicit
+`null` to clear a coordinate, while MCP updates use `clear_lat` and
+`clear_lng`. Edition writes validate and normalise month keys, and event
+updates reject an explicit null start time. Settings writes persist a cleared
+contact value as SQL NULL and continue returning an empty string. These changes
+add no replay protection. Creates can duplicate records, and repeated updates
+can write another audit entry or overwrite a newer edit. Clients continue to
+send these writes without automatic retries.

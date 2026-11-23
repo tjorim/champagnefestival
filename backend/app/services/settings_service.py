@@ -88,7 +88,7 @@ async def update_settings(
     for field in ("public_email", "public_phone", "facebook_url"):
         value = getattr(body, field)
         if value is not None:
-            setattr(settings, field, str(value))
+            setattr(settings, field, str(value).strip() or None)
     await write_audit_entry(
         db,
         actor=actor,

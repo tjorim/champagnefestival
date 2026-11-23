@@ -14,7 +14,7 @@ PostgreSQL instance is required for these unit tests.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -98,8 +98,8 @@ def _make_event(
     ev.title = "Vrijdagavond"
     ev.description = "Festival evening"
     ev.date = event_date
-    ev.start_time = "18:00"
-    ev.end_time = "22:00"
+    ev.start_time = time.fromisoformat("18:00")
+    ev.end_time = time.fromisoformat("22:00")
     ev.category = "festival"
     ev.registration_required = True
     ev.active = active
@@ -531,8 +531,8 @@ class TestAdminToolWiring:
             city="Bredene",
             postal_code="",
             country="",
-            lat=0.0,
-            lng=0.0,
+            lat=None,
+            lng=None,
             active=True,
         )
 
@@ -1806,7 +1806,7 @@ class TestGetEventScheduleLocale:
                 title_nl="Proeverij",
                 title_en="Tasting",
                 date=date(2099, 3, 21),
-                start_time="18:00",
+                start_time=time.fromisoformat("18:00"),
                 category="tasting",
             )
         )

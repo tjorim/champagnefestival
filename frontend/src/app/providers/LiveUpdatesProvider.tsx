@@ -80,7 +80,7 @@ export function LiveUpdatesProvider(): null {
             queryClient.invalidateQueries({ queryKey: queryKeys.admin.eventCheckInStats });
             queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "page"] });
             queryClient.invalidateQueries({
-              queryKey: [...queryKeys.admin.registrations, "counts"],
+              queryKey: queryKeys.admin.registrationCounts,
             });
             queryClient.invalidateQueries({
               queryKey: [...queryKeys.admin.registrations, "layout-event"],

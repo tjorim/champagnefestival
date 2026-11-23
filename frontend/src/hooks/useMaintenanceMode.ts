@@ -17,7 +17,6 @@ import type { AppSettingsOut } from "@/api-types";
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { contactConfig } from "@/config/contact";
 import { queryKeys } from "@/lib/query/queryKeys";
 
 export type ApiAppSettings = AppSettingsOut;
@@ -28,9 +27,9 @@ export const FALLBACK_APP_SETTINGS: ApiAppSettings = {
   stamp_card_type_id: null,
   updated_at: "",
   maintenance_mode: false,
-  public_email: contactConfig.emails.info,
-  public_phone: contactConfig.phones.main,
-  facebook_url: `https://www.facebook.com/${contactConfig.social.facebook}`,
+  public_email: "",
+  public_phone: "",
+  facebook_url: "",
 };
 
 export class SettingsHttpError extends Error {

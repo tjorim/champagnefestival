@@ -14,7 +14,7 @@ into ``MCPToolError`` at its own boundary (see ``app.mcp.utils.as_value_error``)
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -162,8 +162,8 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         edition_id=body.edition_id,
         **body.model_dump(include=set(TEXT_FIELDS)),
         date=body.date,
-        start_time=body.start_time,
-        end_time=body.end_time,
+        start_time=time.fromisoformat(body.start_time),
+        end_time=time.fromisoformat(body.end_time) if body.end_time is not None else None,
         category=body.category,
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
@@ -275,7 +275,10 @@ async def apply_event_update(
         if field in fields_set:
             if field in {"members_only", "volunteers_only"} and getattr(body, field) is None:
                 continue
-            setattr(event, field, getattr(body, field))
+            value = getattr(body, field)
+            if field in {"start_time", "end_time"} and value is not None:
+                value = time.fromisoformat(value)
+            setattr(event, field, value)
 
     await write_audit_entry(
         db,
