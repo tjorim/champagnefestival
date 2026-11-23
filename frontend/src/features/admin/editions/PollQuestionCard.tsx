@@ -136,7 +136,7 @@ interface PollQuestionCardProps {
   count: number;
   /** Another change is in flight (moving or deleting), so the controls wait. */
   busy: boolean;
-  authHeaders: () => Record<string, string>;
+
   onChange: (question: PollQuestion) => void;
   onMove: (direction: -1 | 1) => void;
   onDelete: () => void;
@@ -149,7 +149,7 @@ export default function PollQuestionCard({
   index,
   count,
   busy,
-  authHeaders,
+
   onChange,
   onMove,
   onDelete,
@@ -161,7 +161,7 @@ export default function PollQuestionCard({
   );
 
   const textMutation = useMutation({
-    mutationFn: (write: PollQuestionWrite) => updatePollQuestion(question.id, write, authHeaders),
+    mutationFn: (write: PollQuestionWrite) => updatePollQuestion(question.id, write),
     retry: false,
     onSuccess: (updated) => {
       onChange(updated);
@@ -169,8 +169,7 @@ export default function PollQuestionCard({
     },
   });
   const closingMutation = useMutation({
-    mutationFn: (closesAt: string | null) =>
-      setPollQuestionClosing(question.id, closesAt, authHeaders),
+    mutationFn: (closesAt: string | null) => setPollQuestionClosing(question.id, closesAt),
     retry: false,
     onSuccess: (updated) => {
       onChange(updated);
@@ -363,7 +362,7 @@ export default function PollQuestionCard({
       {POLL_KIND_HAS_OPTIONS[question.kind] && (
         <PollOptionsEditor
           question={question}
-          authHeaders={authHeaders}
+
           onOptionsChange={(options: PollOption[]) => onChange({ ...question, options })}
         />
       )}

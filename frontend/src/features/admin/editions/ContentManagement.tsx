@@ -1,3 +1,5 @@
+import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import {
   auditRecordId,
   focusAuditRecord,
@@ -98,13 +100,11 @@ function editionTypeLabel(type: EditionType | "all") {
 }
 
 interface ContentManagementProps {
-  authHeaders: () => Record<string, string>;
   venues: Venue[];
   onOrganizationSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
   onOrganizationDeleted?: (id: number, isCurrent: () => boolean) => void;
   /** Takes the organizations collection's session fence; called before each write request. */
   captureOrganizationsFence?: () => () => boolean;
-  onEditionMutated?: () => void;
 }
 
 const contentSectionQueryKey = queryKeys.admin.contentManagement.section;
@@ -113,7 +113,7 @@ const contentEditionsQueryKey = queryKeys.admin.contentManagement.editions;
 interface ContentSectionProps {
   sectionKey: string;
   title: string;
-  authHeaders: () => Record<string, string>;
+
   /** `isCurrent` is the session fence taken before the request (always true without `captureFence`). */
   onItemSaved?: (item: OrganizationOut, isCurrent: () => boolean) => void;
   onItemDeleted?: (id: number, isCurrent: () => boolean) => void;
@@ -126,7 +126,7 @@ const ALWAYS_CURRENT = () => true;
 export function ContentSection({
   sectionKey,
   title,
-  authHeaders,
+
   onItemSaved,
   onItemDeleted,
   captureFence,
@@ -145,14 +145,14 @@ export function ContentSection({
 
   const itemsQuery = useQuery({
     queryKey: contentSectionQueryKey(sectionKey),
-    queryFn: () => fetchContentSectionItems(sectionKey, authHeaders),
+    queryFn: () => fetchContentSectionItems(sectionKey),
     staleTime: 60 * 1000,
     retry: false,
   });
 
   const editionsQuery = useQuery({
     queryKey: contentEditionsQueryKey,
-    queryFn: () => fetchEditions(authHeaders),
+    queryFn: () => fetchEditions(),
     staleTime: 60 * 1000,
     retry: false,
   });
@@ -177,18 +177,18 @@ export function ContentSection({
   }, [editionsQuery.data]);
 
   const saveItemMutation = useMutation({
-    mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft, authHeaders),
+    mutationFn: (draft: ItemDraft) => saveContentSectionItem(sectionKey, draft),
     retry: false,
   });
 
   const updateItemActiveMutation = useMutation({
     mutationFn: ({ id, active }: { id: number; active: boolean }) =>
-      updateContentSectionItemActive(sectionKey, id, active, authHeaders),
+      updateContentSectionItemActive(sectionKey, id, active),
     retry: false,
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: (id: number) => deleteContentSectionItem(sectionKey, id, authHeaders),
+    mutationFn: (id: number) => deleteContentSectionItem(sectionKey, id),
     retry: false,
   });
 
@@ -611,7 +611,7 @@ export function ContentSection({
       <ItemModal
         show={modalOpen}
         initial={modalItem}
-        authHeaders={authHeaders}
+
         saving={saveItemMutation.isPending}
         onSave={handleModalSave}
         onHide={() => setModalOpen(false)}
@@ -659,19 +659,31 @@ export function ContentSection({
 }
 
 interface EditionsSectionProps {
-  authHeaders: () => Record<string, string>;
   venues: Venue[];
-  onEditionMutated?: () => void;
 }
 
-export function EditionsSection({ authHeaders, venues, onEditionMutated }: EditionsSectionProps) {
+export function EditionsSection({ venues }: EditionsSectionProps) {
   const queryClient = useQueryClient();
+  const invalidateEditionViews = useCallback(
+    () =>
+      invalidateAdmin(queryClient, [
+        activeEditionQueryKey,
+        queryKeys.admin.activeEdition,
+        queryKeys.admin.activeEditionEvents,
+        queryKeys.admin.editionStats,
+        queryKeys.admin.registrations,
+        queryKeys.admin.layouts,
+        queryKeys.admin.tables,
+        queryKeys.admin.areas,
+      ]),
+    [queryClient],
+  );
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editionTypeFilter, setEditionTypeFilter] = useState<EditionType | "all">("all");
 
   const editionsQuery = useQuery({
     queryKey: contentEditionsQueryKey,
-    queryFn: () => fetchEditions(authHeaders),
+    queryFn: () => fetchEditions(),
     staleTime: 60 * 1000,
     retry: false,
   });
@@ -701,9 +713,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
         edition,
       ]);
       setAddModalOpen(false);
-      onEditionMutated?.();
+      void invalidateEditionViews();
     },
-    [onEditionMutated, queryClient],
+    [invalidateEditionViews, queryClient],
   );
 
   const handleDeleted = useCallback(
@@ -711,9 +723,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
         prev.filter((edition) => edition.id !== id),
       );
-      onEditionMutated?.();
+      void invalidateEditionViews();
     },
-    [onEditionMutated, queryClient],
+    [invalidateEditionViews, queryClient],
   );
 
   const handleUpdated = useCallback(
@@ -721,15 +733,15 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       queryClient.setQueryData<Edition[]>(contentEditionsQueryKey, (prev = []) =>
         prev.map((edition) => (edition.id === updated.id ? updated : edition)),
       );
-      onEditionMutated?.();
+      void invalidateEditionViews();
     },
-    [onEditionMutated, queryClient],
+    [invalidateEditionViews, queryClient],
   );
 
   const handleEventMutation = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: contentEditionsQueryKey });
-    onEditionMutated?.();
-  }, [onEditionMutated, queryClient]);
+    void invalidateEditionViews();
+  }, [invalidateEditionViews, queryClient]);
 
   return (
     <div className="mb-6">
@@ -794,7 +806,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
                     key={edition.id}
                     edition={edition}
                     venues={venues}
-                    authHeaders={authHeaders}
+
                     onDeleted={handleDeleted}
                     onUpdated={handleUpdated}
                     onEventMutation={handleEventMutation}
@@ -810,7 +822,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
         show={addModalOpen}
         initial={null}
         venues={venues}
-        authHeaders={authHeaders}
+
         onSaved={handleCreated}
         onHide={() => setAddModalOpen(false)}
       />
@@ -819,12 +831,10 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
 }
 
 export default function ContentManagement({
-  authHeaders,
   venues,
   onOrganizationSaved,
   onOrganizationDeleted,
   captureOrganizationsFence,
-  onEditionMutated,
 }: ContentManagementProps) {
   const reviewQueryClient = useQueryClient();
   return (
@@ -832,7 +842,6 @@ export default function ContentManagement({
       <Card tone="secondary" className="mb-4">
         <CardContent>
           <OrganizationChangeReview
-            authHeaders={authHeaders}
             onDecided={() => {
               void reviewQueryClient.invalidateQueries({
                 queryKey: contentSectionQueryKey("organizations"),
@@ -842,17 +851,13 @@ export default function ContentManagement({
           <ContentSection
             sectionKey="organizations"
             title={m.admin_content_organizations_section()}
-            authHeaders={authHeaders}
+
             onItemSaved={onOrganizationSaved}
             onItemDeleted={onOrganizationDeleted}
             captureFence={captureOrganizationsFence}
           />
           <hr className="border-subtle" />
-          <EditionsSection
-            authHeaders={authHeaders}
-            venues={venues}
-            onEditionMutated={onEditionMutated}
-          />
+          <EditionsSection venues={venues} />
         </CardContent>
       </Card>
     </div>

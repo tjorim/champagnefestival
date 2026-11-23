@@ -61,7 +61,7 @@ interface EventModalProps {
   show: boolean;
   edition: Edition;
   initial: Event | null;
-  authHeaders: () => Record<string, string>;
+
   saving?: boolean;
   onSave: (formData: EventFormData) => void;
   onHide: () => void;
@@ -92,7 +92,7 @@ export default function EventModal({
   show,
   edition,
   initial,
-  authHeaders,
+
   saving,
   onSave,
   onHide,
@@ -486,7 +486,7 @@ export default function EventModal({
                         <OrganizationTranslationSuggestion
                           key={`${show}-${initial?.id ?? "new"}-title-${language}`}
                           url="/api/events/translation"
-                          headers={authHeaders}
+
                           maxLength={EVENT_TRANSLATION_LIMIT}
                           source="nl"
                           target={language}
@@ -519,7 +519,7 @@ export default function EventModal({
                         <OrganizationTranslationSuggestion
                           key={`${show}-${initial?.id ?? "new"}-description-${language}`}
                           url="/api/events/translation"
-                          headers={authHeaders}
+
                           maxLength={EVENT_TRANSLATION_LIMIT}
                           source="nl"
                           target={language}
@@ -543,11 +543,7 @@ export default function EventModal({
                   }
                 }}
               >
-                <OrderQuestionsEditor
-                  key={initial.id}
-                  eventId={initial.id}
-                  authHeaders={authHeaders}
-                />
+                <OrderQuestionsEditor key={initial.id} eventId={initial.id} />
               </div>
             )}
           </DialogBody>

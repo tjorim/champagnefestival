@@ -217,7 +217,7 @@ describe("LiveUpdatesProvider", () => {
     });
     act(() => capturedOptions!.onInvalidate(envelope));
 
-    expect(patchTable).toHaveBeenCalledWith(envelope, expect.any(Function));
+    expect(patchTable).toHaveBeenCalledWith(envelope);
     expect(spy).not.toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
     // The registrations key still has no registration to patch, so it is invalidated.
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
@@ -258,7 +258,7 @@ describe("LiveUpdatesProvider", () => {
     const { result, unmount } = renderHook(
       () => {
         LiveUpdatesProvider();
-        return usePeopleListQuery({ page: 1, limit: 5 }, () => ({}));
+        return usePeopleListQuery({ page: 1, limit: 5 });
       },
       { wrapper: Wrapper },
     );

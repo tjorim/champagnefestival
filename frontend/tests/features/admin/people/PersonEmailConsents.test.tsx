@@ -7,8 +7,6 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const active: import("@/api-types").EmailConsentOut = {
   id: "ecn_1",
   category_key: "club_news",
@@ -32,7 +30,7 @@ function mount() {
   render(
     <PersonEmailConsents
       person={{ id: "per_1", name: "Ann" }}
-      authHeaders={authHeaders}
+
       onClose={vi.fn()}
     />,
     { wrapper: createTestQueryClientWrapper() },

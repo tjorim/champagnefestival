@@ -14,8 +14,6 @@ import {
   fetchRegistrableEvents,
 } from "@/features/admin/shared/adminRegistrationApi";
 
-const authHeaders = () => ({ Authorization: "Bearer test-token" });
-
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -87,7 +85,7 @@ describe("fetchAdminPersonRegistrations", () => {
       ),
     );
 
-    await expect(fetchAdminPersonRegistrations("person-1", authHeaders)).resolves.toMatchObject([
+    await expect(fetchAdminPersonRegistrations("person-1")).resolves.toMatchObject([
       {
         id: "reg-1",
         event: {
@@ -125,7 +123,7 @@ describe("fetchAdminPersonRegistrations", () => {
       ),
     );
 
-    await expect(fetchAdminPersonRegistrations("person-1", authHeaders)).rejects.toThrow(
+    await expect(fetchAdminPersonRegistrations("person-1")).rejects.toThrow(
       "Invalid registrations payload for person person-1.",
     );
   });
@@ -146,7 +144,7 @@ describe("fetchPersonPaymentSummary", () => {
       ),
     );
 
-    await expect(fetchPersonPaymentSummary("person-1", authHeaders)).resolves.toEqual({
+    await expect(fetchPersonPaymentSummary("person-1")).resolves.toEqual({
       received: "160.00",
       refunded: "10.00",
       net_paid: "150.00",
@@ -164,9 +162,7 @@ describe("fetchPersonPaymentSummary", () => {
       ),
     );
 
-    await expect(fetchPersonPaymentSummary("person-1", authHeaders)).rejects.toThrow(
-      "Failed to load payment summary: 404",
-    );
+    await expect(fetchPersonPaymentSummary("person-1")).rejects.toMatchObject({ status: 404 });
   });
 });
 
@@ -193,7 +189,7 @@ describe("fetchAdminPersonOptions", () => {
         }),
       ),
     );
-    await expect(fetchAdminPersonOptions("ali", authHeaders)).resolves.toEqual([person]);
+    await expect(fetchAdminPersonOptions("ali")).resolves.toEqual([person]);
   });
 
   it("rejects a bare array instead of reading it as no matches", async () => {
@@ -207,7 +203,7 @@ describe("fetchAdminPersonOptions", () => {
       ),
     );
 
-    await expect(fetchAdminPersonOptions("ali", authHeaders)).rejects.toThrow(
+    await expect(fetchAdminPersonOptions("ali")).rejects.toThrow(
       /expected \{items, total, limit, page\}/,
     );
   });
@@ -225,7 +221,7 @@ describe("fetchRegistrableEvents", () => {
       ),
     );
 
-    await expect(fetchRegistrableEvents(authHeaders)).rejects.toThrow(/expected an array/);
+    await expect(fetchRegistrableEvents()).rejects.toThrow(/expected an array/);
   });
 });
 
@@ -249,10 +245,12 @@ describe("createAdminPerson", () => {
     );
 
     await expect(
-      createAdminPerson(
-        { name: "Zoë", email: "zoe@example.com", phone: "", preferredLanguage: "nl" },
-        authHeaders,
-      ),
+      createAdminPerson({
+        name: "Zoë",
+        email: "zoe@example.com",
+        phone: "",
+        preferredLanguage: "nl",
+      }),
     ).resolves.toMatchObject({ id: "person-9", name: "Zoë" });
     expect(body).toEqual({
       name: "Zoë",
@@ -293,10 +291,7 @@ describe("createAdminPerson", () => {
       }),
     );
 
-    await createAdminPerson(
-      { name: "Zoë", email: "", phone: "", preferredLanguage: null },
-      authHeaders,
-    );
+    await createAdminPerson({ name: "Zoë", email: "", phone: "", preferredLanguage: null });
 
     expect(body?.email).toBeNull();
   });
@@ -315,17 +310,14 @@ describe("createAdminRegistration", () => {
       }),
     );
 
-    await createAdminRegistration(
-      {
-        personId: "person-1",
-        eventId: "event-1",
-        guestCount: 2,
-        notes: "",
-        orderItems: [{ productId: "ticket", quantity: 2 }],
-        idempotencyKey: "key-1",
-      },
-      authHeaders,
-    );
+    await createAdminRegistration({
+      personId: "person-1",
+      eventId: "event-1",
+      guestCount: 2,
+      notes: "",
+      orderItems: [{ productId: "ticket", quantity: 2 }],
+      idempotencyKey: "key-1",
+    });
 
     expect(body).toMatchObject({
       order_items: [{ product_id: "ticket", quantity: 2 }],
@@ -346,10 +338,7 @@ describe("createAdminRegistration", () => {
       }),
     );
 
-    await createAdminRegistration(
-      { personId: "p", eventId: "e", guestCount: 1, notes: "" },
-      authHeaders,
-    );
+    await createAdminRegistration({ personId: "p", eventId: "e", guestCount: 1, notes: "" });
 
     expect(body?.order_items).toEqual([]);
     expect(body).not.toHaveProperty("idempotency_key");

@@ -132,7 +132,7 @@ function renderModal(props: Partial<Parameters<typeof RegistrationCreateModal>[0
     <QueryClientProvider client={createTestQueryClient()}>
       <RegistrationCreateModal
         show
-        authHeaders={() => ({ Authorization: "Bearer test" })}
+
         onSaved={onSaved}
         onOpenBooking={onOpenBooking}
         onHide={() => {}}

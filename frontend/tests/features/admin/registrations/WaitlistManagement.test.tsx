@@ -72,7 +72,7 @@ function serve() {
 }
 
 function renderQueue() {
-  return render(<WaitlistManagement authHeaders={() => ({ Authorization: "Bearer test" })} />, {
+  return render(<WaitlistManagement />, {
     wrapper: createTestQueryClientWrapper(),
   });
 }

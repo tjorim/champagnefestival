@@ -1,4 +1,4 @@
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import type { AdminTableState } from "./adminTableState";
 
 /** Which part of a queue is showing; an absent URL filter means the actionable default. */
@@ -31,13 +31,8 @@ export function queueSearchParams(
 export async function fetchQueuePage<T>(
   path: string,
   query: string,
-  headers: () => Record<string, string>,
   signal: AbortSignal,
   fallbackMessage: string,
 ): Promise<QueuePage<T>> {
-  return fetchJsonOrThrowWithUnauthorized<QueuePage<T>>(
-    `${path}?${query}`,
-    { headers: headers(), signal },
-    fallbackMessage,
-  );
+  return fetchJsonOrThrow<QueuePage<T>>(`${path}?${query}`, { signal }, fallbackMessage);
 }

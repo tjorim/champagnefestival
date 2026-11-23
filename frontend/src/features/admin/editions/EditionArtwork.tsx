@@ -63,14 +63,14 @@ const SLOTS: SlotConfig[] = [
 
 interface EditionArtworkProps {
   edition: Edition;
-  authHeaders: () => Record<string, string>;
+
   onUpdated: (edition: Edition) => void;
 }
 
 function ArtworkSlot({
   config,
   edition,
-  authHeaders,
+
   onUpdated,
 }: EditionArtworkProps & { config: SlotConfig }) {
   const input = useRef<HTMLInputElement>(null);
@@ -81,8 +81,7 @@ function ArtworkSlot({
 
   const upload = useMutation({
     retry: false,
-    mutationFn: (selected: File) =>
-      uploadEditionArtwork(edition.id, config.slot, selected, authHeaders),
+    mutationFn: (selected: File) => uploadEditionArtwork(edition.id, config.slot, selected),
     onSuccess: (updated) => {
       setFile(null);
       if (input.current) input.current.value = "";
@@ -92,7 +91,7 @@ function ArtworkSlot({
   });
   const clear = useMutation({
     retry: false,
-    mutationFn: () => clearEditionArtwork(edition.id, config.slot, authHeaders),
+    mutationFn: () => clearEditionArtwork(edition.id, config.slot),
     onSuccess: (updated) => {
       setMessage(m.admin_edition_artwork_cleared({ slot: label }));
       onUpdated(updated);
@@ -180,7 +179,7 @@ function ArtworkSlot({
  * image (#1224). Changes are live immediately; an empty slot uses the static
  * default shown in its preview.
  */
-export default function EditionArtwork({ edition, authHeaders, onUpdated }: EditionArtworkProps) {
+export default function EditionArtwork({ edition, onUpdated }: EditionArtworkProps) {
   return (
     <section aria-labelledby={`edition-artwork-${edition.id}`} className="mb-2">
       <h6 id={`edition-artwork-${edition.id}`} className="text-highlight mb-1 text-sm">
@@ -192,7 +191,7 @@ export default function EditionArtwork({ edition, authHeaders, onUpdated }: Edit
           key={config.slot}
           config={config}
           edition={edition}
-          authHeaders={authHeaders}
+
           onUpdated={onUpdated}
         />
       ))}

@@ -26,7 +26,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import AdminEditorDialog from "@/components/admin/AdminEditorDialog";
 import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
@@ -101,21 +101,13 @@ function stateBadgeVariant(state: ComposedMessageState): BadgeVariant {
   }
 }
 
-export default function ComposerManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function ComposerManagement() {
   const client = useQueryClient();
   const key = queryKeys.admin.composerMessages;
   const query = useQuery({
     queryKey: key,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<ComposedMessage[]>(
-        "/api/composer",
-        { headers: authHeaders() },
-        m.admin_composer_error_load(),
-      ),
+      fetchJsonOrThrow<ComposedMessage[]>("/api/composer", {}, m.admin_composer_error_load()),
     refetchInterval: 10_000,
   });
   const items = query.data ?? [];
@@ -130,11 +122,11 @@ export default function ComposerManagement({
 
   const save = useMutation({
     mutationFn: (payload: Draft) =>
-      fetchJsonOrThrowWithUnauthorized(
+      fetchJsonOrThrow(
         `/api/composer${editing ? `/${editing}` : ""}`,
         {
           method: editing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(writePayload(payload)),
         },
         m.admin_composer_error_save(),
@@ -171,7 +163,7 @@ export default function ComposerManagement({
     queryFn: ({ signal }) =>
       emailRequest<EmailCategory[]>(
         `/api/email-categories?locale=${encodeURIComponent(getLocale())}`,
-        authHeaders,
+
         m.email_category_load_error(),
         signal,
       ),
@@ -222,11 +214,11 @@ export default function ComposerManagement({
 
   const scheduleSend = useMutation({
     mutationFn: (item: ComposedMessage) =>
-      fetchJsonOrThrowWithUnauthorized(
+      fetchJsonOrThrow(
         `/api/composer/${item.id}/schedule`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           // Confirms what the dialog showed: the saved version, and for email the recipient
           // count. The server refuses a message saved again or a changed list.
           body: JSON.stringify({

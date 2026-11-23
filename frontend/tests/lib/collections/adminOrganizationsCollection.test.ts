@@ -12,12 +12,10 @@ import {
 } from "@/lib/collections/adminOrganizationsCollection";
 import { createTestQueryClient } from "../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer test" });
-
 async function setup() {
   const collection = createAdminOrganizationsCollection({
     queryClient: createTestQueryClient(),
-    authHeaders,
+
     enabled: false,
   });
   const unregister = registerAdminOrganizationsCollection(collection);

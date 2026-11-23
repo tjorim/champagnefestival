@@ -23,8 +23,6 @@ vi.mock("@/paraglide/messages", () => ({
 
 vi.mock("@/features/admin/shared/csvExport", () => ({ exportToCsv: vi.fn() }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const edition: Edition = editionOut({
   id: "2026-october",
   year: 2026,
@@ -136,7 +134,7 @@ function renderModal(questions: import("@/api-types").PollQuestionOut[], backdro
   const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <EditionPollModal show edition={edition} authHeaders={authHeaders} onHide={() => {}} />
+      <EditionPollModal show edition={edition} onHide={() => {}} />
     </QueryClientProvider>,
   );
 }

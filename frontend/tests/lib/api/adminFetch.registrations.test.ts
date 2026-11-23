@@ -5,8 +5,6 @@ import { seedRegistrations } from "@/mocks/data/registrations";
 import { server } from "@/mocks/server";
 import { fetchAllRegistrationPages, fetchAllRegistrations } from "@/lib/api/adminFetch";
 
-const authHeaders = () => ({ Authorization: "Bearer test-token" });
-
 function registrationPayload(id: string) {
   return { ...seedRegistrations[0]!, id, table_names: ["T1"] };
 }
@@ -38,7 +36,7 @@ describe("fetchAllRegistrations — reads every page", () => {
     const requested: string[] = [];
     serveRegistrations(2500, requested);
 
-    const registrations = await fetchAllRegistrations(authHeaders, "march-2026");
+    const registrations = await fetchAllRegistrations("march-2026");
 
     expect(registrations).toHaveLength(2500);
     expect(new Set(registrations.map((r) => r.id)).size).toBe(2500);
@@ -53,7 +51,7 @@ describe("fetchAllRegistrations — reads every page", () => {
     const requested: string[] = [];
     serveRegistrations(3, requested);
 
-    const registrations = await fetchAllRegistrations(authHeaders, "march-2026");
+    const registrations = await fetchAllRegistrations("march-2026");
 
     expect(registrations).toHaveLength(3);
     expect(requested).toEqual(["?edition_id=march-2026&limit=1000&page=1"]);
@@ -62,14 +60,14 @@ describe("fetchAllRegistrations — reads every page", () => {
   it("returns an empty list for no registrations", async () => {
     serveRegistrations(0);
 
-    await expect(fetchAllRegistrations(authHeaders, "march-2026")).resolves.toEqual([]);
+    await expect(fetchAllRegistrations("march-2026")).resolves.toEqual([]);
   });
 
   it("applies the filters to every page", async () => {
     const requested: string[] = [];
     serveRegistrations(1500, requested);
 
-    const registrations = await fetchAllRegistrationPages(authHeaders, { status: "confirmed" });
+    const registrations = await fetchAllRegistrationPages({ status: "confirmed" });
 
     expect(registrations).toHaveLength(1500);
     expect(requested.sort()).toEqual([
@@ -96,7 +94,7 @@ describe("fetchAllRegistrations — reads every page", () => {
       }),
     );
 
-    await expect(fetchAllRegistrations(authHeaders, "march-2026")).resolves.toHaveLength(1001);
+    await expect(fetchAllRegistrations("march-2026")).resolves.toHaveLength(1001);
   });
 
   it("rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
@@ -110,7 +108,7 @@ describe("fetchAllRegistrations — reads every page", () => {
       ),
     );
 
-    await expect(fetchAllRegistrations(authHeaders, "march-2026")).rejects.toThrow(
+    await expect(fetchAllRegistrations("march-2026")).rejects.toThrow(
       /expected \{items, total, limit, page\}/,
     );
   });

@@ -127,7 +127,7 @@ function renderRegistrationList() {
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         onAddRegistration={vi.fn()}
-        authHeaders={() => ({ Authorization: "Bearer test-token" })}
+
         activeEdition={activeEdition}
         applyActiveEditionFilterRequest={0}
       />

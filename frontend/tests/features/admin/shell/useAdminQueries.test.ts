@@ -6,11 +6,6 @@ import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
 import { server } from "@/mocks/server";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: "Bearer ".concat("mock-access-token"),
-});
-
 const emptyPage = { items: [], total: 0, limit: 1000, page: 1 };
 
 function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean } = {}) {
@@ -22,13 +17,12 @@ function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean }
         visible: options.visible ?? true,
         isAuthenticated: options.isAuthenticated ?? true,
         canManageAdminSections: true,
-        authHeaders,
       }),
     { wrapper: Wrapper },
   );
 }
 
-describe("useAdminQueries loadData", () => {
+describe("useAdminQueries refreshDashboard", () => {
   it("waits for the active edition before requesting dashboard counters", async () => {
     const requests = vi.fn();
     server.use(
@@ -55,7 +49,6 @@ describe("useAdminQueries loadData", () => {
           visible: true,
           isAuthenticated: true,
           canManageAdminSections: true,
-          authHeaders,
         }),
       { wrapper: Wrapper, initialProps: { editionId: "" } },
     );
@@ -74,7 +67,6 @@ describe("useAdminQueries loadData", () => {
           visible: true,
           isAuthenticated: true,
           canManageAdminSections: true,
-          authHeaders,
         }),
       { wrapper: Wrapper, initialProps: { editionId: "march-2026" } },
     );
@@ -110,7 +102,7 @@ describe("useAdminQueries loadData", () => {
       ),
     );
 
-    await act(() => result.current.loadData());
+    await act(() => result.current.refreshDashboard());
 
     await waitFor(() => {
       expect(result.current.registrationsQuery.data).toHaveLength(0);
@@ -128,7 +120,7 @@ describe("useAdminQueries loadData", () => {
     );
     const { result } = renderQueries({ visible: false });
 
-    await act(() => result.current.loadData());
+    await act(() => result.current.refreshDashboard());
 
     expect(requests).toBe(0);
   });

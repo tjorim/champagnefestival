@@ -35,7 +35,6 @@ import type { Person } from "@/types/person";
 import { EMAIL_REGEX } from "@/config/constants";
 
 interface PersonFormModalProps {
-  authHeaders?: () => Record<string, string>;
   onReuse?: (person: Person) => void;
   show: boolean;
   person: Person | null;
@@ -65,7 +64,7 @@ export default function PersonFormModal({
   person,
   onSave,
   onHide,
-  authHeaders,
+
   onReuse,
 }: PersonFormModalProps) {
   const fieldErrors = usePersonFieldErrors("person");
@@ -191,11 +190,11 @@ export default function PersonFormModal({
           noValidate
         >
           <DialogBody>
-            {!isEdit && show && authHeaders && onReuse && (
+            {!isEdit && show && onReuse && (
               <PersonDirectoryMatches
                 name={values.name}
                 email={values.email}
-                authHeaders={authHeaders}
+
                 onReuse={(existing) => {
                   setError(null);
                   fieldErrors.clear();

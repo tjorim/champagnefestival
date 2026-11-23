@@ -9,21 +9,14 @@ import { seedAreas, seedLayouts, seedRooms, seedTables, seedVenues } from "@/moc
 import { server } from "@/mocks/server";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: "Bearer ".concat("mock-access-token"),
-});
-
 function useAdminVenues() {
   const queries = useAdminQueries({
     editionId: "march-2026",
     visible: true,
     isAuthenticated: true,
     canManageAdminSections: true,
-    authHeaders,
   });
   const actions = useAdminVenueActions({
-    authHeaders,
     tablesCollection: queries.tablesCollection,
     venueCollections: queries.venueCollections,
   });
@@ -214,7 +207,7 @@ describe("venue group collections in the admin hooks", () => {
     await waitFor(() => expect(refetchTables).toHaveBeenCalled());
   });
 
-  it("refetches every venue resource through loadData", async () => {
+  it("refetches every venue resource through refreshDashboard", async () => {
     const { view } = await renderLoaded();
     const seen: string[] = [];
     server.use(
@@ -224,7 +217,7 @@ describe("venue group collections in the admin hooks", () => {
       }),
     );
 
-    await act(() => view.result.current.queries.loadData());
+    await act(() => view.result.current.queries.refreshDashboard());
 
     expect(seen).toEqual(["venues"]);
     await waitFor(() => expect(view.result.current.queries.venuesQuery.data).toHaveLength(0));
@@ -238,10 +231,8 @@ describe("venue group collections in the admin hooks", () => {
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
-          authHeaders,
         });
         const actions = useAdminVenueActions({
-          authHeaders,
           tablesCollection: queries.tablesCollection,
           venueCollections: queries.venueCollections,
         });

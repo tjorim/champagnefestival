@@ -207,7 +207,7 @@ it("fills the admin form and saves only after manual review", async () => {
         image: "/logos/house.png",
         description_nl: "Hallo",
       }}
-      authHeaders={() => ({})}
+
       onSave={save}
       onHide={() => {}}
     />,

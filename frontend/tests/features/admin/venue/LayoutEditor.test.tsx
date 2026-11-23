@@ -13,7 +13,7 @@ const render = (ui: ReactElement) =>
 import { fetchAllRegistrationPages } from "@/lib/api/adminFetch";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import LayoutEditor, { getDayLabel } from "@/features/admin/venue/LayoutEditor";
+import { LayoutEditorView as LayoutEditor, getDayLabel } from "@/features/admin/venue/LayoutEditor";
 import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
@@ -198,7 +198,7 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
     onUpdateTable: vi.fn().mockResolvedValue(undefined),
     onResizeArea: vi.fn().mockResolvedValue(undefined),
     onSaveAllocations: vi.fn().mockResolvedValue(undefined),
-    authHeaders: vi.fn().mockReturnValue({}),
+
     onSaveRevision: vi.fn().mockResolvedValue({
       id: "layrev-1",
       layout_id: "layout-1",
@@ -309,7 +309,6 @@ describe("LayoutEditor", () => {
     renderLayoutEditor({ ...fixture, dayOptions: [] });
     await waitFor(() =>
       expect(fetchAllRegistrationPages).toHaveBeenCalledWith(
-        expect.any(Function),
         expect.objectContaining({ eventId: "event-1" }),
       ),
     );
@@ -658,11 +657,7 @@ describe("LayoutEditor", () => {
 
       const dialog = within(await screen.findByRole("dialog"));
       expect(await dialog.findByText("admin_layout_revisions_empty")).toBeInTheDocument();
-      expect(fetchLayoutRevisions).toHaveBeenCalledWith(
-        expect.any(Function),
-        "layout-1",
-        expect.any(AbortSignal),
-      );
+      expect(fetchLayoutRevisions).toHaveBeenCalledWith("layout-1", expect.any(AbortSignal));
 
       fireEvent.change(dialog.getByPlaceholderText("admin_layout_revisions_label_placeholder"), {
         target: { value: "Opening night" },
@@ -734,7 +729,6 @@ describe("LayoutEditor", () => {
 
       await waitFor(() =>
         expect(compareLayoutRevisions).toHaveBeenCalledWith(
-          expect.any(Function),
           "layout-1",
           "1",
           "current",
@@ -802,9 +796,7 @@ describe("LayoutEditor", () => {
 
       fireEvent.click(restoreButton);
 
-      await waitFor(() =>
-        expect(previewLayoutRestore).toHaveBeenCalledWith(expect.any(Function), "layout-1", 1),
-      );
+      await waitFor(() => expect(previewLayoutRestore).toHaveBeenCalledWith("layout-1", 1));
       expect(
         await dialog.findByText("admin_layout_revisions_restore_conflicts_title"),
       ).toBeInTheDocument();

@@ -4,17 +4,13 @@ import { m } from "@/paraglide/messages";
 import AnnouncementManagement from "../shared/AnnouncementManagement";
 import ComposerManagement from "../shared/ComposerManagement";
 
-interface AnnouncementsSectionProps {
-  authHeaders: () => Record<string, string>;
-}
-
 type AnnouncementsTab = "announcements" | "compose";
 
 /**
  * One home for everything visitors are told: the in-app announcements, and the composer that
  * writes a message once and sends it to those announcements and/or Web Push.
  */
-export default function AnnouncementsSection({ authHeaders }: AnnouncementsSectionProps) {
+export default function AnnouncementsSection() {
   const [tab, setTab] = useState<AnnouncementsTab>("announcements");
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as AnnouncementsTab)}>
@@ -23,10 +19,10 @@ export default function AnnouncementsSection({ authHeaders }: AnnouncementsSecti
         <TabsTrigger value="compose">{m.admin_composer_section()}</TabsTrigger>
       </TabsList>
       <TabsContent value="announcements">
-        <AnnouncementManagement authHeaders={authHeaders} />
+        <AnnouncementManagement />
       </TabsContent>
       <TabsContent value="compose">
-        <ComposerManagement authHeaders={authHeaders} />
+        <ComposerManagement />
       </TabsContent>
     </Tabs>
   );

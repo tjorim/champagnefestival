@@ -7,7 +7,7 @@ import { m } from "@/paraglide/messages";
 import MemberStampCards from "@/features/admin/people/MemberStampCards";
 import StampCardTypes from "@/features/admin/people/StampCardTypes";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
+
 afterEach(cleanup);
 it("confirms hand-out and displays a translated refusal without closing", async () => {
   const writes: unknown[] = [];
@@ -55,7 +55,7 @@ it("confirms hand-out and displays a translated refusal without closing", async 
   render(
     <MemberStampCards
       person={{ id: "alice", name: "Alice" }}
-      authHeaders={authHeaders}
+
       onClose={vi.fn()}
     />,
     { wrapper: createTestQueryClientWrapper() },
@@ -99,7 +99,7 @@ it("preserves the translated type draft after one failed write", async () => {
       );
     }),
   );
-  render(<StampCardTypes authHeaders={authHeaders} />, { wrapper: createTestQueryClientWrapper() });
+  render(<StampCardTypes />, { wrapper: createTestQueryClientWrapper() });
   fireEvent.click(screen.getByRole("button", { name: m.stamp_add_type() }));
   const dialog = screen.getByRole("dialog");
   fireEvent.change(within(dialog).getByLabelText(m.stamp_name({ locale: "nl" })), {

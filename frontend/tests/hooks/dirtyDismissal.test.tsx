@@ -29,7 +29,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
 
 const edition = editionOut({
@@ -96,7 +95,7 @@ const cases: Case[] = [
         show={show}
         edition={edition}
         initial={event}
-        authHeaders={authHeaders}
+
         onSave={noop}
         onHide={onHide}
       />
@@ -138,7 +137,7 @@ const cases: Case[] = [
       <ItemModal
         show={show}
         initial={null}
-        authHeaders={authHeaders}
+
         onSave={noop}
         onHide={onHide}
       />
@@ -154,7 +153,7 @@ const cases: Case[] = [
         show={show}
         initial={edition}
         venues={[]}
-        authHeaders={authHeaders}
+
         onSaved={noop}
         onHide={onHide}
       />
@@ -168,7 +167,7 @@ const cases: Case[] = [
     modal: (show, onHide) => (
       <RegistrationCreateModal
         show={show}
-        authHeaders={authHeaders}
+
         onSaved={noop}
         onOpenBooking={noop}
         onHide={onHide}
@@ -272,7 +271,7 @@ describe("dismissal while saving", () => {
         <ItemModal
           show
           initial={null}
-          authHeaders={authHeaders}
+
           saving
           onSave={noop}
           onHide={onHide}

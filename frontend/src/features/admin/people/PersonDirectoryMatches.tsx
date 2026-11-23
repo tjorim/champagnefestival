@@ -9,12 +9,12 @@ import type { Person } from "@/types/person";
 export function PersonDirectoryMatches({
   name,
   email,
-  authHeaders,
+
   onReuse,
 }: {
   name: string;
   email: string;
-  authHeaders: () => Record<string, string>;
+
   onReuse: (person: Person) => void;
 }) {
   const search = email.trim() || name.trim();
@@ -25,7 +25,7 @@ export function PersonDirectoryMatches({
   }, [search]);
   const matches = usePeopleListQuery(
     { page: 1, limit: 5, q: query },
-    authHeaders,
+
     query.length >= 3,
   );
   if (query !== search || query.length < 3 || matches.isPlaceholderData) return null;

@@ -1,3 +1,7 @@
+import { useAdminWorkspace } from "../shell/AdminWorkspace";
+import { useAdminDashboardData } from "../shell/useAdminDashboardData";
+import { useWorkspaceRegistrationActions } from "../registrations/useWorkspaceRegistrationActions";
+import { useAdminVenueActions } from "../shell/useAdminVenueActions";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDate } from "@/lib/format/dateUtils";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -198,7 +202,7 @@ interface LayoutEditorProps {
   onUpdateTable: (tableId: string, name: string) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
   onSaveAllocations: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
-  authHeaders: () => Record<string, string>;
+
   onSaveRevision: (layoutId: string, label: string, changeNote?: string) => Promise<LayoutRevision>;
   onRestoreRevision: (
     layoutId: string,
@@ -707,7 +711,7 @@ function RoomCanvas({
 // LayoutEditor (main export)
 // ---------------------------------------------------------------------------
 
-export default function LayoutEditor({
+export function LayoutEditorView({
   dayOptions,
   tables: suppliedTables,
   tableTypes,
@@ -732,7 +736,7 @@ export default function LayoutEditor({
   onUpdateTable,
   onResizeArea,
   onSaveAllocations,
-  authHeaders,
+
   onSaveRevision,
   onRestoreRevision,
 }: LayoutEditorProps) {
@@ -761,8 +765,7 @@ export default function LayoutEditor({
       : undefined;
   const historicalRegistrations = useQuery({
     queryKey: [...queryKeys.admin.registrations, "layout-event", historicalEventId],
-    queryFn: ({ signal }) =>
-      fetchAllRegistrationPages(authHeaders, { eventId: historicalEventId, signal }),
+    queryFn: ({ signal }) => fetchAllRegistrationPages({ eventId: historicalEventId, signal }),
     enabled: Boolean(historicalEventId),
     gcTime: 0,
     staleTime: 15 * 1000,
@@ -2134,11 +2137,52 @@ export default function LayoutEditor({
           show={showRevisions}
           onHide={() => setShowRevisions(false)}
           layoutId={activeLayoutId}
-          authHeaders={authHeaders}
+
           onSaveRevision={onSaveRevision}
           onRestoreRevision={onRestoreRevision}
         />
       )}
     </div>
+  );
+}
+
+export default function LayoutEditor() {
+  const { queries, activeEdition } = useAdminWorkspace();
+  const { tablesCollection, venueCollections } = queries;
+  const { layoutDayOptions } = useAdminDashboardData(activeEdition);
+  const actions = useAdminVenueActions({ tablesCollection, venueCollections });
+  const { handleSaveAllocations, confirmDialog } = useWorkspaceRegistrationActions();
+  return (
+    <>
+      <LayoutEditorView
+        dayOptions={layoutDayOptions}
+        tables={queries.tablesQuery.data ?? []}
+        tableTypes={queries.tableTypesQuery.data ?? []}
+        layouts={queries.layoutsQuery.data ?? []}
+        registrations={queries.registrationsQuery.data ?? []}
+        rooms={queries.roomsQuery.data ?? []}
+        organizations={queries.organizationsQuery.data ?? []}
+        areas={queries.areasQuery.data ?? []}
+        onAddTable={actions.handleAddTable}
+        onMoveTable={actions.handleMoveTable}
+        onDeleteTable={actions.handleDeleteTable}
+        onRotateTable={actions.handleRotateTable}
+        onAddLayout={actions.handleAddLayout}
+        onDeleteLayout={actions.handleDeleteLayout}
+        onAddArea={actions.handleAddArea}
+        onMoveArea={actions.handleMoveArea}
+        onDeleteArea={actions.handleDeleteArea}
+        onRotateArea={actions.handleRotateArea}
+        onAssignAreaToItem={actions.handleAssignAreaToItem}
+        onUpdateAreaLabel={actions.handleUpdateAreaLabel}
+        onChangeTableType={actions.handleChangeTableType}
+        onUpdateTable={actions.handleUpdateTable}
+        onResizeArea={actions.handleResizeArea}
+        onSaveRevision={actions.handleSaveRevision}
+        onRestoreRevision={actions.handleRestoreRevision}
+        onSaveAllocations={handleSaveAllocations}
+      />
+      {confirmDialog}
+    </>
   );
 }

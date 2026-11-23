@@ -62,14 +62,9 @@ function SignInPrompt({ message, returnTo }: { message: string; returnTo: string
 
 /** Next step when no valid edition is open: pick one, or retry the list that offers them. */
 function EditionPicker({ message, isAdmin }: { message: string; isAdmin: boolean }) {
-  const auth = useAuth();
   const choices = useQuery({
     queryKey: ["venue-plan-editions", isAdmin],
-    queryFn: () =>
-      fetchVenuePlanEditionChoices(isAdmin, (): Record<string, string> => {
-        const token = auth.getAccessToken();
-        return token ? { Authorization: `Bearer ${token}` } : {};
-      }),
+    queryFn: () => fetchVenuePlanEditionChoices(isAdmin),
     retry: false,
   });
 

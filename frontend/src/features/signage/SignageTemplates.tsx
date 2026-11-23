@@ -14,7 +14,7 @@ import {
   AdminOption,
   AdminTextarea,
 } from "@/components/admin/AdminFields";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
@@ -91,21 +91,13 @@ const optionLabels = (): Record<string, string> => ({
 type Organization = import("@/api-types").OrganizationOut;
 type Notice = import("@/api-types").SlideOut;
 
-export default function SignageTemplates({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function SignageTemplates() {
   const [editing, setEditing] = useState<Template | null | undefined>(undefined);
   const [saved, setSaved] = useState(false);
   const templates = useQuery({
     queryKey: ["admin", "signage", "templates"],
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<Template[]>(
-        "/api/signage/templates",
-        { headers: authHeaders(), signal },
-        m.admin_error_load_data(),
-      ),
+      fetchJsonOrThrow<Template[]>("/api/signage/templates", { signal }, m.admin_error_load_data()),
   });
   return (
     <div className="space-y-4">
@@ -139,7 +131,6 @@ export default function SignageTemplates({
       </ul>
       {editing !== undefined && (
         <TemplateEditor
-          authHeaders={authHeaders}
           template={editing}
           onClose={() => setEditing(undefined)}
           onSaved={() => {
@@ -154,13 +145,11 @@ export default function SignageTemplates({
 }
 
 export function TemplateEditor({
-  authHeaders,
   template,
   onClose,
   onSaved,
   initialKind,
 }: {
-  authHeaders: () => Record<string, string>;
   template: Template | null;
   onClose: () => void;
   onSaved: (template: Template) => void;
@@ -197,20 +186,16 @@ export function TemplateEditor({
   const organizations = useQuery({
     queryKey: ["admin", "signage", "samples", "organizations"],
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<Organization[]>(
+      fetchJsonOrThrow<Organization[]>(
         "/api/organizations?limit=1000",
-        { headers: authHeaders(), signal },
+        { signal },
         m.admin_error_load_data(),
       ),
   });
   const notices = useQuery({
     queryKey: ["admin", "signage", "samples", "notices"],
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<Notice[]>(
-        "/api/signage/slides",
-        { headers: authHeaders(), signal },
-        m.admin_error_load_data(),
-      ),
+      fetchJsonOrThrow<Notice[]>("/api/signage/slides", { signal }, m.admin_error_load_data()),
   });
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) =>
@@ -263,11 +248,11 @@ export function TemplateEditor({
     setBusy(true);
     setError("");
     try {
-      const saved = await fetchJsonOrThrowWithUnauthorized<Template>(
+      const saved = await fetchJsonOrThrow<Template>(
         `/api/signage/templates${id ? `/${id}` : ""}`,
         {
           method: id ? "PUT" : "POST",
-          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(draft),
         },
         m.signage_editor_error(),
@@ -286,11 +271,9 @@ export function TemplateEditor({
     const body = new FormData();
     body.append("file", file);
     try {
-      const headers = { ...authHeaders() };
-      delete headers["Content-Type"];
-      const result = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").SignageAssetOut>(
+      const result = await fetchJsonOrThrow<import("@/api-types").SignageAssetOut>(
         "/api/signage/assets",
-        { method: "POST", headers, body },
+        { method: "POST", body },
         m.signage_editor_error(),
       );
       if (target === "background")

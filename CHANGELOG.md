@@ -38,6 +38,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - Store booked order lines in indexed rows, including booked prices, units and delivery counts (#1650).
 - Share public booking creation and QR, volunteer and admin check-in through registration services. Derive attendance from the check-in timestamp (#1663).
 - Share fixed vocabularies across API schemas and database checks and normalise legacy values before enforcing the new checks (#1652).
+- Consolidate admin API requests, section navigation and mutation ownership while retaining live updates and warm start (#1659).
 - Store event clocks as SQL times, validate edition months, and support venues without coordinates (#1653). Remove personal contact defaults and align schema lengths, Dutch text constraints and audit timestamps.
 - Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.
 - A database constraint failure (HTTP 409) now carries a stable `code` next to its `detail`: `required_field_missing`, `related_records_exist`, `duplicate_value` or `constraint_violation`. Its log line names the route template, never the raw path (which can hold a token).

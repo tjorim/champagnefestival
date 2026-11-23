@@ -50,7 +50,7 @@ function renderAnalyticsDashboard() {
   const queryClient = createTestQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
-      <AnalyticsDashboard authHeaders={() => ({})} />
+      <AnalyticsDashboard />
     </QueryClientProvider>,
   );
 }
@@ -120,7 +120,7 @@ describe("AnalyticsDashboard", () => {
     ]);
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <AnalyticsDashboard authHeaders={() => ({})} />
+        <AnalyticsDashboard />
       </QueryClientProvider>,
     );
 

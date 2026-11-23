@@ -1,8 +1,10 @@
+import { adminRequest } from "@/lib/api/adminApi";
 import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { m } from "@/paraglide/messages";
+import { ApiError } from "@/lib/api/apiErrors";
 import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 
 export default function OrganizationTranslationSuggestion({
@@ -17,7 +19,7 @@ export default function OrganizationTranslationSuggestion({
   maxLength = 600,
 }: {
   url: string;
-  headers: () => Record<string, string>;
+  headers?: () => Record<string, string>;
   source: string;
   target: string;
   text: string;
@@ -41,7 +43,10 @@ export default function OrganizationTranslationSuggestion({
     retry: false,
     gcTime: 0,
     queryFn: async ({ signal }) => {
-      const response = await fetch(url, { headers: headers(), signal });
+      const response = await (headers ? fetch : adminRequest)(url, {
+        headers: headers?.(),
+        signal,
+      });
       if (!response.ok) throw new Error("Translation capabilities unavailable");
       return (await response.json()) as import("@/api-types").TranslationCapabilities;
     },
@@ -62,9 +67,9 @@ export default function OrganizationTranslationSuggestion({
     setPending(true);
     setError("");
     try {
-      const response = await fetch(url, {
+      const response = await (headers ? fetch : adminRequest)(url, {
         method: "POST",
-        headers: { ...headers(), "Content-Type": "application/json" },
+        headers: { ...headers?.(), "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
           text: snapshot.text,
@@ -91,7 +96,8 @@ export default function OrganizationTranslationSuggestion({
     } catch (failure) {
       if (!controller.signal.aborted && isCurrent()) {
         setError(
-          failure instanceof Error && failure.message === m.translation_rate_limit()
+          (failure instanceof ApiError && failure.status === 429) ||
+            (failure instanceof Error && failure.message === m.translation_rate_limit())
             ? m.translation_rate_limit()
             : m.translation_error(),
         );

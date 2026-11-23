@@ -16,10 +16,6 @@ import { fetchPeoplePage, type PeoplePage } from "@/lib/query/adminPeopleQueries
 import { queryKeys } from "@/lib/query/queryKeys";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: "Bearer test-token",
-});
 const data = {
   name: "Updated",
   email: "",
@@ -65,7 +61,7 @@ function harness() {
   });
   for (const queryKey of [key, membersKey]) {
     queryClient.setQueryDefaults(queryKey, {
-      queryFn: ({ signal }) => fetchPeoplePage(authHeaders, queryKey[3], signal),
+      queryFn: ({ signal }) => fetchPeoplePage(queryKey[3], signal),
     });
     queryClient.setQueryData(queryKey, page());
   }
@@ -85,7 +81,7 @@ function harness() {
     () => ({
       ...usePeopleMutations({
         queryClient,
-        authHeaders,
+
         registrationsQueryKey: ["admin", "registrations"],
       }),
       pending: useIsMutating({ mutationKey: ["admin", "people", "write"] }),
@@ -535,7 +531,7 @@ it("applies a pending edit to a page loaded during the request", async () => {
   await act(async () => {
     await h.queryClient.fetchQuery({
       queryKey: key,
-      queryFn: ({ signal }) => fetchPeoplePage(authHeaders, params, signal),
+      queryFn: ({ signal }) => fetchPeoplePage(params, signal),
     });
   });
   expect(h.queryClient.getQueryData<PeoplePage>(key)?.items[0]?.name).toBe("Updated");

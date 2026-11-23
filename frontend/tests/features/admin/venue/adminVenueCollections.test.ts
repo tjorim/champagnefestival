@@ -14,8 +14,6 @@ import {
 import type { FloorArea } from "@/api-types";
 import { createTestQueryClient } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer test" });
-
 function area(id: string, layout_id: string): FloorArea {
   return {
     created_at: "2026-01-01T00:00:00Z",
@@ -36,7 +34,7 @@ function area(id: string, layout_id: string): FloorArea {
 async function setup() {
   const collections = createAdminVenueCollections({
     queryClient: createTestQueryClient(),
-    authHeaders,
+
     enabled: false,
   });
   const unregister = registerAdminVenueCollections(collections);

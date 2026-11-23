@@ -1,6 +1,6 @@
 import type { VenuePlanTableOut, VenuePlanLayoutOut, VenuePlanOut } from "@/api-types";
 import { queryOptions } from "@tanstack/react-query";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { m } from "@/paraglide/messages";
 
 export type VenuePlanTable = VenuePlanTableOut;
@@ -13,7 +13,7 @@ export function fetchVenuePlan(
   editionId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<VenuePlan> {
-  return fetchJsonOrThrowWithUnauthorized<VenuePlan>(
+  return fetchJsonOrThrow<VenuePlan>(
     `/api/venue-plan/${encodeURIComponent(editionId)}`,
     { headers: authHeaders() },
     m.venue_plan_error(),

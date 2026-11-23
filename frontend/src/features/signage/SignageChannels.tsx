@@ -28,8 +28,8 @@ import {
 import {
   signageRequest,
   signageOperationErrorMessage,
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
+  fetchJsonOrThrow,
+  fetchVoidOrThrow,
 } from "@/lib/api/adminApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
@@ -159,11 +159,7 @@ function Preview({ playlist }: { playlist: Playlist }) {
   );
 }
 const newChannel = (): ChannelDraft => ({ name: "", slug: "", edition_id: "", active: false });
-export default function SignageChannels({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function SignageChannels() {
   const client = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const search = useSearch({ strict: false }) as Record<string, unknown>;
@@ -194,8 +190,7 @@ export default function SignageChannels({
   const [at, setAt] = useState(() => new Date().toISOString());
   const channels = useQuery({
     queryKey: ["admin", "signage", "channels"],
-    queryFn: ({ signal }) =>
-      signageRequest<Channel[]>("channels", authHeaders(), "GET", undefined, signal),
+    queryFn: ({ signal }) => signageRequest<Channel[]>("channels", "GET", undefined, signal),
   });
   const channelId = channels.data?.some((item) => item.id === requestedChannelId)
     ? requestedChannelId
@@ -229,20 +224,20 @@ export default function SignageChannels({
   }
   const slides = useQuery({
     queryKey: ["admin", "signage", "slides"],
-    queryFn: ({ signal }) =>
-      signageRequest<Slide[]>("slides", authHeaders(), "GET", undefined, signal),
+    queryFn: ({ signal }) => signageRequest<Slide[]>("slides", "GET", undefined, signal),
   });
   const templates = useQuery({
     queryKey: ["admin", "signage", "templates"],
-    queryFn: ({ signal }) =>
-      signageRequest<Template[]>("templates", authHeaders(), "GET", undefined, signal),
+    queryFn: ({ signal }) => signageRequest<Template[]>("templates", "GET", undefined, signal),
   });
   const editions = useQuery({
     queryKey: ["admin", "signage", "editions"],
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<
-        { id: string; edition_type: string; year: number; month: string }[]
-      >("/api/editions", { headers: authHeaders(), signal }, m.admin_error_load_data()),
+      fetchJsonOrThrow<{ id: string; edition_type: string; year: number; month: string }[]>(
+        "/api/editions",
+        { signal },
+        m.admin_error_load_data(),
+      ),
   });
   const rows = (slides.data ?? [])
     .filter((item) => item.channel_id === channelId)
@@ -340,7 +335,7 @@ export default function SignageChannels({
   }
   function move(from: number, to: number) {
     void run(async () => {
-      await signageRequest(`channels/${channelId}/reorder`, authHeaders(), "POST", {
+      await signageRequest(`channels/${channelId}/reorder`, "POST", {
         ordered_ids: moveSlide(rows, from, to).map((item) => item.id),
       });
       setDraft(null);
@@ -364,9 +359,9 @@ export default function SignageChannels({
       await run(() => remove(resource, id));
   }
   async function remove(resource: "channels" | "slides", id: string) {
-    await fetchVoidOrThrowWithUnauthorized(
+    await fetchVoidOrThrow(
       `/api/signage/${resource}/${id}`,
-      { method: "DELETE", headers: authHeaders() },
+      { method: "DELETE" },
       m.signage_channels_error(),
     );
     if (resource === "channels") selectChannel();
@@ -409,7 +404,7 @@ export default function SignageChannels({
             setPreview(
               await signageRequest<Playlist>(
                 `preview?locale=${getLocale()}`,
-                authHeaders(),
+
                 "POST",
                 { channel, slides: items, at },
               ),
@@ -443,7 +438,7 @@ export default function SignageChannels({
         </Alert>
       )}
       {status && <p role="status">{status}</p>}
-      <SignageVideoExports channels={channels.data ?? []} authHeaders={authHeaders} />
+      <SignageVideoExports channels={channels.data ?? []} />
       <fieldset disabled={busy} className="space-y-4">
         <AdminAddButton onClick={() => openChannel()}>{m.signage_channels_new()}</AdminAddButton>
         <ul className="space-y-2">
@@ -487,9 +482,9 @@ export default function SignageChannels({
                   variant="outline"
                   onClick={() =>
                     void run(async () => {
-                      const playlist = await fetchJsonOrThrowWithUnauthorized<Playlist>(
+                      const playlist = await fetchJsonOrThrow<Playlist>(
                         `/api/signage/${encodeURIComponent(item.slug)}/playlist?locale=${getLocale()}`,
-                        { headers: authHeaders() },
+                        {},
                         m.signage_export_error(),
                       );
                       const { downloadExport } = await import("./export");
@@ -538,7 +533,7 @@ export default function SignageChannels({
                   void run(async () => {
                     const saved = await signageRequest<Channel>(
                       `channels${channelId ? `/${channelId}` : ""}`,
-                      authHeaders(),
+
                       channelId ? "PUT" : "POST",
                       channel,
                     );
@@ -668,7 +663,6 @@ export default function SignageChannels({
             )}
             {creatingTemplate && (
               <TemplateEditor
-                authHeaders={authHeaders}
                 template={null}
                 initialKind={draft.kind}
                 onClose={() => setCreatingTemplate(false)}
@@ -694,7 +688,7 @@ export default function SignageChannels({
                     const { id: _id, ...body } = { ...draft, id: slideId };
                     await signageRequest(
                       `slides${slideId ? `/${slideId}` : ""}`,
-                      authHeaders(),
+
                       slideId ? "PUT" : "POST",
                       body,
                     );
@@ -854,13 +848,11 @@ export default function SignageChannels({
                         void run(async () => {
                           const data = new FormData();
                           data.append("file", file);
-                          const headers = { ...authHeaders() };
-                          delete headers["Content-Type"];
-                          const result = await fetchJsonOrThrowWithUnauthorized<
+                          const result = await fetchJsonOrThrow<
                             import("@/api-types").SignageAssetOut
                           >(
                             "/api/signage/assets",
-                            { method: "POST", headers, body: data },
+                            { method: "POST", body: data },
                             m.signage_channels_error(),
                           );
                           changeSlide({

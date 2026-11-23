@@ -15,7 +15,6 @@ vi.mock("@/lib/api/adminFetch", () => ({
   fetchRegistration,
 }));
 
-const authHeaders = () => ({});
 let nextEventTime = Date.parse("2026-10-05T10:00:00Z");
 
 function makeEnvelope(overrides: Partial<LiveEnvelope> = {}): LiveEnvelope {
@@ -65,7 +64,7 @@ describe("patchAdminRegistrationLiveEvent", () => {
     register(second.collection);
 
     let settled = false;
-    const patch = patchAdminRegistrationLiveEvent(makeEnvelope(), authHeaders).then(() => {
+    const patch = patchAdminRegistrationLiveEvent(makeEnvelope()).then(() => {
       settled = true;
     });
 
@@ -92,10 +91,7 @@ describe("patchAdminRegistrationLiveEvent", () => {
     register(second.collection);
 
     let settled = false;
-    const patch = patchAdminRegistrationLiveEvent(
-      makeEnvelope({ action: "deleted" }),
-      authHeaders,
-    ).then(() => {
+    const patch = patchAdminRegistrationLiveEvent(makeEnvelope({ action: "deleted" })).then(() => {
       settled = true;
     });
 
@@ -122,7 +118,7 @@ describe("patchAdminRegistrationLiveEvent", () => {
     register(healthy.collection);
 
     let outcome: unknown;
-    const patch = patchAdminRegistrationLiveEvent(makeEnvelope(), authHeaders).catch((error) => {
+    const patch = patchAdminRegistrationLiveEvent(makeEnvelope()).catch((error) => {
       outcome = error;
     });
 
@@ -140,9 +136,9 @@ describe("patchAdminRegistrationLiveEvent", () => {
     const failing = makeCollection(undefined, () => Promise.reject(failure));
     register(failing.collection);
 
-    await expect(
-      patchAdminRegistrationLiveEvent(makeEnvelope({ action: "deleted" }), authHeaders),
-    ).rejects.toBe(failure);
+    await expect(patchAdminRegistrationLiveEvent(makeEnvelope({ action: "deleted" }))).rejects.toBe(
+      failure,
+    );
   });
 
   it("rejects when a collection throws synchronously and still writes to the others", async () => {
@@ -155,9 +151,7 @@ describe("patchAdminRegistrationLiveEvent", () => {
     register(throwing.collection);
     register(healthy.collection);
 
-    await expect(patchAdminRegistrationLiveEvent(makeEnvelope(), authHeaders)).rejects.toBe(
-      failure,
-    );
+    await expect(patchAdminRegistrationLiveEvent(makeEnvelope())).rejects.toBe(failure);
     expect(healthy.utils.writeUpsert).toHaveBeenCalledWith({ id: "reg-1" });
   });
 });

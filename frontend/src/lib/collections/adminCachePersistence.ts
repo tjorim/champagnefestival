@@ -197,6 +197,29 @@ export class AdminCachePersistence {
     };
   }
 
+  private scheduleSnapshot(epoch: number, persister: Persister) {
+    clearTimeout(this.expiryTimer);
+    this.expiryTimer = setTimeout(() => {
+      void this.wipe();
+    }, ADMIN_CACHE_MAX_AGE);
+    if (this.timer) return;
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      if (epoch !== this.epoch) return;
+      void persistQueryClientSave({
+        queryClient: this.queryClient,
+        persister,
+        buster: ADMIN_CACHE_BUSTER,
+        dehydrateOptions: {
+          shouldDehydrateMutation: () => false,
+          shouldDehydrateQuery: (query) =>
+            query.state.data !== undefined &&
+            isPersistableAdminKey(query.queryKey, this.status.editionId),
+        },
+      }).catch(() => undefined);
+    }, ADMIN_CACHE_WRITE_DELAY);
+  }
+
   setSession(owner: string | null): Promise<void> {
     if (this.sessionStarted && owner === this.owner) return this.ready;
     this.sessionStarted = true;
@@ -253,26 +276,7 @@ export class AdminCachePersistence {
           restored: this.restoredKeys.size > 0,
           lastSynced: times.length ? Math.min(...times) : 0,
         });
-        clearTimeout(this.expiryTimer);
-        this.expiryTimer = setTimeout(() => {
-          void this.wipe();
-        }, ADMIN_CACHE_MAX_AGE);
-        if (this.timer) return;
-        this.timer = setTimeout(() => {
-          this.timer = undefined;
-          if (epoch !== this.epoch) return;
-          void persistQueryClientSave({
-            queryClient: this.queryClient,
-            persister,
-            buster: ADMIN_CACHE_BUSTER,
-            dehydrateOptions: {
-              shouldDehydrateMutation: () => false,
-              shouldDehydrateQuery: (query) =>
-                query.state.data !== undefined &&
-                isPersistableAdminKey(query.queryKey, this.status.editionId),
-            },
-          }).catch(() => undefined);
-        }, ADMIN_CACHE_WRITE_DELAY);
+        this.scheduleSnapshot(epoch, persister);
       });
       const edition = this.queryClient.getQueryData<{ id: string }>(queryKeys.admin.activeEdition);
       if (edition) await this.setEdition(edition.id);
@@ -311,7 +315,21 @@ export class AdminCachePersistence {
     await this.storage.remove().catch(() => undefined);
     if (this.epoch !== epoch || this.owner !== owner || !owner) return;
     this.sessionStarted = false;
-    await this.setSession(owner);
+    const ready = this.setSession(owner);
+    const restartEpoch = this.epoch;
+    await ready;
+    if (restartEpoch !== this.epoch) return;
+    // A read may finish before the listener is attached again.
+    const hasFreshRows = this.queryClient
+      .getQueryCache()
+      .getAll()
+      .some(
+        (query) =>
+          query.state.data !== undefined &&
+          isPersistableAdminKey(query.queryKey, editionId) &&
+          !this.restoredKeys.has(query.queryHash),
+      );
+    if (hasFreshRows) this.scheduleSnapshot(restartEpoch, this.persister(restartEpoch, owner));
   }
 }
 

@@ -10,15 +10,15 @@ import { sendTestPush, subscribeToPush } from "@/lib/api/pushApi";
 import { getLocale } from "@/paraglide/runtime";
 
 interface PushOptInProps {
-  /** Credentials for admin test-send; the backend enforces the admin role. */
-  authHeaders?: () => Record<string, string>;
+  /** Shows the admin test-send action; the backend enforces the admin role. */
+  admin?: boolean;
 }
 
 /** Public opt-in/opt-out control for Web Push (#941), with explicit consent
  * copy shown *before* the browser's own permission prompt — the browser
  * prompt alone isn't consent under this project's privacy posture, matching
  * the checkbox pattern #934 already established for marketing email opt-in. */
-export default function PushOptIn({ authHeaders }: PushOptInProps) {
+export default function PushOptIn({ admin = false }: PushOptInProps) {
   const { state, isSubscribed, isBusy, error, subscribe, unsubscribe } = usePushSubscription();
   const [consentChecked, setConsentChecked] = useState(false);
   // The button stays enabled so it never looks broken; pressing it without consent
@@ -31,7 +31,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
   }
 
   const handleSendTest = async () => {
-    if (!authHeaders) return;
+    if (!admin) return;
     setTestStatus("sending");
     try {
       const registration = await navigator.serviceWorker.ready;
@@ -50,7 +50,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
         auth: json.keys.auth,
         locale: getLocale(),
       });
-      await sendTestPush(result.id, authHeaders());
+      await sendTestPush(result.id);
       setTestStatus("sent");
     } catch {
       setTestStatus("error");
@@ -138,7 +138,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                 )}
                 {m.push_opt_in_unsubscribe_button()}
               </Button>
-              {authHeaders && (
+              {admin && (
                 <Button
                   variant="outline-warning"
                   size="sm"

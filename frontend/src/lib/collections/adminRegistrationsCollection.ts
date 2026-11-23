@@ -13,7 +13,7 @@ const collectionEditions = new WeakMap<object, string>();
 
 interface CreateAdminRegistrationsCollectionOptions {
   queryClient: QueryClient;
-  authHeaders: () => Record<string, string>;
+
   enabled: boolean;
   editionId: string;
   syncMode?: AdminCollectionSyncMode;
@@ -21,14 +21,14 @@ interface CreateAdminRegistrationsCollectionOptions {
 
 export function createAdminRegistrationsCollection({
   queryClient,
-  authHeaders,
+
   enabled,
   editionId,
   syncMode,
 }: CreateAdminRegistrationsCollectionOptions) {
   const collection = createAdminCollection<Registration>({
     queryKey: queryKeys.admin.registrationsEdition(editionId),
-    queryFn: ({ signal }) => fetchAllRegistrations(authHeaders, editionId, signal),
+    queryFn: ({ signal }) => fetchAllRegistrations(editionId, signal),
     queryClient,
     enabled,
     syncMode,
@@ -39,8 +39,6 @@ export function createAdminRegistrationsCollection({
 }
 
 export type AdminRegistrationsCollection = ReturnType<typeof createAdminRegistrationsCollection>;
-
-type AuthHeadersProvider = () => Record<string, string>;
 
 /**
  * The shared lifecycle (registry, session fence, timestamps, guarded writes);
@@ -74,10 +72,7 @@ export function canPatchAdminRegistrationLiveEvent(envelope: LiveEnvelope): bool
   );
 }
 
-export async function patchAdminRegistrationLiveEvent(
-  envelope: LiveEnvelope,
-  authHeaders: AuthHeadersProvider,
-): Promise<void> {
+export async function patchAdminRegistrationLiveEvent(envelope: LiveEnvelope): Promise<void> {
   if (!canPatchAdminRegistrationLiveEvent(envelope)) {
     throw new Error("Live event cannot be applied incrementally.");
   }
@@ -96,7 +91,7 @@ export async function patchAdminRegistrationLiveEvent(
     return;
   }
 
-  const registration = await fetchRegistration(registrationId, authHeaders);
+  const registration = await fetchRegistration(registrationId);
 
   // Sign-out or a collection swap happened while the booking was in flight.
   if (!isCurrent()) return;

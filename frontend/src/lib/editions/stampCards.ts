@@ -5,7 +5,7 @@ import type {
   StampRewardOut,
   StampCardOut,
 } from "@/api-types";
-import { fetchJsonOrThrowWithUnauthorized } from "../api/adminApi";
+import { fetchJsonOrThrow } from "../api/adminApi";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { pickTranslation } from "./translatedText";
@@ -47,17 +47,17 @@ export const stampKeys = {
 };
 export function stampRequest<T>(
   path: string,
-  authHeaders: () => Record<string, string>,
+
   signal?: AbortSignal,
   body?: unknown,
   method = "GET",
 ) {
-  return fetchJsonOrThrowWithUnauthorized<T>(
+  return fetchJsonOrThrow<T>(
     path,
     {
       method,
       signal,
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
     m.stamp_error(),

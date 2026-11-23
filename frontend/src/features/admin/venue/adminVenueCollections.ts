@@ -17,11 +17,9 @@ import {
 } from "@/lib/api/adminFetch";
 import { queryKeys } from "@/lib/query/queryKeys";
 
-type AuthHeadersProvider = () => Record<string, string>;
-
 interface CreateAdminVenueCollectionsOptions {
   queryClient: QueryClient;
-  authHeaders: AuthHeadersProvider;
+
   enabled: boolean;
   syncMode?: AdminCollectionSyncMode;
 }
@@ -42,7 +40,7 @@ interface CreateAdminVenueCollectionsOptions {
  */
 export function createAdminVenueCollections({
   queryClient,
-  authHeaders,
+
   enabled,
   syncMode,
 }: CreateAdminVenueCollectionsOptions) {
@@ -51,31 +49,31 @@ export function createAdminVenueCollections({
     venues: createAdminCollection<Venue>({
       ...shared,
       queryKey: queryKeys.admin.venues,
-      queryFn: () => fetchVenues(authHeaders),
+      queryFn: () => fetchVenues(),
       getKey: (venue) => venue.id,
     }),
     rooms: createAdminCollection<Room>({
       ...shared,
       queryKey: queryKeys.admin.rooms,
-      queryFn: () => fetchRooms(authHeaders),
+      queryFn: () => fetchRooms(),
       getKey: (room) => room.id,
     }),
     tableTypes: createAdminCollection<TableType>({
       ...shared,
       queryKey: queryKeys.admin.tableTypes,
-      queryFn: () => fetchTableTypes(authHeaders),
+      queryFn: () => fetchTableTypes(),
       getKey: (tableType) => tableType.id,
     }),
     layouts: createAdminCollection<Layout>({
       ...shared,
       queryKey: queryKeys.admin.layouts,
-      queryFn: () => fetchLayouts(authHeaders),
+      queryFn: () => fetchLayouts(),
       getKey: (layout) => layout.id,
     }),
     areas: createAdminCollection<FloorArea>({
       ...shared,
       queryKey: queryKeys.admin.areas,
-      queryFn: () => fetchAreas(authHeaders),
+      queryFn: () => fetchAreas(),
       getKey: (area) => area.id,
       // Canvas edits are optimistic: one PUT per changed area, an explicit
       // refetch on success, and a refetch before the rollback on failure. The
@@ -89,7 +87,7 @@ export function createAdminVenueCollections({
           async () => {
             for (const mutation of transaction.mutations) {
               if (!isCurrent()) return;
-              await updateArea(authHeaders, String(mutation.key), mutation.changes);
+              await updateArea(String(mutation.key), mutation.changes);
             }
           },
           isCurrent,

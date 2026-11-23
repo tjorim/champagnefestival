@@ -9,8 +9,6 @@ import { registrationOut } from "@/mocks/data/builders";
 import { fetchActiveEdition } from "@/hooks/useActiveEdition";
 import type { EditionPublicOut, EventPublicOut, ProductPublicOut } from "@/api-types";
 
-const headers = () => ({ Authorization: "Bearer test" });
-
 describe("generated event, product and edition wire shapes", () => {
   it("preserves admin money strings, nulls, stored translations and nested event fields", async () => {
     const product = productOut({ price: "12.3400", name_en: "  ", stock: 7 });
@@ -25,10 +23,10 @@ describe("generated event, product and edition wire shapes", () => {
         jsonResponse<import("@/api-types").RegistrationOutWithToken>(registration),
       ),
     );
-    expect(await fetchEditions(headers)).toEqual([edition]);
-    expect(await fetchEditionEvents(edition.id, headers)).toEqual([event]);
-    expect(await fetchEventProducts(event.id, headers)).toEqual([product]);
-    expect((await fetchRegistration("reg-1", headers)).event).toEqual(event);
+    expect(await fetchEditions()).toEqual([edition]);
+    expect(await fetchEditionEvents(edition.id)).toEqual([event]);
+    expect(await fetchEventProducts(event.id)).toEqual([product]);
+    expect((await fetchRegistration("reg-1")).event).toEqual(event);
   });
 
   it("reads a public event without manufacturing admin inventory or edition fields", async () => {

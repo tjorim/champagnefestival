@@ -20,29 +20,6 @@ export function useLocationChoice(key: string, choices: readonly string[], fallb
   return [value, setValue, raw !== undefined && raw !== value] as const;
 }
 
-export const adminSections = [
-  "home",
-  "registrations",
-  "waitlist",
-  "scratchpad",
-  "organizations",
-  "editions",
-  "floor-plans",
-  "venues",
-  "people",
-  "analytics",
-  "audit-log",
-  "event-categories",
-  "product-categories",
-  "email-categories",
-  "faq",
-  "signage-channels",
-  "announcements",
-  "policies",
-  "settings",
-  "contact-details",
-  "contact-messages",
-] as const;
 export const accountTabs = [
   "registrations",
   "organizations",

@@ -96,15 +96,11 @@ function actionLabel(action: string): string {
   return resource ? `${label} · ${resourceLabel(resource)}` : label;
 }
 
-interface AuditLogViewerProps {
-  authHeaders: () => Record<string, string>;
-}
-
 function formatTimestamp(iso: string): string {
   return formatDateTime(iso, getLocale());
 }
 
-export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
+export default function AuditLogViewer() {
   const [resourceType, setResourceType] = useState("");
   const [resourceId, setResourceId] = useState("");
   const [actor, setActor] = useState("");
@@ -115,19 +111,19 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
 
   const resourceTypesQuery = useQuery({
     queryKey: queryKeys.admin.auditResourceTypes,
-    queryFn: () => fetchAuditResourceTypes(authHeaders),
+    queryFn: () => fetchAuditResourceTypes(),
     staleTime: 60 * 1000,
   });
 
   const actorsQuery = useQuery({
     queryKey: queryKeys.admin.auditActors,
-    queryFn: () => fetchAuditActors(authHeaders),
+    queryFn: () => fetchAuditActors(),
     staleTime: 60 * 1000,
   });
 
   const actionsQuery = useQuery({
     queryKey: queryKeys.admin.auditActions,
-    queryFn: () => fetchAuditActions(authHeaders),
+    queryFn: () => fetchAuditActions(),
     staleTime: 60 * 1000,
   });
 
@@ -142,7 +138,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
       page,
     }),
     queryFn: () =>
-      fetchAuditEntries(authHeaders, {
+      fetchAuditEntries({
         resourceType: resourceType || undefined,
         resourceId: resourceId.trim() || undefined,
         actor: actor.trim() || undefined,

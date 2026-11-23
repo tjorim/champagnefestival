@@ -4,7 +4,7 @@ import type {
   VolunteerListEnvelope,
   PeopleCountsOut,
 } from "@/api-types";
-import { fetchJsonOrThrowWithUnauthorized } from "../api/adminApi";
+import { fetchJsonOrThrow } from "../api/adminApi";
 import { m } from "@/paraglide/messages";
 
 export interface PeopleListParams {
@@ -34,7 +34,6 @@ export function peopleListSearchParams(params: PeopleListParams): URLSearchParam
 }
 
 export async function fetchPeoplePage(
-  authHeaders: () => Record<string, string>,
   params: PeopleListParams,
   signal: AbortSignal,
 ): Promise<PeoplePage> {
@@ -47,9 +46,11 @@ export async function fetchPeoplePage(
       throw new Error(`Unsupported volunteer sort: ${params.sort}`);
     }
   }
-  const payload = await fetchJsonOrThrowWithUnauthorized<
-    PersonListEnvelope | VolunteerListEnvelope
-  >(`${path}?${search}`, { headers: authHeaders(), signal }, m.admin_error_load_data());
+  const payload = await fetchJsonOrThrow<PersonListEnvelope | VolunteerListEnvelope>(
+    `${path}?${search}`,
+    { signal },
+    m.admin_error_load_data(),
+  );
   signal.throwIfAborted();
   if (
     !Array.isArray(payload.items) ||
@@ -67,7 +68,6 @@ export type PeopleCounts = PeopleCountsOut;
 
 /** Full-result facets, independent of the currently visible page. */
 export function fetchPeopleCounts(
-  authHeaders: () => Record<string, string>,
   params: PeopleCountParams,
   signal: AbortSignal,
 ): Promise<PeopleCounts> {
@@ -78,15 +78,10 @@ export function fetchPeopleCounts(
     }
     if (value !== undefined) search.set(key, String(value));
   }
-  return fetchJsonOrThrowWithUnauthorized(
-    `/api/people/counts?${search}`,
-    { headers: authHeaders(), signal },
-    m.admin_error_load_data(),
-  );
+  return fetchJsonOrThrow(`/api/people/counts?${search}`, { signal }, m.admin_error_load_data());
 }
 
 export async function fetchPeopleByEmail(
-  authHeaders: () => Record<string, string>,
   email: string,
   excludePersonId: string,
   signal: AbortSignal,
@@ -97,9 +92,9 @@ export async function fetchPeopleByEmail(
     limit: "100",
     page: "1",
   });
-  const page = await fetchJsonOrThrowWithUnauthorized<PersonListEnvelope>(
+  const page = await fetchJsonOrThrow<PersonListEnvelope>(
     `/api/people/by-email?${search}`,
-    { headers: authHeaders(), signal },
+    { signal },
     m.admin_error_load_data(),
   );
   signal.throwIfAborted();

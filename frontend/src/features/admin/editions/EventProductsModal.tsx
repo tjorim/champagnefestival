@@ -57,7 +57,7 @@ import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/
 interface EventProductsModalProps {
   show: boolean;
   event: Event | null;
-  authHeaders: () => Record<string, string>;
+
   onHide: () => void;
   onProductsChanged?: () => void;
 }
@@ -98,7 +98,7 @@ const EMPTY_FORM: ProductFormState = {
 export default function EventProductsModal({
   show,
   event,
-  authHeaders,
+
   onHide,
   onProductsChanged,
 }: EventProductsModalProps) {
@@ -131,18 +131,18 @@ export default function EventProductsModal({
 
   const productsQuery = useQuery({
     queryKey: productsQueryKey,
-    queryFn: () => fetchEventProducts(eventId, authHeaders),
+    queryFn: () => fetchEventProducts(eventId),
     enabled: show && Boolean(eventId),
     staleTime: 0,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (payload: ProductWrite) => saveEventProduct(payload, authHeaders),
+    mutationFn: (payload: ProductWrite) => saveEventProduct(payload),
     retry: false,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (productId: string) => deleteEventProduct(productId, authHeaders),
+    mutationFn: (productId: string) => deleteEventProduct(productId),
     retry: false,
   });
 
@@ -260,7 +260,7 @@ export default function EventProductsModal({
         };
         if (editingId) {
           setPreviewPending(true);
-          const result = await previewEventProduct(payload, authHeaders);
+          const result = await previewEventProduct(payload);
           setPreviewPending(false);
           setConfirmShortage(false);
           setPreview({ payload, result });

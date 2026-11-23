@@ -27,11 +27,11 @@ import ConfirmModal from "@/components/ConfirmModal";
 
 export default function MemberStampCards({
   person,
-  authHeaders,
+
   onClose,
 }: {
   person: { id: string; name: string };
-  authHeaders: () => Record<string, string>;
+
   onClose: () => void;
 }) {
   const client = useQueryClient();
@@ -40,7 +40,7 @@ export default function MemberStampCards({
     queryFn: ({ signal }) =>
       stampRequest<StampCard[]>(
         `/api/stamp-cards/people/${encodeURIComponent(person.id)}`,
-        authHeaders,
+
         signal,
       ),
   });
@@ -119,7 +119,7 @@ export default function MemberStampCards({
           onConfirm={async () => {
             await stampRequest(
               `/api/stamp-cards/rewards/${encodeURIComponent(reward.id)}`,
-              authHeaders,
+
               undefined,
               { handed_out: !reward.handed_out_at },
               "PUT",

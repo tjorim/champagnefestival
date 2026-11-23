@@ -1,16 +1,15 @@
+import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQueryClient } from "@tanstack/react-query";
 import { collectionError } from "@/lib/collections/adminCollectionFactory";
 import {
   createAdminRegistrationsCollection,
-  refetchAdminRegistrations,
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/lib/collections/adminRegistrationsCollection";
 import {
   createAdminOrganizationsCollection,
-  refetchAdminOrganizations,
   registerAdminOrganizationsCollection,
   resetAdminOrganizationsCollection,
 } from "@/lib/collections/adminOrganizationsCollection";
@@ -20,13 +19,11 @@ import { useTodayKey } from "@/hooks/useTodayKey";
 import { usePeopleCountsQuery } from "../people/usePeopleListQuery";
 import {
   createAdminTablesCollection,
-  refetchAdminTables,
   registerAdminTablesCollection,
   resetAdminTablesCollection,
 } from "@/lib/collections/adminTablesCollection";
 import {
   createAdminVenueCollections,
-  refetchAdminVenueCollections,
   registerAdminVenueCollections,
   resetAdminVenueCollections,
 } from "../venue/adminVenueCollections";
@@ -39,7 +36,7 @@ interface UseAdminQueriesOptions {
   activeEditionLoaded?: boolean;
   isAuthenticated: boolean;
   canManageAdminSections: boolean;
-  authHeaders: () => Record<string, string>;
+  accountId?: string | null;
 }
 
 export function useAdminQueries({
@@ -48,14 +45,15 @@ export function useAdminQueries({
   activeEditionLoaded = true,
   isAuthenticated,
   canManageAdminSections,
-  authHeaders,
+  accountId,
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
+  const session = useMemo(() => ({ queryClient, accountId }), [queryClient, accountId]);
   const today = useTodayKey();
   const registrationCountsQuery = useRegistrationCountsQuery(
     editionId,
     today,
-    authHeaders,
+
     visible && isAuthenticated && canManageAdminSections && activeEditionLoaded,
   );
 
@@ -65,25 +63,18 @@ export function useAdminQueries({
     [editionId],
   );
 
-  const registrationsQueryOptions = {
-    enabled: visible && isAuthenticated,
-    staleTime: 60 * 1000,
-    retry: false as const,
-  };
-  const adminQueryOptions = {
-    ...registrationsQueryOptions,
-    enabled: visible && isAuthenticated && canManageAdminSections,
-  };
+  const enabled = visible && isAuthenticated;
+  const adminEnabled = enabled && canManageAdminSections;
 
   const registrationsCollection = useMemo(
     () =>
       createAdminRegistrationsCollection({
-        queryClient,
-        authHeaders,
+        queryClient: session.queryClient,
+
         editionId,
-        enabled: registrationsQueryOptions.enabled,
+        enabled,
       }),
-    [registrationsQueryOptions.enabled, authHeaders, queryClient, editionId],
+    [enabled, session, editionId],
   );
   const registrationsLiveQuery = useLiveQuery(registrationsCollection);
   const registrationsCollectionRef = useRef(registrationsCollection);
@@ -104,11 +95,11 @@ export function useAdminQueries({
   const tablesCollection = useMemo(
     () =>
       createAdminTablesCollection({
-        queryClient,
-        authHeaders,
-        enabled: adminQueryOptions.enabled,
+        queryClient: session.queryClient,
+
+        enabled: adminEnabled,
       }),
-    [adminQueryOptions.enabled, authHeaders, queryClient],
+    [adminEnabled, session],
   );
   const tablesLiveQuery = useLiveQuery(tablesCollection);
   const tablesCollectionRef = useRef(tablesCollection);
@@ -129,22 +120,22 @@ export function useAdminQueries({
     isFetching: tablesCollection.utils.isFetching,
   };
 
-  const peopleCountsQuery = usePeopleCountsQuery({}, authHeaders, adminQueryOptions.enabled);
+  const peopleCountsQuery = usePeopleCountsQuery({}, adminEnabled);
   useEffect(() => {
     resetAdminPeopleSession();
     return resetAdminPeopleSession;
-  }, [authHeaders, adminQueryOptions.enabled]);
+  }, [session, adminEnabled]);
 
   // The venue group (venues, rooms, table types, layouts, areas) is one set of
   // collections, built, registered and reset together.
   const venueCollections = useMemo(
     () =>
       createAdminVenueCollections({
-        queryClient,
-        authHeaders,
-        enabled: adminQueryOptions.enabled,
+        queryClient: session.queryClient,
+
+        enabled: adminEnabled,
       }),
-    [adminQueryOptions.enabled, authHeaders, queryClient],
+    [adminEnabled, session],
   );
   const venuesLiveQuery = useLiveQuery(venueCollections.venues);
   const roomsLiveQuery = useLiveQuery(venueCollections.rooms);
@@ -190,11 +181,11 @@ export function useAdminQueries({
   const organizationsCollection = useMemo(
     () =>
       createAdminOrganizationsCollection({
-        queryClient,
-        authHeaders,
-        enabled: adminQueryOptions.enabled,
+        queryClient: session.queryClient,
+
+        enabled: adminEnabled,
       }),
-    [adminQueryOptions.enabled, authHeaders, queryClient],
+    [adminEnabled, session],
   );
   const organizationsLiveQuery = useLiveQuery(organizationsCollection);
   const organizationsCollectionRef = useRef(organizationsCollection);
@@ -255,42 +246,27 @@ export function useAdminQueries({
       : []),
   ];
 
-  const loadData = useCallback(async () => {
-    await Promise.all([
-      registrationsQueryOptions.enabled
-        ? queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "page"] })
-        : undefined,
-      registrationsQueryOptions.enabled
-        ? queryClient.invalidateQueries({
-            queryKey: canManageAdminSections
-              ? queryKeys.admin.registrationCounts
-              : queryKeys.admin.eventCheckInStats,
-          })
-        : undefined,
-      adminQueryOptions.enabled
-        ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.editionStats })
-        : undefined,
-      // A refetch ignores `enabled`, so a hidden or signed-out dashboard must not start one.
-      registrationsQueryOptions.enabled
-        ? refetchAdminRegistrations(registrationsCollection)
-        : undefined,
-      canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
-      adminQueryOptions.enabled
-        ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.people })
-        : undefined,
-      canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
-      canManageAdminSections ? refetchAdminOrganizations(organizationsCollection) : undefined,
+  const refreshDashboard = useCallback(async () => {
+    if (!enabled) return;
+    // The sidebar's Refresh action and session recovery invalidate the active
+    // reads. Collections observe their own backing Query keys as usual.
+    await invalidateAdmin(queryClient, [
+      queryKeys.admin.registrations,
+      ...(adminEnabled
+        ? [
+            queryKeys.admin.editionStats,
+            queryKeys.admin.people,
+            queryKeys.admin.tables,
+            queryKeys.admin.venues,
+            queryKeys.admin.rooms,
+            queryKeys.admin.tableTypes,
+            queryKeys.admin.layouts,
+            queryKeys.admin.areas,
+            queryKeys.admin.organizations,
+          ]
+        : []),
     ]);
-  }, [
-    canManageAdminSections,
-    adminQueryOptions.enabled,
-    queryClient,
-    organizationsCollection,
-    registrationsCollection,
-    registrationsQueryOptions.enabled,
-    tablesCollection,
-    venueCollections,
-  ]);
+  }, [enabled, adminEnabled, queryClient]);
 
   return {
     registrationsCollection,
@@ -311,9 +287,8 @@ export function useAdminQueries({
     // Derived booleans
     isAnyPending: allQueries.some((q) => q.isPending),
     isAnyFetching: allQueries.some((q) => q.isFetching),
-    // Stable query keys (needed by mutations in the parent)
+    // Stable query key for section mutations
     registrationsQueryKey,
-    // Refetch all
-    loadData,
+    refreshDashboard,
   };
 }

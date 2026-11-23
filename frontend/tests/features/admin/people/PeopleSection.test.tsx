@@ -20,7 +20,6 @@ const handlers = { onCreate: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn() };
 async function renderSection(entry = "/admin") {
   return renderLocation(
     <PeopleSection
-      authHeaders={() => ({})}
       counts={{ all: 5, members: 3, volunteers: 2 }}
       people={{ ...handlers, onMerge: vi.fn() }}
       members={{ ...handlers, onDeactivate: handlers.onDelete, onReactivate: handlers.onDelete }}

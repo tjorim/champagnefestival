@@ -22,8 +22,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 /** Captures the query string of every /api/audit request the viewer makes. */
 function captureAuditQueries() {
   const seen: URLSearchParams[] = [];
@@ -49,7 +47,7 @@ function captureAuditQueries() {
 function renderViewer() {
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <AuditLogViewer authHeaders={authHeaders} />
+      <AuditLogViewer />
     </QueryClientProvider>,
   );
 }

@@ -3,7 +3,7 @@ import PersonEmailConsents from "./PersonEmailConsents";
 import StampCardTypes from "./StampCardTypes";
 import { useQuery } from "@tanstack/react-query";
 import { usePeopleCountsQuery } from "./usePeopleListQuery";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,6 @@ import { buildMemberEmailDraft, type EmailDraft } from "../shared/emailComposer"
 import EmailComposeModal from "../shared/EmailComposeModal";
 
 interface MembersManagementProps {
-  authHeaders: () => Record<string, string>;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
   onDeactivate: (id: string) => Promise<void>;
@@ -53,17 +52,16 @@ export default function MembersManagement({
   onUpdate,
   onDeactivate,
   onReactivate,
-  authHeaders,
 }: MembersManagementProps) {
   const [stampMember, setStampMember] = useState<Person | null>(null);
   const [consentPerson, setConsentPerson] = useState<Person | null>(null);
-  const counts = usePeopleCountsQuery({ role: "member" }, authHeaders);
+  const counts = usePeopleCountsQuery({ role: "member" });
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").AppSettingsOut>(
+      fetchJsonOrThrow<import("@/api-types").AppSettingsOut>(
         "/api/settings",
-        { headers: authHeaders() },
+        {},
         m.admin_error_load_settings(),
       ),
   });
@@ -265,14 +263,14 @@ export default function MembersManagement({
       {consentPerson && (
         <PersonEmailConsents
           person={consentPerson}
-          authHeaders={authHeaders}
+
           onClose={() => setConsentPerson(null)}
         />
       )}
       {stampMember && (
         <MemberStampCards
           person={stampMember}
-          authHeaders={authHeaders}
+
           onClose={() => setStampMember(null)}
         />
       )}
@@ -280,7 +278,7 @@ export default function MembersManagement({
       <details className="mb-6 rounded border border-border p-4">
         <summary className="cursor-pointer font-semibold">{m.workspace_reward_policy()}</summary>
         <p className="my-4">{m.stamp_eligibility_help()}</p>
-        <StampCardTypes authHeaders={authHeaders} />
+        <StampCardTypes />
       </details>
       <Card tone="secondary">
         <CardHeader>{m.admin_members_tab()}</CardHeader>
@@ -337,7 +335,7 @@ export default function MembersManagement({
             getRowClassName={(person) =>
               person.inactivity_highlight && !person.inactivity_exempt ? "bg-warning/10" : undefined
             }
-            authHeaders={authHeaders}
+
             columns={columns}
             onOpen={(person) => {
               setEditingMember(person);

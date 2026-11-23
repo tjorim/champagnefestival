@@ -21,7 +21,7 @@ function setup(initial: typeof existingOrganization | null = existingOrganizatio
   const onSave = vi.fn();
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <ItemModal show initial={initial} authHeaders={() => ({})} onSave={onSave} onHide={vi.fn()} />
+      <ItemModal show initial={initial} onSave={onSave} onHide={vi.fn()} />
     </QueryClientProvider>,
   );
   return onSave;

@@ -8,15 +8,12 @@ import { captureAdminPeopleFence } from "./adminPeopleSession";
 import { localIsoDate, type Person } from "@/types/person";
 import { peopleWrites, type PeopleWrite } from "./optimisticPeoplePages";
 import { queryKeys } from "@/lib/query/queryKeys";
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 
 interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
-  authHeaders: () => Record<string, string>;
+
   registrationsQueryKey: QueryKey;
 }
 
@@ -40,7 +37,7 @@ function closedOn(first_help_day: string): string {
 
 export function usePeopleMutations({
   queryClient,
-  authHeaders,
+
   registrationsQueryKey,
 }: UsePeopleMutationsOptions) {
   const writes = peopleWrites(queryClient);
@@ -103,9 +100,9 @@ export function usePeopleMutations({
 
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+      fetchJsonOrThrow<import("@/api-types").PersonOut>(
         `/api/people/${canonicalId}/merge/${duplicateId}`,
-        { method: "POST", headers: authHeaders() },
+        { method: "POST" },
         m.admin_people_merge_error(),
       ),
     ...direct([registrationsQueryKey]),
@@ -114,11 +111,11 @@ export function usePeopleMutations({
 
   const createMemberMutation = useMutation({
     mutationFn: (data: MemberFormData) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+      fetchJsonOrThrow<import("@/api-types").PersonOut>(
         "/api/members",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             name: data.name,
             email: data.email || null,
@@ -140,11 +137,11 @@ export function usePeopleMutations({
   const updateMemberMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: MemberFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+        fetchJsonOrThrow<import("@/api-types").PersonOut>(
           `/api/members/${id}`,
           {
             method: "PUT",
-            headers: authHeaders(),
+
             body: JSON.stringify({
               name: data.name,
               email: data.email || null,
@@ -174,9 +171,9 @@ export function usePeopleMutations({
   const deactivateMemberMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
-        fetchVoidOrThrowWithUnauthorized(
+        fetchVoidOrThrow(
           `/api/members/${id}/deactivate`,
-          { method: "POST", headers: authHeaders() },
+          { method: "POST" },
           m.admin_members_error_deactivate(),
         ),
       ),
@@ -192,9 +189,9 @@ export function usePeopleMutations({
   const reactivateMemberMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
-        fetchVoidOrThrowWithUnauthorized(
+        fetchVoidOrThrow(
           `/api/members/${id}/reactivate`,
-          { method: "POST", headers: authHeaders() },
+          { method: "POST" },
           m.admin_members_error_reactivate(),
         ),
       ),
@@ -207,11 +204,11 @@ export function usePeopleMutations({
 
   const createPersonMutation = useMutation({
     mutationFn: (data: PersonFormData) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+      fetchJsonOrThrow<import("@/api-types").PersonOut>(
         "/api/people",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             name: data.name,
             email: data.email || null,
@@ -231,11 +228,11 @@ export function usePeopleMutations({
   const updatePersonMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: PersonFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<import("@/api-types").PersonOut>(
+        fetchJsonOrThrow<import("@/api-types").PersonOut>(
           `/api/people/${id}`,
           {
             method: "PUT",
-            headers: authHeaders(),
+
             body: JSON.stringify({
               name: data.name,
               email: data.email || null,
@@ -262,11 +259,7 @@ export function usePeopleMutations({
   const deletePersonMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
-        fetchVoidOrThrowWithUnauthorized(
-          `/api/people/${id}`,
-          { method: "DELETE", headers: authHeaders() },
-          m.admin_error_delete_person(),
-        ),
+        fetchVoidOrThrow(`/api/people/${id}`, { method: "DELETE" }, m.admin_error_delete_person()),
       ),
     ...optimistic((id: string) => ({ id, update: () => null })),
     retry: false,
@@ -274,11 +267,11 @@ export function usePeopleMutations({
 
   const createVolunteerMutation = useMutation({
     mutationFn: (data: VolunteerFormData) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
+      fetchJsonOrThrow<import("@/api-types").VolunteerOut>(
         "/api/volunteers",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             name: data.name,
             address: data.address,
@@ -300,11 +293,11 @@ export function usePeopleMutations({
   const updateVolunteerMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: VolunteerFormData }) =>
       writes.persist(id, takeFence(data), () =>
-        fetchJsonOrThrowWithUnauthorized<import("@/api-types").VolunteerOut>(
+        fetchJsonOrThrow<import("@/api-types").VolunteerOut>(
           `/api/volunteers/${id}`,
           {
             method: "PUT",
-            headers: authHeaders(),
+
             body: JSON.stringify({
               name: data.name,
               address: data.address,
@@ -340,9 +333,9 @@ export function usePeopleMutations({
   const deactivateVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
-        fetchVoidOrThrowWithUnauthorized(
+        fetchVoidOrThrow(
           `/api/volunteers/${id}/deactivate`,
-          { method: "POST", headers: authHeaders() },
+          { method: "POST" },
           m.admin_volunteers_error_deactivate(),
         ),
       ),
@@ -365,9 +358,9 @@ export function usePeopleMutations({
   const reactivateVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
-        fetchVoidOrThrowWithUnauthorized(
+        fetchVoidOrThrow(
           `/api/volunteers/${id}/reactivate`,
-          { method: "POST", headers: authHeaders() },
+          { method: "POST" },
           m.admin_volunteers_error_reactivate(),
         ),
       ),

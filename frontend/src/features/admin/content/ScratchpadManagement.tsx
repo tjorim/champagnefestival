@@ -10,16 +10,14 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 
 type ApiScratchpad = import("@/api-types").EditionScratchpadOut;
 
 export default function ScratchpadManagement({
-  authHeaders,
   editionId,
 }: {
-  authHeaders: () => Record<string, string>;
   /** The active edition's id — the scratchpad is scoped per edition, not a
    * single global notepad, so it doesn't accumulate clutter across editions
    * the way a person-level notes field would. Empty when there's no active
@@ -40,9 +38,9 @@ export default function ScratchpadManagement({
   const query = useQuery({
     queryKey: scratchpadQueryKey,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<ApiScratchpad>(
+      fetchJsonOrThrow<ApiScratchpad>(
         `/api/editions/${editionId}/scratchpad`,
-        { headers: authHeaders() },
+        {},
         m.admin_error_load_scratchpad(),
       ),
     enabled: editionId !== "",
@@ -78,11 +76,11 @@ export default function ScratchpadManagement({
 
   const saveMutation = useMutation({
     mutationFn: (nextContent: string) =>
-      fetchJsonOrThrowWithUnauthorized<ApiScratchpad>(
+      fetchJsonOrThrow<ApiScratchpad>(
         `/api/editions/${editionId}/scratchpad`,
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify({ content: nextContent }),
         },
         m.admin_error_save_scratchpad(),

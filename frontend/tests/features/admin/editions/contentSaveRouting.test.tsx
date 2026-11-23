@@ -31,8 +31,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 function withQuery(ui: React.ReactElement) {
   return <QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>;
 }
@@ -45,7 +43,7 @@ describe("new content items are created, not updated", () => {
         <ItemModal
           show
           initial={null}
-          authHeaders={authHeaders}
+
           onSave={onSave}
           onHide={vi.fn()}
         />,
@@ -69,7 +67,7 @@ describe("new content items are created, not updated", () => {
       seen.push(`${request.method} ${new URL(request.url).pathname}`);
     });
 
-    const saved = await saveContentSectionItem("organizations", draft as never, authHeaders);
+    const saved = await saveContentSectionItem("organizations", draft as never);
 
     expect(seen).toContain("POST /api/organizations");
     expect(seen.some((entry) => entry.startsWith("PUT /api/organizations/"))).toBe(false);
@@ -145,7 +143,7 @@ describe("saving a festival edition submits only programmable organizations", ()
           venues={
             [{ id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true }] as Venue[]
           }
-          authHeaders={authHeaders}
+
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,

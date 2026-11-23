@@ -82,10 +82,7 @@ describe("useRegistrationAdminMutations", () => {
       () =>
         useRegistrationAdminMutations({
           queryClient,
-          authHeaders: () => ({
-            "Content-Type": "application/json",
-            Authorization: "Bearer test-token",
-          }),
+
           registrationsQueryKey: ["admin", "registrations"],
         }),
       { wrapper: Wrapper },
@@ -99,7 +96,7 @@ describe("useRegistrationAdminMutations", () => {
       });
     });
 
-    expect(seen.authorization).toBe("Bearer test-token");
+    expect(seen.authorization).toBe("Bearer mock-access-token");
     expect(seen.body).toEqual({ checked_in: true });
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
@@ -127,7 +124,7 @@ it.each([{ checked_in: true }, { checked_in: false }, { strap_issued: true }, { 
       () =>
         useRegistrationAdminMutations({
           queryClient,
-          authHeaders: () => ({}),
+
           registrationsQueryKey: ["admin", "registrations"],
         }),
       { wrapper: Wrapper },
