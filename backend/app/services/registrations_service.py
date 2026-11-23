@@ -1,27 +1,11 @@
-"""Shared application-service operations for admin registration management.
-
-Used by both ``app.routers.registrations`` (REST, admin-only endpoints) and
-``app.mcp.admin.registrations`` (MCP) so order-item resolution, the
-table/edition consistency guard, and the update/create/delete transitions
-(with their audit-detail assembly and live-bus publication) live in exactly
-one place instead of two copies (#860). The public self-service endpoints
-(guest-facing creation with spam/rate-limit checks, the email-token "my
-registrations" lookup flow, CSV export) have no MCP equivalent and stay in
-the router.
-
-Raises ``HTTPException`` directly (matching the pre-existing shared helpers
-this consolidates, same convention as ``app/services/editions_service.py``)
-rather than the ``ServiceError`` hierarchy in ``app/services/errors.py``.
-Person/event lookups reuse ``app.services.people_service.get_person_or_404``
-and ``app.services.events_service.get_event_or_404`` directly rather than
-keeping a third copy of each.
-"""
+"""Shared application-service operations for public and admin registrations."""
 
 from __future__ import annotations
 
 import logging
 import secrets
 from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -30,18 +14,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.ids import make_id
-from app.models import Event, Person, Registration
+from app.models import Event, Person, Registration, Table, User
 from app.schemas import (
+    CheckInGuestOut,
+    CheckInOut,
     OrderItemRequest,
     RegistrationAdminCreate,
+    RegistrationCreate,
     RegistrationDeliveryUpdate,
     RegistrationOut,
+    RegistrationPublicOut,
     RegistrationUpdate,
+    StampProgress,
     TableAllocation,
+    VolunteerRegistrationUpdate,
 )
-from app.services import allocations_service, payments_service, people_service
+from app.services import allocations_service, email_consent_service, payments_service, people_service
 from app.services import product_inventory as inventory
 from app.services.audit_service import write_audit_entry
+from app.services.email_service import send_email_consent_confirmation
 from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
 from app.services.idempotency import (
     check_idempotency_key,
@@ -51,12 +42,183 @@ from app.services.idempotency import (
 )
 from app.services.live import mapping as live_mapping
 from app.services.live import notify_live_event
+from app.services.member_registration import verified_member
 from app.services.outbox_service import enqueue_registration_confirmation
-from app.services.serializers import registration_to_out
+from app.services.serializers import registration_to_checkin_out, registration_to_out
+from app.services.users_service import get_or_create_user, verified_email_from_claims
+from app.services.visitor_session import actor_for_user
 
 logger = logging.getLogger(__name__)
 
 ADMIN_REGISTRATION_SCOPE = "registrations.admin_create"
+
+
+def _ensure_public_registration_allowed(event: Event) -> None:
+    if not event.active or not event.edition.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registrations are not available for this event.",
+        )
+    # Registration is mandatory for events that require it (capacity-limited ones),
+    # and optional-but-offered for walk-in events that still have something to
+    # order (e.g. a VIP package) — anyone else can just show up. An event with
+    # neither accepts no registrations at all.
+    if not event.registration_required and not any(p.purchasable for p in event.products):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This event does not accept registrations.",
+        )
+
+    now = datetime.now(UTC)
+    if event.registrations_open_from is not None:
+        registrations_open_from = event.registrations_open_from
+        if registrations_open_from.tzinfo is None:
+            registrations_open_from = registrations_open_from.replace(tzinfo=UTC)
+        if registrations_open_from > now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registrations for this event are not open yet.",
+            )
+
+    if event.registrations_close_at is not None:
+        registrations_close_at = event.registrations_close_at
+        if registrations_close_at.tzinfo is None:
+            registrations_close_at = registrations_close_at.replace(tzinfo=UTC)
+        if registrations_close_at <= now:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registrations for this event have closed.",
+            )
+
+
+async def create_public_registration(
+    db: AsyncSession,
+    body: RegistrationCreate,
+    *,
+    claims: dict[str, Any] | None,
+    session_user: User | None,
+    request_id: str | None,
+) -> RegistrationPublicOut:
+    user = None
+    if claims is not None:
+        user = await get_or_create_user(db, claims["sub"], commit=False)
+
+    event = await inventory.lock_event(db, body.event_id)
+    if event.volunteers_only:
+        raise ApiHTTPException(
+            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
+        )
+    member_identity = await verified_member(db, session_user) if event.members_only else None
+    _ensure_public_registration_allowed(event)
+    from app.services.order_questions_service import validate_answers
+
+    order_answers = await validate_answers(db, event.id, body.order_answers)
+    resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
+    await inventory.check_stock(db, event, resolved_order_items)
+
+    if member_identity is not None:
+        person, user = member_identity
+    else:
+        email_norm = str(body.email).lower().strip()
+        name_norm = " ".join(body.name.lower().split())
+        phone_norm = people_service.parse_phone(body.phone)
+
+        candidates = (
+            (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm)))
+            .scalars()
+            .all()
+        )
+        person = next(
+            (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
+            None,
+        )
+        if person is None:
+            person = Person(
+                id=make_id("per"),
+                preferred_language=body.preferred_language,
+                name=body.name,
+                email=email_norm,
+                phone=phone_norm,
+            )
+            db.add(person)
+            await db.flush()
+        else:
+            if user is not None and await db.scalar(
+                select(Registration.id)
+                .where(Registration.person_id == person.id, Registration.user_id == user.id)
+                .limit(1)
+            ):
+                person.preferred_language = body.preferred_language
+
+    consent_confirmation = None
+    if body.new_editions_opt_in:
+        # Ticking the box is a request, not consent: it becomes consent only for a verified address.
+        if claims is not None:
+            consent_actor, consent_auth_source = claims["sub"], None
+        elif session_user is not None:
+            consent_actor, consent_auth_source = actor_for_user(session_user, None)
+        else:
+            consent_actor, consent_auth_source = "anonymous", None
+        consent_confirmation = await email_consent_service.request_new_editions_consent(
+            db,
+            person,
+            verified_emails=[
+                email
+                for email in (verified_email_from_claims(claims), session_user.verified_email if session_user else None)
+                if email
+            ],
+            actor=consent_actor,
+            auth_source=consent_auth_source,
+            request_id=request_id,
+        )
+    consent_mail = (
+        (person.email, consent_confirmation[0], consent_confirmation[1].localized_name(person.preferred_language))
+        if consent_confirmation is not None
+        else None
+    )
+    consent_language = person.preferred_language
+
+    registration = Registration(
+        id=make_id("reg"),
+        event_id=event.id,
+        guest_count=body.guest_count,
+        notes=body.notes,
+        person_id=person.id,
+        user_id=user.id if user else None,
+        check_in_token=secrets.token_urlsafe(32),
+    )
+    registration.order_answers = order_answers
+    registration.order_items = resolved_order_items
+    registration.product_snapshot = snapshot
+    registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
+    db.add(registration)
+    await enqueue_registration_confirmation(
+        db,
+        registration.id,
+        actor=claims["sub"] if claims is not None else "anonymous",
+        request_id=request_id,
+    )
+    await notify_live_event(
+        db,
+        live_mapping.registration_changed(
+            action="created",
+            registration_id=registration.id,
+            event_id=event.id,
+            edition_id=event.edition_id,
+        ),
+    )
+    await db.commit()
+
+    if consent_mail is not None:
+        # Best effort, like the sign-in link: the registration stands either way and the person can
+        # tick the option again (or use the preferences screen) if the mail does not arrive.
+        recipient, token, category_name = consent_mail
+        await send_email_consent_confirmation(
+            email=recipient, token=token, category_name=category_name, language=consent_language
+        )
+
+    registration = await get_registration_or_404(db, registration.id)
+    return registration_to_out(registration, person, event, public=True)
 
 
 async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
@@ -154,6 +316,149 @@ def ensure_registration_can_check_in(registration: Registration) -> None:
         )
 
 
+async def _get_by_token_or_401(
+    db: AsyncSession,
+    reservation_id: str,
+    token: str,
+    *,
+    for_update: bool = False,
+) -> Registration:
+    async def fetch(*, lock: bool) -> Registration | None:
+        stmt = select(Registration).where(Registration.id == reservation_id)
+        if lock:
+            stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        return (await db.execute(stmt)).scalar_one_or_none()
+
+    r = await fetch(lock=False)
+    if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid registration ID or token.",
+        )
+    if for_update:
+        r = await fetch(lock=True)
+        if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid registration ID or token.",
+            )
+    return r
+
+
+async def _guest_check_in_response(db: AsyncSession, registration: Registration, event: Event) -> CheckInGuestOut:
+    person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
+    table_name = (
+        await db.scalar(select(Table.name).where(Table.id == registration.table_id)) if registration.table_id else None
+    )
+    return registration_to_checkin_out(registration, person, event, table_name=table_name)
+
+
+async def lookup_guest_check_in(db: AsyncSession, registration_id: str, token: str) -> CheckInGuestOut:
+    registration = await _get_by_token_or_401(db, registration_id, token)
+    ensure_registration_can_check_in(registration)
+    event = (await db.execute(select(Event).where(Event.id == registration.event_id))).scalar_one()
+    return await _guest_check_in_response(db, registration, event)
+
+
+async def check_in_guest(
+    db: AsyncSession,
+    registration_id: str,
+    *,
+    issue_strap: bool,
+    actor: str,
+    request_id: str | None,
+    token: str | None = None,
+) -> CheckInOut:
+    if token is None:
+        registration = await db.scalar(
+            select(Registration)
+            .where(Registration.id == registration_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if registration is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+    else:
+        registration = await _get_by_token_or_401(db, registration_id, token, for_update=True)
+    ensure_registration_can_check_in(registration)
+    event = (await db.execute(select(Event).where(Event.id == registration.event_id))).scalar_one()
+    already = registration.checked_in
+    stamp_progress = await check_in_registration(
+        db,
+        registration,
+        edition_id=event.edition_id,
+        checked_in=True,
+        strap_issued=True if issue_strap else None,
+        actor=actor,
+        request_id=request_id,
+        source="qr" if token is not None else "volunteer_search",
+    )
+    result = CheckInOut(
+        registration=await _guest_check_in_response(db, registration, event),
+        already_checked_in=already,
+        stamp_progress=stamp_progress,
+    )
+    await db.commit()
+    return result
+
+
+async def check_in_registration(
+    db: AsyncSession,
+    registration: Registration,
+    *,
+    edition_id: str | None,
+    checked_in: bool | None,
+    strap_issued: bool | None,
+    actor: str,
+    request_id: str | None,
+    source: Literal["admin", "qr", "volunteer_search"] = "admin",
+) -> StampProgress | None:
+    """Apply attendance and strap transitions under the caller's registration row lock."""
+    from app.services.stamp_cards_service import sync_check_in
+
+    attendance_changed = checked_in is not None and checked_in != registration.checked_in
+    strap_changed = strap_issued is not None and strap_issued != registration.strap_issued
+    stamp_progress = await sync_check_in(db, registration, checked_in) if checked_in is not None else None
+
+    details = {"event_id": registration.event_id}
+    if source == "volunteer_search":
+        details["source"] = source
+    audit_context = {
+        "actor": actor,
+        "resource_type": "registration",
+        "resource_id": registration.id,
+        "request_id": request_id,
+        "auth_source": "token" if source == "qr" else None,
+    }
+    if attendance_changed:
+        registration.checked_in_at = datetime.now(UTC) if checked_in else None
+        registration._legacy_checked_in = registration.checked_in
+        await write_audit_entry(
+            db,
+            action="check_in",
+            details={"checked_in": registration.checked_in} if source == "admin" else details,
+            **audit_context,
+        )
+    if strap_issued is not None and strap_changed:
+        registration.strap_issued = strap_issued
+        await write_audit_entry(
+            db,
+            action="strap_issued",
+            details={"strap_issued": strap_issued} if source == "admin" else details,
+            **audit_context,
+        )
+    if attendance_changed or strap_changed:
+        await notify_live_event(
+            db,
+            live_mapping.check_in_changed(
+                registration_id=registration.id,
+                event_id=registration.event_id,
+                edition_id=edition_id,
+            ),
+        )
+    return stamp_progress
+
+
 async def fetch_person_map(db: AsyncSession, rows: list[Registration]) -> dict[str, Person]:
     if not rows:
         return {}
@@ -194,6 +499,78 @@ def apply_delivery_updates(order_items: list[dict] | None, updates: list[Registr
         item["delivered_quantity"] = delivery.delivered_quantity
         item["delivered"] = delivery.delivered_quantity == quantity
     return updated
+
+
+async def update_volunteer_entrance_details(
+    db: AsyncSession,
+    registration_id: str,
+    body: VolunteerRegistrationUpdate,
+    *,
+    actor: str,
+    request_id: str | None,
+) -> CheckInGuestOut:
+    row = (
+        await db.execute(
+            select(Registration, Table.name)
+            .outerjoin(Table, Registration.table_id == Table.id)
+            .where(Registration.id == registration_id)
+            .options(selectinload(Registration.person), selectinload(Registration.event))
+        )
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    registration, table_name = row
+    if registration.person is None or registration.event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
+
+    previous_orders = list(registration.order_items) if registration.order_items else []
+    previous_strap_issued = registration.strap_issued
+    changed = False
+    delivery_changed = False
+    audit_base = {
+        "actor": actor,
+        "resource_type": "registration",
+        "resource_id": registration.id,
+        "request_id": request_id,
+    }
+
+    if body.order_items is not None:
+        new_orders = apply_delivery_updates(previous_orders, body.order_items)
+        if new_orders != previous_orders:
+            registration.order_items = new_orders
+            changed = True
+            delivery_changed = True
+            await write_audit_entry(
+                db,
+                action="delivery_updated",
+                details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+                **audit_base,
+            )
+
+    if body.strap_issued is not None and body.strap_issued != previous_strap_issued:
+        registration.strap_issued = body.strap_issued
+        changed = True
+        await write_audit_entry(
+            db,
+            action="strap_issued" if registration.strap_issued else "strap_revoked",
+            details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+            **audit_base,
+        )
+
+    if changed:
+        scope = {
+            "registration_id": registration.id,
+            "event_id": registration.event_id,
+            "edition_id": registration.event.edition_id,
+        }
+        if delivery_changed:
+            await notify_live_event(db, live_mapping.delivery_changed(**scope))
+        if registration.strap_issued != previous_strap_issued:
+            await notify_live_event(db, live_mapping.check_in_changed(**scope))
+        await db.commit()
+
+    return registration_to_checkin_out(registration, registration.person, registration.event, table_name=table_name)
 
 
 async def admin_create_registration(
@@ -335,8 +712,6 @@ async def apply_registration_update(
     ]
     pre_guest_count = registration.guest_count
     pre_order_items = list(registration.order_items) if registration.order_items else []
-    pre_checked_in = registration.checked_in
-    pre_strap_issued = registration.strap_issued
     pre_status = registration.status
     pre_payment_status = registration.payment_status
     pre_amount_due = registration.amount_due
@@ -420,17 +795,16 @@ async def apply_registration_update(
         # booking becomes "paid" once its due amount is lowered to match).
         await payments_service.sync_registration_payment_fields(db, registration)
     stamp_progress = None
-    if body.checked_in is not None:
-        from app.services.stamp_cards_service import sync_check_in
-
-        stamp_progress = await sync_check_in(db, registration, body.checked_in)
-        if body.checked_in and not registration.checked_in:
-            registration.checked_in_at = datetime.now(UTC)
-        if not body.checked_in:
-            registration.checked_in_at = None
-        registration.checked_in = body.checked_in
-    if body.strap_issued is not None:
-        registration.strap_issued = body.strap_issued
+    if body.checked_in is not None or body.strap_issued is not None:
+        stamp_progress = await check_in_registration(
+            db,
+            registration,
+            edition_id=edition_id,
+            checked_in=body.checked_in,
+            strap_issued=body.strap_issued,
+            actor=actor,
+            request_id=request_id,
+        )
 
     audit_base = {"resource_type": "registration", "resource_id": registration.id, "request_id": request_id}
     if capacity_override_used:
@@ -451,22 +825,6 @@ async def apply_registration_update(
         )
     if registration.order_items != pre_order_items:
         await write_audit_entry(db, actor=actor, action="order_updated", details={}, **audit_base)
-    if body.checked_in is not None and registration.checked_in != pre_checked_in:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="check_in",
-            details={"checked_in": registration.checked_in},
-            **audit_base,
-        )
-    if body.strap_issued is not None and registration.strap_issued != pre_strap_issued:
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="strap_issued",
-            details={"strap_issued": registration.strap_issued},
-            **audit_base,
-        )
     if registration.status != pre_status or registration.payment_status != pre_payment_status:
         await write_audit_entry(
             db,
@@ -507,8 +865,6 @@ async def apply_registration_update(
         await notify_live_event(db, live_mapping.seating_changed(**scope))
     if registration.order_items != pre_order_items:
         await notify_live_event(db, live_mapping.order_changed(**scope))
-    if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
-        await notify_live_event(db, live_mapping.check_in_changed(**scope))
     metadata_fields = {
         "order_answers",
         "guest_count",

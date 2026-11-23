@@ -70,7 +70,9 @@ async def list_registrations(
         if payment_status:
             stmt = stmt.where(Registration.payment_status == payment_status)
         if checked_in is not None:
-            stmt = stmt.where(Registration.checked_in == checked_in)
+            stmt = stmt.where(
+                Registration.checked_in_at.is_(None) if not checked_in else Registration.checked_in_at.is_not(None)
+            )
         if q and (q_stripped := q.strip()):
             stmt = stmt.join(Registration.person).where(person_search_predicate(name=q_stripped, email=q_stripped))
         # Fetch one extra row beyond effective_limit so its presence (not just a

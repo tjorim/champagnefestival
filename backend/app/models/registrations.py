@@ -117,7 +117,8 @@ class Registration(Base):
     `payment_status`, it does not take payments. Null means nothing is owed.
     """
 
-    checked_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Keep the legacy database column in sync for older deployments until its migration.
+    _legacy_checked_in: Mapped[bool] = mapped_column("checked_in", Boolean, default=False)
     checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     strap_issued: Mapped[bool] = mapped_column(Boolean, default=False)
     check_in_token: Mapped[str] = mapped_column(String(64), unique=True)
@@ -128,3 +129,7 @@ class Registration(Base):
     event: Mapped[Event] = relationship(back_populates="registrations")
     person: Mapped[Person] = relationship(back_populates="registrations")
     user: Mapped[User | None] = relationship(back_populates="registrations")
+
+    @property
+    def checked_in(self) -> bool:
+        return self.checked_in_at is not None

@@ -1283,3 +1283,17 @@ contact value as SQL NULL and continue returning an empty string. These changes
 add no replay protection. Creates can duplicate records, and repeated updates
 can write another audit entry or overwrite a newer edit. Clients continue to
 send these writes without automatic retries.
+
+
+## Registration service consolidation (#1663)
+
+- Public registration creation still allocates a new booking ID for every successful request. Its
+  confirmation job and live update commit with that booking. Consent confirmation mail is sent after
+  commit. Clients reconcile before retrying an ambiguous create.
+- QR and volunteer check-in and admin attendance updates share the same registration row lock and
+  transaction for the timestamp, stamp, audit and live update. A repeat against the same state keeps
+  the first timestamp, does not duplicate an existing stamp and adds no audit entry or live update. A repeat can still create a missing stamp when the booking has become eligible (for example after an edition type change), without changing the timestamp or strap. A retry after a separate
+  undo can check the guest in again. The general admin update keeps its existing read-and-reconcile
+  contract for ambiguous results.
+- Volunteer entrance details continue to accept absolute strap and delivery values. Clients must
+  reconcile after an ambiguous result because another update can commit between attempts.

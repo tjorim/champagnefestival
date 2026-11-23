@@ -188,7 +188,7 @@ async def test_spam_invalid_timestamp(client):
 @pytest.fixture()
 def sent_confirmations(monkeypatch):
     """Capture the consent confirmation mails the registration route would send."""
-    import app.routers.registrations as registrations_module
+    import app.services.registrations_service as registrations_module
 
     sent: list[dict] = []
 

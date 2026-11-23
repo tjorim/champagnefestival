@@ -167,7 +167,7 @@ async def test_last_attended_sort_filter_highlight(client, db_session):
                 person_id=f"p{i}",
                 guest_count=1,
                 check_in_token=f"token{i}",
-                checked_in=True,
+                checked_in_at=datetime(2026, 1, 1, tzinfo=UTC),
             )
         )
     db_session.add_all(
@@ -181,7 +181,7 @@ async def test_last_attended_sort_filter_highlight(client, db_session):
                 event_id="festival",
                 person_id="p0",
                 guest_count=1,
-                checked_in=True,
+                checked_in_at=datetime(2026, 1, 1, tzinfo=UTC),
             ),
         ]
     )
