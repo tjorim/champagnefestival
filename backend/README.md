@@ -1214,3 +1214,25 @@ An unsupported export profile is set to the supported profile and marked failed
 so the job is never retried under a different profile. Integration clients
 with unknown roles are revoked, disabled, and assigned the volunteer role.
 Downgrading removes the checks. It does not undo data repairs.
+
+
+### Booking order lines (#1650)
+
+Migration `014` moves orders to `registration_order_lines`. Each line keeps its
+booked product identifier, names, price, category, unit, quantities and
+visibility. Stock sums the indexed live product references from non-cancelled
+bookings. Deleting a product clears the reference and preserves the booked line.
+The API derives the delivery flag from the delivered and booked quantities.
+
+`registrations.package_snapshot` retains the frozen package rules used to
+recalculate bookings. A frozen node without a corresponding booked line retains
+its own metadata. Apply migration `014` with the previous application stopped,
+since it reads and writes the old columns.
+
+The backfill preserves order and normalises the legacy delivery flag, missing
+translated names and pre-purchasable package rules. It discards entries without
+an identifiable product or positive quantity, clamps included and delivered
+quantities to the booked quantity, and uses zero when neither the line nor its
+snapshot has a valid booked price. Downgrading rebuilds the JSON columns from
+the canonical lines and frozen rules. A pre-migration backup is needed to recover
+the original shape or discarded or repaired data.

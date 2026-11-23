@@ -292,21 +292,10 @@ def matches_order_filters(
     if category is None and delivery_state is None:
         return True
     for item in order_items or []:
-        if not isinstance(item, dict):
+        if category is not None and normalize_text(item["category"]) != normalize_text(category):
             continue
-        if category is not None and normalize_text(str(item.get("category", ""))) != normalize_text(category):
-            continue
-        try:
-            quantity = max(int(item.get("quantity", 0) or 0), 0)
-        except TypeError, ValueError:
-            quantity = 0
-        delivered_quantity = item.get("delivered_quantity")
-        if delivered_quantity is None:
-            delivered_quantity = quantity if item.get("delivered", False) else 0
-        try:
-            delivered_quantity = max(min(int(delivered_quantity or 0), quantity), 0)
-        except TypeError, ValueError:
-            delivered_quantity = 0
+        quantity = item["quantity"]
+        delivered_quantity = item["delivered_quantity"]
         if delivery_state == "pending" and delivered_quantity >= quantity:
             continue
         if delivery_state == "delivered" and delivered_quantity < quantity:

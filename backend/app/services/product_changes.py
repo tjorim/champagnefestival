@@ -109,7 +109,7 @@ async def change_product(
                 r.id,
                 r.status,
                 r.order_items,
-                r.product_snapshot,
+                r.frozen_product_graph(),
                 str(r.amount_paid),
                 str(r.amount_due),
                 r.updated_at.isoformat(),
@@ -152,7 +152,7 @@ async def change_product(
     changed_rows = []
     projected = []
     for registration in registrations:
-        existing = registration.product_snapshot or {}
+        existing = registration.frozen_product_graph()
         touched = product_id in existing or any(i["product_id"] == product_id for i in registration.order_items)
         if (
             not touched
@@ -249,10 +249,9 @@ async def change_product(
     if requires_shortage_confirmation and not body.confirm_shortage:
         raise HTTPException(409, "Confirm the stock shortage to keep existing bookings and stop further sales.")
     for registration, items, snapshot in projected:
-        if registration.order_items == items and registration.product_snapshot == snapshot:
+        if registration.order_items == items and registration.frozen_product_graph() == snapshot:
             continue
-        registration.order_items = items
-        registration.product_snapshot = snapshot
+        registration.replace_order(items, snapshot, {p.id for p in event.products})
         registration.amount_due = inventory.order_total(items)
         registration.payment_status = (
             "paid"

@@ -27,11 +27,7 @@ async def registration_ids_by_table(db: AsyncSession, table_ids: list[str]) -> d
 
 
 def whole_table_quantity(registration: Registration) -> int:
-    return sum(
-        item["quantity"]
-        for item in registration.order_items
-        if registration.product_snapshot.get(item["product_id"], {}).get("unit") == "table"
-    )
+    return registration.booked_table_quantity
 
 
 async def validate_allocations(

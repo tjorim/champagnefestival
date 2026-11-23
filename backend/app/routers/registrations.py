@@ -193,8 +193,7 @@ async def create_registration(
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_answers = order_answers
-    registration.order_items = resolved_order_items
-    registration.product_snapshot = snapshot
+    registration.replace_order(resolved_order_items, snapshot, {p.id for p in event.products})
     registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
     db.add(registration)
     await enqueue_registration_confirmation(

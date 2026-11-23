@@ -16,14 +16,15 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.auth import get_actor_id, require_volunteer
 from app.core.dependencies import Pagination
 from app.db.session import get_db
-from app.models import Event, Person, Registration, RegistrationAllocation, Table
+from app.models import Event, Person, Registration, RegistrationAllocation, RegistrationOrderLine, Table
+from app.models.base import _utcnow
 from app.schemas import (
     CheckInGuestOut,
     CheckInOut,
@@ -224,7 +225,20 @@ async def search_registrations(
                 Registration.id.ilike(q_like, escape="\\"),
                 Registration.event_id.ilike(q_like, escape="\\"),
                 func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
-                func.unaccent(cast(Registration.order_items, Text)).ilike(func.unaccent(q_like), escape="\\"),
+                Registration.order_lines.any(
+                    or_(
+                        *(
+                            func.unaccent(column).ilike(func.unaccent(q_like), escape="\\")
+                            for column in (
+                                RegistrationOrderLine.product_id,
+                                RegistrationOrderLine.name_nl,
+                                RegistrationOrderLine.name_fr,
+                                RegistrationOrderLine.name_en,
+                                RegistrationOrderLine.category,
+                            )
+                        )
+                    )
+                ),
             ]
             if table_query:
                 table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
@@ -311,6 +325,7 @@ async def update_volunteer_registration(
             select(Registration, Table.name)
             .outerjoin(Table, Registration.table_id == Table.id)
             .where(Registration.id == registration_id)
+            .with_for_update(of=Registration)
             .options(selectinload(Registration.person), selectinload(Registration.event))
         )
     ).one_or_none()
@@ -321,10 +336,8 @@ async def update_volunteer_registration(
     if registration.person is None or registration.event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
 
-    previous_orders = list(registration.order_items) if registration.order_items else []
     previous_strap_issued = registration.strap_issued
     changed = False
-    delivery_changed = False
     request_id = getattr(request.state, "request_id", None)
     audit_base = {
         "actor": actor,
@@ -333,18 +346,16 @@ async def update_volunteer_registration(
         "request_id": request_id,
     }
 
-    if body.order_items is not None:
-        new_orders = apply_delivery_updates(previous_orders, body.order_items)
-        if new_orders != previous_orders:
-            registration.order_items = new_orders
-            changed = True
-            delivery_changed = True
-            await write_audit_entry(
-                db,
-                action="delivery_updated",
-                details={"event_id": registration.event_id, "source": "volunteer_check_in"},
-                **audit_base,
-            )
+    delivery_changed = body.order_items is not None and apply_delivery_updates(registration, body.order_items)
+    if delivery_changed:
+        registration.updated_at = _utcnow()
+        changed = True
+        await write_audit_entry(
+            db,
+            action="delivery_updated",
+            details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+            **audit_base,
+        )
 
     if body.strap_issued is not None and body.strap_issued != previous_strap_issued:
         registration.strap_issued = body.strap_issued
