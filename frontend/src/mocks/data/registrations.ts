@@ -60,6 +60,7 @@ export const seedTransactions: PaymentTransactionOut[] = seedPayments.map(
     effective_date: "2026-03-06",
     recorded_at: "2026-03-06T18:00:00Z",
     recorded_by: "mock-admin",
+    actor_label: { kind: "person", name: "Alex Martin" },
     reference: null,
     note: null,
     reversed_transaction_id: null,

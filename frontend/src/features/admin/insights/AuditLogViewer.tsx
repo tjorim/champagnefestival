@@ -1,3 +1,4 @@
+import { ActorName, actorName } from "@/components/admin/ActorName";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDateTime } from "@/lib/format/dateUtils";
 import {
@@ -42,6 +43,7 @@ import { m } from "@/paraglide/messages";
 import { auditRecordHref } from "../shared/auditRecordLink";
 import {
   fetchAuditActions,
+  fetchAuditActors,
   fetchAuditEntries,
   fetchAuditResourceTypes,
 } from "@/lib/api/adminFetch";
@@ -117,6 +119,12 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
     staleTime: 60 * 1000,
   });
 
+  const actorsQuery = useQuery({
+    queryKey: queryKeys.admin.auditActors,
+    queryFn: () => fetchAuditActors(authHeaders),
+    staleTime: 60 * 1000,
+  });
+
   const actionsQuery = useQuery({
     queryKey: queryKeys.admin.auditActions,
     queryFn: () => fetchAuditActions(authHeaders),
@@ -158,8 +166,8 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
     setPage(1);
   }, []);
 
-  const handleActorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setActor(e.target.value);
+  const handleActorChange = useCallback((value: string) => {
+    setActor(value);
     setPage(1);
   }, []);
 
@@ -191,6 +199,14 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
   }, []);
 
   const entries = entriesQuery.data ?? [];
+  const actorOptions = (actorsQuery.data ?? []).map((option) => ({
+    actor: option.actor,
+    name: actorName(option.actor_label),
+  }));
+  const actorNameCounts = new Map<string, number>();
+  for (const { name } of actorOptions) {
+    actorNameCounts.set(name, (actorNameCounts.get(name) ?? 0) + 1);
+  }
 
   if (entriesQuery.error) {
     devError("Failed to load audit log", entriesQuery.error);
@@ -232,13 +248,14 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             <AdminLabel className="text-sm text-subtle mb-1">
               {m.admin_audit_filter_actor()}
             </AdminLabel>
-            <AdminInput
-              size="sm"
-              type="text"
-              value={actor}
-              onChange={handleActorChange}
-              placeholder={m.admin_audit_filter_actor_placeholder()}
-            />
+            <AdminSelect size="sm" value={actor} onValueChange={handleActorChange}>
+              <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
+              {actorOptions.map(({ actor, name }) => (
+                <AdminOption key={actor} value={actor}>
+                  {actorNameCounts.get(name) === 1 ? name : `${name} (${actor})`}
+                </AdminOption>
+              ))}
+            </AdminSelect>
           </AdminField>
           <AdminField controlId="audit-action">
             <AdminLabel className="text-sm text-subtle mb-1">
@@ -310,7 +327,9 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
                   return (
                     <TableRow key={entry.id}>
                       <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
-                      <TableCell className="break-words">{entry.actor}</TableCell>
+                      <TableCell className="break-words">
+                        <ActorName actor={entry.actor} label={entry.actor_label} />
+                      </TableCell>
                       <TableCell>{actionLabel(entry.action)}</TableCell>
                       <TableCell className="break-words" title={entry.resource_id}>
                         {href ? (

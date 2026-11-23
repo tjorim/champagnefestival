@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ActorLabel } from './actorLabel';
 
 export type PaymentTransactionOut = {
   id: string;
@@ -13,6 +14,7 @@ export type PaymentTransactionOut = {
   effective_date: string;
   recorded_at: string;
   recorded_by: string;
+  actor_label: ActorLabel;
   reference: string | null;
   note: string | null;
   reversed_transaction_id: string | null;

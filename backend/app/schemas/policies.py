@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import ConfigDict
 
+from app.schemas.actors import ActorLabel
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.faq import FaqLocale
 from app.schemas.types import MarkdownSource, Text2000
@@ -30,6 +31,8 @@ class PolicyVersionOut(ResponseModel):
     updated_at: datetime
     published_at: datetime | None
     published_by: str | None
+    created_by_label: ActorLabel
+    published_by_label: ActorLabel | None
 
     model_config = ConfigDict(from_attributes=True)
 

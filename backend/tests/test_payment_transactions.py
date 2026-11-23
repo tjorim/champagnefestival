@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp.admin import payments as mcp_payments
 from app.mcp.utils import MCPToolError
-from app.models import IdempotencyKey, PaymentTransaction
+from app.models import IdempotencyKey, PaymentTransaction, Person
 from app.schemas import PaymentTransactionOut
 from app.services import payments_service, registrations_service
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory, requires_postgres
@@ -730,6 +730,9 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
     registration_id = await _registration(client, amount_due="25.00")
     factory = mcp_session_factory(db_session)
 
+    person = Person(id="payment-actor", name="Alex Martin", oidc_subject="admin-1")
+    db_session.add(person)
+    await db_session.commit()
     response = await mcp_payments.create_payment_transaction(
         factory,
         "admin-1",
@@ -742,9 +745,23 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
     assert row.scope == "payments.record_transaction"
 
     # Model construction must not replace the replay store's existing ISO encoder.
-    assert row.response_body == _normalize(response)
+    assert response["actor_label"] == {"kind": "person", "name": "Alex Martin"}
+    assert row.response_body == {key: value for key, value in _normalize(response).items() if key != "actor_label"}
     assert row.response_body["recorded_at"].endswith("+00:00")
     assert isinstance(row.response_body["amount"], str)
+
+    person.name = "Alex Renamed"
+    await db_session.commit()
+    replay = await mcp_payments.create_payment_transaction(
+        factory,
+        "admin-1",
+        registration_id,
+        amount=25.0,
+        effective_date="2026-01-01",
+        idempotency_key="scope-check-key",
+    )
+    assert replay["id"] == response["id"]
+    assert replay["actor_label"] == {"kind": "person", "name": "Alex Renamed"}
 
 
 @pytest.mark.anyio

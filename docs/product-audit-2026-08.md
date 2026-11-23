@@ -30,7 +30,7 @@ listing does not assign a new priority.
 
 ### Active implementation and work needing scope decisions
 
-- [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names belong to #1660.
+- [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names and selection are implemented in #1660.
 
 
 - [#1435 — organisation preparation](https://github.com/tjorim/champagnefestival/issues/1435): Organisation-specific labels, identity/type/contact first, an explicit public temporary-image choice, upload-after-save guidance, mounted language tabs and a saved-content manager overview are implemented, with component, API and laptop/phone Chromium coverage; the implementation record is under **Organisation preparation follow-up (#1435, 2026-10-29)** below. **Still active:** one combined real-backend browser rehearsal of create → contact → proposal → acceptance/rejection. File storage and side-by-side review contracts are unchanged.
@@ -95,6 +95,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1660](https://github.com/tjorim/champagnefestival/issues/1660) | Repository implementation complete | 2026-11-23 | REST, MCP and dashboard actor-filter regression tests | Resolve names at read time in the audit log, payment ledger, layout revisions, policy history and composer. The dashboard reveals IDs on demand and filters by selecting a named actor. Audit storage and token-IP redaction are unchanged. |
 | [#1667](https://github.com/tjorim/champagnefestival/issues/1667) | Repository implementation complete | 2026-11-23 | Interface formatting and plural regression tests, locale audit | Shared locale-aware formatting for dashboard and public dates and times, localised ledger dates and amounts, plural forms in Dutch, French and English, and order fulfilment wording for every product. |
 | [#1669](https://github.com/tjorim/champagnefestival/issues/1669) | Repository implementation complete | 2026-11-23 | `dashboard-laptop.authenticated.spec.ts`; [dashboard heading scale](frontend-ui.md#dashboard-heading-scale) | Compact registration defaults preserve saved visibility and keep status, payment and check-in on screen at 1280×800. The floor plan opens fitted with a single toolbar row and an actual-size editing control. The empty organisation review fits on one line, the header uses the admin theme and Programme and Editions are named in Dutch, French and English. |
 | [#1653](https://github.com/tjorim/champagnefestival/issues/1653) | Repository implementation complete | 2026-11-23 | Migration `012`; [schema decisions](../backend/README.md#schema-values-and-defaults-1653); PostgreSQL migration and API regression tests | Typed event clocks, validated edition months, optional venue coordinates, contact defaults removed, and database text and timestamp constraints aligned. The schema decisions document retained compatibility fields. |
@@ -398,3 +399,11 @@ still require connectivity; the saved venue address remains available.
 
 The signage cache has its own lifecycle. Authenticated APIs and all writes remain
 outside the public cache; existing retry contracts remain in force.
+
+
+### Actor attribution (#1660)
+
+- [x] Audit, ledger, layout revision, policy and composer views show actor names with IDs available on demand.
+- [x] REST and MCP share the actor resolver.
+- [x] The audit filter offers named actors.
+- [x] No additional personal data is stored in audit rows.

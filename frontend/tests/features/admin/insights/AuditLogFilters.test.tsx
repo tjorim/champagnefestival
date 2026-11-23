@@ -32,6 +32,14 @@ function captureAuditQueries() {
       seen.push(new URL(request.url).searchParams);
       return jsonResponse<import("@/api-types").AuditEntryOut[]>([]);
     }),
+    http.get("/api/audit/actors", () =>
+      jsonResponse<import("@/api-types").AuditActorOut[]>([
+        {
+          actor: "auth0|abc",
+          actor_label: { kind: "person", name: "Alex Martin" },
+        },
+      ]),
+    ),
     http.get("/api/audit/actions", () => jsonResponse<string[]>(["person_merged"])),
     http.get("/api/audit/resource-types", () => jsonResponse<string[]>(["person", "edition"])),
   );
@@ -52,9 +60,9 @@ describe("AuditLogViewer filters", () => {
     renderViewer();
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
 
-    fireEvent.change(screen.getByLabelText("admin_audit_filter_actor"), {
-      target: { value: "auth0|abc" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "admin_audit_filter_actor" }));
+    await user.click(await screen.findByRole("option", { name: "Alex Martin" }));
 
     await waitFor(() => {
       expect(seen.some((params) => params.get("actor") === "auth0|abc")).toBe(true);
@@ -104,13 +112,13 @@ describe("AuditLogViewer filters", () => {
     renderViewer();
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
 
-    fireEvent.change(screen.getByLabelText("admin_audit_filter_actor"), {
-      target: { value: "someone" },
+    fireEvent.change(screen.getByLabelText("admin_audit_filter_resource_id"), {
+      target: { value: "venue-123" },
     });
 
     await waitFor(() => {
-      const withActor = seen.find((params) => params.get("actor") === "someone");
-      expect(withActor?.get("page")).toBe("1");
+      const filtered = seen.find((params) => params.get("resource_id") === "venue-123");
+      expect(filtered?.get("page")).toBe("1");
     });
   });
 });

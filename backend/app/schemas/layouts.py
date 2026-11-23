@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.actors import ActorLabel
 from app.schemas.areas import AreaOut
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.tables import ROTATION_DESCRIPTION, X_POSITION_DESCRIPTION, Y_POSITION_DESCRIPTION, TableOut
@@ -138,6 +139,7 @@ class LayoutRevisionOut(ResponseModel):
     label: str
     change_note: str | None
     created_by: str
+    actor_label: ActorLabel
     created_at: datetime
     snapshot: LayoutRevisionSnapshot
 

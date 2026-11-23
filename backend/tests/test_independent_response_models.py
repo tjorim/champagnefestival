@@ -19,6 +19,7 @@ from app.models import (
     Registration,
 )
 from app.schemas import AnnouncementOut, CategoryOut, EmailCategoryOut, PaymentTransactionOut, PolicyVersionOut
+from app.schemas.actors import ActorLabel
 from app.services import (
     announcements_service,
     categories,
@@ -27,6 +28,9 @@ from app.services import (
     payments_service,
     policies_service,
 )
+
+ACTOR_LABEL = ActorLabel(kind="unknown")
+POLICY_LABELS = {"admin": ACTOR_LABEL, "publisher": ACTOR_LABEL}
 
 NOW = datetime(2026, 11, 15, 12, 34, 56, tzinfo=UTC)
 
@@ -89,6 +93,11 @@ VERSION = {
     "published_at": NOW,
     "published_by": "publisher",
 }
+VERSION_OUT = VERSION | {
+    "created_by_label": ACTOR_LABEL.model_dump(),
+    "published_by_label": ACTOR_LABEL.model_dump(),
+}
+
 PAYMENT = {
     "id": "txn_parity",
     "registration_id": "reg_parity",
@@ -124,7 +133,12 @@ PAYMENT = {
             EmailCategoryOut,
             {**EMAIL_CATEGORY, "name": "Nieuws", "description": "Berichten"},
         ),
-        (policies_service._version_to_out, PolicyVersion(**VERSION), PolicyVersionOut, VERSION),
+        (
+            lambda row: policies_service._version_to_out(row, POLICY_LABELS),
+            PolicyVersion(**VERSION),
+            PolicyVersionOut,
+            VERSION_OUT,
+        ),
     ],
 )
 def test_entity_projection_preserves_python_transport(builder, entity, model, expected):
@@ -138,13 +152,13 @@ def test_payment_models_preserve_decimal_and_mcp_transport():
     from app.mcp.admin.payments import _payload
 
     transaction = PaymentTransaction(**{**PAYMENT, "amount": Decimal("-12.30")})
-    result = payments_service.payment_transaction_to_out(transaction)
+    result = payments_service.payment_transaction_to_out(transaction, ACTOR_LABEL)
     assert isinstance(result, PaymentTransactionOut)
     assert result.amount == Decimal("-12.30")
     assert result.model_dump(mode="json")["amount"] == "-12.30"
-    assert _payload(result) == PAYMENT
+    assert _payload(result) == PAYMENT | {"actor_label": ACTOR_LABEL.model_dump()}
     ledger = payments_service.ledger_row_to_out(
-        transaction, Registration(), Person(name="Visitor"), Event(title_nl="Event", edition=None)
+        transaction, Registration(), Person(name="Visitor"), Event(title_nl="Event", edition=None), ACTOR_LABEL
     )
     assert ledger.model_dump(mode="json")["amount"] == "-12.30"
     assert ledger.person_name == "Visitor"
@@ -188,7 +202,7 @@ async def test_composer_projection_preserves_counts_snapshots_and_nulls(monkeypa
     monkeypatch.setattr(composer_service, "_estimated_email_audience", AsyncMock(return_value=8))
     monkeypatch.setattr(composer_service, "_result_fields", AsyncMock(return_value=counts))
     monkeypatch.setattr(composer_service.member_mail, "member_mail_available", lambda: True)
-    result = await composer_service.to_out(AsyncMock(), ComposedMessage(**values))
+    result = await composer_service.to_out(AsyncMock(), ComposedMessage(**values), POLICY_LABELS)
     assert isinstance(result, BaseModel)
     assert result.model_dump() == dict(
         **values,
@@ -196,6 +210,7 @@ async def test_composer_projection_preserves_counts_snapshots_and_nulls(monkeypa
         estimated_push_audience=7,
         estimated_email_audience=8,
         member_mail_available=True,
+        actor_label=ACTOR_LABEL.model_dump(),
     )
 
 
@@ -328,14 +343,14 @@ def test_policy_history_and_consent_payload_parity():
     old = PolicyVersion(**{**VERSION, "id": "old", "version_number": 1})
     current = PolicyVersion(**VERSION)
     policy = policies_service._policy_to_out(
-        Policy(key="privacy", title_nl="Privacy", title_fr=None, title_en=None), [old, current]
+        Policy(key="privacy", title_nl="Privacy", title_fr=None, title_en=None), [old, current], POLICY_LABELS
     )
     assert policy.model_dump() == {
         "key": "privacy",
         "title_nl": "Privacy",
         "title_fr": None,
         "title_en": None,
-        "versions": [VERSION, {**VERSION, "id": "old", "version_number": 1}],
+        "versions": [VERSION_OUT, {**VERSION_OUT, "id": "old", "version_number": 1}],
     }
     consent = EmailConsent(
         id="consent", category_key="parity", source="visitor", granted_at=NOW, revoked_at=None, revoked_source=None
@@ -381,7 +396,9 @@ def test_revision_projection_keeps_snapshot_geometry():
         "created_at": NOW,
         "snapshot": snapshot,
     }
-    assert layouts_service._revision_to_out(LayoutRevision(**values)).model_dump() == values
+    assert layouts_service._revision_to_out(LayoutRevision(**values), ACTOR_LABEL).model_dump() == (
+        values | {"actor_label": ACTOR_LABEL.model_dump()}
+    )
 
 
 def test_signage_summary_preserves_state_and_native_timestamps():

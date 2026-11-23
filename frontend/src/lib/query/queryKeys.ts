@@ -99,6 +99,7 @@ export const queryKeys = {
       sortDir?: string;
       page?: number;
     }) => ["admin", "registrations", "transactions", filters] as const,
+    auditActors: ["admin", "audit", "actors"] as const,
     auditActions: ["admin", "audit", "actions"] as const,
     auditResourceTypes: ["admin", "audit", "resource-types"] as const,
     auditEntries: (filters: {

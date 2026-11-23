@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ActorLabel } from './actorLabel';
 import type { PolicyVersionOutStatus } from './policyVersionOutStatus';
 
 /**
@@ -24,4 +25,6 @@ export type PolicyVersionOut = {
   updated_at: string;
   published_at: string | null;
   published_by: string | null;
+  created_by_label: ActorLabel;
+  published_by_label: ActorLabel | null;
 };

@@ -1,3 +1,4 @@
+import { ActorName } from "@/components/admin/ActorName";
 import { formatEuro } from "@/lib/format/numberUtils";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDate } from "@/lib/format/dateUtils";
@@ -498,9 +499,10 @@ export default function BookingEditor({
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
-                      <span className="text-subtle">
-                        {formatDate(entry.effective_date, getLocale())} · {entry.recorded_by}
-                      </span>
+                      <div className="text-subtle">
+                        {formatDate(entry.effective_date, getLocale())} ·{" "}
+                        <ActorName actor={entry.recorded_by} label={entry.actor_label} />
+                      </div>
                     </div>
                   </PresentationListItem>
                 ))}

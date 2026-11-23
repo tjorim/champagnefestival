@@ -1,3 +1,4 @@
+import { ActorName } from "@/components/admin/ActorName";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import {
   AdminField,
@@ -345,6 +346,15 @@ export default function ComposerManagement({
                 )}
               </span>
             );
+          },
+        }),
+        columnHelper.display({
+          id: "sentBy",
+          header: m.admin_composer_column_sent_by(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const { sent_by, actor_label } = row.original;
+            return sent_by === null ? null : <ActorName actor={sent_by} label={actor_label} />;
           },
         }),
         columnHelper.display({

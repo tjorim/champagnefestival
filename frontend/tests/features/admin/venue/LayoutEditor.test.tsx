@@ -206,6 +206,7 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
       label: "Revision",
       change_note: null,
       created_by: "admin",
+      actor_label: { kind: "unknown", name: null },
       created_at: "2026-01-01T00:00:00Z",
       snapshot: {
         tables: [],
@@ -685,6 +686,7 @@ describe("LayoutEditor", () => {
         label: "Opening",
         change_note: null,
         created_by: "admin-a",
+        actor_label: { kind: "unknown", name: null },
         created_at: "2026-01-01T00:00:00Z",
         snapshot: { tables: [], areas: [], room: { width_m: 10, length_m: 8 } },
       };
@@ -750,6 +752,7 @@ describe("LayoutEditor", () => {
         label: "Empty",
         change_note: null,
         created_by: "admin-a",
+        actor_label: { kind: "unknown", name: null },
         created_at: "2026-01-01T00:00:00Z",
         snapshot: { tables: [], areas: [], room: { width_m: 10, length_m: 8 } },
       };

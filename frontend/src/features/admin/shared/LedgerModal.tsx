@@ -1,3 +1,4 @@
+import { ActorName } from "@/components/admin/ActorName";
 import { formatEuro } from "@/lib/format/numberUtils";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDate } from "@/lib/format/dateUtils";
@@ -141,6 +142,9 @@ export default function LedgerModal({
         }),
         columnHelper.accessor("recorded_by", {
           header: m.admin_ledger_column_recorded_by(),
+          cell: ({ row }) => (
+            <ActorName actor={row.original.recorded_by} label={row.original.actor_label} />
+          ),
           enableSorting: false,
         }),
       ]),

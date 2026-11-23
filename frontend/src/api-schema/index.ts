@@ -8,6 +8,8 @@
 
 export * from './activeApiAnnouncementsActiveGetLocale';
 export * from './activeApiAnnouncementsActiveGetParams';
+export * from './actorLabel';
+export * from './actorLabelKind';
 export * from './adminPollOrderIn';
 export * from './announcementCreate';
 export * from './announcementCreateLevel';
@@ -25,6 +27,7 @@ export * from './appSettingsUpdate';
 export * from './areaCreate';
 export * from './areaOut';
 export * from './areaUpdate';
+export * from './auditActorOut';
 export * from './auditEntryOut';
 export * from './auditEntryOutDetails';
 export * from './background';

@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Changed
 
+- The audit log, payment ledger, floor-plan revision history, policy history and message composer show actor names. Select a name to reveal the stored ID, or use the actor picker to filter the audit log.
+
 - Dashboard lists show organisation logos, named tables and edition lineups, localised schedule dates, and room and table type summaries. The audit log shows resource names and filter choices, and booking details label the check-in link.
 
 ### Fixed
