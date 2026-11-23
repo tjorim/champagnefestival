@@ -81,7 +81,7 @@ async def get_checkin_stats(
             Registration.event_id,
             Event.title.label("event_title"),
             func.coalesce(func.sum(Registration.guest_count), 0).label("total"),
-            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
+            func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in_at.is_not(None)), 0).label(
                 "checked_in"
             ),
         )

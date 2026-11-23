@@ -30,6 +30,8 @@ listing does not assign a new priority.
 
 ### Active implementation and work needing scope decisions
 
+- [#1663 — one registration check-in path](https://github.com/tjorim/champagnefestival/issues/1663): Public booking creation and QR, volunteer and admin check-in now share registration services. Tests cover stamps, audit entries and live updates across all three check-in entry points. Attendance reads and filters use `checked_in_at`. **Still active:** replace the legacy attendance column and composite index in the separately coordinated Alembic revision.
+
 - [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names belong to #1660.
 
 
