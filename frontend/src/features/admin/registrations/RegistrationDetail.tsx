@@ -145,6 +145,9 @@ export default function RegistrationDetail({
 
   if (!registration) return null;
   const simpleRsvp = isSimpleRsvp(registration);
+  const paid = toAmount(registration.amount_paid);
+  const balance = Math.max(0, toAmount(registration.amount_due) - paid);
+  const refund = toAmount(registration.refund_due);
   const changedPrices = registration.order_items.flatMap((item) => {
     const current = registration.event?.products?.find((product) => product.id === item.product_id);
     return current && Number(current.price) !== item.price && item.quantity > item.included_quantity
@@ -170,13 +173,9 @@ export default function RegistrationDetail({
             {formatNumber(registration.guest_count, getLocale())}
           </p>
           <p className="text-sm">
-            {m.admin_inventory_paid()}:{" "}
-            {formatEuro(toAmount(registration.amount_paid), getLocale())} ·{" "}
-            {m.admin_booking_balance()}:{" "}
-            {formatEuro(
-              Math.max(0, toAmount(registration.amount_due) - toAmount(registration.amount_paid)),
-              getLocale(),
-            )}
+            {m.admin_inventory_paid()}: {formatEuro(paid, getLocale())} ·{" "}
+            {refund > 0 ? m.admin_inventory_refund() : m.admin_booking_balance()}:{" "}
+            {formatEuro(refund > 0 ? refund : balance, getLocale())}
           </p>
           <nav className="flex flex-wrap gap-2" aria-label={m.admin_booking_editor()}>
             {onSaveBooking && (
@@ -275,13 +274,6 @@ export default function RegistrationDetail({
                 : registration.payment_status === "partial"
                   ? m.admin_payment_partial()
                   : m.admin_payment_unpaid()}
-              {registration.amount_due != null && (
-                <span className="ms-1 font-normal">
-                  {m.admin_registration_amount_due({
-                    amount: formatEuro(toAmount(registration.amount_due), getLocale()),
-                  })}
-                </span>
-              )}
             </Badge>
             {registration.checked_in ? (
               <Badge variant="success">

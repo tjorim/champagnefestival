@@ -920,7 +920,7 @@
   "admin_filter_today": "Aujourd’hui",
   "admin_active_edition_apply_filter": "Filtrer les inscriptions sur l’édition active",
   "admin_active_edition_day_progress": "Jour {current} sur {total}",
-  "admin_active_edition_checkins": "{checkedIn} / {total} enregistrés",
+  "admin_active_edition_checkins": "{checkedIn}/{total} personnes entrées",
   "admin_active_edition_events_today": [
     {
       "declarations": [
@@ -1411,7 +1411,8 @@
   "admin_allocation_add": "Ajouter une table",
   "admin_booking_editor": "Réservation, paiement et placement",
   "admin_booking_quantity": "Quantité achetée",
-  "admin_booking_total": "Nouveau total",
+  "admin_booking_total": "Total estimé après modification",
+  "admin_booking_projected_refund": "Remboursement estimé après modification",
   "admin_booking_balance": "Solde à payer",
   "admin_booking_release_tables": [
     {
@@ -1618,7 +1619,7 @@
   "admin_edition_id_placeholder": "p. ex. 2026-mars",
   "admin_edition_year_label": "Année",
   "admin_edition_month_label": "Mois",
-  "admin_edition_month_placeholder": "p. ex. mars",
+  "admin_edition_month_placeholder": "Sélectionnez un mois",
   "admin_edition_date_label": "Date de l’édition",
   "theme_switcher_group_label": "Sélecteur d’aperçu du design visuel",
   "theme_switcher_select_label": "Aperçu du design visuel",
@@ -2097,7 +2098,7 @@
   "admin_editor_availability": "Prix et disponibilité",
   "admin_editor_back_product": "Retour au produit",
   "admin_edition_id_help": "Obligatoire. Choisissez un identifiant unique et permanent, par exemple 2027-march.",
-  "admin_edition_month_help": "Obligatoire. Indiquez le mois, par exemple mars. Ajoutez des événements après avoir enregistré l’édition pour définir ses dates.",
+  "admin_edition_month_help": "Obligatoire. Ajoutez des événements après avoir enregistré l’édition pour définir ses dates.",
   "admin_layout_all_layouts_count": "Toutes les dispositions : {count}",
   "admin_layout_inspector": "Objet sélectionné",
   "admin_layout_find_table": "Rechercher une table",

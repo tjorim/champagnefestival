@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 
 import pytest
 
@@ -95,7 +95,7 @@ async def test_delete_person_cascades_registrations(db_session):
             edition_id="edition-1",
             title_nl="Vrijdagavond",
             date=date(2099, 3, 21),
-            start_time="18:00",
+            start_time=time.fromisoformat("18:00"),
             category="general",
         )
     )

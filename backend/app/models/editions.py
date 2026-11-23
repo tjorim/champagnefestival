@@ -27,6 +27,10 @@ class Edition(Base):
             postgresql_where=text("active = true"),
             sqlite_where=text("active = true"),
         ),
+        CheckConstraint(
+            "lower(trim(month)) IN ('january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december')",
+            name="ck_editions_month",
+        ),
         CheckConstraint("edition_type IN ('festival', 'bourse', 'capsule_exchange')", name="ck_editions_edition_type"),
     )
 

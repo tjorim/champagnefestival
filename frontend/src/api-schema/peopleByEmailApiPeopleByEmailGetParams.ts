@@ -10,7 +10,7 @@ import type { PeopleByEmailApiPeopleByEmailGetSortDir } from './peopleByEmailApi
 export type PeopleByEmailApiPeopleByEmailGetParams = {
   /**
    * @minLength 1
-   * @maxLength 200
+   * @maxLength 320
    */
   email: string;
   exclude_person_id?: string | null;

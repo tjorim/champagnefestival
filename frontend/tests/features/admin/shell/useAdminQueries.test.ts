@@ -1,7 +1,7 @@
 import { jsonResponse } from "@/mocks/response";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw/http";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useAdminQueries } from "@/features/admin/shell/useAdminQueries";
 import { server } from "@/mocks/server";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
@@ -29,6 +29,42 @@ function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean }
 }
 
 describe("useAdminQueries loadData", () => {
+  it("waits for the active edition before requesting dashboard counters", async () => {
+    const requests = vi.fn();
+    server.use(
+      http.get("/api/registrations/stats", ({ request }) => {
+        requests(new URL(request.url).searchParams.get("edition_id"));
+        return jsonResponse<import("@/api-types").RegistrationDashboardStats>({
+          all: 3,
+          pending: 1,
+          confirmed: 2,
+          festival: 3,
+          standalone: 0,
+          active: 3,
+          today: 0,
+          events: [],
+        });
+      }),
+    );
+    const { Wrapper } = createTestQueryClientHarness();
+    const view = renderHook(
+      ({ editionId }) =>
+        useAdminQueries({
+          editionId,
+          activeEditionLoaded: !!editionId,
+          visible: true,
+          isAuthenticated: true,
+          canManageAdminSections: true,
+          authHeaders,
+        }),
+      { wrapper: Wrapper, initialProps: { editionId: "" } },
+    );
+    expect(view.result.current.registrationCountsQuery.fetchStatus).toBe("idle");
+    view.rerender({ editionId: "march-2026" });
+    await waitFor(() => expect(view.result.current.registrationCountsQuery.data?.all).toBe(3));
+    expect(requests).toHaveBeenCalledExactlyOnceWith("march-2026");
+  });
+
   it("swaps to an empty working set when the active edition changes", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const view = renderHook(

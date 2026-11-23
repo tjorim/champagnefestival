@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import time
 from typing import Any
 
 import pytest
@@ -236,7 +237,7 @@ async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str
             edition_id=edition_id,
             title_nl=f"Event {number}",
             date=date(2099, 3, 20 + number),
-            start_time="10:00",
+            start_time=time.fromisoformat("10:00"),
             category="other",
         )
     )

@@ -118,11 +118,15 @@ const EventStructuredData: React.FC = () => {
         postalCode: postalCode,
         addressCountry: country,
       },
-      geo: {
-        "@type": "GeoCoordinates",
-        latitude: coordinates.lat,
-        longitude: coordinates.lng,
-      },
+      ...(coordinates.lat != null && coordinates.lng != null
+        ? {
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: coordinates.lat,
+              longitude: coordinates.lng,
+            },
+          }
+        : {}),
     },
     image: [`${baseUrl}${editionShareImage(edition) ?? DEFAULT_SHARE}`],
     description: m.welcome_subtitle(),

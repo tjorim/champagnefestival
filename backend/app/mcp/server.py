@@ -498,8 +498,8 @@ class ChampagneFestivalMcpBackend:
         city: str = "",
         postal_code: str = "",
         country: str = "",
-        lat: float = 0.0,
-        lng: float = 0.0,
+        lat: float | None = None,
+        lng: float | None = None,
         active: bool = True,
     ) -> dict:
         """Create a venue. Requires the ``admin`` role."""
@@ -538,8 +538,10 @@ class ChampagneFestivalMcpBackend:
         lat: float | None = None,
         lng: float | None = None,
         active: bool | None = None,
+        clear_lat: bool = False,
+        clear_lng: bool = False,
     ) -> dict:
-        """Partially update a venue; omitted fields are left unchanged. Requires the ``admin`` role."""
+        """Partially update a venue. Use clear_lat or clear_lng to clear a coordinate. Requires the admin role."""
         self._require_admin()
         return await mcp_admin_venues.update_venue(
             self.session_factory,
@@ -553,6 +555,8 @@ class ChampagneFestivalMcpBackend:
             lat=lat,
             lng=lng,
             active=active,
+            clear_lat=clear_lat,
+            clear_lng=clear_lng,
         )
 
     async def delete_venue(self, venue_id: str) -> dict:

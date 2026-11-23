@@ -22,6 +22,8 @@ class SignageChannel(Base):
     active: Mapped[bool] = mapped_column(Boolean, default=False)
     epoch: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class SignageTemplate(Base):
@@ -32,6 +34,8 @@ class SignageTemplate(Base):
     name: Mapped[str] = mapped_column(String(200))
     background: Mapped[dict] = mapped_column(JSON)
     layers: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class SignageSlide(Base):
@@ -51,6 +55,8 @@ class SignageSlide(Base):
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     content: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class SignageVideoExport(Base):

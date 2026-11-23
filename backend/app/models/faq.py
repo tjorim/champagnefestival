@@ -33,10 +33,10 @@ class FaqItem(Base):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    question_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    question_nl: Mapped[str] = mapped_column(String(500), nullable=False)
     question_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     question_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    answer_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_nl: Mapped[str] = mapped_column(Text, nullable=False)
     answer_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)

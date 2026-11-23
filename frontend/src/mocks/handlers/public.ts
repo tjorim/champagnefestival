@@ -104,8 +104,8 @@ function mockSettings(): import("@/api-types").AppSettingsOut {
     updated_at: "2026-01-01T00:00:00Z",
     stamp_card_type_id: seededState("stamp-card-type", null),
     maintenance_mode: seededState("maintenance", false),
-    public_email: "nancy.cattrysse@telenet.be",
-    public_phone: "+32 478 48 01 77",
+    public_email: "",
+    public_phone: "",
     facebook_url: "https://www.facebook.com/champagnefestival.kust",
   };
 }
@@ -125,8 +125,8 @@ export const publicHandlers = [
       updated_at: "2026-01-01T00:00:00Z",
       stamp_card_type_id: seededState("stamp-card-type", null),
       maintenance_mode: seededState("maintenance", false),
-      public_email: "nancy.cattrysse@telenet.be",
-      public_phone: "+32 478 48 01 77",
+      public_email: "",
+      public_phone: "",
       facebook_url: "https://www.facebook.com/champagnefestival.kust",
     }),
   ),

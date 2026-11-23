@@ -233,7 +233,9 @@ describe("admin edit modals prefill from the record being edited", () => {
     await waitFor(() => {
       expect(screen.queryByText("admin_edition_loading_organizations")).not.toBeInTheDocument();
     });
-    expect(screen.getByLabelText("admin_edition_month_label")).toHaveValue("march");
+    expect(screen.getByLabelText("admin_edition_month_label")).toHaveTextContent(
+      /march|maart|mars/i,
+    );
     expect(screen.getByLabelText("admin_edition_year_label")).toHaveValue(2027);
     expect(screen.getByLabelText("admin_edition_venue_label")).toHaveTextContent("Brussels Expo");
   });

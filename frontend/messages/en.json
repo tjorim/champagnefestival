@@ -920,7 +920,7 @@
   "admin_filter_today": "Today",
   "admin_active_edition_apply_filter": "Filter registrations to the active edition",
   "admin_active_edition_day_progress": "Day {current} of {total}",
-  "admin_active_edition_checkins": "{checkedIn} / {total} checked in",
+  "admin_active_edition_checkins": "{checkedIn}/{total} guests checked in",
   "admin_active_edition_events_today": [
     {
       "declarations": [
@@ -1411,7 +1411,8 @@
   "admin_allocation_add": "Add table",
   "admin_booking_editor": "Booking, payment and seating",
   "admin_booking_quantity": "Purchased quantity",
-  "admin_booking_total": "New total",
+  "admin_booking_total": "Estimated total after changes",
+  "admin_booking_projected_refund": "Estimated refund after changes",
   "admin_booking_balance": "Balance due",
   "admin_booking_release_tables": [
     {
@@ -1618,7 +1619,7 @@
   "admin_edition_id_placeholder": "e.g. 2026-march",
   "admin_edition_year_label": "Year",
   "admin_edition_month_label": "Month",
-  "admin_edition_month_placeholder": "e.g. march",
+  "admin_edition_month_placeholder": "Select a month",
   "admin_edition_date_label": "Edition date",
   "theme_switcher_group_label": "Visual design preview switcher",
   "theme_switcher_select_label": "Visual design preview",
@@ -2097,7 +2098,7 @@
   "admin_editor_availability": "Price and availability",
   "admin_editor_back_product": "Back to product",
   "admin_edition_id_help": "Required. Choose a unique, permanent ID, for example 2027-march.",
-  "admin_edition_month_help": "Required. Enter the month label, for example march. Add events after saving the edition to set its dates.",
+  "admin_edition_month_help": "Required. Add events after saving the edition to set its dates.",
   "admin_layout_all_layouts_count": "All layouts: {count}",
   "admin_layout_inspector": "Selected object",
   "admin_layout_find_table": "Find a table",

@@ -82,6 +82,12 @@ class EventUpdate(EventTextFields):
     registrations_close_at: datetime | None = None
     active: bool | None = None
 
+    @model_validator(mode="after")
+    def reject_null_start_time(self) -> Self:
+        if "start_time" in self.model_fields_set and self.start_time is None:
+            raise ValueError("start_time may be omitted but cannot be null.")
+        return self
+
 
 class EventTextOut(ResponseModel):
     """The stored text of an event in every language.

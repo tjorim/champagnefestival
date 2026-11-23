@@ -665,35 +665,37 @@ export function HomePage() {
                     )}
                   </div>
                 )}
-                <LoadWhenVisible
-                  placeholder={
-                    <div
-                      data-slot="location-map-placeholder"
-                      className="aspect-video rounded-md border border-border bg-muted"
-                    />
-                  }
-                >
-                  <SuspenseWithBoundary
-                    fallback={
-                      <div className="map-loading flex items-center justify-center py-12">
-                        <div className="text-center">
-                          <Spinner variant="primary" />
-                          <p className="mt-2">{m.loading()}</p>
-                        </div>
-                      </div>
+                {edition.venue.lat != null && edition.venue.lng != null && (
+                  <LoadWhenVisible
+                    placeholder={
+                      <div
+                        data-slot="location-map-placeholder"
+                        className="aspect-video rounded-md border border-border bg-muted"
+                      />
                     }
-                    errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
                   >
-                    <MapComponent
-                      location={edition.venue.name}
-                      address={edition.venue.address}
-                      city={edition.venue.city}
-                      postalCode={edition.venue.postal_code}
-                      country={edition.venue.country}
-                      coordinates={{ lat: edition.venue.lat, lng: edition.venue.lng }}
-                    />
-                  </SuspenseWithBoundary>
-                </LoadWhenVisible>
+                    <SuspenseWithBoundary
+                      fallback={
+                        <div className="map-loading flex items-center justify-center py-12">
+                          <div className="text-center">
+                            <Spinner variant="primary" />
+                            <p className="mt-2">{m.loading()}</p>
+                          </div>
+                        </div>
+                      }
+                      errorFallback={<div className="map-error">{m.error_loading_map()}</div>}
+                    >
+                      <MapComponent
+                        location={edition.venue.name}
+                        address={edition.venue.address}
+                        city={edition.venue.city}
+                        postalCode={edition.venue.postal_code}
+                        country={edition.venue.country}
+                        coordinates={{ lat: edition.venue.lat, lng: edition.venue.lng }}
+                      />
+                    </SuspenseWithBoundary>
+                  </LoadWhenVisible>
+                )}
               </div>
             </div>
           </div>
