@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { m } from "@/paraglide/messages";
@@ -42,7 +44,7 @@ export function PublicOfflineNotice() {
   return (
     <Alert role="status" variant="warning">
       {m.public_offline_notice()}{" "}
-      {updated && m.public_offline_updated({ time: new Date(updated).toLocaleString() })}
+      {updated && m.public_offline_updated({ time: formatDateTime(updated, getLocale()) })}
     </Alert>
   );
 }

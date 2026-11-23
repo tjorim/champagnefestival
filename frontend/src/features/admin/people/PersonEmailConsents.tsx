@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
@@ -85,14 +87,14 @@ export default function PersonEmailConsents({
                 </div>
                 <p className="text-sm mb-0">
                   {m.admin_email_consent_given({
-                    date: new Date(consent.granted_at).toLocaleDateString(),
+                    date: formatDate(consent.granted_at, getLocale()),
                     source: sourceLabel(consent.source),
                   })}
                 </p>
                 {consent.revoked_at && consent.revoked_source && (
                   <p className="text-sm mb-0">
                     {m.admin_email_consent_ended({
-                      date: new Date(consent.revoked_at).toLocaleDateString(),
+                      date: formatDate(consent.revoked_at, getLocale()),
                       source: revokedSourceLabel(consent.revoked_source),
                     })}
                   </p>

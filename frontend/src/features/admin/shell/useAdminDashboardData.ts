@@ -1,6 +1,7 @@
+import { getLocale } from "@/paraglide/runtime";
 import { useMemo } from "react";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
-import { toLocalDateKey } from "@/lib/format/dateUtils";
+import { toLocalDateKey, formatDate, formatTime } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 
 export function useAdminDashboardData(activeEdition: ActiveEdition) {
@@ -14,15 +15,16 @@ export function useAdminDashboardData(activeEdition: ActiveEdition) {
 
   const eventsToday = activeEdition.events.filter((event) => event.date === todayKey).length;
 
+  const locale = getLocale();
   const layoutDayOptions = useMemo(() => {
     return [...activeEdition.events]
       .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))
       .map((event) => ({
         eventId: event.id,
         date: event.date,
-        label: `${event.title} — ${new Date(`${event.date}T00:00:00`).toLocaleDateString()} ${event.start_time}`,
+        label: `${event.title} — ${formatDate(event.date, locale)} ${formatTime(event.start_time, locale)}`,
       }));
-  }, [activeEdition.events]);
+  }, [activeEdition.events, locale]);
 
   return {
     activeDayIndex,

@@ -1,3 +1,4 @@
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import {
@@ -534,7 +535,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   {purchasableProducts.map((product) => {
                     const currentItem = orderItems.find((o) => o.product_id === product.id);
                     const qty = currentItem?.quantity ?? 0;
-                    const label = `${productName(product, getLocale())} - €${product.price}`;
+                    const label = `${productName(product, getLocale())} · ${formatEuro(product.price, getLocale())}`;
                     const isLockedOptional =
                       !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
                     const included = includedQuantities.get(product.id);
@@ -581,7 +582,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             >
                               <Icon icon={MinusIcon} />
                             </Button>
-                            <span className="text-foreground min-w-6 text-center">{qty}</span>
+                            <span className="text-foreground min-w-6 text-center">
+                              {formatNumber(qty, getLocale())}
+                            </span>
                             <Button
                               variant="outline-warning"
                               size="sm"
@@ -600,7 +603,8 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                         </div>
                         {product.available_quantity != null && (
                           <div className="text-subtle text-sm">
-                            {m.registration_order_available()}: {product.available_quantity}
+                            {m.registration_order_available()}:{" "}
+                            {formatNumber(product.available_quantity, getLocale())}
                           </div>
                         )}
                         {included && (

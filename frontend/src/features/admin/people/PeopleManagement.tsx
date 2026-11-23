@@ -1,3 +1,6 @@
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { editionDisplayName } from "@/lib/editions/editionName";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { RowActionButton, RowActions } from "@/components/admin/RowActions";
@@ -298,7 +301,9 @@ export default function PeopleManagement({
             const resCount = getValue();
             return (
               <>
-                <Badge variant={resCount > 0 ? "warning" : "secondary"}>{resCount}</Badge>
+                <Badge variant={resCount > 0 ? "warning" : "secondary"}>
+                  {formatNumber(resCount, getLocale())}
+                </Badge>
                 {resCount > 0 && (
                   <Button
                     size="sm"
@@ -525,7 +530,8 @@ export default function PeopleManagement({
                       {person.phone && <div className="text-subtle">{person.phone}</div>}
                       <div className="mt-1">
                         <Badge variant={resCount > 0 ? "warning" : "secondary"}>
-                          {resCount} {m.admin_people_registrations_count()}
+                          {formatNumber(resCount, getLocale())}{" "}
+                          {m.admin_people_registrations_count()}
                         </Badge>
                         {(person.roles ?? []).map((r) => (
                           <Badge key={r} variant="secondary" className="ms-1 capitalize">
@@ -655,24 +661,24 @@ export default function PeopleManagement({
                   <div className="px-4 pt-4 text-sm text-subtle">
                     <div>
                       {m.admin_people_total_paid({
-                        amount: personPaymentTotals.grandTotal.toFixed(2),
+                        amount: formatEuro(personPaymentTotals.grandTotal, getLocale()),
                       })}
                     </div>
                     <div>
                       {m.admin_people_total_outstanding({
-                        amount: personPaymentTotals.outstandingTotal.toFixed(2),
+                        amount: formatEuro(personPaymentTotals.outstandingTotal, getLocale()),
                       })}
                     </div>
                     {personPaymentSummary && (
                       <>
                         <div>
                           {m.admin_people_total_received({
-                            amount: Number(personPaymentSummary.received).toFixed(2),
+                            amount: formatEuro(Number(personPaymentSummary.received), getLocale()),
                           })}
                         </div>
                         <div>
                           {m.admin_people_total_refunded({
-                            amount: Number(personPaymentSummary.refunded).toFixed(2),
+                            amount: formatEuro(Number(personPaymentSummary.refunded), getLocale()),
                           })}
                         </div>
                       </>
@@ -680,7 +686,7 @@ export default function PeopleManagement({
                     {personPaymentTotals.byEdition.length > 1 &&
                       personPaymentTotals.byEdition.map((edition) => (
                         <div key={edition.label} className="ms-2">
-                          {edition.label}: €{edition.totalPaid.toFixed(2)}
+                          {edition.label}: {formatEuro(edition.totalPaid, getLocale())}
                         </div>
                       ))}
                   </div>
@@ -696,8 +702,8 @@ export default function PeopleManagement({
                             <div className="font-semibold text-sm">{r.event.title}</div>
                             <div className="text-subtle text-sm">
                               <Icon icon={UsersIcon} className="me-1" />
-                              {r.guest_count}
-                              <span className="ms-2">€{Number(r.amount_paid).toFixed(2)}</span>
+                              {formatNumber(r.guest_count, getLocale())}
+                              <span className="ms-2">{formatEuro(r.amount_paid, getLocale())}</span>
                             </div>
                           </div>
                           <div className="flex gap-1 flex-wrap justify-end">
@@ -740,7 +746,7 @@ export default function PeopleManagement({
                           </div>
                         </div>
                         <div className="text-subtle text-tiny">
-                          {new Date(r.created_at).toLocaleDateString()}
+                          {formatDate(r.created_at, getLocale())}
                         </div>
                       </PresentationListItem>
                     ))}

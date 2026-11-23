@@ -1,3 +1,6 @@
+import { formatEuro } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -294,11 +297,11 @@ export default function BookingEditor({
           {orderChanged && products.length > 0 && (
             <div className="site-sm:w-4/12 text-sm self-end">
               <div>
-                {m.admin_booking_total()}: €{projectedTotal.toFixed(2)}
+                {m.admin_booking_total()}: {formatEuro(projectedTotal, getLocale())}
               </div>
               {projectedRefund > 0 && (
                 <div>
-                  {m.admin_booking_projected_refund()}: €{projectedRefund.toFixed(2)}
+                  {m.admin_booking_projected_refund()}: {formatEuro(projectedRefund, getLocale())}
                 </div>
               )}
             </div>
@@ -306,7 +309,8 @@ export default function BookingEditor({
           {products.map((product) => (
             <AdminField className="site-sm:w-6/12" key={product.id}>
               <AdminLabel>
-                {product.name} · €{(bookedPrices[product.id] ?? Number(product.price)).toFixed(2)}
+                {product.name} ·{" "}
+                {formatEuro(bookedPrices[product.id] ?? product.price, getLocale())}
               </AdminLabel>
               <AdminInput
                 aria-label={`${m.admin_booking_quantity()} ${product.name}`}
@@ -359,11 +363,9 @@ export default function BookingEditor({
       <fieldset id="registration-seating" tabIndex={-1} className="mt-4">
         <legend className="text-base font-medium">{m.admin_action_assign_table()}</legend>
         <p className="text-sm">
-          {m.admin_allocation_progress({
-            assigned,
-            total: allocationTotal,
-            unit: tableQuantity ? m.admin_inventory_unit_table() : m.admin_allocation_unit_person(),
-          })}
+          {tableQuantity
+            ? m.admin_allocation_table_progress({ assigned, total: allocationTotal })
+            : m.admin_allocation_progress({ assigned, total: allocationTotal })}
         </p>
         {allocationShortage && tableQuantity > 0 && (
           <Alert variant="warning">
@@ -492,12 +494,12 @@ export default function BookingEditor({
                     <div className="text-sm flex justify-between flex-wrap gap-2">
                       <span>
                         <strong>{transactionAmountLabel(Number(entry.amount))}</strong>{" "}
-                        {Number(entry.amount) >= 0 ? "+" : ""}€{Number(entry.amount).toFixed(2)}
+                        {formatEuro(entry.amount, getLocale(), { signDisplay: "always" })}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                       <span className="text-subtle">
-                        {entry.effective_date} · {entry.recorded_by}
+                        {formatDate(entry.effective_date, getLocale())} · {entry.recorded_by}
                       </span>
                     </div>
                   </PresentationListItem>

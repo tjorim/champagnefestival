@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatTime } from "@/lib/format/dateUtils";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { StampProgress } from "@/lib/editions/stampCards";
 import {
@@ -193,7 +195,7 @@ function CheckInCard({
           {isAlreadyCheckedIn && !success && registration.checked_in_at && (
             <Alert variant="warning" className="mb-4">
               <Icon icon={CircleAlertIcon} className="me-2" />
-              {m.checkin_already_in()} {new Date(registration.checked_in_at).toLocaleTimeString()}
+              {m.checkin_already_in()} {formatTime(registration.checked_in_at, getLocale())}
             </Alert>
           )}
         </div>

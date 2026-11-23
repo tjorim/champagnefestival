@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { sourceCandidates, frozenMessageCalls } from "./locale-audit.mjs";
+import { sourceCandidates, frozenMessageCalls, localeLessFormatting } from "./locale-audit.mjs";
 
 it("finds JSX copy, single-word labels, validators, enum prose and template fragments", () => {
   const source = `const labels = { wait: "Even wachten" }; const validate = () => "Geef een naam";
@@ -48,4 +48,18 @@ it("rejects module-level translations while allowing deferred functions and gett
       "const labels = { get title() { return m.settings(); } }; const notice = () => m.settings();",
     ),
   ).toEqual([]);
+});
+
+it("rejects formatter calls that fall back to the browser locale", () => {
+  const source = [
+    "date.toLocaleDateString(undefined, options)",
+    'amount["toLocaleString"]()',
+    "new Intl.DateTimeFormat()",
+    "Intl.NumberFormat(undefined)",
+    "date.toLocaleTimeString([])",
+    "date.toLocaleTimeString(locale)",
+    "new Intl.DateTimeFormat(locale)",
+    "title.toLowerCase()",
+  ].join(";\n");
+  expect(localeLessFormatting(source)).toEqual([1, 2, 3, 4, 5]);
 });

@@ -1,3 +1,4 @@
+import { formatNumber } from "@/lib/format/numberUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { AdminTableSortMenu } from "../shared/AdminTableSortMenu";
 import { useIsMobile } from "@/components/ui/use-mobile";
@@ -79,7 +80,7 @@ import {
   type RegistrationSortKey,
 } from "@/lib/api/adminFetch";
 import { queryKeys } from "@/lib/query/queryKeys";
-import { toLocalDateKey } from "@/lib/format/dateUtils";
+import { formatDate, toLocalDateKey } from "@/lib/format/dateUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { devError } from "@/lib/devLog";
@@ -214,6 +215,7 @@ export default function RegistrationList({
   sectionError,
   onClearSectionError,
 }: RegistrationListProps) {
+  const locale = getLocale();
   const isMobile = useIsMobile();
   const isOnline = useOnlineStatus();
   const [attendanceFeedback, setAttendanceFeedback] = useState("");
@@ -674,8 +676,10 @@ export default function RegistrationList({
                 {!isStandalone && reg.order_items.length > 0 && (
                   <div className="text-highlight text-sm">
                     <Icon icon={ShoppingCartIcon} className="me-1" />
-                    {reg.order_items.filter((o) => o.delivered).length}/{reg.order_items.length}{" "}
-                    {m.admin_order_items()}
+                    {m.admin_order_delivery_progress({
+                      delivered: reg.order_items.filter((item) => item.delivered).length,
+                      total: reg.order_items.length,
+                    })}
                   </div>
                 )}
               </>
@@ -690,6 +694,7 @@ export default function RegistrationList({
         }),
         columnHelper.accessor("guest_count", {
           header: m.admin_guests_count(),
+          cell: ({ getValue }) => formatNumber(getValue(), locale),
         }),
         columnHelper.accessor("status", {
           header: m.admin_status_label(),
@@ -889,6 +894,7 @@ export default function RegistrationList({
         }),
       ]),
     [
+      locale,
       allContactPersonIds,
       tables,
       tableOccupancy,
@@ -965,11 +971,16 @@ export default function RegistrationList({
         (event) =>
           !backendEditionId || activeEdition.events.some(({ id }) => id === event.event_id),
       );
+  const checkInTotals = eventCapacityStats && summarizeGuestCheckIns(eventCapacityStats);
+  const formattedCheckIns = checkInTotals && {
+    checkedIn: formatNumber(checkInTotals.checkedIn, locale),
+    total: formatNumber(checkInTotals.total, locale),
+  };
   const checkInSummary =
-    eventCapacityStats &&
+    formattedCheckIns &&
     (backendEditionId
-      ? `${editionDisplayNameWithType(activeEdition)} · ${m.admin_active_edition_checkins(summarizeGuestCheckIns(eventCapacityStats))}`
-      : m.admin_event_checkin_summary(summarizeGuestCheckIns(eventCapacityStats)));
+      ? `${editionDisplayNameWithType(activeEdition)} · ${m.admin_active_edition_checkins(formattedCheckIns)}`
+      : m.admin_event_checkin_summary(formattedCheckIns));
 
   // Exports every registration matching the current filters, not just the
   // rendered page — see fetchAllMatchingRegistrations.
@@ -1083,7 +1094,7 @@ export default function RegistrationList({
   for (const record of selectedRecords) {
     const previous = selectedEvents.get(record.event_id);
     selectedEvents.set(record.event_id, {
-      title: `${record.event?.title ?? record.event_id}${record.event?.date ? ` · ${record.event.date}` : ""}`,
+      title: `${record.event?.title ?? record.event_id}${record.event?.date ? ` · ${formatDate(record.event.date, locale)}` : ""}`,
       count: (previous?.count ?? 0) + 1,
     });
   }
@@ -1107,7 +1118,9 @@ export default function RegistrationList({
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold">{m.admin_registrations_tab_header()}</span>
-              <span className="text-subtle text-sm">({statusCounts.all})</span>
+              <span className="text-subtle text-sm">
+                ({formatNumber(statusCounts.all, locale)})
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
@@ -1188,13 +1201,15 @@ export default function RegistrationList({
                       }}
                     >
                       <ToggleGroupItem value="all">
-                        {m.admin_filter_edition_all()} ({editionCounts.all})
+                        {m.admin_filter_edition_all()} ({formatNumber(editionCounts.all, locale)})
                       </ToggleGroupItem>
                       <ToggleGroupItem value="festival">
-                        {m.admin_filter_edition_festivals()} ({editionCounts.festival})
+                        {m.admin_filter_edition_festivals()} (
+                        {formatNumber(editionCounts.festival, locale)})
                       </ToggleGroupItem>
                       <ToggleGroupItem value="standalone">
-                        {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
+                        {m.admin_filter_edition_standalone()} (
+                        {formatNumber(editionCounts.standalone, locale)})
                       </ToggleGroupItem>
                     </ToggleGroup>
                     <Toggle
@@ -1204,7 +1219,7 @@ export default function RegistrationList({
                       onPressedChange={toggleActiveEditionOnly}
                     >
                       {m.admin_filter_active_edition()}: {editionDisplayNameWithType(activeEdition)}{" "}
-                      ({editionCounts.active})
+                      ({formatNumber(editionCounts.active, locale)})
                     </Toggle>
                   </div>
                   {allocationOptions.length > 0 && (
@@ -1237,7 +1252,7 @@ export default function RegistrationList({
                     onValueChange={toggleDateFilter}
                   >
                     <ToggleGroupItem value="today">
-                      {m.admin_filter_today()} ({todayCount})
+                      {m.admin_filter_today()} ({formatNumber(todayCount, locale)})
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </div>
@@ -1257,13 +1272,13 @@ export default function RegistrationList({
                     }}
                   >
                     <ToggleGroupItem value="all">
-                      {m.admin_filter_all()} ({statusCounts.all})
+                      {m.admin_filter_all()} ({formatNumber(statusCounts.all, locale)})
                     </ToggleGroupItem>
                     <ToggleGroupItem value="pending">
-                      {m.admin_filter_pending()} ({statusCounts.pending})
+                      {m.admin_filter_pending()} ({formatNumber(statusCounts.pending, locale)})
                     </ToggleGroupItem>
                     <ToggleGroupItem value="confirmed">
-                      {m.admin_filter_confirmed()} ({statusCounts.confirmed})
+                      {m.admin_filter_confirmed()} ({formatNumber(statusCounts.confirmed, locale)})
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </div>
@@ -1294,8 +1309,8 @@ export default function RegistrationList({
                               <span className="font-semibold text-content me-2">
                                 {eventStats.event_title}
                               </span>
-                              {m.admin_checked_in()}: {eventStats.checked_in}/{eventStats.total}{" "}
-                              {m.admin_guests_count()}
+                              {m.admin_checked_in()}: {formatNumber(eventStats.checked_in, locale)}/
+                              {formatNumber(eventStats.total, locale)} {m.admin_guests_count()}
                             </span>
                             <span className="flex items-center gap-2">
                               <Button
@@ -1315,7 +1330,7 @@ export default function RegistrationList({
                           </div>
                           <Progress
                             value={checkInPercent}
-                            aria-label={`${eventStats.event_title}: ${eventStats.checked_in}/${eventStats.total} ${m.admin_checked_in()}`}
+                            aria-label={`${eventStats.event_title}: ${formatNumber(eventStats.checked_in, locale)}/${formatNumber(eventStats.total, locale)} ${m.admin_checked_in()}`}
                           />
                         </div>
                       );
@@ -1623,7 +1638,7 @@ export default function RegistrationList({
             <ul className="my-3 space-y-1">
               {[...selectedEvents].map(([id, event]) => (
                 <li key={id}>
-                  {event.title}: {event.count}
+                  {event.title}: {formatNumber(event.count, locale)}
                 </li>
               ))}
             </ul>
@@ -1640,8 +1655,10 @@ export default function RegistrationList({
                   {selectedRecords.map((record) => (
                     <li key={record.id}>
                       {record.person.name} · {record.event?.title ?? record.event_id}
-                      {record.event?.date ? ` · ${record.event.date}` : ""} ·{" "}
-                      {m.admin_guests_count()}: {record.guest_count}
+                      {record.event?.date
+                        ? ` · ${formatDate(record.event.date, locale)}`
+                        : ""} ·{" "}
+                      {m.admin_guests_count()}: {formatNumber(record.guest_count, locale)}
                     </li>
                   ))}
                 </ul>

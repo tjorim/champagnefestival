@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { adminCachePersistence } from "@/lib/collections/adminCachePersistence";
@@ -13,7 +15,7 @@ export function AdminCacheStatus() {
   return (
     <Alert role="status" variant="info" className="text-sm">
       {status.restored ? m.admin_cache_restored() + " " : ""}
-      {m.admin_cache_last_synced({ time: new Date(status.lastSynced).toLocaleString() })}
+      {m.admin_cache_last_synced({ time: formatDateTime(status.lastSynced, getLocale()) })}
     </Alert>
   );
 }

@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useCallback, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, MailDotIcon } from "lucide-react";
@@ -81,7 +83,7 @@ export default function ContactMessagesManagement({
         id: "received",
         header: m.admin_contact_message_col_received(),
         enableSorting: false,
-        cell: (info) => new Date(info.row.original.created_at).toLocaleString(),
+        cell: (info) => formatDateTime(info.row.original.created_at, getLocale()),
       }),
       columnHelper.display({
         id: "status",
@@ -138,7 +140,7 @@ export default function ContactMessagesManagement({
             <>
               <Sender message={message} />
               <div className="text-sm text-subtle">
-                {new Date(message.created_at).toLocaleString()}
+                {formatDateTime(message.created_at, getLocale())}
               </div>
               <p className="mb-0 whitespace-pre-wrap">{message.message}</p>
               <Status message={message} />

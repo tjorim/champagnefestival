@@ -13,9 +13,6 @@ import { noEventTranslations } from "../../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
-    schedule_days_friday: () => "Friday",
-    schedule_days_saturday: () => "Saturday",
-    schedule_days_sunday: () => "Sunday",
     schedule_start_time: () => "Start time",
     schedule_end_time: () => "End time",
     schedule_time_range: ({ start, end }: { start: string; end: string }) => `${start} - ${end}`,
@@ -139,10 +136,10 @@ describe("Schedule component", () => {
   it("links panels to tabs and switches with the keyboard without axe violations", async () => {
     const user = userEvent.setup();
     const { container } = renderSchedule(<Schedule events={mockEvents} />);
-    const friday = screen.getByRole("tab", { name: /Friday/ });
+    const friday = screen.getByRole("tab", { name: /vrijdag/ });
     friday.focus();
     await user.keyboard("{ArrowRight}");
-    expect(screen.getByRole("tab", { name: /Saturday/ })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: /zaterdag/ })).toHaveFocus();
     expect(screen.getByRole("heading", { name: "Party" })).toBeVisible();
     expect((await axe(container)).violations).toEqual([]);
   });
@@ -154,8 +151,8 @@ describe("Schedule component", () => {
 
   it("renders day tabs", () => {
     renderSchedule(<Schedule events={mockEvents} />);
-    expect(screen.getByText("Friday")).toBeInTheDocument();
-    expect(screen.getByText("Saturday")).toBeInTheDocument();
+    expect(screen.getByText("vrijdag")).toBeInTheDocument();
+    expect(screen.getByText("zaterdag")).toBeInTheDocument();
   });
 
   it("renders events for the default active day (Friday)", () => {
@@ -216,7 +213,7 @@ describe("Schedule component", () => {
 
   it("switches to Saturday tab and shows Saturday events", () => {
     renderSchedule(<Schedule events={mockEvents} />);
-    fireEvent.click(screen.getByText("Saturday"));
+    fireEvent.click(screen.getByText("zaterdag"));
     expect(screen.getByRole("heading", { name: "Party" })).toBeInTheDocument();
   });
 

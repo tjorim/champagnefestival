@@ -1,3 +1,5 @@
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import {
@@ -694,7 +696,7 @@ export default function EventProductsModal({
                 {m.admin_products_required_badge()}
               </Badge>
             )}
-            <span className="text-subtle text-sm">€{Number(product.price).toFixed(2)}</span>
+            <span className="text-subtle text-sm">{formatEuro(product.price, getLocale())}</span>
           </span>
           <RowActions
             className="shrink-0"
@@ -758,7 +760,7 @@ export default function EventProductsModal({
                   {m.admin_inventory_existing_bookings()}
                 </h3>
                 <p>
-                  {preview.payload.name.nl}: €{Number(preview.payload.price).toFixed(2)};{" "}
+                  {preview.payload.name.nl}: {formatEuro(preview.payload.price, getLocale())};{" "}
                   {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
@@ -779,19 +781,26 @@ export default function EventProductsModal({
                 </div>
                 {preview.result.bookings.map((b) => (
                   <div key={b.id} className="mb-2">
-                    <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
-                    {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
-                    {b.refund_due}
+                    <strong>{b.id}</strong>: {formatEuro(b.before_total, getLocale())} →{" "}
+                    {formatEuro(b.after_total, getLocale())}; {m.admin_inventory_paid()}{" "}
+                    {formatEuro(b.amount_paid, getLocale())}; {m.admin_inventory_refund()}{" "}
+                    {formatEuro(b.refund_due, getLocale())}
                     <div>
-                      {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
-                      {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+                      {b.before_items
+                        .map((i) => `${i.name}: ${formatNumber(i.quantity, getLocale())}`)
+                        .join(", ")}{" "}
+                      →{" "}
+                      {b.after_items
+                        .map((i) => `${i.name}: ${formatNumber(i.quantity, getLocale())}`)
+                        .join(", ")}
                     </div>
                   </div>
                 ))}
                 {preview.result.shortages.map((s, i) => (
                   <Alert variant="warning" key={i}>
-                    {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
-                    {m.admin_inventory_shortage()} {s.shortage}
+                    {s.name}: {m.admin_inventory_reserved()} {formatNumber(s.reserved, getLocale())}{" "}
+                    / {formatNumber(s.stock, getLocale())}; {m.admin_inventory_shortage()}{" "}
+                    {s.shortage}
                   </Alert>
                 ))}
                 {preview.result.shortages.length > 0 && (

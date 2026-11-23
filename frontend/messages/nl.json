@@ -39,9 +39,6 @@
   "next_festival_none": "Er is momenteel geen aankomend festival gepland. Kom binnenkort terug!",
   "schedule_title": "Programma",
   "schedule_description": "Bekijk het gedetailleerde festivalprogramma met evenementen, degustaties en speciale presentaties.",
-  "schedule_days_friday": "Vrijdag",
-  "schedule_days_saturday": "Zaterdag",
-  "schedule_days_sunday": "Zondag",
   "schedule_registration": "Reservering vereist",
   "schedule_order_available": "VIP-pakket beschikbaar",
   "schedule_no_events": "Geen evenementen gepland voor deze dag",
@@ -200,7 +197,7 @@
   "admin_status_confirmed": "Bevestigd",
   "admin_status_cancelled": "Geannuleerd",
   "admin_payment_unpaid": "Onbetaald",
-  "admin_registration_amount_due": "· € {amount} te betalen",
+  "admin_registration_amount_due": "· {amount} te betalen",
   "admin_payment_partial": "Gedeeltelijk",
   "admin_payment_paid": "Betaald",
   "admin_action_confirm": "Bevestigen",
@@ -234,12 +231,40 @@
   "admin_announcement_publish_named": "“{name}” publiceren",
   "admin_guests_count": "Gasten",
   "admin_event_label": "Evenement",
-  "admin_order_items": "Bestelde items",
+  "admin_order_delivery_progress": [
+    {
+      "declarations": [
+        "input delivered",
+        "input total",
+        "local plural = total: plural",
+        "local formattedDelivered = delivered: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedDelivered}/{formattedTotal} bestelartikel geleverd",
+        "plural=*": "{formattedDelivered}/{formattedTotal} bestelartikelen geleverd"
+      }
+    }
+  ],
   "admin_no_tables": "Geen tafels aangemaakt",
   "admin_table_label": "Tafel",
   "admin_unassigned": "Niet toegewezen",
   "admin_assigned_table_unavailable": "Toegewezen tafel niet beschikbaar",
-  "admin_table_capacity_remaining": "{count} plaats(en) vrij",
+  "admin_table_capacity_remaining": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} plaats vrij",
+        "plural=*": "{formattedCount} plaatsen vrij"
+      }
+    }
+  ],
   "admin_notes": "Opmerkingen",
   "admin_authenticated": "Geverifieerd",
   "admin_refresh": "Vernieuwen",
@@ -270,7 +295,7 @@
   "admin_qr_code": "QR-code",
   "admin_open_check_in_link": "Check-inlink openen",
   "admin_qr_scan_info": "Scan deze QR-code aan de ingang",
-  "admin_bottle_fulfillment": "Flessen afhandeling",
+  "admin_order_fulfillment": "Bestelafhandeling",
   "admin_bottle_delivered": "Geleverd",
   "admin_bottle_not_delivered": "Niet geleverd",
   "admin_mark_delivered": "Markeren als geleverd",
@@ -504,7 +529,20 @@
   "admin_error_resize_area_status": "Standgrootte wijzigen mislukt (status {status}).",
   "admin_edit": "Bewerken",
   "admin_venues_tab": "Locaties",
-  "admin_edition_events": "evenementen",
+  "admin_edition_events": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} evenement",
+        "plural=*": "{formattedCount} evenementen"
+      }
+    }
+  ],
   "admin_edition_artwork_title": "Beeldmateriaal",
   "admin_edition_artwork_help": "Te zien op de onderhoudspagina, achter de hero en wanneer de site wordt gedeeld. Uploads zijn meteen live; een lege plek gebruikt de standaardafbeelding.",
   "admin_edition_artwork_flyer": "Flyer",
@@ -523,8 +561,34 @@
   "admin_edition_artwork_uploaded": "{slot} geüpload.",
   "admin_edition_artwork_cleared": "{slot} verwijderd; de standaardafbeelding is terug.",
   "admin_edition_artwork_error": "De afbeelding kan niet worden bijgewerkt. Controleer het formaat en de grootte en probeer opnieuw.",
-  "admin_edition_producers": "producenten",
-  "admin_edition_sponsors": "sponsors",
+  "admin_edition_producers": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} producent",
+        "plural=*": "{formattedCount} producenten"
+      }
+    }
+  ],
+  "admin_edition_sponsors": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} sponsor",
+        "plural=*": "{formattedCount} sponsors"
+      }
+    }
+  ],
   "admin_edition_uncategorised": "Zonder categorie",
   "admin_edition_lineup_vendors": "Standhouders",
   "admin_edition_lineup_sponsors": "Sponsors",
@@ -766,10 +830,10 @@
   "admin_people_view_registrations": "Registraties bekijken",
   "admin_people_registrations_modal_title": "Registraties",
   "admin_people_registrations_empty": "Geen registraties gevonden voor deze persoon.",
-  "admin_people_total_paid": "Totaal betaald (exclusief geannuleerd): €{amount}",
-  "admin_people_total_outstanding": "Openstaand (exclusief geannuleerd): €{amount}",
-  "admin_people_total_received": "Ontvangen (exclusief geannuleerd): €{amount}",
-  "admin_people_total_refunded": "Terugbetaald (exclusief geannuleerd): €{amount}",
+  "admin_people_total_paid": "Totaal betaald (exclusief geannuleerd): {amount}",
+  "admin_people_total_outstanding": "Openstaand (exclusief geannuleerd): {amount}",
+  "admin_people_total_received": "Ontvangen (exclusief geannuleerd): {amount}",
+  "admin_people_total_refunded": "Terugbetaald (exclusief geannuleerd): {amount}",
   "admin_people_registrations_load_error": "Laden van registraties mislukt.",
   "admin_people_export_ledger": "Grootboek exporteren (CSV)",
   "admin_people_export_ledger_error": "Exporteren van het grootboek is mislukt.",
@@ -787,7 +851,20 @@
   "my_registrations_invalid_token": "Deze veilige link is ongeldig of vervallen. Vraag een nieuwe aan.",
   "my_registrations_no_results": "Er zijn geen inschrijvingen gevonden voor deze veilige link.",
   "my_registrations_error": "Er is een fout opgetreden bij het laden van je inschrijvingen.",
-  "my_registrations_guests_label": "gasten",
+  "my_registrations_guests_label": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} gast",
+        "plural=*": "{formattedCount} gasten"
+      }
+    }
+  ],
   "my_registrations_qr_label": "QR-code voor toegang",
   "my_registrations_add_calendar": "Aan agenda toevoegen",
   "my_registrations_request_new_link": "Nog een veilige link aanvragen",
@@ -856,7 +933,20 @@
   "admin_active_edition_apply_filter": "Filter registraties op de actieve editie",
   "admin_active_edition_day_progress": "Dag {current} van {total}",
   "admin_active_edition_checkins": "{checkedIn}/{total} gasten aangemeld",
-  "admin_active_edition_events_today": "{count} evenementen vandaag",
+  "admin_active_edition_events_today": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} evenement vandaag",
+        "plural=*": "{formattedCount} evenementen vandaag"
+      }
+    }
+  ],
   "admin_edition_type_festival": "Festival",
   "admin_edition_type_bourse": "Beurs",
   "admin_edition_type_capsule_exchange": "Capsule-uitwisseling",
@@ -1310,15 +1400,58 @@
   "admin_composer_column_actions": "Acties",
   "registration_notes_help": "Vermeld toegankelijkheidsbehoeften of plaatsingsvoorkeuren, bijvoorbeeld naast een andere boeking. Plaatsingsverzoeken zijn niet gegarandeerd.",
   "admin_inventory_price_difference": "Geboekte → huidige eenheidsprijs. Gebruik indien nodig hieronder Contact opnemen.",
-  "admin_allocation_progress": "{assigned} van {total} {unit} toegewezen",
-  "admin_allocation_unit_person": "Persoon",
+  "admin_allocation_progress": [
+    {
+      "declarations": [
+        "input assigned",
+        "input total",
+        "local plural = total: plural",
+        "local formattedAssigned = assigned: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedAssigned} van {formattedTotal} persoon toegewezen",
+        "plural=*": "{formattedAssigned} van {formattedTotal} personen toegewezen"
+      }
+    }
+  ],
+  "admin_allocation_table_progress": [
+    {
+      "declarations": [
+        "input assigned",
+        "input total",
+        "local plural = total: plural",
+        "local formattedAssigned = assigned: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedAssigned} van {formattedTotal} volledige tafel toegewezen",
+        "plural=*": "{formattedAssigned} van {formattedTotal} volledige tafels toegewezen"
+      }
+    }
+  ],
   "admin_allocation_add": "Tafel toevoegen",
   "admin_booking_editor": "Boeking, betaling en tafelindeling",
   "admin_booking_quantity": "Gekochte hoeveelheid",
   "admin_booking_total": "Geschat totaal na wijzigingen",
   "admin_booking_projected_refund": "Geschatte terugbetaling na wijzigingen",
   "admin_booking_balance": "Nog te betalen",
-  "admin_booking_release_tables": "Geef {count} tafel(s) vrij vóór het opslaan. Kies hieronder welke toewijzing u verwijdert.",
+  "admin_booking_release_tables": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "Geef {formattedCount} tafel vrij vóór het opslaan. Kies hieronder welke toewijzing u verwijdert.",
+        "plural=*": "Geef {formattedCount} tafels vrij vóór het opslaan. Kies hieronder welke toewijzingen u verwijdert."
+      }
+    }
+  ],
   "admin_booking_save_all": "Boekingswijzigingen opslaan",
   "admin_layout_assign_booking": "Boeking toewijzen",
   "admin_layout_choose_booking": "Kies een boeking",

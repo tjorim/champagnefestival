@@ -98,6 +98,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Fixed
 
+- Dates, times and prices follow the selected language on the website and dashboard. Booking and edition counts use natural plurals, and order fulfilment covers all products.
 - Make admin work easier on laptops with compact registration columns, a floor plan that fits on load, clearer headings, a one-line empty organisation review queue and a dark dashboard header. The Programme group now lists Editions, including bourses and capsule exchanges. (#1669)
 
 - **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.

@@ -47,7 +47,7 @@ import { useEditionHeroImage } from "@/features/site/useEditionHeroImage";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { featureItems } from "@/config/features";
-import { dayjs, endOfDay, formatDateRange } from "@/lib/format/dateUtils";
+import { dayjs, endOfDay, formatDate, formatDateRange } from "@/lib/format/dateUtils";
 import { generateGoogleMapsUrl } from "@/lib/venue/maps";
 import { editionStandsQueryOptions, type OrganizationStands } from "@/lib/api/standsApi";
 import type { SliderItem } from "@/config/editions";
@@ -239,7 +239,7 @@ export function HomePage() {
       .filter((opening): opening is Date => opening !== null && opening > now)
       .sort((a, b) => a.getTime() - b.getTime());
     const first = openings[0];
-    return first ? dayjs(first).locale(locale).format("D MMMM YYYY") : null;
+    return first ? formatDate(first, locale, { dateStyle: "long" }) : null;
   }, [edition.events, registrableEvents.length, locale, nowTimestamp]);
 
   const { name: venueName, address, postal_code: postalCode, city, country } = edition.venue;
@@ -252,7 +252,7 @@ export function HomePage() {
   const heroKicker =
     hasEdition && firstFestivalDate
       ? m.hero_edition_kicker({
-          month: dayjs(firstFestivalDate).locale(locale).format("MMMM"),
+          month: formatDate(firstFestivalDate, locale, { month: "long" }),
           year: String(dayjs(firstFestivalDate).year()),
         })
       : m.festival_name();

@@ -39,9 +39,6 @@
   "next_festival_none": "No upcoming festival is currently scheduled. Check back soon!",
   "schedule_title": "Schedule",
   "schedule_description": "View our detailed festival schedule with events, tastings, and special presentations.",
-  "schedule_days_friday": "Friday",
-  "schedule_days_saturday": "Saturday",
-  "schedule_days_sunday": "Sunday",
   "schedule_registration": "Reservation required",
   "schedule_order_available": "VIP package available",
   "schedule_no_events": "No events scheduled for this day.",
@@ -200,7 +197,7 @@
   "admin_status_confirmed": "Confirmed",
   "admin_status_cancelled": "Cancelled",
   "admin_payment_unpaid": "Unpaid",
-  "admin_registration_amount_due": "· € {amount} due",
+  "admin_registration_amount_due": "· {amount} due",
   "admin_payment_partial": "Partial",
   "admin_payment_paid": "Paid",
   "admin_action_confirm": "Confirm",
@@ -234,12 +231,40 @@
   "admin_announcement_publish_named": "Publish “{name}”",
   "admin_guests_count": "Guests",
   "admin_event_label": "Event",
-  "admin_order_items": "Order items",
+  "admin_order_delivery_progress": [
+    {
+      "declarations": [
+        "input delivered",
+        "input total",
+        "local plural = total: plural",
+        "local formattedDelivered = delivered: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedDelivered}/{formattedTotal} order item delivered",
+        "plural=*": "{formattedDelivered}/{formattedTotal} order items delivered"
+      }
+    }
+  ],
   "admin_no_tables": "No tables created",
   "admin_table_label": "Table",
   "admin_unassigned": "Unassigned",
   "admin_assigned_table_unavailable": "Assigned table unavailable",
-  "admin_table_capacity_remaining": "{count} seat(s) left",
+  "admin_table_capacity_remaining": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} seat left",
+        "plural=*": "{formattedCount} seats left"
+      }
+    }
+  ],
   "admin_notes": "Notes",
   "admin_authenticated": "Authenticated",
   "admin_refresh": "Refresh",
@@ -270,7 +295,7 @@
   "admin_qr_code": "QR Code",
   "admin_open_check_in_link": "Open check-in link",
   "admin_qr_scan_info": "Scan this QR code at the entrance",
-  "admin_bottle_fulfillment": "Bottle fulfilment",
+  "admin_order_fulfillment": "Order fulfilment",
   "admin_bottle_delivered": "Delivered",
   "admin_bottle_not_delivered": "Not delivered",
   "admin_mark_delivered": "Mark as delivered",
@@ -504,7 +529,20 @@
   "admin_error_resize_area_status": "Failed to resize area (status {status}).",
   "admin_edit": "Edit",
   "admin_venues_tab": "Venues",
-  "admin_edition_events": "events",
+  "admin_edition_events": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} event",
+        "plural=*": "{formattedCount} events"
+      }
+    }
+  ],
   "admin_edition_artwork_title": "Artwork",
   "admin_edition_artwork_help": "Shown on the maintenance page, behind the hero and when the site is shared. Uploads go live immediately; an empty slot uses the default image.",
   "admin_edition_artwork_flyer": "Flyer",
@@ -523,8 +561,34 @@
   "admin_edition_artwork_uploaded": "{slot} uploaded.",
   "admin_edition_artwork_cleared": "{slot} removed; the default image is back.",
   "admin_edition_artwork_error": "Unable to update the image. Check the format and size, then try again.",
-  "admin_edition_producers": "producers",
-  "admin_edition_sponsors": "sponsors",
+  "admin_edition_producers": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} producer",
+        "plural=*": "{formattedCount} producers"
+      }
+    }
+  ],
+  "admin_edition_sponsors": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} sponsor",
+        "plural=*": "{formattedCount} sponsors"
+      }
+    }
+  ],
   "admin_edition_uncategorised": "Uncategorised",
   "admin_edition_lineup_vendors": "Vendors",
   "admin_edition_lineup_sponsors": "Sponsors",
@@ -766,10 +830,10 @@
   "admin_people_view_registrations": "View registrations",
   "admin_people_registrations_modal_title": "Registrations",
   "admin_people_registrations_empty": "No registrations found for this person.",
-  "admin_people_total_paid": "Total paid (excluding cancelled): €{amount}",
-  "admin_people_total_outstanding": "Outstanding (excluding cancelled): €{amount}",
-  "admin_people_total_received": "Received (excluding cancelled): €{amount}",
-  "admin_people_total_refunded": "Refunded (excluding cancelled): €{amount}",
+  "admin_people_total_paid": "Total paid (excluding cancelled): {amount}",
+  "admin_people_total_outstanding": "Outstanding (excluding cancelled): {amount}",
+  "admin_people_total_received": "Received (excluding cancelled): {amount}",
+  "admin_people_total_refunded": "Refunded (excluding cancelled): {amount}",
   "admin_people_registrations_load_error": "Failed to load registrations.",
   "admin_people_export_ledger": "Export ledger (CSV)",
   "admin_people_export_ledger_error": "Failed to export the payment ledger.",
@@ -787,7 +851,20 @@
   "my_registrations_invalid_token": "This secure link is invalid or has expired. Please request a new one.",
   "my_registrations_no_results": "No registrations were found for this secure link.",
   "my_registrations_error": "An error occurred while loading your registrations.",
-  "my_registrations_guests_label": "guests",
+  "my_registrations_guests_label": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} guest",
+        "plural=*": "{formattedCount} guests"
+      }
+    }
+  ],
   "my_registrations_qr_label": "Booking check-in QR code",
   "my_registrations_add_calendar": "Add to calendar",
   "my_registrations_request_new_link": "Request another secure link",
@@ -856,7 +933,20 @@
   "admin_active_edition_apply_filter": "Filter registrations to the active edition",
   "admin_active_edition_day_progress": "Day {current} of {total}",
   "admin_active_edition_checkins": "{checkedIn}/{total} guests checked in",
-  "admin_active_edition_events_today": "{count} events today",
+  "admin_active_edition_events_today": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedCount} event today",
+        "plural=*": "{formattedCount} events today"
+      }
+    }
+  ],
   "admin_edition_type_festival": "Festival",
   "admin_edition_type_bourse": "Bourse",
   "admin_edition_type_capsule_exchange": "Capsule Exchange",
@@ -1310,15 +1400,58 @@
   "admin_composer_column_actions": "Actions",
   "registration_notes_help": "Tell us about accessibility needs or placement preferences, such as being next to another booking. Placement requests are not guaranteed.",
   "admin_inventory_price_difference": "Booked → current unit price. Use Contact visitor below if needed.",
-  "admin_allocation_progress": "{assigned} of {total} {unit} assigned",
-  "admin_allocation_unit_person": "Person",
+  "admin_allocation_progress": [
+    {
+      "declarations": [
+        "input assigned",
+        "input total",
+        "local plural = total: plural",
+        "local formattedAssigned = assigned: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedAssigned} of {formattedTotal} person assigned",
+        "plural=*": "{formattedAssigned} of {formattedTotal} people assigned"
+      }
+    }
+  ],
+  "admin_allocation_table_progress": [
+    {
+      "declarations": [
+        "input assigned",
+        "input total",
+        "local plural = total: plural",
+        "local formattedAssigned = assigned: number",
+        "local formattedTotal = total: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "{formattedAssigned} of {formattedTotal} whole table assigned",
+        "plural=*": "{formattedAssigned} of {formattedTotal} whole tables assigned"
+      }
+    }
+  ],
   "admin_allocation_add": "Add table",
   "admin_booking_editor": "Booking, payment and seating",
   "admin_booking_quantity": "Purchased quantity",
   "admin_booking_total": "Estimated total after changes",
   "admin_booking_projected_refund": "Estimated refund after changes",
   "admin_booking_balance": "Balance due",
-  "admin_booking_release_tables": "Release {count} table(s) before saving. Choose which allocation to remove below.",
+  "admin_booking_release_tables": [
+    {
+      "declarations": [
+        "input count",
+        "local plural = count: plural",
+        "local formattedCount = count: number"
+      ],
+      "selectors": ["plural"],
+      "match": {
+        "plural=one": "Release {formattedCount} table before saving. Choose which allocation to remove below.",
+        "plural=*": "Release {formattedCount} tables before saving. Choose which allocations to remove below."
+      }
+    }
+  ],
   "admin_booking_save_all": "Save booking changes",
   "admin_layout_assign_booking": "Assign booking",
   "admin_layout_choose_booking": "Choose a booking",

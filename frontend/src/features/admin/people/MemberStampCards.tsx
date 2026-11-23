@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
@@ -80,7 +82,7 @@ export default function MemberStampCards({
                   <p>{m.stamp_progress({ count: card.stamps.length, total: card.box_count })}</p>
                   <p lang={stampLabelText(card).lang}>{stampLabelText(card).text}</p>
                   <p className="text-sm text-subtle">
-                    {m.stamp_opened({ date: new Date(card.opened_at).toLocaleDateString() })}
+                    {m.stamp_opened({ date: formatDate(card.opened_at, getLocale()) })}
                   </p>
                   {card.reward && (
                     <div className="flex flex-wrap items-center gap-2">
@@ -88,9 +90,10 @@ export default function MemberStampCards({
                         {card.reward.handed_out_at ? m.stamp_handed_out() : m.stamp_reward_due()}
                       </Badge>
                       <span className="text-sm">
-                        {new Date(
+                        {formatDate(
                           card.reward.handed_out_at ?? card.reward.earned_at,
-                        ).toLocaleDateString()}
+                          getLocale(),
+                        )}
                       </span>
                       <Button variant="outline" onClick={() => setReward(card.reward)}>
                         {card.reward.handed_out_at ? m.stamp_undo_hand_out() : m.stamp_hand_out()}

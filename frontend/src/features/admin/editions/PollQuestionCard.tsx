@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/format/dateUtils";
 import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -119,7 +120,7 @@ export function PollEventField({
         )}
         {events.map((event) => (
           <AdminOption key={event.id} value={event.id}>
-            {eventTitle(event, getLocale())} · {event.date}
+            {eventTitle(event, getLocale())} · {formatDate(event.date, getLocale())}
           </AdminOption>
         ))}
       </AdminSelect>
@@ -204,7 +205,7 @@ export default function PollQuestionCard({
     ? m.admin_poll_status_closed()
     : question.closes_at
       ? m.admin_poll_status_open_until({
-          time: new Date(question.closes_at).toLocaleString(getLocale()),
+          time: formatDateTime(question.closes_at, getLocale()),
         })
       : m.admin_poll_status_open();
 

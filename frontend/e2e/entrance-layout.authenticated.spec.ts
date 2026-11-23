@@ -463,7 +463,7 @@ test("cross-page bulk confirmation names the affected guests and dated events be
   ).toBeFocused();
   await page.getByRole("button", { name: en.admin_bulk_confirm, exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Grand Opening · 2026-03-06: 15", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Grand Opening · 6 Mar 2026: 15", { exact: true })).toBeVisible();
   await dialog
     .getByRole("button", { name: en.admin_bulk_selected.replace("{count}", "60"), exact: true })
     .click();

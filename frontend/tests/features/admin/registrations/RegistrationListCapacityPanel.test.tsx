@@ -175,11 +175,11 @@ describe("RegistrationList — per-event capacity panel", () => {
 
     const queryClient = renderRegistrationList([buildRegistration()], true);
     const summary = await screen.findByRole("button", { name: /admin_active_edition_checkins/ });
-    expect(summary).toHaveTextContent('"checkedIn":12,"total":30');
+    expect(summary).toHaveTextContent('"checkedIn":"12","total":"30"');
     expect(
       screen
         .getAllByRole("status")
-        .some((status) => status.textContent?.includes('"checkedIn":12,"total":30')),
+        .some((status) => status.textContent?.includes('"checkedIn":"12","total":"30"')),
     ).toBe(true);
     expect(screen.getByTestId("edition-counter")).toHaveTextContent("12/30");
     expect(requests).toHaveBeenCalledExactlyOnceWith("edition-1");
@@ -190,7 +190,7 @@ describe("RegistrationList — per-event capacity panel", () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrationCounts }),
     );
     await waitFor(() => {
-      expect(summary).toHaveTextContent('"checkedIn":15,"total":30');
+      expect(summary).toHaveTextContent('"checkedIn":"15","total":"30"');
       expect(screen.getByTestId("edition-counter")).toHaveTextContent("15/30");
     });
     expect(requests).toHaveBeenCalledTimes(2);
@@ -203,7 +203,7 @@ describe("RegistrationList — per-event capacity panel", () => {
     renderRegistrationList([buildRegistration()]);
 
     const summary = await screen.findByRole("button", { name: /admin_event_checkin_summary/ });
-    expect(summary).toHaveTextContent('"checkedIn":20,"total":38');
+    expect(summary).toHaveTextContent('"checkedIn":"20","total":"38"');
     expect(summary).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(summary);
     expect(screen.getByText("Capsule Exchange")).toBeVisible();

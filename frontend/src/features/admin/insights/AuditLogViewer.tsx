@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import {
   Pagination,
   PaginationContent,
@@ -50,7 +52,7 @@ const PAGE_SIZE = 50;
 
 function readableLabel(value: string) {
   const words = value.replaceAll("_", " ");
-  return words.charAt(0).toLocaleUpperCase() + words.slice(1);
+  return words.charAt(0).toLocaleUpperCase(getLocale()) + words.slice(1);
 }
 
 function resourceLabel(type: string): string {
@@ -97,7 +99,7 @@ interface AuditLogViewerProps {
 }
 
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString();
+  return formatDateTime(iso, getLocale());
 }
 
 export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {

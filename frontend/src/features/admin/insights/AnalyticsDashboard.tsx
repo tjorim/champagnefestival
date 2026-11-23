@@ -1,3 +1,5 @@
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { DownloadIcon, FileSpreadsheetIcon, NotebookTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -101,16 +103,12 @@ interface AttendanceRow {
   count: number;
 }
 
-/** Totals arrive as exact decimal strings. */
-function money(amount: string): string {
-  return Number(amount).toFixed(2);
-}
-
 function editionLabel(edition: EditionAttendanceStats): string {
   return editionDisplayName(edition);
 }
 
 export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
+  const locale = getLocale();
   const [showTable, setShowTable] = useState(false);
   const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
   const [chartExportError, setChartExportError] = useState("");
@@ -246,6 +244,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           scale: scaleLinear,
           nice: true,
           grid: true,
+          axis: { ticks: { format: (value: number) => formatNumber(value, locale) } },
         },
       },
       color: {
@@ -268,9 +267,12 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         background: "transparent",
       },
       focus: "group-x",
-      tooltip,
+      tooltip: {
+        use: tooltip,
+        items: ["x", { channel: "y", text: (point) => formatNumber(Number(point.yValue), locale) }],
+      },
     });
-  }, [editions, visibleSeries]);
+  }, [editions, locale, visibleSeries]);
 
   const checkinRateChart = useMemo(() => {
     const rows: CheckinRateRow[] = editions
@@ -309,7 +311,9 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           grid: true,
           axis: {
             label: m.admin_analytics_checkin_rate_label(),
-            ticks: { format: (value: number) => `${value}%` },
+            ticks: {
+              format: (value: number) => formatNumber(value / 100, locale, { style: "percent" }),
+            },
           },
         },
       },
@@ -320,9 +324,22 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         background: "transparent",
       },
       focus: "group-x",
-      tooltip,
+      tooltip: {
+        use: tooltip,
+        items: [
+          "x",
+          {
+            channel: "y",
+            text: (point) =>
+              formatNumber(Number(point.yValue) / 100, locale, {
+                style: "percent",
+                maximumFractionDigits: 1,
+              }),
+          },
+        ],
+      },
     });
-  }, [editions]);
+  }, [editions, locale]);
 
   return (
     <div>
@@ -395,21 +412,23 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
             {editions.map((edition) => (
               <TableRow key={edition.edition_id}>
                 <TableCell>{editionLabel(edition)}</TableCell>
-                <TableCell>{edition.events_count}</TableCell>
-                <TableCell>{edition.total_registrations}</TableCell>
-                <TableCell>{edition.total_guests}</TableCell>
-                <TableCell>{edition.total_checked_in}</TableCell>
+                <TableCell>{formatNumber(edition.events_count, locale)}</TableCell>
+                <TableCell>{formatNumber(edition.total_registrations, locale)}</TableCell>
+                <TableCell>{formatNumber(edition.total_guests, locale)}</TableCell>
+                <TableCell>{formatNumber(edition.total_checked_in, locale)}</TableCell>
                 <TableCell>
                   {edition.total_guests > 0
-                    ? `${Math.round((edition.total_checked_in / edition.total_guests) * 100)}%`
+                    ? formatNumber(edition.total_checked_in / edition.total_guests, locale, {
+                        style: "percent",
+                      })
                     : "—"}
                 </TableCell>
-                <TableCell>€{money(edition.total_paid)}</TableCell>
-                <TableCell>€{money(edition.total_due)}</TableCell>
-                <TableCell>€{money(edition.total_received)}</TableCell>
-                <TableCell>€{money(edition.total_refunded)}</TableCell>
-                <TableCell>€{money(edition.total_outstanding)}</TableCell>
-                <TableCell>€{money(edition.total_refund_liability)}</TableCell>
+                <TableCell>{formatEuro(edition.total_paid, locale)}</TableCell>
+                <TableCell>{formatEuro(edition.total_due, locale)}</TableCell>
+                <TableCell>{formatEuro(edition.total_received, locale)}</TableCell>
+                <TableCell>{formatEuro(edition.total_refunded, locale)}</TableCell>
+                <TableCell>{formatEuro(edition.total_outstanding, locale)}</TableCell>
+                <TableCell>{formatEuro(edition.total_refund_liability, locale)}</TableCell>
                 <TableCell className="flex gap-1">
                   <Button
                     variant="outline"

@@ -2,13 +2,10 @@
  * Centralized dayjs configuration and date utility helpers.
  *
  * Import `dayjs` and any helper functions from here rather than importing
- * directly from the `dayjs` package, so that locale data is loaded exactly
- * once and shared across the whole app.
+ * directly from the `dayjs` package, to share calendar handling across the app.
  */
 
 import dayjs from "dayjs";
-import "dayjs/locale/nl";
-import "dayjs/locale/fr";
 
 // Export the configured dayjs instance for use across the app.
 export { dayjs };
@@ -19,46 +16,77 @@ export { dayjs };
  */
 export const endOfDay = (date: Date): Date => dayjs(date).endOf("day").toDate();
 
-/**
- * Returns the full localised month name for the given date.
- *
- * @param date   - The date whose month should be formatted.
- * @param locale - A dayjs-compatible locale string, e.g. `"en"`, `"nl"`, `"fr"`.
- *
- * @example
- * localizedMonthName(new Date(2026, 2, 13), "nl") // "maart"
- * localizedMonthName(new Date(2026, 2, 13), "fr") // "mars"
- */
-export const localizedMonthName = (date: Date, locale: "en" | "fr" | "nl"): string =>
-  dayjs(date).locale(locale).format("MMMM");
+/** Use British English for display while keeping the interface language codes unchanged. */
+export const displayLocale = (locale: string): string => (locale === "en" ? "en-GB" : locale);
 
 export const toLocalDateKey = (date: Date): string => dayjs(date).format("YYYY-MM-DD");
 
-/**
- * Formats a festival's dates as a human-readable range, e.g. "2-3-4 October 2026"
- * (or "2-3-4 oktober 2026" in Dutch) when every date falls in the same month.
- * Dates spanning two months fall back to "D MMMM – D MMMM YYYY".
- *
- * @param dates  - The festival's dates, in chronological order.
- * @param locale - A dayjs-compatible locale string, e.g. `"en"`, `"nl"`, `"fr"`.
- */
-export function formatDateRange(dates: Date[], locale: "en" | "fr" | "nl"): string {
-  if (dates.length === 0) return "";
+type DateValue = Date | string | number;
 
-  const first = dates[0]!;
-  const last = dates[dates.length - 1]!;
-  const sameMonth = dates.every(
-    (d) => dayjs(d).month() === dayjs(first).month() && dayjs(d).year() === dayjs(first).year(),
-  );
-
-  if (sameMonth) {
-    const days = dates.map((d) => dayjs(d).date());
-    const monthName = localizedMonthName(first, locale);
-    const year = dayjs(first).year();
-    return locale === "en"
-      ? `${monthName} ${days.join("-")}, ${year}`
-      : `${days.join("-")} ${monthName} ${year}`;
+function parseDate(value: DateValue): Date {
+  if (value instanceof Date) return value;
+  // Calendar dates from the API represent a day, independent of the viewer's time zone.
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00`);
   }
+  return new Date(value);
+}
 
-  return `${dayjs(first).locale(locale).format("D MMMM")} – ${dayjs(last).locale(locale).format("D MMMM YYYY")}`;
+function format(value: DateValue, locale: string, options: Intl.DateTimeFormatOptions): string {
+  const date = parseDate(value);
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : new Intl.DateTimeFormat(displayLocale(locale), options).format(date);
+}
+
+export function formatDate(
+  value: DateValue,
+  locale: string,
+  options: Intl.DateTimeFormatOptions = { dateStyle: "medium" },
+): string {
+  return format(value, locale, options);
+}
+
+export function formatDateTime(value: DateValue, locale: string): string {
+  return format(value, locale, { dateStyle: "medium", timeStyle: "medium" });
+}
+
+/** API clock times have no zone. Anchor them in UTC so formatting preserves the wall time. */
+export function formatTime(value: DateValue, locale: string): string {
+  if (typeof value === "string" && /^\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value)) {
+    const date = new Date(`2000-01-01T${value}Z`);
+    if (Number.isNaN(date.getTime())) return value;
+    return format(date, locale, { timeStyle: "short", timeZone: "UTC" });
+  }
+  return format(value, locale, { timeStyle: "medium" });
+}
+
+/** Keep the individual days visible when an edition's dates fall in one month. */
+export function formatDateRange(dates: readonly DateValue[], locale: string): string {
+  if (dates.length === 0) return "";
+  const options = { day: "numeric", month: "long", year: "numeric" } as const;
+  if (dates.length === 1) return formatDate(dates[0]!, locale, options);
+
+  const parsed = dates.map(parseDate);
+  if (parsed.some((date) => Number.isNaN(date.getTime()))) {
+    return dates.map((date) => formatDate(date, locale, options)).join(" – ");
+  }
+  parsed.sort((left, right) => left.getTime() - right.getTime());
+  const first = parsed[0]!;
+  const last = parsed[parsed.length - 1]!;
+  const intlLocale = displayLocale(locale);
+  const formatter = new Intl.DateTimeFormat(intlLocale, options);
+  if (
+    parsed.every(
+      (date) => date.getMonth() === first.getMonth() && date.getFullYear() === first.getFullYear(),
+    )
+  ) {
+    const dayFormatter = new Intl.DateTimeFormat(intlLocale, { day: "numeric" });
+    const days = parsed.map((date) => dayFormatter.format(date)).join("-");
+    return formatter
+      .formatToParts(first)
+      .map(({ type, value }) => (type === "day" ? days : value))
+      .join("");
+  }
+  return formatter.formatRange(first, last);
 }

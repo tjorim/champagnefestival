@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/format/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert } from "@/components/ui/alert";
@@ -34,7 +35,7 @@ export default function PrivacyPolicyPage() {
             {query.data && (
               <p className="text-subtle mb-6">
                 {m.privacy_last_updated()}:{" "}
-                {new Date(query.data.published_at).toLocaleDateString(locale, {
+                {formatDate(query.data.published_at, locale, {
                   year: "numeric",
                   month: "long",
                 })}

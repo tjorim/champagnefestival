@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { getLocale } from "@/paraglide/runtime";
@@ -33,7 +34,7 @@ export default function ComposerSendReview({
   item: ComposedMessage;
   categoryName: string;
 }) {
-  const savedAt = new Date(item.updated_at).toLocaleString(getLocale());
+  const savedAt = formatDateTime(item.updated_at, getLocale());
   return (
     <div className="space-y-3 text-left text-sm">
       <p className="text-subtle mb-0">{m.admin_composer_review_saved({ time: savedAt })}</p>

@@ -1,3 +1,6 @@
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatTime } from "@/lib/format/dateUtils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
@@ -167,12 +170,12 @@ export default function RegistrationDetail({
           </DialogTitle>
           <p className="text-sm text-subtle">
             {registration.event?.title ?? registration.event_id} · {m.admin_guests_count()}:{" "}
-            {registration.guest_count}
+            {formatNumber(registration.guest_count, getLocale())}
           </p>
           <p className="text-sm">
-            {m.admin_inventory_paid()}: €{paid.toFixed(2)} ·{" "}
-            {refund > 0 ? m.admin_inventory_refund() : m.admin_booking_balance()}: €
-            {(refund > 0 ? refund : balance).toFixed(2)}
+            {m.admin_inventory_paid()}: {formatEuro(paid, getLocale())} ·{" "}
+            {refund > 0 ? m.admin_inventory_refund() : m.admin_booking_balance()}:{" "}
+            {formatEuro(refund > 0 ? refund : balance, getLocale())}
           </p>
           <nav className="flex flex-wrap gap-2" aria-label={m.admin_booking_editor()}>
             {onSaveBooking && (
@@ -197,7 +200,7 @@ export default function RegistrationDetail({
             )}
             {!simpleRsvp && registration.order_items.length > 0 && (
               <a className="text-primary underline" href="#registration-fulfillment">
-                {m.admin_bottle_fulfillment()}
+                {m.admin_order_fulfillment()}
               </a>
             )}
             <a className="text-primary underline" href="#registration-entrance">
@@ -219,7 +222,8 @@ export default function RegistrationDetail({
           )}
           {toAmount(registration.refund_due) > 0 && (
             <Alert variant="warning">
-              {m.admin_inventory_refund()}: €{toAmount(registration.refund_due).toFixed(2)}
+              {m.admin_inventory_refund()}:{" "}
+              {formatEuro(toAmount(registration.refund_due), getLocale())}
             </Alert>
           )}
           {changedPrices.length > 0 && (
@@ -227,7 +231,8 @@ export default function RegistrationDetail({
               {m.admin_inventory_price_difference()}
               {changedPrices.map((price) => (
                 <div key={price.name}>
-                  {price.name}: €{price.booked.toFixed(2)} → €{Number(price.current).toFixed(2)}
+                  {price.name}: {formatEuro(price.booked, getLocale())} →{" "}
+                  {formatEuro(price.current, getLocale())}
                 </div>
               ))}
             </Alert>
@@ -276,7 +281,7 @@ export default function RegistrationDetail({
                 {m.admin_checked_in()}
                 {registration.checked_in_at && (
                   <span className="ms-1 font-normal">
-                    {new Date(registration.checked_in_at).toLocaleTimeString()}
+                    {formatTime(registration.checked_in_at, getLocale())}
                   </span>
                 )}
               </Badge>
@@ -327,7 +332,9 @@ export default function RegistrationDetail({
             {!onSaveBooking && (
               <PresentationListItem className="flex justify-between">
                 <span className="text-subtle">{m.admin_guests_count()}</span>
-                <span aria-label={m.admin_guests_count()}>{registration.guest_count}</span>
+                <span aria-label={m.admin_guests_count()}>
+                  {formatNumber(registration.guest_count, getLocale())}
+                </span>
               </PresentationListItem>
             )}
             <PresentationListItem className="flex justify-between">
@@ -418,7 +425,7 @@ export default function RegistrationDetail({
                 className="text-base font-medium text-highlight mb-2"
               >
                 <Icon icon={ShoppingBasketIcon} className="me-2" />
-                {m.admin_bottle_fulfillment()}
+                {m.admin_order_fulfillment()}
               </h3>
               <PresentationList>
                 {registration.order_items.map((item) => (
@@ -429,15 +436,18 @@ export default function RegistrationDetail({
                     <span>
                       {item.name}{" "}
                       <Badge variant="secondary" className="ms-1">
-                        ×{item.quantity}
+                        ×{formatNumber(item.quantity, getLocale())}
                       </Badge>
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={item.delivered ? "success" : "secondary"}>
-                        {m.admin_bottle_delivered()}: {item.delivered_quantity}/{item.quantity}
+                        {m.admin_bottle_delivered()}:{" "}
+                        {formatNumber(item.delivered_quantity, getLocale())}/
+                        {formatNumber(item.quantity, getLocale())}
                       </Badge>
                       <Badge variant={remainingQuantity(item) > 0 ? "warning" : "success"}>
-                        {m.admin_bottle_not_delivered()}: {remainingQuantity(item)}
+                        {m.admin_bottle_not_delivered()}:{" "}
+                        {formatNumber(remainingQuantity(item), getLocale())}
                       </Badge>
                       <div className="flex items-center gap-1">
                         <Button
@@ -457,7 +467,7 @@ export default function RegistrationDetail({
                           className="text-center w-20"
                           inputMode="numeric"
                           min={0}
-                          max={item.quantity}
+                          max={formatNumber(item.quantity, getLocale())}
                           onBlur={(event) => {
                             const value = Number(event.currentTarget.value);
                             if (Number.isFinite(value)) {

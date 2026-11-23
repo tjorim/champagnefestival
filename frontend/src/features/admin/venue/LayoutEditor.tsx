@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import {
   ADMIN_CONTROL_CLASS,
@@ -138,7 +140,7 @@ export function getDayLabel(
   // cross-date compare picker). Fall back to the layout's own event title
   // rather than showing blank.
   if (eventTitle) {
-    const formattedDate = date ? new Date(`${date}T00:00:00`).toLocaleDateString() : "";
+    const formattedDate = date ? formatDate(date, getLocale()) : "";
     return formattedDate ? `${eventTitle} — ${formattedDate}` : eventTitle;
   }
   return label;
@@ -438,8 +440,8 @@ function TableLocator({
   onSelect: (tableId: string) => void;
 }) {
   const [search, setSearch] = useState("");
-  const needle = search.toLocaleLowerCase();
-  const matches = tables.filter((table) => table.name.toLocaleLowerCase().includes(needle));
+  const needle = search.toLowerCase();
+  const matches = tables.filter((table) => table.name.toLowerCase().includes(needle));
   return (
     <div className="mb-4">
       <AdminField controlId="plan-table-search">

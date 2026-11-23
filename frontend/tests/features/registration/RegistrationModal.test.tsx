@@ -486,12 +486,12 @@ describe("RegistrationModal component", () => {
 
   it("shows order products when the event has active products", () => {
     renderModal();
-    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bottle (Standard) · €65.00")).toBeInTheDocument();
   });
 
   it("hides order products when the event has no products", () => {
     renderModal({ event: { ...vipEvent, products: [] } });
-    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+    expect(screen.queryByText("Champagne Bottle (Standard) · €65.00")).not.toBeInTheDocument();
   });
 
   it("does not render a buy control for a hidden product", () => {
@@ -506,7 +506,7 @@ describe("RegistrationModal component", () => {
     renderModal({
       event: { ...vipEvent, products: [champagneProduct, hiddenProduct] },
     });
-    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bottle (Standard) · €65.00")).toBeInTheDocument();
     // Only one buy row exists — the purchasable product's — not a second one
     // for the hidden entry sharing the same name/price.
     expect(
@@ -522,7 +522,7 @@ describe("RegistrationModal component", () => {
       purchasable: false,
     });
     renderModal({ event: { ...vipEvent, products: [hiddenProduct] } });
-    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+    expect(screen.queryByText("Champagne Bottle (Standard) · €65.00")).not.toBeInTheDocument();
   });
 
   it("shows a sold-out badge and disables increasing quantity for a sold-out product", () => {
@@ -577,13 +577,13 @@ describe("RegistrationModal component", () => {
     // A Sunday-morning capsule exchange during the festival is not "vip", but can
     // still sell things — the category label must not gate this.
     renderModal({ event: { ...vipEvent, category: "exchange" } });
-    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+    expect(screen.getByText("Champagne Bottle (Standard) · €65.00")).toBeInTheDocument();
   });
 
   it("hides order products for a vip-categorised event with no products", () => {
     // The inverse: being labelled "vip" grants nothing by itself.
     renderModal({ event: { ...vipEvent, category: "vip", products: [] } });
-    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+    expect(screen.queryByText("Champagne Bottle (Standard) · €65.00")).not.toBeInTheDocument();
   });
 
   it("shows error message on submission failure (server error)", async () => {

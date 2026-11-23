@@ -171,6 +171,32 @@ export function frozenMessageCalls(source, file = "source.tsx") {
   });
   return lines;
 }
+/** Keep browser-default formats out of production source. */
+export function localeLessFormatting(source, file = "source.tsx") {
+  const lines = [];
+  walk(parse(source, file), (node) => {
+    if (node.type !== "CallExpression" && node.type !== "NewExpression") return;
+    const { callee, arguments: args } = node;
+    if (callee.type !== "MemberExpression") return;
+    const name = callee.computed ? callee.property.value : callee.property.name;
+    const intlFormatter =
+      callee.object.type === "Identifier" &&
+      callee.object.name === "Intl" &&
+      /^(?:DateTimeFormat|NumberFormat)$/.test(name);
+    if (!intlFormatter && !/^toLocale[A-Z]/.test(name)) return;
+    const locale = args[0];
+    if (
+      !locale ||
+      locale.name === "undefined" ||
+      locale.value === null ||
+      (locale.type === "ArrayExpression" && locale.elements.length === 0)
+    ) {
+      lines.push(lineAt(source, node.start));
+    }
+  });
+  return lines;
+}
+
 function files(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(directory, entry.name);
@@ -193,6 +219,11 @@ function main() {
       entry.endsWith("/") ? relative.startsWith(entry) : relative === entry,
     );
   });
+  for (const file of sources) {
+    const relative = path.relative(path.join(root, "src"), file);
+    for (const line of localeLessFormatting(fs.readFileSync(file, "utf8"), relative))
+      errors.push(`${relative}:${line}: pass the interface locale to the formatter`);
+  }
   for (const file of reviewed) {
     const relative = path.relative(path.join(root, "src"), file);
     for (const line of frozenMessageCalls(fs.readFileSync(file, "utf8"), relative))

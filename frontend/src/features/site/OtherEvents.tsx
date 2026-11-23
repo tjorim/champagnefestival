@@ -1,3 +1,4 @@
+import { formatDate, formatTime } from "@/lib/format/dateUtils";
 import { Badge } from "@/components/ui/badge";
 import { CalendarCheckIcon, CalendarDaysIcon, MapPinIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,13 +23,6 @@ function getEditionTitle(edition_type: ApiUpcomingEdition["edition_type"]) {
     default:
       return m.other_events_type_other();
   }
-}
-
-function formatDate(date: string): string {
-  const d = new Date(`${date}T00:00:00`);
-  return Number.isNaN(d.getTime())
-    ? date
-    : d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }
 
 /**
@@ -103,7 +97,12 @@ export default function OtherEvents() {
                         <p className="mb-1 font-semibold">{eventTitle(item.event, locale)}</p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={CalendarDaysIcon} className="me-2" />
-                          {formatDate(item.event.date)} • {item.event.start_time}
+                          {formatDate(item.event.date, locale, {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                          })}{" "}
+                          • {formatTime(item.event.start_time, locale)}
                         </p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={MapPinIcon} className="me-2" />

@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime, formatDate } from "@/lib/format/dateUtils";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -305,7 +307,9 @@ export default function PolicyManagement({
           header: m.admin_policy_published_column(),
           enableSorting: false,
           cell: ({ row }) =>
-            row.original.published_at ? new Date(row.original.published_at).toLocaleString() : "—",
+            row.original.published_at
+              ? formatDateTime(row.original.published_at, getLocale())
+              : "—",
         }),
         historyColumnHelper.display({
           id: "by",
@@ -364,7 +368,7 @@ export default function PolicyManagement({
                     {m.admin_policy_currently_published({
                       version: published.version_number,
                       date: published.published_at
-                        ? new Date(published.published_at).toLocaleDateString()
+                        ? formatDate(published.published_at, getLocale())
                         : "—",
                     })}
                   </div>

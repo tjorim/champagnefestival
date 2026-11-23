@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatNumber } from "@/lib/format/numberUtils";
 import {
   BuildingIcon,
   CalendarCheckIcon,
@@ -103,7 +105,7 @@ function SidebarItem({
         <span>{label}</span>
         {count > 0 && (
           <span className="ml-auto rounded bg-muted px-1.5 text-xs text-foreground tabular-nums">
-            {count}
+            {formatNumber(count, getLocale())}
           </span>
         )}
       </SidebarMenuButton>
