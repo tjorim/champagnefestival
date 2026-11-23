@@ -1257,7 +1257,7 @@ export default function RegistrationList({
                     onValueChange={toggleDateFilter}
                   >
                     <ToggleGroupItem value="today">
-                      {m.admin_filter_today()} ({todayCount})
+                      {m.admin_filter_today()} ({formatNumber(todayCount, locale)})
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </div>

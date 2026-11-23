@@ -1,4 +1,4 @@
-import { formatEuro } from "@/lib/format/numberUtils";
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
 import { getLocale } from "@/paraglide/runtime";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -786,15 +786,21 @@ export default function EventProductsModal({
                     {formatEuro(b.amount_paid, getLocale())}; {m.admin_inventory_refund()}{" "}
                     {formatEuro(b.refund_due, getLocale())}
                     <div>
-                      {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
-                      {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+                      {b.before_items
+                        .map((i) => `${i.name}: ${formatNumber(i.quantity, getLocale())}`)
+                        .join(", ")}{" "}
+                      →{" "}
+                      {b.after_items
+                        .map((i) => `${i.name}: ${formatNumber(i.quantity, getLocale())}`)
+                        .join(", ")}
                     </div>
                   </div>
                 ))}
                 {preview.result.shortages.map((s, i) => (
                   <Alert variant="warning" key={i}>
-                    {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
-                    {m.admin_inventory_shortage()} {s.shortage}
+                    {s.name}: {m.admin_inventory_reserved()} {formatNumber(s.reserved, getLocale())}{" "}
+                    / {formatNumber(s.stock, getLocale())}; {m.admin_inventory_shortage()}{" "}
+                    {s.shortage}
                   </Alert>
                 ))}
                 {preview.result.shortages.length > 0 && (

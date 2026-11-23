@@ -1,4 +1,4 @@
-import { formatEuro } from "@/lib/format/numberUtils";
+import { formatEuro, formatNumber } from "@/lib/format/numberUtils";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDate } from "@/lib/format/dateUtils";
 import { editionDisplayName } from "@/lib/editions/editionName";
@@ -301,7 +301,9 @@ export default function PeopleManagement({
             const resCount = getValue();
             return (
               <>
-                <Badge variant={resCount > 0 ? "warning" : "secondary"}>{resCount}</Badge>
+                <Badge variant={resCount > 0 ? "warning" : "secondary"}>
+                  {formatNumber(resCount, getLocale())}
+                </Badge>
                 {resCount > 0 && (
                   <Button
                     size="sm"
@@ -528,7 +530,8 @@ export default function PeopleManagement({
                       {person.phone && <div className="text-subtle">{person.phone}</div>}
                       <div className="mt-1">
                         <Badge variant={resCount > 0 ? "warning" : "secondary"}>
-                          {resCount} {m.admin_people_registrations_count()}
+                          {formatNumber(resCount, getLocale())}{" "}
+                          {m.admin_people_registrations_count()}
                         </Badge>
                         {(person.roles ?? []).map((r) => (
                           <Badge key={r} variant="secondary" className="ms-1 capitalize">
@@ -699,7 +702,7 @@ export default function PeopleManagement({
                             <div className="font-semibold text-sm">{r.event.title}</div>
                             <div className="text-subtle text-sm">
                               <Icon icon={UsersIcon} className="me-1" />
-                              {r.guest_count}
+                              {formatNumber(r.guest_count, getLocale())}
                               <span className="ms-2">{formatEuro(r.amount_paid, getLocale())}</span>
                             </div>
                           </div>

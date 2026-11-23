@@ -449,11 +449,13 @@ export default function RegistrationDetail({
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={item.delivered ? "success" : "secondary"}>
-                        {m.admin_bottle_delivered()}: {item.delivered_quantity}/
+                        {m.admin_bottle_delivered()}:{" "}
+                        {formatNumber(item.delivered_quantity, getLocale())}/
                         {formatNumber(item.quantity, getLocale())}
                       </Badge>
                       <Badge variant={remainingQuantity(item) > 0 ? "warning" : "success"}>
-                        {m.admin_bottle_not_delivered()}: {remainingQuantity(item)}
+                        {m.admin_bottle_not_delivered()}:{" "}
+                        {formatNumber(remainingQuantity(item), getLocale())}
                       </Badge>
                       <div className="flex items-center gap-1">
                         <Button
