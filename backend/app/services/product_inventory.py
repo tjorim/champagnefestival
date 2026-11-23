@@ -237,7 +237,7 @@ async def check_stock(
         )
         .group_by(RegistrationOrderLine.live_product_id)
     )
-    occupied = defaultdict(int, dict(rows.tuples()))
+    occupied = defaultdict(int, dict(rows.all()))
     old = quantities(registration.order_items) if registration and registration.status != "cancelled" else {}
     for key, qty in requested.items():
         product = next((p for p in event.products if p.id == key), None)
