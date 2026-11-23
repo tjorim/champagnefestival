@@ -6,11 +6,12 @@
  * OpenAPI spec version: snapshot
  */
 import type { EditionUpdateEditionType } from './editionUpdateEditionType';
+import type { EditionUpdateMonth } from './editionUpdateMonth';
 import type { EditionUpdateSponsorTiers } from './editionUpdateSponsorTiers';
 
 export type EditionUpdate = {
   year?: number | null;
-  month?: string | null;
+  month?: EditionUpdateMonth;
   venue_id?: string | null;
   edition_type?: EditionUpdateEditionType;
   organizations?: number[] | null;

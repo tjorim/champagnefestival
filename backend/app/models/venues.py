@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -15,6 +15,10 @@ class Venue(Base):
     """A physical venue where the festival takes place."""
 
     __tablename__ = "venues"
+    __table_args__ = (
+        CheckConstraint("lat BETWEEN -90 AND 90", name="ck_venues_lat"),
+        CheckConstraint("lng BETWEEN -180 AND 180", name="ck_venues_lng"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
@@ -22,8 +26,8 @@ class Venue(Base):
     city: Mapped[str] = mapped_column(String(100), default="")
     postal_code: Mapped[str] = mapped_column(String(20), default="")
     country: Mapped[str] = mapped_column(String(100), default="")
-    lat: Mapped[float] = mapped_column(Float, default=0.0)
-    lng: Mapped[float] = mapped_column(Float, default=0.0)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lng: Mapped[float | None] = mapped_column(Float)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

@@ -111,8 +111,8 @@ def event_to_summary_out(
         edition_id=event.edition_id,
         **event_text_dict(event, locale),
         date=event.date,
-        start_time=event.start_time,
-        end_time=event.end_time,
+        start_time=event.start_time.isoformat(timespec="minutes"),
+        end_time=event.end_time.isoformat(timespec="minutes") if event.end_time is not None else None,
         category=event.category,
         volunteers_only=event.volunteers_only,
         members_only=event.members_only,
@@ -496,7 +496,16 @@ def person_summary_to_out(p: Person) -> PersonSummaryOut:
 
 
 def app_settings_to_out(s: AppSettings) -> AppSettingsOut:
-    return AppSettingsOut.model_validate(s, from_attributes=True)
+    return AppSettingsOut(
+        member_limit=s.member_limit,
+        member_inactivity_months=s.member_inactivity_months,
+        stamp_card_type_id=s.stamp_card_type_id,
+        maintenance_mode=s.maintenance_mode,
+        updated_at=s.updated_at,
+        public_email=s.public_email or "",
+        public_phone=s.public_phone or "",
+        facebook_url=s.facebook_url or "",
+    )
 
 
 def faq_item_to_public_out(f: FaqItem, locale: str) -> FaqItemPublicOut:

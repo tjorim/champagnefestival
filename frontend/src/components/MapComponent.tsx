@@ -26,7 +26,7 @@ interface MapComponentProps {
   country?: string;
   location?: string;
   postalCode?: string;
-  coordinates?: { lat: number; lng: number };
+  coordinates?: { lat: number | null; lng: number | null };
 }
 
 /**
@@ -50,19 +50,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
   const descriptionId = useId();
 
-  // Validate coordinates
-  const validCoordinates =
-    coordinates &&
-    typeof coordinates.lat === "number" &&
-    typeof coordinates.lng === "number" &&
-    Number.isFinite(coordinates.lat) &&
-    Number.isFinite(coordinates.lng) &&
-    coordinates.lat >= -90 &&
-    coordinates.lat <= 90 &&
-    coordinates.lng >= -180 &&
-    coordinates.lng <= 180;
-
-  if (!validCoordinates) {
+  const { lat, lng } = coordinates;
+  if (lat === null || lng === null || !(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)) {
     return (
       <div className="flex aspect-video items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
         <p className="text-subtle">{m.error_loading_map()}</p>
@@ -79,7 +68,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       aria-label={m.location_map_label()}
     >
       <MapContainer
-        center={[coordinates.lat, coordinates.lng]}
+        center={[lat, lng]}
         zoom={16}
         scrollWheelZoom={false}
         className="absolute inset-0 size-full"
@@ -90,7 +79,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={[coordinates.lat, coordinates.lng]} icon={venueMarkerIcon}>
+        <Marker position={[lat, lng]} icon={venueMarkerIcon}>
           <Popup>
             <b>{location}</b>
             <br />

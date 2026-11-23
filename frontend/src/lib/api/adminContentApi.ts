@@ -1,7 +1,7 @@
 import type { PollOptionUpdate, PollQuestionUpdate, OrganizationOut } from "@/api-types";
 import type { PollOptionOut, PollQuestionOut } from "@/api-types";
 import type { EventCreate, ProductCreate, ProductUpdate } from "@/api-types";
-import type { Edition } from "@/api-types";
+import type { Edition, EditionCreate } from "@/api-types";
 
 import type { ItemDraft } from "@/types/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
@@ -156,7 +156,7 @@ export async function saveEdition(
   payload: {
     id: string;
     year: number;
-    month: string;
+    month: EditionCreate["month"];
     edition_type: Edition["edition_type"];
     venueId: string;
     active: boolean;

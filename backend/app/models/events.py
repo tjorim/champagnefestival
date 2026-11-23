@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import date as dt_date
-from datetime import datetime
+from datetime import datetime, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, String, Text, Time, func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,13 +27,19 @@ class Event(Base):
     __table_args__ = (
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_events_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_events_description_nl"),
+        CheckConstraint(
+            "extract(second from start_time) = 0 AND start_time < TIME '24:00'", name="ck_events_start_time_minute"
+        ).ddl_if(dialect="postgresql"),
+        CheckConstraint(
+            "extract(second from end_time) = 0 AND end_time < TIME '24:00'", name="ck_events_end_time_minute"
+        ).ddl_if(dialect="postgresql"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     description_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -68,8 +74,8 @@ class Event(Base):
         return resolve_text({"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en}, locale)
 
     date: Mapped[dt_date] = mapped_column(Date, index=True)
-    start_time: Mapped[str] = mapped_column(String(10))
-    end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    start_time: Mapped[time] = mapped_column(Time)
+    end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     category: Mapped[str] = mapped_column(
         String(50), ForeignKey("event_categories.key", ondelete="RESTRICT"), index=True
     )

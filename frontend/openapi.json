@@ -9148,7 +9148,7 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 200,
+              "maxLength": 320,
               "title": "Email"
             }
           },
@@ -17431,6 +17431,20 @@
           },
           "month": {
             "type": "string",
+            "enum": [
+              "january",
+              "february",
+              "march",
+              "april",
+              "may",
+              "june",
+              "july",
+              "august",
+              "september",
+              "october",
+              "november",
+              "december"
+            ],
             "title": "Month"
           },
           "venue_id": {
@@ -18018,7 +18032,21 @@
           "month": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "january",
+                  "february",
+                  "march",
+                  "april",
+                  "may",
+                  "june",
+                  "july",
+                  "august",
+                  "september",
+                  "october",
+                  "november",
+                  "december"
+                ]
               },
               {
                 "type": "null"
@@ -29913,14 +29941,30 @@
             "default": ""
           },
           "lat": {
-            "type": "number",
-            "title": "Lat",
-            "default": 0.0
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
           },
           "lng": {
-            "type": "number",
-            "title": "Lng",
-            "default": 0.0
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lng"
           },
           "active": {
             "type": "boolean",
@@ -29962,11 +30006,25 @@
             "title": "Country"
           },
           "lat": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Lat"
           },
           "lng": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Lng"
           },
           "active": {
@@ -30310,7 +30368,9 @@
           "lat": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
               },
               {
                 "type": "null"
@@ -30321,7 +30381,9 @@
           "lng": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
               },
               {
                 "type": "null"

@@ -159,9 +159,9 @@ const cases: Case[] = [
         onHide={onHide}
       />
     ),
-    field: () => screen.getByLabelText("admin_edition_month_label"),
-    typed: "x",
-    pristine: "october",
+    field: () => screen.getByLabelText("admin_edition_year_label"),
+    typed: "1",
+    pristine: "2026",
   },
   {
     name: "RegistrationCreateModal",

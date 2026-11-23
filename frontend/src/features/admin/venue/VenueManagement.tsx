@@ -81,8 +81,8 @@ interface VenueManagementProps {
     city: string,
     postalCode: string,
     country: string,
-    lat: number,
-    lng: number,
+    lat: number | null,
+    lng: number | null,
   ) => Promise<void>;
   onUpdate: (id: string, data: VenueUpdate) => Promise<void>;
   onArchive: (id: string) => Promise<void>;
@@ -112,8 +112,8 @@ const emptyVenueForm = {
   city: "",
   postalCode: "",
   country: "",
-  lat: "" as number | "",
-  lng: "" as number | "",
+  lat: null as number | null,
+  lng: null as number | null,
 };
 
 // widthM/lengthM start blank — a room's real dimensions have no defensible
@@ -217,8 +217,7 @@ export default function VenueManagement({
   const venueForm = useForm({
     defaultValues: venueDefaultValues,
     onSubmit: async ({ value }) => {
-      if (!venueFormIsValid || typeof value.lat !== "number" || typeof value.lng !== "number")
-        return;
+      if (!venueFormIsValid) return;
       setAddVenueError(null);
       try {
         const data = {
@@ -250,17 +249,12 @@ export default function VenueManagement({
   });
   const venueValues = useSelector(venueForm.atom, (s) => s.values);
 
+  const { lat, lng } = venueValues;
   const venueCoordinatesAreValid =
-    typeof venueValues.lat === "number" &&
-    venueValues.lat >= -90 &&
-    venueValues.lat <= 90 &&
-    typeof venueValues.lng === "number" &&
-    venueValues.lng >= -180 &&
-    venueValues.lng <= 180;
+    (lat === null || (lat >= -90 && lat <= 90)) && (lng === null || (lng >= -180 && lng <= 180));
   const venueFormIsValid = venueValues.name.trim().length > 0 && venueCoordinatesAreValid;
-  const previewCoordinates = venueCoordinatesAreValid
-    ? { lat: Number(venueValues.lat), lng: Number(venueValues.lng) }
-    : null;
+  const previewCoordinates =
+    venueCoordinatesAreValid && lat !== null && lng !== null ? { lat, lng } : null;
 
   // Seed the form when the modal opens. Reset during render rather than in an
   // effect (the "adjusting state when a prop changes" pattern) since this only
@@ -1006,9 +1000,9 @@ export default function VenueManagement({
                         step="any"
                         min={-90}
                         max={90}
-                        value={field.value}
+                        value={field.value ?? ""}
                         onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                          field.handleChange(e.target.value === "" ? null : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
                         className={ADMIN_CONTROL_CLASS}
@@ -1027,9 +1021,9 @@ export default function VenueManagement({
                         step="any"
                         min={-180}
                         max={180}
-                        value={field.value}
+                        value={field.value ?? ""}
                         onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                          field.handleChange(e.target.value === "" ? null : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
                         className={ADMIN_CONTROL_CLASS}

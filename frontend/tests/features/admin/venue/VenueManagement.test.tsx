@@ -290,7 +290,7 @@ describe("VenueManagement", () => {
     expect(screen.getByText("admin_no_venues")).toBeInTheDocument();
   });
 
-  it("disables Save until name is filled, then calls onAdd with trimmed args and closes the modal", async () => {
+  it("disables Save until name is filled, then saves with optional coordinates and closes the modal", async () => {
     const { onAdd } = renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_venue_add" }));
@@ -306,18 +306,11 @@ describe("VenueManagement", () => {
     fireEvent.change(dialogScope.getByLabelText("admin_venue_city_label"), {
       target: { value: "  Antwerp  " },
     });
-    fireEvent.change(dialogScope.getByLabelText("admin_venue_latitude_label"), {
-      target: { value: "51.2194" },
-    });
-    fireEvent.change(dialogScope.getByLabelText("admin_venue_longitude_label"), {
-      target: { value: "4.4025" },
-    });
-
     expect(saveButton).not.toBeDisabled();
     fireEvent.click(saveButton);
 
     await waitFor(() =>
-      expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", 51.2194, 4.4025),
+      expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", null, null),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });

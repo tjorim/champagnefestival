@@ -145,8 +145,8 @@ export function useAdminVenueActions({
       city: string,
       postalCode: string,
       country: string,
-      lat: number,
-      lng: number,
+      lat: number | null,
+      lng: number | null,
     ) => {
       const isCurrent = captureAdminVenueFence();
       const d = await createVenueMutation.mutateAsync({
