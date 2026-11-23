@@ -98,6 +98,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Fixed
 
+- Make admin work easier on laptops with compact registration columns, a floor plan that fits on load, clearer headings, a one-line empty organisation review queue and a dark dashboard header. The Programme group now lists Editions, including bourses and capsule exchanges. (#1669)
+
 - **Android:** OIDC discovery now rejects endpoints that are not plain HTTPS (cleartext only for `localhost`, `127.0.0.1`, `::1` and the emulator's `10.0.2.2`), carry credentials, a query or a fragment, or whose token/end-session endpoint is on a different host than the sign-in page. Redirects are no longer followed, and the success response is size-bounded.
 - **Sign-out:** `GET /api/auth/oidc-config` now returns the provider's `end_session_url` and the Android app reads it. The app only starts the provider logout when an end-session endpoint is known, and it never received one, so signing out cleared the local session but left the Keycloak session alive (the next sign-in succeeded silently).
 - The cascade layer order is declared before the first `@layer components` rule in `index.html`. The inline style that hides the server fragment mentioned `components` first, which put the runtime themes below Tailwind's preflight: the fixed header covered the top of the page, and theme headings and spacing were reset. The mobile sort controls of admin tables are exposed as a labelled group.

@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event";
 import { readAdminOptions } from "../../../utils/adminSelect";
 import { selectAdminOption } from "../../../utils/adminSelect";
 import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
@@ -336,10 +337,11 @@ describe("LayoutEditor", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a realistic fixture: room tab and table names appear", async () => {
+  it("renders the selected room and its table names", async () => {
     renderLayoutEditor(realisticFixture());
-    // "Main Hall" appears both in the room tab and the active-room header.
-    expect(screen.getAllByText("Main Hall").length).toBeGreaterThan(0);
+    expect(screen.getByRole("combobox", { name: "admin_rooms_tab" })).toHaveTextContent(
+      "Main Hall",
+    );
     expect(screen.getAllByText("Table A")[0]!).toBeInTheDocument();
     expect(screen.getAllByText("Table B")[0]!).toBeInTheDocument();
   });
@@ -382,7 +384,7 @@ describe("LayoutEditor", () => {
     await waitFor(() => expect(callbacks.onSaveAllocations).toHaveBeenLastCalledWith("reg-1", []));
   });
 
-  it("switches rooms when a different room tab is clicked", async () => {
+  it("switches rooms through the room selector", async () => {
     const fixture = realisticFixture();
     fixture.rooms = [makeRoom(), makeRoom2()];
     fixture.layouts = [makeLayout(), makeLayout2()];
@@ -398,7 +400,9 @@ describe("LayoutEditor", () => {
     expect(screen.getAllByText("Table A")[0]!).toBeInTheDocument();
     expect(screen.queryByText("Garden Table")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Garden Room"));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "admin_rooms_tab" }));
+    await user.click(screen.getByRole("option", { name: /^Garden Room ·/ }));
 
     expect(screen.getAllByText("Garden Table")[0]!).toBeInTheDocument();
     expect(screen.queryByText("Table A")).not.toBeInTheDocument();
