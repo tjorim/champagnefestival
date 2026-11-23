@@ -44,7 +44,6 @@ def _make_registration():
         amount_due=None,
         amount_paid=0,
         allocations=[],
-        product_snapshot={},
         checked_in=False,
         checked_in_at=None,
         strap_issued=False,

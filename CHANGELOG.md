@@ -32,6 +32,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Store booked order lines in indexed rows, including booked prices, units and delivery counts (#1650).
 - Share public booking creation and QR, volunteer and admin check-in through registration services. Derive attendance from the check-in timestamp (#1663).
 - Share fixed vocabularies across API schemas and database checks and normalise legacy values before enforcing the new checks (#1652).
 - Store event clocks as SQL times, validate edition months, and support venues without coordinates (#1653). Remove personal contact defaults and align schema lengths, Dutch text constraints and audit timestamps.

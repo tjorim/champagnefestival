@@ -160,8 +160,7 @@ def product_text_dict(p: Product, locale: str | None = None) -> dict:
 
 
 def order_item_name(item: dict, locale: str | None) -> str:
-    """An order line's product name in *locale*, falling back to the Dutch
-    name stored with the order (older orders carry only that)."""
+    """An order line's booked name in *locale*, falling back to Dutch."""
     return resolve_text({code: item.get(f"name_{code}") for code in ("nl", "fr", "en")}, locale) or item["name"]
 
 
@@ -248,10 +247,7 @@ def _registration_response[
     | RegistrationGuestOut
     | CheckInGuestOut
 ](response: T, stored_items: list[dict]) -> T:
-    # Delivery validators derive defaults and mark them as set. REST has always
-    # serialized those defaults, but MCP historically sent only stored keys.
-    # Preserve that distinction for exclude_unset at the MCP boundary, including
-    # old order lines that predate delivered_quantity.
+    # Preserve fields supplied by the order projection at the MCP boundary.
     for item, stored in zip(response.order_items, stored_items, strict=True):
         item.model_fields_set.intersection_update(stored)
     return response
@@ -298,11 +294,7 @@ def registration_to_out(
             order_items=_visible_order_items(r.order_items) if public else r.order_items,
             notes=r.notes,
             table_id=r.allocations[0].table_id if r.allocations else None,
-            booked_table_quantity=sum(
-                i["quantity"]
-                for i in r.order_items
-                if (r.product_snapshot or {}).get(i["product_id"], {}).get("unit") == "table"
-            ),
+            booked_table_quantity=r.booked_table_quantity,
             allocations=[
                 {"table_id": a.table_id, "guest_count": a.guest_count, "exclusive": a.exclusive} for a in r.allocations
             ],

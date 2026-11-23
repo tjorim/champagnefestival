@@ -212,7 +212,7 @@ def registration():
         allocations=[
             SimpleNamespace(table_id="t", guest_count=4, exclusive=True, table=SimpleNamespace(name="Table 1"))
         ],
-        product_snapshot={"wine": {"unit": "table"}},
+        booked_table_quantity=2,
         status="confirmed",
         payment_status="paid",
         amount_due=Decimal("20.00"),
@@ -290,7 +290,7 @@ def test_all_registration_variants_preserve_projections_and_computed_values():
     "delivery",
     [
         {},
-        {"delivered": True},
+        {"delivered_quantity": 2},
         {"delivered_quantity": 1, "delivered": False},
         {"delivered_quantity": 2, "delivered": True},
     ],
@@ -310,7 +310,7 @@ def test_mcp_registration_preserves_stored_order_fields(delivery):
     assert dump_response(result)["order_items"] == [stored]
     # REST keeps its existing complete, derived delivery projection.
     rest_item = result.model_dump()["order_items"][0]
-    expected = delivery.get("delivered_quantity", 2 if delivery.get("delivered") else 0)
+    expected = delivery.get("delivered_quantity", 0)
     assert rest_item["delivered_quantity"] == expected
     assert rest_item["delivered"] == (expected == 2)
 

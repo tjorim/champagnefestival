@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Self
 
 from pydantic import ConfigDict, Field, model_validator
 
@@ -15,9 +15,7 @@ from app.schemas.types import NonEmptyText, NonNegativeQuantity, OrderQuantity, 
 class OrderItemBase(ResponseModel):
     product_id: str
     name: str
-    """Dutch name at order time. `name_*` hold the translations so the
-    order can be shown in the booker's language; orders from before products were
-    translated carry only `name`."""
+    """Dutch name at order time. `name_*` hold the booked names per language."""
     name_nl: str | None = None
     name_fr: str | None = None
     name_en: str | None = None
@@ -25,7 +23,7 @@ class OrderItemBase(ResponseModel):
     price: float = Field(ge=0)
     category: str
     delivered_quantity: NonNegativeQuantity = 0
-    """Always set: a stored line that only has the legacy `delivered` flag gets the whole quantity."""
+    """Quantity already delivered to the guest."""
     delivered: bool = False
     included_quantity: NonNegativeQuantity = 0
     """How many of `quantity` came free via a product bundle (see
@@ -37,15 +35,6 @@ class OrderItemBase(ResponseModel):
     product is itself `purchasable` (see Product.purchasable). Always counted
     for stock/prep regardless."""
 
-    @model_validator(mode="before")
-    @classmethod
-    def derive_delivered_quantity(cls, data: Any) -> Any:
-        if isinstance(data, dict) and data.get("delivered_quantity") is None:
-            quantity = data.get("quantity")
-            delivered = bool(data.get("delivered")) and isinstance(quantity, int)
-            return {**data, "delivered_quantity": quantity if delivered else 0}
-        return data
-
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
         delivered_quantity = self.delivered_quantity
@@ -54,7 +43,6 @@ class OrderItemBase(ResponseModel):
         if self.included_quantity > self.quantity:
             raise ValueError("included_quantity cannot exceed quantity.")
 
-        self.delivered_quantity = delivered_quantity
         self.delivered = delivered_quantity == self.quantity
         return self
 

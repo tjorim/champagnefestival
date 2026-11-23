@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.models import Registration, RegistrationOrderLine
 from app.schemas import RegistrationDeliveryUpdate
 from app.services.registrations_service import apply_delivery_updates
 from tests.helpers import (
@@ -18,13 +19,13 @@ from tests.helpers import (
 
 
 def test_delivery_update_allows_bundled_order_quantity_above_request_limit():
-    updated = apply_delivery_updates(
-        [{"product_id": "bundled", "quantity": 120, "delivered_quantity": 0, "delivered": False}],
-        [RegistrationDeliveryUpdate(product_id="bundled", delivered_quantity=110)],
-    )
+    line = RegistrationOrderLine(product_id="bundled", quantity=120, delivered_quantity=0)
+    registration = Registration(order_lines=[line])
+    updates = [RegistrationDeliveryUpdate(product_id="bundled", delivered_quantity=110)]
 
-    assert updated[0]["delivered_quantity"] == 110
-    assert updated[0]["delivered"] is False
+    assert apply_delivery_updates(registration, updates)
+    assert line.delivered_quantity == 110
+    assert not apply_delivery_updates(registration, updates)
 
 
 async def _create_table(client, *, event_id: str | None = None, name: str) -> str:
@@ -348,7 +349,6 @@ async def _bulk_registrations(db_session, *, event_id: str, count: int, name_pre
             event_id=event_id,
             person_id=person.id,
             guest_count=1,
-            order_items=[],
             check_in_token=f"{name_prefix}-tok-{index:04d}",
         )
         db_session.add(registration)

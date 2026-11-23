@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.ids import make_id
 from app.models import Event, Person, Registration, Table, User
+from app.models.base import _utcnow
 from app.schemas import (
     CheckInGuestOut,
     CheckInOut,
@@ -188,8 +189,7 @@ async def create_public_registration(
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_answers = order_answers
-    registration.order_items = resolved_order_items
-    registration.product_snapshot = snapshot
+    registration.replace_order(resolved_order_items, snapshot, {p.id for p in event.products})
     registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
     db.add(registration)
     await enqueue_registration_confirmation(
@@ -472,33 +472,28 @@ def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_co
     return inventory.resolve_booking(event, requests, guest_count)[0]
 
 
-def apply_delivery_updates(order_items: list[dict] | None, updates: list[RegistrationDeliveryUpdate]) -> list[dict]:
-    """Apply delivery counts without trusting clients with priced order data."""
-    updated = [dict(item) for item in (order_items or [])]
-    by_product_id = {item.get("product_id"): item for item in updated}
-    seen: set[str] = set()
+def apply_delivery_updates(registration: Registration, updates: list[RegistrationDeliveryUpdate]) -> bool:
+    """Validate the whole request before changing any line."""
+    by_product_id = {line.product_id: line for line in registration.order_lines}
+    quantities: dict[str, int] = {}
     for delivery in updates:
-        if delivery.product_id in seen:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Product '{delivery.product_id}' appears more than once in the delivery update.",
-            )
-        seen.add(delivery.product_id)
-        item = by_product_id.get(delivery.product_id)
-        if item is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Product '{delivery.product_id}' is not on this registration.",
-            )
-        quantity = int(item.get("quantity") or 0)
-        if delivery.delivered_quantity > quantity:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"delivered_quantity for product '{delivery.product_id}' cannot exceed quantity.",
-            )
-        item["delivered_quantity"] = delivery.delivered_quantity
-        item["delivered"] = delivery.delivered_quantity == quantity
-    return updated
+        product_id = delivery.product_id
+        if product_id in quantities:
+            raise HTTPException(400, f"Product '{product_id}' appears more than once in the delivery update.")
+        line = by_product_id.get(product_id)
+        if line is None:
+            raise HTTPException(400, f"Product '{product_id}' is not on this registration.")
+        if delivery.delivered_quantity > line.quantity:
+            raise HTTPException(400, f"delivered_quantity for product '{product_id}' cannot exceed quantity.")
+        quantities[product_id] = delivery.delivered_quantity
+
+    changed = False
+    for product_id, quantity in quantities.items():
+        line = by_product_id[product_id]
+        if line.delivered_quantity != quantity:
+            line.delivered_quantity = quantity
+            changed = True
+    return changed
 
 
 async def update_volunteer_entrance_details(
@@ -514,6 +509,7 @@ async def update_volunteer_entrance_details(
             select(Registration, Table.name)
             .outerjoin(Table, Registration.table_id == Table.id)
             .where(Registration.id == registration_id)
+            .with_for_update(of=Registration)
             .options(selectinload(Registration.person), selectinload(Registration.event))
         )
     ).one_or_none()
@@ -524,10 +520,8 @@ async def update_volunteer_entrance_details(
     if registration.person is None or registration.event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
 
-    previous_orders = list(registration.order_items) if registration.order_items else []
     previous_strap_issued = registration.strap_issued
     changed = False
-    delivery_changed = False
     audit_base = {
         "actor": actor,
         "resource_type": "registration",
@@ -535,18 +529,16 @@ async def update_volunteer_entrance_details(
         "request_id": request_id,
     }
 
-    if body.order_items is not None:
-        new_orders = apply_delivery_updates(previous_orders, body.order_items)
-        if new_orders != previous_orders:
-            registration.order_items = new_orders
-            changed = True
-            delivery_changed = True
-            await write_audit_entry(
-                db,
-                action="delivery_updated",
-                details={"event_id": registration.event_id, "source": "volunteer_check_in"},
-                **audit_base,
-            )
+    delivery_changed = body.order_items is not None and apply_delivery_updates(registration, body.order_items)
+    if delivery_changed:
+        registration.updated_at = _utcnow()
+        changed = True
+        await write_audit_entry(
+            db,
+            action="delivery_updated",
+            details={"event_id": registration.event_id, "source": "volunteer_check_in"},
+            **audit_base,
+        )
 
     if body.strap_issued is not None and body.strap_issued != previous_strap_issued:
         registration.strap_issued = body.strap_issued
@@ -616,8 +608,7 @@ async def admin_create_registration(
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_answers = order_answers
-    registration.order_items = resolved_order_items
-    registration.product_snapshot = snapshot
+    registration.replace_order(resolved_order_items, snapshot, {p.id for p in event.products})
     registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
     db.add(registration)
     await write_audit_entry(
@@ -756,6 +747,7 @@ async def apply_registration_update(
             await guard_registration_history(db, registration.id)
         await people_service.get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
+    snapshot = None
     resolved_items = pre_order_items
     if body.order_items is not None or registration.guest_count != pre_guest_count:
         requests = body.order_items if body.order_items is not None else inventory.purchased_requests(pre_order_items)
@@ -763,10 +755,9 @@ async def apply_registration_update(
             registration.event,
             requests,
             registration.guest_count,
-            previous_snapshot=registration.product_snapshot,
+            previous_snapshot=registration.frozen_product_graph(),
             previous_items=pre_order_items,
         )
-        registration.product_snapshot = snapshot
         if body.order_items is not None or pre_order_items:
             registration.amount_due = inventory.order_total(resolved_items)
     if target_status != "cancelled":
@@ -775,7 +766,8 @@ async def apply_registration_update(
         with db.no_autoflush:
             await inventory.check_stock(db, registration.event, resolved_items, registration=registration)
         registration.status = target_status
-    registration.order_items = resolved_items
+    if snapshot is not None:
+        registration.replace_order(resolved_items, snapshot, {p.id for p in registration.event.products})
     if allocation_entries is not None or (
         registration.allocations and {"guest_count", "status", "order_items"} & body.model_fields_set
     ):

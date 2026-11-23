@@ -15,14 +15,14 @@ import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.auth import get_actor_id, require_volunteer
 from app.core.dependencies import Pagination
 from app.db.session import get_db
-from app.models import Event, Person, Registration, RegistrationAllocation, Table
+from app.models import Event, Person, Registration, RegistrationAllocation, RegistrationOrderLine, Table
 from app.schemas import (
     CheckInGuestOut,
     CheckInOut,
@@ -219,7 +219,20 @@ async def search_registrations(
                 Registration.id.ilike(q_like, escape="\\"),
                 Registration.event_id.ilike(q_like, escape="\\"),
                 func.unaccent(Event.title).ilike(func.unaccent(q_like), escape="\\"),
-                func.unaccent(cast(Registration.order_items, Text)).ilike(func.unaccent(q_like), escape="\\"),
+                Registration.order_lines.any(
+                    or_(
+                        *(
+                            func.unaccent(column).ilike(func.unaccent(q_like), escape="\\")
+                            for column in (
+                                RegistrationOrderLine.product_id,
+                                RegistrationOrderLine.name_nl,
+                                RegistrationOrderLine.name_fr,
+                                RegistrationOrderLine.name_en,
+                                RegistrationOrderLine.category,
+                            )
+                        )
+                    )
+                ),
             ]
             if table_query:
                 table_query_escaped = table_query.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
