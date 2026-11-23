@@ -34,16 +34,30 @@ const EmailUnsubscribePage = lazy(
 );
 
 /** Minimal top-bar shown on standalone admin / check-in pages */
-function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) {
+function StandaloneNavBar({
+  icon,
+  title,
+  admin = false,
+}: {
+  icon: LucideIcon;
+  title: string;
+  admin?: boolean;
+}) {
   return (
-    <nav className="standalone-navbar flex flex-wrap items-center justify-between fixed inset-x-0 top-0 z-header px-4 py-2">
+    <nav
+      data-theme-scope={admin ? "admin" : undefined}
+      data-theme-mode={admin ? "dark" : undefined}
+      className={`standalone-navbar fixed inset-x-0 top-0 z-header flex flex-wrap items-center justify-between px-4 py-2 ${admin ? "border-b border-border bg-sidebar text-foreground shadow-none" : ""}`}
+    >
       <div className="site-fluid-container mx-auto w-full px-3 flex justify-between items-center gap-2">
-        <span className="standalone-navbar-brand me-2 flex min-w-0 flex-1 items-center text-xl font-bold mb-0">
-          <Icon icon={icon} className="me-2 shrink-0" />
-          <span className="min-w-0 shrink truncate">{title}</span>
-        </span>
-        <div className="standalone-navbar-actions flex shrink-0 gap-2 items-center">
-          <LanguageSwitcher />
+        {!admin && (
+          <span className="standalone-navbar-brand me-2 flex min-w-0 flex-1 items-center text-xl font-bold mb-0">
+            <Icon icon={icon} className="me-2 shrink-0" />
+            <span className="min-w-0 shrink truncate">{title}</span>
+          </span>
+        )}
+        <div className="standalone-navbar-actions ms-auto flex shrink-0 gap-2 items-center">
+          <LanguageSwitcher admin={admin} />
           <ButtonLink
             render={<a href={localizedPublicPath("/", getLocale())} />}
             variant="outline"
@@ -64,11 +78,13 @@ function StandaloneRoute({
   icon,
   title,
   errorFallbackText,
+  admin = false,
   children,
 }: {
   icon: LucideIcon;
   title: string;
   errorFallbackText: string;
+  admin?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -76,7 +92,7 @@ function StandaloneRoute({
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar icon={icon} title={title} />
+      <StandaloneNavBar icon={icon} title={title} admin={admin} />
       <main id="main-content" className="standalone-main">
         <div className="site-container mx-auto w-full px-4 pt-4">
           <StaffTasks />
@@ -93,6 +109,7 @@ export function AdminPage() {
   return (
     <StandaloneRoute
       icon={ShieldIcon}
+      admin
       title={m.admin_title()}
       errorFallbackText={m.admin_error_load_dashboard()}
     >

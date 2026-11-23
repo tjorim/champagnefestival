@@ -115,7 +115,7 @@ function Review({
   });
   return (
     <article className="rounded-lg border border-subtle p-4 flex flex-col gap-4">
-      <h3 className="text-lg font-medium text-content">{change.organization_name}</h3>
+      <h3 className="text-base font-semibold text-content">{change.organization_name}</h3>
       <div className="overflow-x-auto">
         <AdminDataTable table={table} />
       </div>
@@ -175,13 +175,22 @@ export default function OrganizationChangeReview({
       ),
   });
   return (
-    <section className="flex flex-col gap-4 mb-6">
-      <h2 className="text-xl font-medium text-content">{m.manager_change_review()}</h2>
-      <Button variant="outline" disabled={query.isFetching} onClick={() => void query.refetch()}>
-        {m.manager_change_refresh()}
-      </Button>
+    <section className="mb-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 className="text-lg font-semibold text-content">{m.manager_change_review()}</h2>
+        {query.data?.length === 0 && (
+          <p className="text-sm text-subtle">{m.manager_change_none()}</p>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={query.isFetching}
+          onClick={() => void query.refetch()}
+        >
+          {m.manager_change_refresh()}
+        </Button>
+      </div>
       {query.isError && <Alert variant="danger">{m.manager_change_review_error()}</Alert>}
-      {query.data?.length === 0 && <p>{m.manager_change_none()}</p>}
       {query.data?.map((change) => (
         <Review
           key={`${accountId}-${change.id}`}

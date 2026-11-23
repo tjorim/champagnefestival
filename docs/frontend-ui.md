@@ -437,3 +437,14 @@ Kept as they are:
 ## Dependency and upstream source maintenance
 
 Use the pinned CLI and review workflow in [ui-maintenance.md](ui-maintenance.md). Existing generator/version examples above describe the original adoption; current maintenance commands and captured revisions live in that workflow and the frontend inventory.
+
+## Dashboard heading scale
+
+Use `text-2xl font-semibold` for the workspace title, `text-lg font-semibold`
+for dashboard sections and panels, and `text-base font-semibold` for headings
+inside those panels. Keep the HTML heading level in document order, including
+when the same component is reused in a different context.
+
+The floor-plan editor opens fitted to the workspace. Staff can select objects
+and use the inspector in either view. Use **Actual size** to drag tables and
+areas, and **Fit plan** to return to the overview.

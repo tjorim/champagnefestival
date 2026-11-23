@@ -15,9 +15,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AreaIcon } from "@/components/AreaIcon";
 import {
   ArrowLeftRightIcon,
-  BuildingIcon,
-  CalendarIcon,
   Grid3x3Icon,
+  MaximizeIcon,
+  MinimizeIcon,
   InfoIcon,
   RotateCcwClockIcon,
   RotateCcwIcon,
@@ -216,6 +216,7 @@ interface DraggableTableProps {
   exclusive: boolean;
   isSelected: boolean;
   isInteractive: boolean;
+  canDrag: boolean;
   isInSelectedArea: boolean;
   onClick: () => void;
   canvasW: number;
@@ -229,6 +230,7 @@ function DraggableTable({
   exclusive,
   isSelected,
   isInteractive,
+  canDrag,
   isInSelectedArea,
   onClick,
   canvasW,
@@ -236,7 +238,7 @@ function DraggableTable({
 }: DraggableTableProps) {
   const { ref, isDragging } = useDraggable({
     id: table.id,
-    disabled: !isInteractive,
+    disabled: !canDrag || !isInteractive,
   });
 
   const { width: TABLE_W, height: TABLE_L } = getTableSizePx(table, tableTypes);
@@ -331,6 +333,7 @@ interface DraggableAreaProps {
   assignedLabel: string | null;
   isSelected: boolean;
   isInteractive: boolean;
+  canDrag: boolean;
   onClick: () => void;
   canvasW: number;
   canvasH: number;
@@ -341,13 +344,14 @@ function DraggableArea({
   assignedLabel,
   isSelected,
   isInteractive,
+  canDrag,
   onClick,
   canvasW,
   canvasH,
 }: DraggableAreaProps) {
   const { ref, isDragging } = useDraggable({
     id: area.id,
-    disabled: !isInteractive,
+    disabled: !canDrag || !isInteractive,
   });
 
   const { width: AREA_W, height: AREA_H } = getAreaSizePx(area.width_m, area.length_m);
@@ -484,6 +488,7 @@ function TableLocator({
 // ---------------------------------------------------------------------------
 
 interface RoomCanvasProps {
+  fitPlan: boolean;
   room: Room;
   roomTables: FloorTable[];
   roomAreas: FloorArea[];
@@ -500,6 +505,7 @@ interface RoomCanvasProps {
 }
 
 function RoomCanvas({
+  fitPlan,
   room,
   roomTables,
   roomAreas,
@@ -515,6 +521,28 @@ function RoomCanvas({
   onMoveArea,
 }: RoomCanvasProps) {
   const { width: canvasW, height: canvasH } = getCanvasSizePx(room.width_m, room.length_m);
+
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const measure = () => {
+      if (!viewport.clientWidth) return;
+      setFitScale(
+        Math.min(1, viewport.clientWidth / canvasW, (window.innerHeight * 0.55) / canvasH),
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [canvasW, canvasH]);
+  const scale = fitPlan ? fitScale : 1;
 
   const [canvasElement, setCanvasElement] = useState<HTMLDivElement | null>(null);
 
@@ -560,14 +588,13 @@ function RoomCanvas({
   const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
 
   return (
-    <div className="overflow-auto pb-2" role="region" aria-label={room.name} tabIndex={0}>
-      <p className="text-subtle text-sm mb-1">
-        {m.admin_room_size({ width: room.width_m, length: room.length_m })}
-        <span className="ms-2">
-          <Icon icon={InfoIcon} className="me-1" />
-          {m.admin_table_move_hint()}
-        </span>
-      </p>
+    <div
+      ref={viewportRef}
+      className="overflow-auto pb-2"
+      role="region"
+      aria-label={room.name}
+      tabIndex={0}
+    >
       <p className="sr-only">{m.admin_layout_keyboard_hint()}</p>
       <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
@@ -582,6 +609,7 @@ function RoomCanvas({
           style={{
             width: canvasW,
             height: canvasH,
+            zoom: scale,
             borderColor: safeRoomColor(room.color),
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
@@ -627,6 +655,7 @@ function RoomCanvas({
                 )}
                 isSelected={selectedTable === table.id}
                 isInteractive={layer === "seating"}
+                canDrag={scale === 1}
                 isInSelectedArea={isInSelectedArea}
                 onClick={() => {
                   onSelectArea(null);
@@ -649,6 +678,7 @@ function RoomCanvas({
                 assignedLabel={assignedLabel}
                 isSelected={selectedArea === area.id}
                 isInteractive={layer === "areas"}
+                canDrag={scale === 1}
                 onClick={() => {
                   onSelectTable(null);
                   onSelectArea(selectedArea === area.id ? null : area.id);
@@ -660,6 +690,13 @@ function RoomCanvas({
           })}
         </div>
       </DragDropProvider>
+      <p className="text-subtle text-sm mt-2">
+        {m.admin_room_size({ width: room.width_m, length: room.length_m })}
+        <span className="ms-2">
+          <Icon icon={InfoIcon} className="me-1" />
+          {scale === 1 ? m.admin_table_move_hint() : m.admin_layout_zoom_to_move()}
+        </span>
+      </p>
     </div>
   );
 }
@@ -697,6 +734,7 @@ export default function LayoutEditor({
   onSaveRevision,
   onRestoreRevision,
 }: LayoutEditorProps) {
+  const [fitPlan, setFitPlan] = useState(true);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const [showCompareLayouts, setShowCompareLayouts] = useState(false);
@@ -948,10 +986,6 @@ export default function LayoutEditor({
       setAllocationPending(false);
     }
   };
-  const activeLayoutDateLabel = useMemo(
-    () => (activeLayout ? getDayLabel(activeLayout, dayOptions) : ""),
-    [activeLayout, dayOptions],
-  );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.room_id ?? activeRoomId));
   const roomLayouts = layouts
     .filter((l) => l.room_id === activeRoomId)
@@ -1000,106 +1034,154 @@ export default function LayoutEditor({
 
   return (
     <div>
-      <div className="admin-plan-workspace">
-        {/* Tab bar: one tab per room */}
-        <Card tone="secondary" className="min-w-0 mb-4">
-          <CardHeader className="flex items-center justify-between flex-wrap gap-2">
-            {activeLayoutDateLabel && (
-              <span className="text-subtle text-sm hidden site-md:inline">
-                <Icon icon={CalendarIcon} className="me-1" />
-                {activeLayoutDateLabel}
-              </span>
-            )}
+      {activeRoom && (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <AdminSelect
+            aria-label={m.admin_rooms_tab()}
+            size="sm"
+            className="w-48 max-w-full"
+            value={activeRoomId ?? ""}
+            onValueChange={handleSelectRoom}
+          >
+            {rooms.map((room) => {
+              const layoutIds = new Set(
+                layouts.filter((layout) => layout.room_id === room.id).map((layout) => layout.id),
+              );
+              const count = tables.filter((table) => layoutIds.has(table.layout_id)).length;
+              return (
+                <AdminOption key={room.id} value={room.id}>
+                  {`${room.name} · ${m.admin_layout_all_layouts_count({ count })}`}
+                </AdminOption>
+              );
+            })}
+          </AdminSelect>
+          {roomLayouts.length > 0 && (
+            <AdminSelect
+              aria-label={m.admin_layout_day_label()}
+              size="sm"
+              className="w-48 max-w-full"
+              value={activeLayoutId ?? ""}
+              onValueChange={(id) => {
+                setActiveLayoutId(id);
+                setSelectedTable(null);
+                setSelectedArea(null);
+              }}
+            >
+              {roomLayouts.map((layout) => (
+                <AdminOption key={layout.id} value={layout.id}>
+                  {getDayLabel(layout, dayOptions)}
+                </AdminOption>
+              ))}
+            </AdminSelect>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
             <ToggleGroup
               variant="outline"
               size="sm"
-              value={[activeRoomId ?? ""]}
+              aria-label={m.admin_layout_layer_aria()}
+              value={[layer]}
               onValueChange={(values) => {
-                if (values[0]) handleSelectRoom(values[0]);
+                if (values[0] === "seating") {
+                  setLayer("seating");
+                  setSelectedArea(null);
+                } else if (values[0] === "areas") {
+                  setLayer("areas");
+                  setSelectedTable(null);
+                }
               }}
-              aria-label={m.admin_rooms_tab()}
             >
-              {rooms.map((room) => {
-                const roomTableCount = layouts
-                  .filter((l) => l.room_id === room.id)
-                  .reduce((sum, l) => sum + tables.filter((t) => t.layout_id === l.id).length, 0);
-                return (
-                  <ToggleGroupItem key={room.id} value={room.id}>
-                    <span
-                      className="mr-1 inline-block size-2.5 rounded-full"
-
-                      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                      style={{
-                        background: safeRoomColor(room.color),
-                      }}
-                      /* oxlint-enable shadcn/no-inline-styles */
-                      aria-hidden="true"
-                    />
-                    {room.name}
-                    <span className="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">
-                      {m.admin_layout_all_layouts_count({ count: roomTableCount })}
-                    </span>
-                  </ToggleGroupItem>
-                );
-              })}
+              <ToggleGroupItem value="seating">
+                <Icon icon={UsersIcon} />
+                {m.admin_layout_seating()}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="areas">
+                <Icon icon={StoreIcon} />
+                {m.admin_layout_areas()}
+              </ToggleGroupItem>
             </ToggleGroup>
-            <div className="flex gap-2 items-center">
-              <ToggleGroup
-                variant="outline"
-                size="sm"
-                aria-label={m.admin_layout_layer_aria()}
-                value={[layer]}
-                onValueChange={(values) => {
-                  if (values[0] === "seating") {
-                    setLayer("seating");
-                    setSelectedArea(null);
-                  } else if (values[0] === "areas") {
-                    setLayer("areas");
-                    setSelectedTable(null);
-                  }
+            {layer === "seating" ? (
+              <AdminAddButton
+                onClick={() => {
+                  setAddTableError(null);
+                  setShowAddTable(true);
                 }}
+                disabled={!activeLayoutId}
               >
-                <ToggleGroupItem value="seating">
-                  <Icon icon={UsersIcon} />
-                  {m.admin_layout_seating()}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="areas">
-                  <Icon icon={StoreIcon} />
-                  {m.admin_layout_areas()}
-                </ToggleGroupItem>
-              </ToggleGroup>
-              {layer === "seating" ? (
-                <AdminAddButton
-                  onClick={() => {
-                    setAddTableError(null);
-                    setShowAddTable(true);
-                  }}
-                  disabled={!activeLayoutId}
+                {m.admin_add_table()}
+              </AdminAddButton>
+            ) : (
+              <AdminAddButton
+                onClick={() => {
+                  setAddAreaError(null);
+                  setNewArea({
+                    label: "",
+                    icon: "bi-shop",
+                    widthM: 1.5,
+                    lengthM: 1.0,
+                    assignedType: "",
+                    assignedId: 0,
+                  });
+                  setShowAddArea(true);
+                }}
+                disabled={!activeLayoutId}
+              >
+                {m.admin_layout_add_area()}
+              </AdminAddButton>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <AdminAddButton
+              variant="outline"
+              onClick={() => {
+                setAddLayoutError(null);
+                setNewLayout(getInitialNewLayoutState(dayOptions));
+                setShowAddLayout(true);
+              }}
+            >
+              {m.admin_add_layout()}
+            </AdminAddButton>
+            {roomLayouts.length > 1 && (
+              <Button
+                size="icon-sm"
+                variant="outline-info"
+                onClick={() => setShowCompareLayouts(true)}
+                title={m.admin_layout_compare_title()}
+                aria-label={m.admin_layout_compare_title()}
+              >
+                <Icon icon={ArrowLeftRightIcon} />
+              </Button>
+            )}
+            {activeLayout && (
+              <>
+                <Button size="sm" variant="outline" onClick={() => setFitPlan((fit) => !fit)}>
+                  <Icon icon={fitPlan ? MaximizeIcon : MinimizeIcon} />
+                  {fitPlan ? m.admin_layout_actual_size() : m.admin_layout_fit_plan()}
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  onClick={() => setShowRevisions(true)}
+                  title={m.admin_layout_revisions_button()}
+                  aria-label={m.admin_layout_revisions_button()}
                 >
-                  {m.admin_add_table()}
-                </AdminAddButton>
-              ) : (
-                <AdminAddButton
-                  onClick={() => {
-                    setAddAreaError(null);
-                    setNewArea({
-                      label: "",
-                      icon: "bi-shop",
-                      widthM: 1.5,
-                      lengthM: 1.0,
-                      assignedType: "",
-                      assignedId: 0,
-                    });
-                    setShowAddArea(true);
-                  }}
-                  disabled={!activeLayoutId}
+                  <Icon icon={RotateCcwClockIcon} />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="outline-danger"
+                  onClick={() => setConfirmDeleteLayoutId(activeLayout.id)}
+                  title={m.admin_delete_item({ name: getDayLabel(activeLayout, dayOptions) })}
+                  aria-label={m.admin_delete_item({ name: getDayLabel(activeLayout, dayOptions) })}
                 >
-                  {m.admin_layout_add_area()}
-                </AdminAddButton>
-              )}
-            </div>
-          </CardHeader>
-
+                  <Icon icon={TrashIcon} />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="admin-plan-workspace">
+        <Card tone="secondary" className="min-w-0 mb-4">
           <CardContent className="p-2">
             {rooms.length === 0 ? (
               <AdminEmptyState>
@@ -1107,107 +1189,26 @@ export default function LayoutEditor({
                 {m.admin_floor_plan_no_rooms({ section: m.admin_venues_rooms_tab() })}
               </AdminEmptyState>
             ) : activeRoom ? (
-              <div>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 font-semibold">
-                      {/* The saved room colour is a swatch, not the text colour: any chosen colour can fail contrast against the admin background. */}
-                      <span
-                        aria-hidden="true"
-                        className="size-3 shrink-0 rounded-full border border-border" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                        style={{ backgroundColor: safeRoomColor(activeRoom.color, "transparent") }}
-                        /* oxlint-enable shadcn/no-inline-styles */
-                      />
-                      <Icon icon={BuildingIcon} className="me-1" />
-                      {activeRoom.name}
-                    </span>
-                    {/* Day / layout selector */}
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {roomLayouts.map((layout) => (
-                        <div key={layout.id} className="flex items-center gap-0">
-                          <Button
-                            size="sm"
-                            variant={activeLayoutId === layout.id ? "warning" : "outline"}
-                            onClick={() => {
-                              setActiveLayoutId(layout.id);
-                              setSelectedTable(null);
-                            }}
-                            className="rounded-tr-none rounded-br-none"
-                          >
-                            {getDayLabel(layout, dayOptions)}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
-                            onClick={() => setConfirmDeleteLayoutId(layout.id)}
-                            title={m.admin_delete_item({ name: getDayLabel(layout, dayOptions) })}
-                            aria-label={m.admin_delete_item({
-                              name: getDayLabel(layout, dayOptions),
-                            })}
-                            className="rounded-tl-none rounded-bl-none border-l-0"
-                          >
-                            <Icon icon={TrashIcon} />
-                          </Button>
-                        </div>
-                      ))}
-                      {roomLayouts.length === 0 && (
-                        <span className="text-subtle text-sm">{m.admin_no_layouts()}</span>
-                      )}
-                      <AdminAddButton
-                        variant="outline"
-                        onClick={() => {
-                          setAddLayoutError(null);
-                          setNewLayout(getInitialNewLayoutState(dayOptions));
-                          setShowAddLayout(true);
-                        }}
-                      >
-                        {m.admin_add_layout()}
-                      </AdminAddButton>
-                      {roomLayouts.length > 1 && (
-                        <Button
-                          size="sm"
-                          variant="outline-info"
-                          onClick={() => setShowCompareLayouts(true)}
-                          title={m.admin_layout_compare_title()}
-                        >
-                          <Icon icon={ArrowLeftRightIcon} />
-                          {m.admin_layout_compare_title()}
-                        </Button>
-                      )}
-                      {activeLayoutId && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowRevisions(true)}
-                          title={m.admin_layout_revisions_button()}
-                        >
-                          <Icon icon={RotateCcwClockIcon} />
-                          {m.admin_layout_revisions_button()}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {activeLayoutId ? (
-                  <RoomCanvas
-                    room={activeRoom}
-                    roomTables={canvasTables}
-                    roomAreas={canvasAreas}
-                    tableTypes={tableTypes}
-                    registrations={registrations}
-                    organizations={organizations}
-                    layer={layer}
-                    selectedTable={selectedTable}
-                    selectedArea={selectedArea}
-                    onSelectTable={setSelectedTable}
-                    onSelectArea={setSelectedArea}
-                    onMoveTable={onMoveTable}
-                    onMoveArea={onMoveArea}
-                  />
-                ) : (
-                  <AdminEmptyState>{m.admin_no_layouts()}</AdminEmptyState>
-                )}
-              </div>
+              activeLayoutId ? (
+                <RoomCanvas
+                  fitPlan={fitPlan}
+                  room={activeRoom}
+                  roomTables={canvasTables}
+                  roomAreas={canvasAreas}
+                  tableTypes={tableTypes}
+                  registrations={registrations}
+                  organizations={organizations}
+                  layer={layer}
+                  selectedTable={selectedTable}
+                  selectedArea={selectedArea}
+                  onSelectTable={setSelectedTable}
+                  onSelectArea={setSelectedArea}
+                  onMoveTable={onMoveTable}
+                  onMoveArea={onMoveArea}
+                />
+              ) : (
+                <AdminEmptyState>{m.admin_no_layouts()}</AdminEmptyState>
+              )
             ) : null}
           </CardContent>
         </Card>
@@ -1217,7 +1218,7 @@ export default function LayoutEditor({
           className="admin-plan-inspector text-content"
           aria-label={m.admin_layout_inspector()}
         >
-          <h3 className="font-semibold mb-2">{m.admin_layout_inspector()}</h3>
+          <h2 className="text-lg font-semibold mb-2">{m.admin_layout_inspector()}</h2>
           <p className="text-sm text-subtle mb-3">{m.admin_layout_save_behaviour()}</p>
           {activeLayoutId && (
             <TableLocator

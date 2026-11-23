@@ -2,13 +2,14 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Admin dashboard", () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
     await page.goto("/admin");
     await expect(page.locator("#admin-title")).toBeVisible();
   });
 
-  test("admin page loads with title", async ({ page }) => {
-    // Standalone nav bar should show the admin title
-    await expect(page.locator("nav.standalone-navbar").first()).toBeVisible();
+  test("admin login heading and dark header are visible", async ({ page }) => {
+    await expect(page.locator("#admin-title")).toBeVisible();
+    await expect(page.locator("nav.standalone-navbar")).toHaveAttribute("data-theme-mode", "dark");
   });
 
   test("back to site link is available", async ({ page }) => {

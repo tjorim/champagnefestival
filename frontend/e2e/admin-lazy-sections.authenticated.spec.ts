@@ -11,6 +11,10 @@ async function expectRegistrations(page: import("@playwright/test").Page) {
   await expect(page.getByText("alice@moet.com", { exact: true }).first()).toBeVisible();
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("PARAGLIDE_LOCALE", "en"));
+});
+
 test("downloads secondary tools only on selection and keeps navigation usable while loading", async ({
   page,
 }) => {
@@ -81,16 +85,16 @@ test("opens content, editions, venue and floor-plan tools from the sidebar", asy
   test.setTimeout(60_000);
   await page.goto("/admin?section=registrations");
   await expectRegistrations(page);
-  await page.getByRole("button", { name: "Events", exact: true }).click();
+  await page.getByRole("button", { name: "Programme", exact: true }).click();
   await page.getByRole("button", { name: "Organisations", exact: true }).click();
   await expect(page.getByRole("heading", { name: /^Organisations/ })).toBeVisible();
-  await page.getByRole("button", { name: "Festival Editions", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Festival Editions", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Editions", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Editions", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Venue", exact: true }).click();
   await page.getByRole("button", { name: "Venues & Rooms", exact: true }).click();
   await expect(page.getByRole("button", { name: "Add venue", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Floor Plans", exact: true }).click();
-  await expect(page.getByRole("group", { name: "Rooms", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Rooms", exact: true })).toBeVisible();
   await page.getByRole("button", { name: /^Registrations/ }).click();
   await expectRegistrations(page);
 });
