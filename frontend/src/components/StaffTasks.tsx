@@ -43,11 +43,15 @@ export default function StaffTasks({
       aria-label={m.workspace_title()}
       className="mb-6 rounded border border-border p-4 text-foreground"
     >
-      <h2 className="text-xl font-semibold mb-3">{m.workspace_title()}</h2>
+      {expanded ? (
+        <h1 className="mb-3 text-2xl font-semibold">{m.workspace_title()}</h1>
+      ) : (
+        <h2 className="mb-3 text-xl font-semibold">{m.workspace_title()}</h2>
+      )}
       {expanded && editionLabel && <p className="font-medium mb-4">{editionLabel}</p>}
       <div className={expanded ? "grid gap-6 md:grid-cols-2" : "flex flex-wrap gap-3"}>
         <section>
-          {expanded && <h3 className="font-semibold mb-3">{m.workspace_event_day()}</h3>}
+          {expanded && <h2 className="mb-3 text-lg font-semibold">{m.workspace_event_day()}</h2>}
           <div className="flex flex-wrap gap-2">
             {link("registrations", m.workspace_find_booking())}
             <ButtonLink variant="outline" render={<Link to="/check-in" search={{ edition }} />}>
@@ -88,7 +92,7 @@ export default function StaffTasks({
         {expanded && admin && (
           <>
             <section>
-              <h3 className="font-semibold mb-3">{m.workspace_preparation()}</h3>
+              <h2 className="mb-3 text-lg font-semibold">{m.workspace_preparation()}</h2>
               <p className="text-sm text-subtle mb-3">{m.workspace_global()}</p>
               <div className="flex flex-wrap gap-2">
                 {link("editions", m.admin_content_editions_section())}
@@ -98,7 +102,7 @@ export default function StaffTasks({
               </div>
             </section>
             <section>
-              <h3 className="font-semibold mb-3">{m.workspace_follow_up()}</h3>
+              <h2 className="mb-3 text-lg font-semibold">{m.workspace_follow_up()}</h2>
               <p className="text-sm text-subtle mb-3">{m.workspace_follow_up_hint()}</p>
               {pendingBookings?.loading && <p role="status">{m.loading()}</p>}
               {pendingBookings?.error && (

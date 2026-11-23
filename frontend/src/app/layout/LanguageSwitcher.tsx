@@ -11,7 +11,7 @@ import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
 import { localizedPublicUrl } from "@/config/localePath";
 import { m } from "@/paraglide/messages";
 
-const LanguageSwitcher = () => {
+const LanguageSwitcher = ({ admin = false }: { admin?: boolean }) => {
   const preventHydrationIssue = useHydrated();
   const [currentLang, setCurrentLang] = useState(getLocale());
 
@@ -48,7 +48,7 @@ const LanguageSwitcher = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="site-lang-toggle inline-flex items-center gap-2 rounded border px-2 py-1 text-sm"
+        className={`inline-flex items-center gap-2 rounded border px-2 py-1 text-sm ${admin ? "border-border bg-sidebar text-foreground hover:bg-accent" : "site-lang-toggle"}`}
         aria-label={`${currentLanguage.code.toUpperCase()}: ${m.language_select()}`}
         title={m.language_select()}
       >
@@ -56,7 +56,7 @@ const LanguageSwitcher = () => {
         <span className="hidden sm:inline">{currentLanguage.code.toUpperCase()}</span>
         <ChevronDownIcon aria-hidden="true" className="size-3" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent admin={false} align="end" className="min-w-56">
+      <DropdownMenuContent admin={admin} align="end" className="min-w-56">
         {languages.map((lang) => (
           <DropdownMenuItem
             key={lang.code}

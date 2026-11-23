@@ -72,7 +72,7 @@ import { useAppTable, createAppColumnHelper } from "../shared/useAdminTable";
 import { exportToCsv } from "../shared/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "../shared/ColumnVisibilityDropdown";
-import { hideColumnUntilUsed, loadColVis, saveColVis } from "../shared/columnVisibility";
+import { loadColVis, saveColVis } from "../shared/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchRegistration,
@@ -191,6 +191,7 @@ function isStandaloneRegistration(registration: Registration) {
 }
 
 const columnHelper = createAppColumnHelper<Registration>();
+const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityState = { event: false, table: false };
 
 export default function RegistrationList({
   registrations,
@@ -644,11 +645,11 @@ export default function RegistrationList({
             const isStandalone = isStandaloneRegistration(reg);
             return (
               <>
-                <div className="font-semibold flex items-center gap-1">
+                <div className="font-semibold flex flex-wrap items-center gap-1">
                   <Button
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 text-left whitespace-normal"
+                    className="h-auto p-0 text-left whitespace-normal wrap-anywhere"
                     onClick={() => onViewDetail(reg)}
                   >
                     {reg.person.name}
@@ -671,7 +672,7 @@ export default function RegistrationList({
                     })()}
                   </Badge>
                 </div>
-                <div className="text-subtle text-sm">{reg.person.email}</div>
+                <div className="text-subtle text-sm wrap-anywhere">{reg.person.email}</div>
                 {!isStandalone && reg.order_items.length > 0 && (
                   <div className="text-highlight text-sm">
                     <Icon icon={ShoppingCartIcon} className="me-1" />
@@ -816,7 +817,7 @@ export default function RegistrationList({
                 )}
                 {!reg.checked_in && reg.status !== "cancelled" && (
                   <Button
-                    size="sm"
+                    size="icon-sm"
                     variant="outline-success"
                     onClick={() => handleCheckIn(reg.id)}
                     disabled={!isOnline || processingIds.has(reg.id)}
@@ -824,12 +825,11 @@ export default function RegistrationList({
                     aria-label={m.admin_mark_checked_in()}
                   >
                     <Icon icon={LogInIcon} />
-                    <span>{m.admin_mark_checked_in()}</span>
                   </Button>
                 )}
                 {reg.checked_in && !reg.strap_issued && !isStandaloneRegistration(reg) && (
                   <Button
-                    size="sm"
+                    size="icon-sm"
                     variant="outline-info"
                     onClick={() => handleIssueStrap(reg.id)}
                     disabled={!isOnline || processingIds.has(reg.id)}
@@ -837,7 +837,6 @@ export default function RegistrationList({
                     aria-label={m.admin_issue_strap()}
                   >
                     <Icon icon={ContactRoundIcon} />
-                    <span>{m.admin_issue_strap()}</span>
                   </Button>
                 )}
                 <DropdownMenu>
@@ -936,14 +935,7 @@ export default function RegistrationList({
     clearSelection();
   }, [onFilterChange, clearSelection]);
 
-  // Historical bookings can have assignments even when the active floor plan has no tables.
-  // An explicit choice in the Columns menu always wins.
-  const hasTables =
-    tables.length > 0 || pageRegistrations.some((registration) => Boolean(registration.table_id));
-  const effectiveColumnVisibility = useMemo<ColumnVisibilityState>(
-    () => hideColumnUntilUsed(columnVisibility, "table", hasTables),
-    [columnVisibility, hasTables],
-  );
+  const effectiveColumnVisibility = { ...DEFAULT_COLUMN_VISIBILITY, ...columnVisibility };
   const table = useAppTable(
     {
       data: pageRegistrations,
