@@ -1039,7 +1039,7 @@ export default function LayoutEditor({
           <AdminSelect
             aria-label={m.admin_rooms_tab()}
             size="sm"
-            className="w-48 max-w-full"
+            className="w-32 grow max-w-48"
             value={activeRoomId ?? ""}
             onValueChange={handleSelectRoom}
           >
@@ -1059,7 +1059,7 @@ export default function LayoutEditor({
             <AdminSelect
               aria-label={m.admin_layout_day_label()}
               size="sm"
-              className="w-48 max-w-full"
+              className="w-32 grow max-w-48"
               value={activeLayoutId ?? ""}
               onValueChange={(id) => {
                 setActiveLayoutId(id);
