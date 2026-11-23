@@ -93,3 +93,22 @@ async def test_venue_delete_blocked_while_room_in_use(client):
     r = await client.delete(f"/api/venues/{venue_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 409
     assert "rooms" in r.json()["detail"]
+
+
+@pytest.mark.anyio
+async def test_coordinates_can_be_omitted_set_to_zero_or_cleared(client):
+    created = await client.post("/api/venues", json={"name": "Venue"}, headers=ADMIN_HEADERS)
+    assert created.status_code == 201
+    assert (created.json()["lat"], created.json()["lng"]) == (None, None)
+    url = f"/api/venues/{created.json()['id']}"
+
+    invalid = await client.put(url, json={"lat": 91}, headers=ADMIN_HEADERS)
+    assert invalid.status_code == 422
+
+    located = await client.put(url, json={"lat": 0, "lng": 4}, headers=ADMIN_HEADERS)
+    assert located.status_code == 200
+    assert (located.json()["lat"], located.json()["lng"]) == (0, 4)
+
+    cleared = await client.put(url, json={"lng": None}, headers=ADMIN_HEADERS)
+    assert cleared.status_code == 200
+    assert (cleared.json()["lat"], cleared.json()["lng"]) == (0, None)

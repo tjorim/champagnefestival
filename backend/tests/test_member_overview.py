@@ -1,6 +1,6 @@
 """Member indicators and the current-member email invariant (#1403)."""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -140,8 +140,8 @@ async def test_last_attended_sort_filter_highlight(client, db_session):
                 edition_id="caps",
                 title_nl="Exchange",
                 date=day,
-                start_time="10:00",
-                end_time="12:00",
+                start_time=time.fromisoformat("10:00"),
+                end_time=time.fromisoformat("12:00"),
                 category="general",
             )
         )
@@ -151,8 +151,8 @@ async def test_last_attended_sort_filter_highlight(client, db_session):
             edition_id="fest",
             title_nl="Festival",
             date=today,
-            start_time="10:00",
-            end_time="12:00",
+            start_time=time.fromisoformat("10:00"),
+            end_time=time.fromisoformat("12:00"),
             category="general",
         )
     )

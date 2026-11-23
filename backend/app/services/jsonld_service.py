@@ -135,11 +135,11 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
                 "postalCode": venue["postal_code"],
                 "addressCountry": venue["country"],
             },
-            "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": venue["lat"],
-                "longitude": venue["lng"],
-            },
+            **(
+                {"geo": {"@type": "GeoCoordinates", "latitude": venue["lat"], "longitude": venue["lng"]}}
+                if venue.get("lat") is not None and venue.get("lng") is not None
+                else {}
+            ),
         },
         "image": [edition_share_image(edition, base_url=base_url) or f"{base_url}/images/og-image.jpg"],
         "description": WELCOME_SUBTITLE[locale],

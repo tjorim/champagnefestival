@@ -225,7 +225,7 @@ async def test_server_rendered_home_and_json_ld_use_the_locale_text(client, monk
 
 
 async def test_the_database_enforces_dutch_text_and_the_category(db_session):
-    from datetime import date
+    from datetime import date, time
 
     from app.models import Edition, Venue
 
@@ -238,7 +238,7 @@ async def test_the_database_enforces_dutch_text_and_the_category(db_session):
         base = {
             "edition_id": "edition-constraints",
             "date": date(2099, 3, 21),
-            "start_time": "10:00",
+            "start_time": time(10),
             "category": "tasting",
             "title_nl": "Titel",
         }

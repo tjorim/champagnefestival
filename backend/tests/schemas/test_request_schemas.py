@@ -105,3 +105,15 @@ def test_poll_option_creation_requires_a_dutch_label() -> None:
         schemas.PollOptionCreate.model_validate({"question_id": "question", "label_nl": "   "})
     with pytest.raises(ValidationError, match="Dutch label"):
         schemas.PollOptionCreate.model_validate({"question_id": "question", "label_en": "Dinner"})
+
+
+def test_edition_month_is_normalized_and_validated():
+    from app.schemas import EditionCreate, EditionUpdate
+
+    edition = EditionCreate.model_validate({"id": "edition", "year": 2026, "venue_id": "venue", "month": " Octobre "})
+    assert edition.month == "october"
+    assert EditionUpdate.model_validate({"month": "maart"}).month == "march"
+    assert EditionUpdate().model_fields_set == set()
+    for invalid in ("spring", "", None):
+        with pytest.raises(ValidationError):
+            EditionUpdate.model_validate({"month": invalid})

@@ -1154,3 +1154,46 @@ fix can introduce new 429s. If a staged rollout is needed, keep
 log-only counting; use access logs for that assessment.
 
 Rate-limit buckets, response headers, exemptions and rollout: [REST rate limiting](docs/RATE_LIMITING.md).
+
+## Schema values and defaults (#1653)
+
+Migration `012` records these decisions for the operational schema.
+
+- Event clocks use SQL `TIME` with minute precision and no time zone. REST and
+  MCP use `HH:MM`, with a nullable end time. The dashboard uses native time
+  inputs. Historical blank end times become `NULL`. Correct any invalid
+  times or sub-minute values before migration.
+- Edition months use a validated set of calendar month keys. The dashboard
+  offers localised month choices. The migration normalises case, surrounding
+  spaces, and full Dutch and French month names to English keys. Correct any
+  other legacy labels before migrating. The database check rejects them rather
+  than guessing from an edition's event dates.
+- Venue coordinates are independently nullable and bounded. The migration
+  interprets the historical pair `(0, 0)` as missing because those columns used
+  zero defaults without recording provenance. A single zero is preserved.
+  New writes can explicitly store zero, including `(0, 0)`. A map pin or
+  structured-data coordinates need both values.
+- Optional public contact settings store `NULL` when blank. Configure them in
+  the admin settings. Existing configured values survive the migration, and
+  the public API represents cleared settings as empty strings. Legacy blank
+  strings are retained in people, organisations, venue addresses, notes,
+  scratchpads, and layout labels. Their search, erasure, import, or editor
+  contracts already use blank strings to clear or identify an absent value.
+  Translated optional content continues to use `NULL`.
+- People email and its derived search column use 320 characters. The stamp
+  reward actor uses 255 characters. The people search trigger is restored
+  in the same transaction as the type change. Downgrading requires values to
+  fit the previous lengths.
+- Unconditionally required Dutch content uses `NOT NULL` alongside the
+  non-blank checks. Optional Dutch descriptions and links remain nullable.
+  Policy versions keep conditional Dutch content so an empty draft can be
+  saved before publication.
+- Keep `rooms.dimensions_placeholder` because the editor still needs to warn
+  about unverified dimensions until someone measures the room. Keep existing
+  area icon identifiers because they are also part of persisted, immutable
+  floor-plan revisions and the public plan contract. The frontend maps them to
+  Lucide at render time.
+- Signage channels, templates and slides and stamp-card types now have creation
+  and modification timestamps. Existing rows use migration time as the
+  earliest known timestamp. Stamps are immutable check-in facts and already
+  store their creation time, so they have no modification timestamp.

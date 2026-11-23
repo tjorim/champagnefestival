@@ -42,7 +42,7 @@ export function useAdminDashboardData({
 
   const layoutDayOptions = useMemo(() => {
     return [...activeEdition.events]
-      .sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`))
+      .sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time))
       .map((event) => ({
         eventId: event.id,
         date: event.date,

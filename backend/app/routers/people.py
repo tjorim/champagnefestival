@@ -165,7 +165,7 @@ async def people_counts(
 
 @router.get("/by-email", response_model=PersonListEnvelope)
 async def people_by_email(
-    email: str = Query(min_length=1, max_length=200),
+    email: str = Query(min_length=1, max_length=320),
     exclude_person_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     list_query: ListQuery = Depends(),

@@ -14,8 +14,8 @@ export interface EditionVenue {
   postalCode: string;
   country: string;
   coordinates: {
-    lat: number;
-    lng: number;
+    lat: number | null;
+    lng: number | null;
   };
 }
 
@@ -72,7 +72,7 @@ export const EMPTY_EDITION: FallbackEdition = {
     city: "",
     postalCode: "",
     country: "",
-    coordinates: { lat: 0, lng: 0 },
+    coordinates: { lat: null, lng: null },
   },
   schedule: [],
   producers: [],

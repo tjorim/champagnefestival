@@ -15,6 +15,7 @@ async def test_create_get_list_venue(db_session):
     created = await mcp_venues.create_venue(factory, "admin-1", name="Test Venue", city="Bredene")
     assert created["name"] == "Test Venue"
     assert created["city"] == "Bredene"
+    assert (created["lat"], created["lng"]) == (None, None)
     venue_id = created["id"]
 
     fetched = await mcp_venues.get_venue(factory, venue_id)
@@ -38,10 +39,11 @@ async def test_get_venue_not_found(db_session):
 
 async def test_update_venue_partial(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_venues.create_venue(factory, "admin-1", name="Test Venue")
+    created = await mcp_venues.create_venue(factory, "admin-1", name="Test Venue", lat=0, lng=4)
 
-    updated = await mcp_venues.update_venue(factory, "admin-1", created["id"], city="Oostende")
+    updated = await mcp_venues.update_venue(factory, "admin-1", created["id"], city="Oostende", clear_lng=True)
     assert updated["city"] == "Oostende"
+    assert (updated["lat"], updated["lng"]) == (0, None)
     assert updated["name"] == "Test Venue"  # untouched fields survive a partial update
 
 

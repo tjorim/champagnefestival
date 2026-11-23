@@ -23,8 +23,8 @@ async def create_venue(
     city: str = "",
     postal_code: str = "",
     country: str = "",
-    lat: float = 0.0,
-    lng: float = 0.0,
+    lat: float | None = None,
+    lng: float | None = None,
     active: bool = True,
 ) -> dict:
     body = validate_with_schema(
@@ -71,8 +71,10 @@ async def update_venue(
     lat: float | None = None,
     lng: float | None = None,
     active: bool | None = None,
+    clear_lat: bool = False,
+    clear_lng: bool = False,
 ) -> dict:
-    provided = {
+    provided: dict[str, object] = {
         k: v
         for k, v in {
             "name": name,
@@ -86,6 +88,10 @@ async def update_venue(
         }.items()
         if v is not None
     }
+    if clear_lat:
+        provided["lat"] = None
+    if clear_lng:
+        provided["lng"] = None
     body = validate_with_schema(VenueUpdate, **provided)
     async with session_factory() as db:
         try:
