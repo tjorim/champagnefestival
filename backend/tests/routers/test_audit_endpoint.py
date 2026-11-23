@@ -107,3 +107,23 @@ async def test_audit_actions_lists_distinct_values(client):
     r = await client.get("/api/audit/actions", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert r.json().count("venue_created") == 1
+
+
+@pytest.mark.anyio
+async def test_audit_resolves_an_edition_display_name(client):
+    venue = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    edition = await client.post(
+        "/api/editions",
+        json={
+            "id": "audit-march-2027",
+            "year": 2027,
+            "month": "march",
+            "venue_id": venue.json()["id"],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert edition.status_code == 201, edition.text
+    r = await client.get("/api/audit", params={"resource_type": "edition"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["resource_name"] == "March 2027"
+    assert r.json()[0]["resource_exists"] is True

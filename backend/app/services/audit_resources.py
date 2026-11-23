@@ -42,7 +42,10 @@ NAMED_RESOURCES = {
     "composed_message": (ComposedMessage.id, ComposedMessage.title_nl),
     "edition": (
         Edition.id,
-        func.upper(func.substr(Edition.month, 1, 1)) + func.substr(Edition.month, 2) + " " + cast(Edition.year, String),
+        cast(func.upper(func.substr(Edition.month, 1, 1)), String)
+        + func.substr(Edition.month, 2)
+        + " "
+        + cast(Edition.year, String),
     ),
     "edition_poll_option": (EditionPollOption.id, EditionPollOption.label_nl),
     "edition_poll_question": (EditionPollQuestion.id, EditionPollQuestion.title_nl),
