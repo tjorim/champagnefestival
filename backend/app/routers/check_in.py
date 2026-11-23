@@ -1,25 +1,13 @@
 """QR-code check-in endpoints (public, token-gated)."""
 
-import logging
-import secrets
-from datetime import UTC, datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Path, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.db.session import get_db
-from app.models import Event, Person, Registration, Table
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
-from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
-from app.services.live import mapping as live_mapping
-from app.services.live import notify_live_event
-from app.services.registrations_service import ensure_registration_can_check_in
-from app.services.serializers import registration_to_checkin_out
-
-logger = logging.getLogger(__name__)
+from app.services.registrations_service import check_in_guest, lookup_guest_check_in
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
@@ -60,21 +48,7 @@ async def lookup_check_in(
             "rate_limited",
             "Too many requests. Please try again later.",
         )
-    r = await _get_by_token_or_401(db, reservation_id, body.token)
-    ensure_registration_can_check_in(r)
-    person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
-    event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
-    table_name = (
-        (await db.execute(select(Table.name).where(Table.id == r.table_id))).scalar_one_or_none()
-        if r.table_id
-        else None
-    )
-    return registration_to_checkin_out(r, person, event, table_name=table_name)
-
-
-# ---------------------------------------------------------------------------
-# POST /api/check-in/{id}  — mark checked-in and issue strap
-# ---------------------------------------------------------------------------
+    return await lookup_guest_check_in(db, reservation_id, body.token)
 
 
 @router.post("/{reservation_id}", response_model=CheckInOut)
@@ -101,106 +75,11 @@ async def post_check_in(
             "rate_limited",
             "Too many requests. Please try again later.",
         )
-    r = await _get_by_token_or_401(db, reservation_id, body.token, for_update=True)
-    ensure_registration_can_check_in(r)
-    person = (await db.execute(select(Person).where(Person.id == r.person_id))).scalar_one()
-    event = (await db.execute(select(Event).where(Event.id == r.event_id))).scalar_one()
-    table_name = (
-        (await db.execute(select(Table.name).where(Table.id == r.table_id))).scalar_one_or_none()
-        if r.table_id
-        else None
+    return await check_in_guest(
+        db,
+        reservation_id,
+        token=body.token,
+        issue_strap=body.issue_strap,
+        actor=client_ip,
+        request_id=getattr(request.state, "request_id", None),
     )
-
-    already = r.checked_in
-    changed = False
-    strap_newly_issued = False
-    actor = get_client_ip(request)
-    request_id = getattr(request.state, "request_id", None)
-
-    if not already:
-        r.checked_in = True
-        r.checked_in_at = datetime.now(UTC)
-        changed = True
-
-    if body.issue_strap and not r.strap_issued:
-        r.strap_issued = True
-        strap_newly_issued = True
-        changed = True
-
-    from app.services.stamp_cards_service import sync_check_in
-
-    stamp_progress = await sync_check_in(db, r, True)
-
-    if changed:
-        if not already:
-            await write_audit_entry(
-                db,
-                actor=actor,
-                action="check_in",
-                resource_type="registration",
-                resource_id=r.id,
-                request_id=request_id,
-                details={"event_id": r.event_id},
-                auth_source="token",
-            )
-        if strap_newly_issued:
-            await write_audit_entry(
-                db,
-                actor=actor,
-                action="strap_issued",
-                resource_type="registration",
-                resource_id=r.id,
-                request_id=request_id,
-                details={"event_id": r.event_id},
-                auth_source="token",
-            )
-        await notify_live_event(
-            db,
-            live_mapping.check_in_changed(
-                registration_id=r.id,
-                event_id=r.event_id,
-                edition_id=event.edition_id,
-            ),
-        )
-    await db.commit()
-    if changed:
-        await db.refresh(r)
-    return CheckInOut(
-        registration=registration_to_checkin_out(r, person, event, table_name=table_name),
-        already_checked_in=already,
-        stamp_progress=stamp_progress,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Helper
-# ---------------------------------------------------------------------------
-
-
-async def _get_by_token_or_401(
-    db: AsyncSession,
-    reservation_id: str,
-    token: str,
-    *,
-    for_update: bool = False,
-) -> Registration:
-    async def fetch(*, lock: bool) -> Registration | None:
-        stmt = select(Registration).where(Registration.id == reservation_id)
-        if lock:
-            stmt = stmt.with_for_update().execution_options(populate_existing=True)
-        return (await db.execute(stmt)).scalar_one_or_none()
-
-    r = await fetch(lock=False)
-    if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid registration ID or token.",
-        )
-    if for_update:
-        r = await fetch(lock=True)
-        if r is None or not r.check_in_token or not secrets.compare_digest(r.check_in_token, token):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid registration ID or token.",
-            )
-    return r

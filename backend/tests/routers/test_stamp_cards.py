@@ -6,9 +6,11 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import Registration, Stamp, StampCard, StampCardReward
-from app.services import stamp_cards_service as service
+from app.models import AuditEntry, Registration, Stamp, StampCard, StampCardReward
+from app.services.live import live_bus
+from app.services.registrations_service import check_in_registration
 from tests.helpers import _create_event, _post_registration, requires_postgres
+from tests.services.test_live_broadcasts import _get_event
 
 TYPE = {"name_nl": "Ruilbeurs", "box_count": 2, "reward_label_nl": "Een fles", "reward_label_fr": "Une bouteille"}
 
@@ -112,8 +114,15 @@ async def test_concurrent_check_ins(client, engine, db_session):
                 select(Registration).where(Registration.id == registration_id).with_for_update()
             )
             assert registration is not None
-            await service.sync_check_in(db, registration, True)
-            registration.checked_in = True
+            await check_in_registration(
+                db,
+                registration,
+                edition_id=event["edition_id"],
+                checked_in=True,
+                strap_issued=None,
+                actor="admin",
+                request_id=None,
+            )
             await db.commit()
 
     await asyncio.gather(attend(first["id"]), attend(second["id"]), attend(first["id"]))
@@ -282,3 +291,65 @@ async def test_manual_volunteer_missing_type_rolls_back(client):
     assert response.status_code == 409
     assert response.json()["code"] == "stamp_card_type_not_configured"
     assert not (await client.get(f"/api/registrations/{registration['id']}")).json()["checked_in"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("source", ["qr", "volunteer", "admin"])
+async def test_check_in_entry_points_share_transactional_side_effects(client, db_session, source, monkeypatch):
+    import app.services.registrations_service as registrations_service
+
+    check_in_notifications: list[str] = []
+    notify = registrations_service.notify_live_event
+
+    async def counting_notify(db, event):
+        if event.topic == "check_in":
+            check_in_notifications.append(event.scope.registration_id)
+        return await notify(db, event)
+
+    monkeypatch.setattr(registrations_service, "notify_live_event", counting_notify)
+    _, event, booking = await setup_card(client, boxes=1)
+    registration_id = booking["id"]
+    admin_url = f"/api/registrations/{registration_id}"
+    detail = (await client.get(admin_url)).json()
+
+    async def attend():
+        if source == "qr":
+            return await client.post(
+                f"/api/check-in/{registration_id}", json={"token": detail["check_in_token"], "issue_strap": True}
+            )
+        if source == "volunteer":
+            return await client.post(
+                f"/api/volunteer/registrations/{registration_id}/check-in", json={"issue_strap": True}
+            )
+        return await client.put(admin_url, json={"checked_in": True, "strap_issued": True})
+
+    async with live_bus.subscribe() as queue:
+        first = await attend()
+        assert first.status_code == 200, first.text
+        notice = await _get_event(queue, matches=lambda e: e.topic == "check_in")
+        assert notice.scope.registration_id == registration_id
+        assert notice.scope.event_id == event["id"]
+        assert notice.scope.edition_id == event["edition_id"]
+        assert check_in_notifications == [registration_id]
+        assert first.json()["stamp_progress"]["reward_earned"]
+        first_detail = first.json().get("registration", first.json())
+        assert first_detail["checked_in"] and first_detail["strap_issued"]
+        assert first_detail["checked_in_at"]
+
+        repeated = await attend()
+        assert repeated.status_code == 200, repeated.text
+        assert repeated.json()["stamp_progress"] == first.json()["stamp_progress"]
+        repeat_detail = repeated.json().get("registration", repeated.json())
+        assert repeat_detail["checked_in_at"] == first_detail["checked_in_at"]
+        assert check_in_notifications == [registration_id]
+
+    entries = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.resource_id == registration_id, AuditEntry.action.in_(("check_in", "strap_issued"))
+            )
+        )
+    ).all()
+    assert sorted(entry.action for entry in entries) == ["check_in", "strap_issued"]
+    assert all(entry.auth_source == ("token" if source == "qr" else "none") for entry in entries)
+    assert await db_session.scalar(select(func.count()).select_from(Stamp)) == 1
