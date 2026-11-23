@@ -22,7 +22,8 @@ export type RegistrationStatus = RegistrationListOut["status"];
 export type PaymentStatus = RegistrationListOut["payment_status"];
 
 /** Admin list/detail wire shapes; the token is present only in the detail response. */
-export type Registration = RegistrationListOut &
+export type Registration = Omit<RegistrationListOut, "table_names"> &
+  Partial<Pick<RegistrationListOut, "table_names">> &
   Partial<Pick<RegistrationOutWithToken, "check_in_token">>;
 
 /**

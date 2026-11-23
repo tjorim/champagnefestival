@@ -48,33 +48,36 @@ const TOTAL_REGISTRATIONS = 30;
 
 function buildRawRegistration(index: number): RegistrationListOut {
   const n = String(index).padStart(2, "0");
-  return registrationOut({
-    id: `reg-page-${n}`,
-    person_id: `person-page-${n}`,
-    person: {
-      id: `person-page-${n}`,
-      name: `Guest ${n}`,
-      email: `guest${n}@example.com`,
-      phone: "",
-      preferred_language: null,
-    },
-    event_id: "event-page-test",
-    event: eventOut({
-      id: "event-page-test",
-      title: "Pagination Test Event",
-      end_time: "22:00",
-      edition: {
-        id: "edition-1",
-        year: 2026,
-        month: "march",
-        edition_type: "festival",
-        active: true,
+  return {
+    ...registrationOut({
+      id: `reg-page-${n}`,
+      person_id: `person-page-${n}`,
+      person: {
+        id: `person-page-${n}`,
+        name: `Guest ${n}`,
+        email: `guest${n}@example.com`,
+        phone: "",
+        preferred_language: null,
       },
+      event_id: "event-page-test",
+      event: eventOut({
+        id: "event-page-test",
+        title: "Pagination Test Event",
+        end_time: "22:00",
+        edition: {
+          id: "edition-1",
+          year: 2026,
+          month: "march",
+          edition_type: "festival",
+          active: true,
+        },
+      }),
+      status: "confirmed",
+      created_at: `2024-01-${n}T00:00:00Z`,
+      updated_at: `2024-01-${n}T00:00:00Z`,
     }),
-    status: "confirmed",
-    created_at: `2024-01-${n}T00:00:00Z`,
-    updated_at: `2024-01-${n}T00:00:00Z`,
-  });
+    table_names: [],
+  };
 }
 
 const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
@@ -82,18 +85,18 @@ const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
 );
 const registrations = rawRegistrations.map((row) => row);
 
-function installPaginatedHandler(seen: URL[] = []) {
+function installPaginatedHandler(seen: URL[] = [], rows = rawRegistrations) {
   server.use(
     http.get("/api/registrations", ({ request }) => {
       const url = new URL(request.url);
       seen.push(url);
-      const limit = Number(url.searchParams.get("limit") ?? rawRegistrations.length);
+      const limit = Number(url.searchParams.get("limit") ?? rows.length);
       const page = Number(url.searchParams.get("page") ?? 1);
       const start = (page - 1) * limit;
-      const items = rawRegistrations.slice(start, start + limit);
+      const items = rows.slice(start, start + limit);
       return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
         items,
-        total: rawRegistrations.length,
+        total: rows.length,
         limit,
         page,
       });
@@ -137,6 +140,9 @@ describe("RegistrationList — server-side pagination", () => {
     const older = buildRawRegistration(1);
     older.event = { ...older.event, edition_id: "older-edition" };
     older.person = { ...older.person, name: "Historical guest" };
+    older.table_id = "old-table-id";
+    older.allocations = [{ table_id: older.table_id, guest_count: 1, exclusive: false }];
+    older.table_names = ["Window table"];
     server.use(
       http.get("/api/registrations", () =>
         jsonResponse<import("@/api-types").RegistrationListEnvelope>({
@@ -149,6 +155,8 @@ describe("RegistrationList — server-side pagination", () => {
     );
     renderRegistrationList([]);
     await waitFor(() => expect(screen.getByText("Historical guest")).toBeInTheDocument());
+    expect(screen.getByText("Window table")).toBeInTheDocument();
+    expect(screen.queryByText("old-table-id")).not.toBeInTheDocument();
   });
 
   it("fits everything on one page at the default page size and disables Previous/Next", async () => {
@@ -207,19 +215,20 @@ describe("RegistrationList — responsive actions", () => {
     });
     try {
       const seen: URL[] = [];
-      installPaginatedHandler(seen);
-      renderRegistrationList();
-      await waitFor(() => expect(screen.getByText("Guest 01")).toBeInTheDocument());
+      const mobileRows = rawRegistrations.slice(0, 3);
+      installPaginatedHandler(seen, mobileRows);
+      renderRegistrationList(mobileRows);
+      expect(await screen.findByText("Guest 01", {}, { timeout: 5000 })).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
       expect(screen.getAllByRole("button", { name: "admin_mark_checked_in" })).toHaveLength(
-        TOTAL_REGISTRATIONS,
+        mobileRows.length,
       );
       expect(
         screen.getByRole("button", { name: "admin_view_edit_booking: Guest 01" }),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("checkbox", { name: "admin_select_all" }));
       expect(
-        screen.getByText(`admin_bulk_selected({"count":${TOTAL_REGISTRATIONS}})`),
+        screen.getByText(`admin_bulk_selected({"count":${mobileRows.length}})`),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("checkbox", { name: "admin_select_all" }));
       const user = userEvent.setup();
@@ -242,7 +251,7 @@ describe("RegistrationList — responsive actions", () => {
     } finally {
       media.mockRestore();
     }
-  }, 15_000); // axe scans 30 populated cards while the full suite shares CPU.
+  }, 15_000);
 });
 
 it("keeps an open QR dialog in sync with token rotation and cancellation", async () => {

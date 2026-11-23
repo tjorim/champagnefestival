@@ -16,6 +16,8 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import "./admin.css";
 import RegistrationList from "../registrations/RegistrationList";
+import { fetchRegistration } from "@/lib/api/adminFetch";
+import { readAuditRegistrationTarget } from "../shared/auditRecordLink";
 import {
   summarizeGuestCheckIns,
   useVolunteerCheckInStats,
@@ -165,7 +167,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     };
     const label = labels[effectiveActiveKey];
     if (label) document.title = `${label} — ${m.admin_title()}`;
-    document.getElementById("admin-content")?.focus({ preventScroll: true });
+    if (!window.location.hash.startsWith("#audit-")) {
+      document.getElementById("admin-content")?.focus({ preventScroll: true });
+    }
   }, [effectiveActiveKey, visible, isAuthenticated]);
 
   const toggleGroup = useCallback((group: string) => {
@@ -184,6 +188,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     }),
     [auth],
   );
+
+  useEffect(() => {
+    if (
+      !visible ||
+      !isAuthenticated ||
+      !canManageAdminSections ||
+      effectiveActiveKey !== "registrations"
+    )
+      return;
+    const id = readAuditRegistrationTarget();
+    if (!id) return;
+    let current = true;
+    void fetchRegistration(id, authHeaders).then(
+      (registration) => {
+        if (current) setDetailRegistration(registration);
+      },
+      (error: unknown) => {
+        if (current) setRegistrationError(apiErrorMessage(error, m.admin_error_load_data()));
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [visible, isAuthenticated, canManageAdminSections, effectiveActiveKey, authHeaders]);
 
   const {
     registrationsQuery,

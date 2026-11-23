@@ -638,3 +638,13 @@ export async function downloadPaymentTransactionsCsv(
     "payment-transactions.csv",
   );
 }
+
+export async function fetchAuditActions(
+  authHeaders: () => Record<string, string>,
+): Promise<string[]> {
+  return fetchArrayOrThrow(
+    "/api/audit/actions",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+}

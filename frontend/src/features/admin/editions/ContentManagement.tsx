@@ -1,3 +1,8 @@
+import {
+  auditRecordId,
+  focusAuditRecord,
+  isAuditRecordTarget,
+} from "@/features/admin/shared/auditRecordLink";
 import type { OrganizationOut } from "@/api-types";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import OrganizationChangeReview from "./OrganizationChangeReview";
@@ -132,7 +137,7 @@ export function ContentSection({
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [modalItem, setModalItem] = useState<ItemDraft | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState<boolean | undefined>();
   const [typeFilter, setTypeFilter] = useState<"all" | "producer" | "sponsor" | "vendor">("all");
   const [q, setQ] = useState("");
   const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
@@ -188,6 +193,9 @@ export function ContentSection({
   });
 
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+  const showArchived =
+    archivedOpen ??
+    items.some((item) => !item.active && isAuditRecordTarget("organization", item.id));
 
   const { activeItems, archivedItems, totalActive, totalArchived } = useMemo(() => {
     const s = q.toLowerCase();
@@ -388,6 +396,9 @@ export function ContentSection({
     return (
       <PresentationListItem
         key={item.id}
+        id={auditRecordId("organization", item.id)}
+        tabIndex={-1}
+        ref={focusAuditRecord}
         className={cn("flex justify-between items-center gap-2", isArchived && "opacity-50")}
       >
         <span className="flex items-center gap-2 grow truncate">
@@ -400,7 +411,8 @@ export function ContentSection({
               ) : (
                 <img
                   src={item.image}
-                  alt={item.name}
+                  alt=""
+                  loading="lazy"
                   className="w-8 h-8 object-contain"
                   onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
                 />
@@ -435,7 +447,6 @@ export function ContentSection({
           >
             {typeLabel(item.type)}
           </Badge>
-          <small className="text-subtle truncate hidden site-md:inline">{item.image}</small>
           {item.contact_person && (
             <small className="text-subtle truncate hidden site-lg:inline">
               <Icon icon={UserIcon} className="me-1" />
@@ -584,12 +595,12 @@ export function ContentSection({
             variant="link"
             size="sm"
             className="text-subtle px-0"
-            onClick={() => setArchivedOpen((value) => !value)}
+            onClick={() => setArchivedOpen(!showArchived)}
           >
-            <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} />
+            <Icon icon={showArchived ? ChevronDownIcon : ChevronRightIcon} />
             {m.admin_content_archived_section()}
           </Button>
-          {archivedOpen && (
+          {showArchived && (
             <PresentationList flush>
               {archivedItems.map((item) => renderItemRow(item, true))}
             </PresentationList>

@@ -351,7 +351,11 @@ def registration_to_out_with_token(r: Registration, person: Person, event: Event
 def registration_to_list_out(r: Registration, person: Person, event: Event) -> RegistrationListOut:
     """Admin list includes notes needed for manual table allocation."""
     return _registration_response(
-        RegistrationListOut.model_validate(registration_to_out(r, person, event), from_attributes=True), r.order_items
+        RegistrationListOut(
+            **registration_to_out(r, person, event).model_dump(),
+            table_names=[allocation.table.name for allocation in r.allocations],
+        ),
+        r.order_items,
     )
 
 

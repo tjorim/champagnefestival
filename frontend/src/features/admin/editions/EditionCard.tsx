@@ -1,5 +1,9 @@
-import { getLocale } from "@/paraglide/runtime";
 import { formatDate, formatDateRange, formatTime } from "@/lib/format/dateUtils";
+import {
+  auditRecordId,
+  focusAuditRecord,
+  isAuditRecordTarget,
+} from "@/features/admin/shared/auditRecordLink";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -23,6 +27,7 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import { Spinner } from "@/components/ui/spinner";
+import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
@@ -72,7 +77,9 @@ export default function EditionCard({
   onEventMutation,
 }: EditionCardProps) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() =>
+    edition.events?.some((event) => isAuditRecordTarget("event", event.id)),
+  );
   const [saveError, setSaveError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editionModalOpen, setEditionModalOpen] = useState(false);
@@ -168,7 +175,13 @@ export default function EditionCard({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card tone="secondary" className="mb-2">
+      <Card
+        tone="secondary"
+        className="mb-2"
+        id={auditRecordId("edition", edition.id)}
+        tabIndex={-1}
+        ref={focusAuditRecord}
+      >
         <CardHeader className="flex justify-between items-center gap-2 flex-wrap py-2">
           <CollapsibleTrigger
             render={
@@ -258,6 +271,26 @@ export default function EditionCard({
             );
           })()}
 
+          {(
+            [
+              [m.admin_edition_lineup_producers(), edition.producers ?? []],
+              [m.admin_edition_lineup_sponsors(), edition.sponsors ?? []],
+              [m.admin_edition_lineup_vendors(), edition.vendors ?? []],
+              [
+                m.admin_edition_co_organizer_label(),
+                edition.co_organizer ? [edition.co_organizer] : [],
+              ],
+            ] as const
+          ).map(([label, items]) =>
+            items.length > 0 ? (
+              <p key={label} className="mb-1 text-sm">
+                <span className="font-medium">{label}</span>
+                {" · "}
+                {new Intl.ListFormat(getLocale()).format(items.map((item) => item.name))}
+              </p>
+            ) : null,
+          )}
+
           <div className="flex justify-between items-center mb-1">
             <h6 className="text-highlight mb-0 text-sm">{m.admin_content_edition_schedule()}</h6>
             <AdminAddButton variant="outline" onClick={openAddEvent}>
@@ -277,6 +310,9 @@ export default function EditionCard({
               {sortedEvents.map((event) => (
                 <PresentationListItem
                   key={event.id}
+                  id={auditRecordId("event", event.id)}
+                  tabIndex={-1}
+                  ref={focusAuditRecord}
                   className="flex justify-between items-center gap-2 py-1 px-0"
                 >
                   <span className="flex items-center gap-2 flex-wrap">
@@ -289,7 +325,7 @@ export default function EditionCard({
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
-                      {categoryLabel(categories, event.category) ?? event.category}
+                      {categoryLabel(categories, event.category) ?? m.admin_edition_uncategorised()}
                     </Badge>
                     {event.registration_required && (
                       <Badge variant="warning" className="text-micro">

@@ -1,3 +1,4 @@
+import { auditRecordId, focusAuditRecord } from "@/features/admin/shared/auditRecordLink";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 /**
  * CategoryManagement — CRUD for the categories events or products are filed under.
@@ -252,7 +253,12 @@ export default function CategoryManagement({
               </TableHeader>
               <TableBody>
                 {categories.map((category) => (
-                  <TableRow key={category.key}>
+                  <TableRow
+                    key={category.key}
+                    id={auditRecordId(`${kind}_category`, category.key)}
+                    tabIndex={-1}
+                    ref={focusAuditRecord}
+                  >
                     <TableCell className="font-mono text-sm">{category.key}</TableCell>
                     {LANGUAGES.map(({ language, field }) => (
                       <TableCell key={language}>

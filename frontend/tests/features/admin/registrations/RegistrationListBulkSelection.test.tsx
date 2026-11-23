@@ -54,33 +54,36 @@ const TOTAL_REGISTRATIONS = 60;
 
 function buildRawRegistration(index: number): RegistrationListOut {
   const n = String(index).padStart(2, "0");
-  return registrationOut({
-    id: `reg-bulk-${n}`,
-    person_id: `person-bulk-${n}`,
-    person: {
-      id: `person-bulk-${n}`,
-      name: `Bulk Guest ${n}`,
-      email: `bulk${n}@example.com`,
-      phone: "",
-      preferred_language: null,
-    },
-    event_id: "event-bulk-test",
-    event: eventOut({
-      id: "event-bulk-test",
-      title: "Bulk Selection Test Event",
-      end_time: "22:00",
-      edition: {
-        id: "edition-1",
-        year: 2026,
-        month: "march",
-        edition_type: "festival",
-        active: true,
+  return {
+    ...registrationOut({
+      id: `reg-bulk-${n}`,
+      person_id: `person-bulk-${n}`,
+      person: {
+        id: `person-bulk-${n}`,
+        name: `Bulk Guest ${n}`,
+        email: `bulk${n}@example.com`,
+        phone: "",
+        preferred_language: null,
       },
+      event_id: "event-bulk-test",
+      event: eventOut({
+        id: "event-bulk-test",
+        title: "Bulk Selection Test Event",
+        end_time: "22:00",
+        edition: {
+          id: "edition-1",
+          year: 2026,
+          month: "march",
+          edition_type: "festival",
+          active: true,
+        },
+      }),
+      status: "pending",
+      created_at: `2024-01-01T00:00:${n}Z`,
+      updated_at: `2024-01-01T00:00:${n}Z`,
     }),
-    status: "pending",
-    created_at: `2024-01-01T00:00:${n}Z`,
-    updated_at: `2024-01-01T00:00:${n}Z`,
-  });
+    table_names: [],
+  };
 }
 
 const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>

@@ -105,6 +105,11 @@ async def test_table_from_another_edition_is_rejected(client):
     assert r.status_code == 200, r.text
     assert r.json()["table_id"] == bourse_table
 
+    r = await client.get("/api/registrations", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    booking = next(item for item in r.json()["items"] if item["id"] == registration_id)
+    assert booking["table_names"] == ["Table bourse-2026"]
+
     # Clearing the assignment stays allowed.
     r = await client.put(f"/api/registrations/{registration_id}", json={"allocations": []}, headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
