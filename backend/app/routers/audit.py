@@ -13,6 +13,7 @@ from app.core.dependencies import Pagination, apply_pagination
 from app.db.session import get_db
 from app.models import AuditEntry
 from app.schemas import AuditEntryOut
+from app.services.audit_resources import audit_entries_with_resource_names
 
 router = APIRouter(
     prefix="/api/audit",
@@ -32,7 +33,7 @@ async def list_audit_entries(
     until: datetime | None = Query(default=None, description="Only entries at or before this timestamp"),
     before_id: str | None = Query(default=None, description="Exclusive keyset cursor from the previous page"),
     pagination: Pagination = Depends(),
-) -> list[AuditEntry]:
+) -> list[AuditEntryOut]:
     stmt = select(AuditEntry)
     if resource_type:
         stmt = stmt.where(AuditEntry.resource_type == resource_type)
@@ -62,11 +63,18 @@ async def list_audit_entries(
     effective_pagination = Pagination(page=1 if before_id else pagination.page, limit=pagination.limit or 100)
     stmt = apply_pagination(stmt, effective_pagination)
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    return await audit_entries_with_resource_names(db, list(result.scalars().all()))
 
 
 @router.get("/resource-types", response_model=list[str])
 async def list_audit_resource_types(db: AsyncSession = Depends(get_db)) -> list[str]:
     """Distinct resource_type values seen so far, for populating a filter dropdown."""
     result = await db.execute(select(AuditEntry.resource_type).distinct().order_by(AuditEntry.resource_type))
+    return list(result.scalars().all())
+
+
+@router.get("/actions", response_model=list[str])
+async def list_audit_actions(db: AsyncSession = Depends(get_db)) -> list[str]:
+    """Distinct actions recorded across the entire audit trail."""
+    result = await db.execute(select(AuditEntry.action).distinct().order_by(AuditEntry.action))
     return list(result.scalars().all())

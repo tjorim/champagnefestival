@@ -29,6 +29,20 @@ async def test_audit_lists_entries_from_mutations(client):
     assert entries[0]["resource_type"] == "venue"
     assert entries[0]["resource_id"] == venue_id
     assert entries[0]["details"] == {"name": "Test Venue"}
+    assert entries[0]["resource_name"] == "Test Venue"
+    assert entries[0]["resource_exists"] is True
+
+    await client.put(f"/api/venues/{venue_id}", json={"name": "Renamed Venue"}, headers=ADMIN_HEADERS)
+    params = {"resource_id": venue_id, "action": "venue_created"}
+    r = await client.get("/api/audit", params=params, headers=ADMIN_HEADERS)
+    assert r.json()[0]["resource_name"] == "Renamed Venue"
+
+    await client.put(f"/api/venues/{venue_id}", json={"active": False}, headers=ADMIN_HEADERS)
+    deleted = await client.delete(f"/api/venues/{venue_id}", headers=ADMIN_HEADERS)
+    assert deleted.status_code == 204, deleted.text
+    r = await client.get("/api/audit", params=params, headers=ADMIN_HEADERS)
+    assert r.json()[0]["resource_name"] == "Test Venue"
+    assert r.json()[0]["resource_exists"] is False
 
 
 @pytest.mark.anyio
@@ -82,3 +96,14 @@ async def test_audit_resource_types_lists_distinct_values(client):
     r = await client.get("/api/audit/resource-types", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert "venue" in r.json()
+
+
+@pytest.mark.anyio
+async def test_audit_actions_lists_distinct_values(client):
+    for _ in range(2):
+        r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+        assert r.status_code == 201
+
+    r = await client.get("/api/audit/actions", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json().count("venue_created") == 1

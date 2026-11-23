@@ -13,12 +13,14 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const { fetchAuditEntries, fetchAuditResourceTypes } = vi.hoisted(() => ({
+const { fetchAuditActions, fetchAuditEntries, fetchAuditResourceTypes } = vi.hoisted(() => ({
+  fetchAuditActions: vi.fn(),
   fetchAuditEntries: vi.fn(),
   fetchAuditResourceTypes: vi.fn(),
 }));
 
 vi.mock("@/lib/api/adminFetch", () => ({
+  fetchAuditActions,
   fetchAuditEntries,
   fetchAuditResourceTypes,
 }));
@@ -34,6 +36,7 @@ function renderAuditLogViewer() {
 
 describe("AuditLogViewer", () => {
   beforeEach(() => {
+    fetchAuditActions.mockResolvedValue(["venue_created"]);
     fetchAuditEntries.mockReset();
     fetchAuditResourceTypes.mockReset();
     fetchAuditResourceTypes.mockResolvedValue(["venue", "table"]);
@@ -58,15 +61,26 @@ describe("AuditLogViewer", () => {
         integration_client_id: null,
         resource_type: "venue",
         resource_id: "venue_abc123",
+        resource_name: "Renamed Venue",
+        resource_exists: true,
         request_id: null,
         details: { name: "Test Venue" },
       } satisfies AuditEntryOut,
     ]);
     renderAuditLogViewer();
 
-    await waitFor(() => expect(screen.getByText("venue_created")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.getByText("admin_audit_action_created · admin_audit_resource_venue"),
+      ).toBeInTheDocument(),
+    );
     expect(screen.getByText("admin@example.com")).toBeInTheDocument();
-    expect(screen.getByText(/venue \/ venue_abc123/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Renamed Venue" })).toHaveAttribute(
+      "href",
+      "/admin?section=venues#audit-venue-venue_abc123",
+    );
+    expect(screen.getByTitle("venue_abc123")).toBeInTheDocument();
+    expect(screen.queryByText("venue_abc123")).not.toBeInTheDocument();
   });
 
   it("populates the resource type filter from fetchAuditResourceTypes", async () => {
@@ -75,7 +89,9 @@ describe("AuditLogViewer", () => {
 
     await waitFor(() => expect(fetchAuditResourceTypes).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("combobox", { name: "admin_audit_filter_resource_type" }));
-    expect(await screen.findByRole("option", { name: "venue" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "table" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("option", { name: "admin_audit_resource_venue" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "admin_audit_resource_table" })).toBeInTheDocument();
   });
 });

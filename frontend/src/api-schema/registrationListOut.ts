@@ -26,6 +26,7 @@ export type RegistrationListOut = {
   order_items: OrderItemOut[];
   notes: string;
   table_id: string | null;
+  table_names: string[];
   status: RegistrationListOutStatus;
   payment_status: RegistrationListOutPaymentStatus;
   amount_due: string | null;

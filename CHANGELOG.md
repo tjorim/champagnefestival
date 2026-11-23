@@ -22,6 +22,10 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - An eighth preview design, "Affiche": a poster of flat blue, red and yellow blocks with ink outlines. Its landing page opens with a grid of tiles showing the title, the mascot, the dates, the countdown, the venue and a running band of producer names.
 - A ninth preview design, "Billet": the festival as an admission ticket. A portrait ticket with the title, dates, venue, countdown and registration stays beside the page on wide screens while the sections scroll past, and the programme shows every day side by side.
 
+### Changed
+
+- Dashboard lists show organisation logos, named tables and edition lineups, localised schedule dates, and room and table type summaries. The audit log shows resource names and filter choices, and booking details label the check-in link.
+
 ### Internal
 
 - A database constraint failure (HTTP 409) now carries a stable `code` next to its `detail`: `required_field_missing`, `related_records_exist`, `duplicate_value` or `constraint_violation`. Its log line names the route template, never the raw path (which can hold a token).
