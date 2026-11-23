@@ -6,10 +6,10 @@
  * OpenAPI spec version: snapshot
  */
 
-export type OrganizationUpdateType = typeof OrganizationUpdateType[keyof typeof OrganizationUpdateType] | null;
+export type OrganizationType = typeof OrganizationType[keyof typeof OrganizationType];
 
 
-export const OrganizationUpdateType = {
+export const OrganizationType = {
   producer: 'producer',
   sponsor: 'sponsor',
   vendor: 'vendor',

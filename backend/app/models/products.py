@@ -15,24 +15,20 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
-    cast,
     func,
     select,
-    true,
 )
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import ProductUnit
 from app.db.base import Base
-from app.db.dialect_functions import json_array_elements
 from app.models.base import _optional_dutch_check, _utcnow
-from app.models.registrations import Registration
+from app.models.registrations import Registration, RegistrationOrderLine
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.events import Event
-
-
-_product_lines = json_array_elements(Registration.order_items).table_valued("value").alias("product_line")
 
 
 class Product(Base):
@@ -53,14 +49,14 @@ class Product(Base):
         String(64), ForeignKey("events.id", ondelete="CASCADE"), index=True, nullable=False
     )
     reserved_quantity: Mapped[int] = column_property(
-        select(func.coalesce(func.sum(cast(_product_lines.c.value.op("->>")("quantity"), Integer)), 0))
-        .select_from(Registration.__table__.join(_product_lines, true()))
+        select(func.coalesce(func.sum(RegistrationOrderLine.quantity), 0))
+        .join(Registration, Registration.id == RegistrationOrderLine.registration_id)
         .where(
             Registration.event_id == event_id,
             Registration.status != "cancelled",
-            _product_lines.c.value.op("->>")("product_id") == id,
+            RegistrationOrderLine.live_product_id == id,
         )
-        .correlate_except(Registration, _product_lines)
+        .correlate_except(Registration, RegistrationOrderLine)
         .scalar_subquery()
     )
 
@@ -91,7 +87,7 @@ class Product(Base):
     """
     __table_args__ = (
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
-        CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
+        vocabulary_check("ck_product_unit", "unit", ProductUnit),
         CheckConstraint("NOT required OR purchasable", name="ck_products_required_implies_purchasable"),
         CheckConstraint("(length(trim(name_nl)) > 0) IS TRUE", name="ck_products_name_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_products_description_nl"),

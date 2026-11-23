@@ -8,7 +8,7 @@
 import type { ExpiredPlaylist } from './expiredPlaylist';
 import type { Playlist } from './playlist';
 import type { VideoExportCreatedOutLocale } from './videoExportCreatedOutLocale';
-import type { VideoExportCreatedOutState } from './videoExportCreatedOutState';
+import type { VideoExportState } from './videoExportState';
 
 /**
  * A new export with the playlist snapshot the browser renders slides from.
@@ -21,7 +21,7 @@ export type VideoExportCreatedOut = {
   channel_id: string | null;
   channel_name: string;
   locale: VideoExportCreatedOutLocale;
-  state: VideoExportCreatedOutState;
+  state: VideoExportState;
   cancel_requested: boolean;
   retrying: boolean;
   created_at: string;

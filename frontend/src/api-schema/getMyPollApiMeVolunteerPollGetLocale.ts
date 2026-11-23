@@ -11,6 +11,6 @@ export type GetMyPollApiMeVolunteerPollGetLocale = typeof GetMyPollApiMeVoluntee
 
 export const GetMyPollApiMeVolunteerPollGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

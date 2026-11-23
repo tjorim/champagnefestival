@@ -11,6 +11,6 @@ export type PublicPlaylistApiSignageChannelPlaylistGetLocale = typeof PublicPlay
 
 export const PublicPlaylistApiSignageChannelPlaylistGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

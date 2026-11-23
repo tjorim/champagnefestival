@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ids import make_id
+from app.core.vocabularies import OrganizationType
 from app.models import Area, Edition, Event, Layout, Organization, SignageChannel, SignageSlide, SignageTemplate
 from app.schemas.signage import (
     Content,
@@ -179,7 +180,7 @@ async def playlist(
                 select(Organization).where(
                     or_(
                         Organization.id.in_(edition.organizations),
-                        (Organization.type == "vendor")
+                        (Organization.type == OrganizationType.VENDOR)
                         & Organization.id.in_(
                             select(Area.organization_id)
                             .join(Layout, Area.layout_id == Layout.id)
@@ -197,7 +198,7 @@ async def playlist(
     organizations.sort(
         key=lambda org: (
             {"producer": 0, "vendor": 1, "sponsor": 2}.get(org.type, 3),
-            tiers.get(edition.sponsor_tiers.get(str(org.id)), 3) if org.type == "sponsor" else 0,
+            tiers.get(edition.sponsor_tiers.get(str(org.id)), 3) if org.type == OrganizationType.SPONSOR else 0,
             org.name.casefold() if org.type in ("producer", "vendor") else "",
             lineup.get(org.id, org.id),
         )
@@ -253,8 +254,10 @@ async def playlist(
                             "name": org.name,
                             "logo": org.image,
                             "description": description,
-                            "sponsor": org.type == "sponsor",
-                            "sponsor_tier": edition.sponsor_tiers.get(str(org.id)) if org.type == "sponsor" else None,
+                            "sponsor": org.type == OrganizationType.SPONSOR,
+                            "sponsor_tier": edition.sponsor_tiers.get(str(org.id))
+                            if org.type == OrganizationType.SPONSOR
+                            else None,
                         },
                     )
                 )

@@ -7,6 +7,7 @@ from typing import Literal, Self
 
 from pydantic import Field, field_validator, model_validator
 
+from app.core.vocabularies import PollQuestionKind
 from app.models import MAX_POLL_PEOPLE, MAX_POLL_QUANTITY
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import ResourceId, ResourceKey, Text200, Text500
@@ -62,7 +63,6 @@ DietaryTag = Literal["vegetarian", "vegan", "gluten_free", "lactose_free", "cont
 """What a meal suits or contains; the labels are translated in the admin UI and the volunteer page."""
 
 
-PollQuestionKind = Literal["yes_no", "meals", "single_choice", "free_text", "rating"]
 """Attendance, meal quantities, one configured choice, free text, or a fixed 1–5 rating."""
 
 

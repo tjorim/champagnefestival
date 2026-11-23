@@ -11,6 +11,6 @@ export type ListActiveFaqItemsApiFaqActiveGetLocale = typeof ListActiveFaqItemsA
 
 export const ListActiveFaqItemsApiFaqActiveGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

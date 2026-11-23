@@ -172,6 +172,8 @@ def _make_registration(
             }
         ]
     )
+    for item in r.order_items:
+        item.setdefault("delivered_quantity", item["quantity"] if item.get("delivered") else 0)
     return r
 
 

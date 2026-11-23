@@ -8,6 +8,15 @@ from typing import Literal, overload
 from typing import cast as type_cast
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import (
+    EditionMonth,
+    EditionType,
+    Locale,
+    OrganizationType,
+    PaymentStatus,
+    ProductUnit,
+    RegistrationStatus,
+)
 from app.models import (
     AppSettings,
     Area,
@@ -151,8 +160,7 @@ def product_text_dict(p: Product, locale: str | None = None) -> dict:
 
 
 def order_item_name(item: dict, locale: str | None) -> str:
-    """An order line's product name in *locale*, falling back to the Dutch
-    name stored with the order (older orders carry only that)."""
+    """An order line's booked name in *locale*, falling back to Dutch."""
     return resolve_text({code: item.get(f"name_{code}") for code in ("nl", "fr", "en")}, locale) or item["name"]
 
 
@@ -176,7 +184,7 @@ def product_to_out(p: Product, locale: str | None = None) -> ProductOut:
         required=p.required,
         included_product_id=p.included_product_id,
         included_per_guests=p.included_per_guests,
-        unit=type_cast(Literal["item", "table", "person"], p.unit),
+        unit=type_cast(ProductUnit, p.unit),
         stock=p.stock,
         inclusions=p.inclusions,
         reserved_quantity=p.reserved_quantity,
@@ -213,7 +221,7 @@ def product_to_public_out(
         **product_text_dict(p, locale),
         price=p.price,
         category=p.category,
-        unit=type_cast(Literal["item", "table", "person"], p.unit),
+        unit=type_cast(ProductUnit, p.unit),
         required=p.required,
         purchasable=p.purchasable,
         available_quantity=available_quantity,
@@ -239,10 +247,7 @@ def _registration_response[
     | RegistrationGuestOut
     | CheckInGuestOut
 ](response: T, stored_items: list[dict]) -> T:
-    # Delivery validators derive defaults and mark them as set. REST has always
-    # serialized those defaults, but MCP historically sent only stored keys.
-    # Preserve that distinction for exclude_unset at the MCP boundary, including
-    # old order lines that predate delivered_quantity.
+    # Preserve fields supplied by the order projection at the MCP boundary.
     for item, stored in zip(response.order_items, stored_items, strict=True):
         item.model_fields_set.intersection_update(stored)
     return response
@@ -289,16 +294,12 @@ def registration_to_out(
             order_items=_visible_order_items(r.order_items) if public else r.order_items,
             notes=r.notes,
             table_id=r.allocations[0].table_id if r.allocations else None,
-            booked_table_quantity=sum(
-                i["quantity"]
-                for i in r.order_items
-                if (r.product_snapshot or {}).get(i["product_id"], {}).get("unit") == "table"
-            ),
+            booked_table_quantity=r.booked_table_quantity,
             allocations=[
                 {"table_id": a.table_id, "guest_count": a.guest_count, "exclusive": a.exclusive} for a in r.allocations
             ],
-            status=type_cast(Literal["pending", "confirmed", "cancelled"], r.status),
-            payment_status=type_cast(Literal["unpaid", "partial", "paid"], r.payment_status),
+            status=type_cast(RegistrationStatus, r.status),
+            payment_status=type_cast(PaymentStatus, r.payment_status),
             amount_due=r.amount_due,
             amount_paid=r.amount_paid,
             refund_due=None if r.amount_due is None else max(0, (r.amount_paid or 0) - r.amount_due),
@@ -331,7 +332,7 @@ def registration_to_checkin_out(
             guest_count=r.guest_count,
             order_items=r.order_items,
             notes=r.notes,
-            status=type_cast(Literal["pending", "confirmed", "cancelled"], r.status),
+            status=type_cast(RegistrationStatus, r.status),
             checked_in=r.checked_in,
             checked_in_at=r.checked_in_at,
             strap_issued=r.strap_issued,
@@ -374,8 +375,8 @@ def registration_to_guest_out(r: Registration, person: Person, event: Event) -> 
             guest_count=r.guest_count,
             order_answers=[a.as_dict() for a in r.order_answers],
             order_items=_visible_order_items(r.order_items),
-            status=type_cast(Literal["pending", "confirmed", "cancelled"], r.status),
-            payment_status=type_cast(Literal["unpaid", "partial", "paid"], r.payment_status),
+            status=type_cast(RegistrationStatus, r.status),
+            payment_status=type_cast(PaymentStatus, r.payment_status),
             amount_due=r.amount_due,
             amount_paid=r.amount_paid,
             refund_due=None if r.amount_due is None else max(0, (r.amount_paid or 0) - r.amount_due),
@@ -398,7 +399,7 @@ def organization_to_out(e: Organization, contact_person: Person | None = None) -
         description_fr=e.description_fr,
         description_en=e.description_en,
         active=e.active,
-        type=e.type,
+        type=OrganizationType(e.type),
         contact_person_id=e.contact_person_id,
         contact_person=person_summary_to_out(contact_person) if contact_person else None,
         created_at=e.created_at,
@@ -471,8 +472,8 @@ def edition_to_out(
     return (EditionPublicOut if public else EditionOut)(
         id=e.id,
         year=e.year,
-        month=e.month,
-        edition_type=type_cast(Literal["festival", "bourse", "capsule_exchange"], e.edition_type),
+        month=type_cast(EditionMonth, e.month),
+        edition_type=type_cast(EditionType, e.edition_type),
         dates=dates if dates is not None else [],
         venue=venue,
         events=events if events is not None else [],
@@ -521,7 +522,7 @@ def person_to_out(p: Person) -> PersonOut:
         name=p.name,
         email=p.email,
         phone=p.phone,
-        preferred_language=type_cast(Literal["nl", "fr", "en"] | None, p.preferred_language),
+        preferred_language=type_cast(Locale | None, p.preferred_language),
         address=p.address,
         roles=p.roles,
         retired_roles=dict(p.retired_roles or {}),

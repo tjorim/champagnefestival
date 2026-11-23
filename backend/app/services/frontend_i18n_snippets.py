@@ -18,9 +18,7 @@ breaks CI rather than silently going stale in the server-rendered output.
 
 from __future__ import annotations
 
-from typing import Literal
-
-Locale = Literal["nl", "en", "fr"]
+from app.core.vocabularies import Locale
 
 FESTIVAL_NAME = "Champagnefestival"
 

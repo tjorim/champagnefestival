@@ -348,7 +348,7 @@ describe("MyAccountPage", () => {
                 description_fr: null,
                 description_en: null,
                 image: "",
-                type: "",
+                type: "vendor",
                 website: "",
                 active: false,
                 id: 1,

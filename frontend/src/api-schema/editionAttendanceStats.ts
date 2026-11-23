@@ -5,12 +5,14 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { EditionAttendanceStatsEditionType } from './editionAttendanceStatsEditionType';
+import type { EditionAttendanceStatsMonth } from './editionAttendanceStatsMonth';
 
 export type EditionAttendanceStats = {
   edition_id: string;
   year: number;
-  month: string;
-  edition_type: string;
+  month: EditionAttendanceStatsMonth;
+  edition_type: EditionAttendanceStatsEditionType;
   start_date: string | null;
   events_count: number;
   total_registrations: number;

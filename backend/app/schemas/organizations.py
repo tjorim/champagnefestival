@@ -9,11 +9,10 @@ from uuid import UUID
 
 from pydantic import ConfigDict, field_validator, model_validator
 
+from app.core.vocabularies import OrganizationChangeStatus, OrganizationType
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.people import PersonSummaryOut
 from app.schemas.types import NonEmptyText200, Text500, Text600, Text2000
-
-SponsorTier = Literal["main", "partner", "supporter"]
 
 
 class OrganizationDescription(RequestModel):
@@ -37,7 +36,7 @@ class OrganizationCreate(OrganizationDescription):
     image: Text500 = ""
     website: Text500 = ""
     active: bool = True
-    type: Literal["producer", "sponsor", "vendor"] = "vendor"
+    type: OrganizationType = OrganizationType.VENDOR
     contact_person_id: str | None = None
 
     @model_validator(mode="after")
@@ -50,7 +49,7 @@ class OrganizationUpdate(OrganizationDescription):
     image: Text500 | None = None
     website: Text500 | None = None
     active: bool | None = None
-    type: Literal["producer", "sponsor", "vendor"] | None = None
+    type: OrganizationType | None = None
     contact_person_id: str | None = None
 
 
@@ -63,7 +62,7 @@ class OrganizationOut(ResponseModel):
     image: str
     website: str
     active: bool
-    type: str
+    type: OrganizationType
     contact_person_id: str | None
     contact_person: PersonSummaryOut | None
     created_at: datetime
@@ -78,7 +77,7 @@ class ManagedOrganizationOut(OrganizationDescription):
     image: str
     id: int
     name: str
-    type: str
+    type: OrganizationType
     website: str
     active: bool
 
@@ -107,7 +106,7 @@ class OrganizationChangeOut(ResponseModel):
     id: str
     organization_id: int
     organization_name: str
-    status: Literal["pending", "accepted", "rejected", "superseded", "replaced"]
+    status: OrganizationChangeStatus
     proposed: dict[str, str | None]
     current: dict[str, str | None]
     superseded_fields: list[str]

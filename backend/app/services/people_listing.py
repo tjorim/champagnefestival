@@ -47,7 +47,7 @@ last_attended = (
     .join(Edition, Edition.id == Event.edition_id)
     .where(
         Registration.person_id == Person.id,
-        Registration.checked_in.is_(True),
+        Registration.checked_in_at.is_not(None),
         Edition.edition_type == "capsule_exchange",
     )
     .correlate(Person)

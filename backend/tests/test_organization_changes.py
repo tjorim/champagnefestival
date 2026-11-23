@@ -171,7 +171,7 @@ async def test_concurrent_decisions(engine, db_session, manager):
             locked,
             OrganizationChangeSubmit(submission_id=uuid4(), website="https://race.example"),
             actor="manager",
-            auth_source="visitor",
+            auth_source="visitor_session",
         )
 
     async def run(value):
@@ -210,7 +210,7 @@ async def test_notification_uses_configured_recipient(db_session, manager, monke
         row,
         OrganizationChangeSubmit(submission_id=uuid4(), website=""),
         actor="manager",
-        auth_source="visitor",
+        auth_source="visitor_session",
     )
     # Delivery loads the durable record from a fresh session in production.
     from contextlib import asynccontextmanager
@@ -283,7 +283,7 @@ async def test_mcp_review_authorization_and_supersession(db_session, manager, mo
         row,
         OrganizationChangeSubmit(submission_id=uuid4(), website="https://proposal.example"),
         actor="manager",
-        auth_source="visitor",
+        auth_source="visitor_session",
     )
     assert len((await backend.list_organization_changes())["changes"]) == 1
     await mcp_organizations.update_organization(

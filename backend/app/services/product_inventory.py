@@ -7,25 +7,12 @@ from copy import deepcopy
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Event, Registration
+from app.models import Event, Registration, RegistrationOrderLine
 from app.schemas import OrderItemBase, OrderItemRequest
-
-
-def node_purchasable(node: dict) -> bool:
-    """A graph node's purchasable flag, tolerating a
-    `Registration.product_snapshot` node frozen before #1020 — those carry
-    the `active` key this replaced. `current_snapshot()` always sets
-    `purchasable` on live nodes; this fallback only ever fires for such a
-    pre-existing frozen snapshot merged into the graph via
-    `resolve_booking`'s `previous_snapshot`."""
-    purchasable = node.get("purchasable")
-    if purchasable is not None:
-        return purchasable
-    return node.get("active", True)
 
 
 async def lock_event(db: AsyncSession, event_id: str) -> Event:
@@ -120,7 +107,7 @@ def resolve_booking(
     if not refresh_prices:
         for key, old in old_items.items():
             if key in graph:
-                graph[key]["price"] = str(old["price"])
+                graph[key]["price"] = str(Decimal(str(old["price"])).quantize(Decimal("0.01")))
     validate_graph(graph)
     ordered: dict[str, int] = defaultdict(int)
     for req in requests:
@@ -189,7 +176,7 @@ def resolve_booking(
         # Visible when explicitly ordered, or when included via a bundle
         # whose target is itself purchasable — a hidden product's name never
         # reaches the visitor-facing summary, even as a package line.
-        visible = bool(ordered.get(key, 0)) or (bool(included.get(key, 0)) and node_purchasable(node))
+        visible = bool(ordered.get(key, 0)) or (bool(included.get(key, 0)) and node["purchasable"])
         items.append(
             OrderItemBase(
                 product_id=key,
@@ -236,25 +223,23 @@ async def check_stock(
     db: AsyncSession, event: Event, items: list[dict], *, registration: Registration | None = None
 ) -> None:
     """Caller holds event lock. Existing shortages may shrink, never grow here."""
-    rows = (
-        (
-            await db.execute(
-                select(Registration.order_items).where(
-                    Registration.event_id == event.id,
-                    Registration.status != "cancelled",
-                    *([Registration.id != registration.id] if registration else []),
-                )
-            )
+    requested = quantities(items)
+    if not requested:
+        return
+    rows = await db.execute(
+        select(RegistrationOrderLine.live_product_id, func.sum(RegistrationOrderLine.quantity))
+        .join(Registration, Registration.id == RegistrationOrderLine.registration_id)
+        .where(
+            Registration.event_id == event.id,
+            Registration.status != "cancelled",
+            RegistrationOrderLine.live_product_id.in_(requested),
+            *([Registration.id != registration.id] if registration else []),
         )
-        .scalars()
-        .all()
+        .group_by(RegistrationOrderLine.live_product_id)
     )
-    occupied: dict[str, int] = defaultdict(int)
-    for order_items in rows:
-        for key, qty in quantities(order_items).items():
-            occupied[key] += qty
+    occupied = defaultdict(int, dict(rows.all()))
     old = quantities(registration.order_items) if registration and registration.status != "cancelled" else {}
-    for key, qty in quantities(items).items():
+    for key, qty in requested.items():
         product = next((p for p in event.products if p.id == key), None)
         if product and product.stock is not None and occupied[key] + qty > product.stock and qty > old.get(key, 0):
             raise HTTPException(

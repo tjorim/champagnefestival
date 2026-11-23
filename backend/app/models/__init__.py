@@ -26,7 +26,6 @@ from app.models.policies import Policy, PolicyVersion
 from app.models.poll import (
     MAX_POLL_PEOPLE,
     MAX_POLL_QUANTITY,
-    POLL_QUESTION_KINDS,
     EditionPollOption,
     EditionPollQuestion,
     PollDeletionNotification,
@@ -40,7 +39,7 @@ from app.models.poll import (
 from app.models.products import Product
 from app.models.push import PushSubscription
 from app.models.rate_limits import RateLimitBucket
-from app.models.registrations import Registration, RegistrationAllocation
+from app.models.registrations import Registration, RegistrationAllocation, RegistrationOrderLine
 from app.models.settings import AppSettings
 from app.models.signage import SignageChannel, SignageSlide, SignageTemplate, SignageVideoExport
 from app.models.stamp_cards import Stamp, StampCard, StampCardReward, StampCardType
@@ -80,7 +79,6 @@ __all__ = [
     "Organization",
     "OrganizationChange",
     "OutboxJob",
-    "POLL_QUESTION_KINDS",
     "PaymentTransaction",
     "PebbleAccessToken",
     "Person",
@@ -93,6 +91,7 @@ __all__ = [
     "RateLimitBucket",
     "Registration",
     "RegistrationAllocation",
+    "RegistrationOrderLine",
     "RegistrationOrderAnswer",
     "Room",
     "SignageChannel",

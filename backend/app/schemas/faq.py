@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import Text500, Text10000
-
-FaqLocale = Literal["nl", "en", "fr"]
 
 
 class FaqTextFields(RequestModel):

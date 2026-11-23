@@ -11,6 +11,6 @@ export type CreateExportLocale = typeof CreateExportLocale[keyof typeof CreateEx
 
 export const CreateExportLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator, model_validator
 
+from app.core.vocabularies import AnnouncementLevel
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import Text120, Text500, Text1000
-
-AnnouncementLevel = Literal["info", "warning", "urgent"]
 
 
 def _validate_safe_announcement_url(value: str | None) -> str | None:

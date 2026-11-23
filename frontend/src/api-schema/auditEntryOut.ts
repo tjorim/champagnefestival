@@ -6,13 +6,14 @@
  * OpenAPI spec version: snapshot
  */
 import type { ActorLabel } from './actorLabel';
+import type { AuditEntryOutAuthSource } from './auditEntryOutAuthSource';
 import type { AuditEntryOutDetails } from './auditEntryOutDetails';
 
 export type AuditEntryOut = {
   id: string;
   timestamp: string;
   actor: string;
-  auth_source: string;
+  auth_source: AuditEntryOutAuthSource;
   subject: string | null;
   integration_client_id: string | null;
   action: string;

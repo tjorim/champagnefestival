@@ -13,17 +13,6 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.functions import FunctionElement
 
 
-class json_array_elements(FunctionElement):  # noqa: N801 - named after the SQL function it renders
-    """Table-valued ``json_array_elements(json)``; one ``value`` column per array element.
-
-    Renders as ``json_each(json)`` on SQLite, whose ``value`` column (and ``->>`` operator)
-    behave the same way.
-    """
-
-    name = "json_array_elements"
-    inherit_cache = True
-
-
 class json_array_elements_text(FunctionElement):  # noqa: N801
     """Table-valued ``json_array_elements_text(json)``; array elements as text in ``value``."""
 
@@ -31,13 +20,11 @@ class json_array_elements_text(FunctionElement):  # noqa: N801
     inherit_cache = True
 
 
-@compiles(json_array_elements)
 @compiles(json_array_elements_text)
 def _postgresql(element: FunctionElement, compiler: Any, **kw: Any) -> str:
     return f"{element.name}({compiler.process(element.clauses, **kw)})"
 
 
-@compiles(json_array_elements, "sqlite")
 @compiles(json_array_elements_text, "sqlite")
 def _sqlite(element: FunctionElement, compiler: Any, **kw: Any) -> str:
     return f"json_each({compiler.process(element.clauses, **kw)})"

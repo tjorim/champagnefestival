@@ -13,9 +13,11 @@ services can all depend on it without a cycle.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Literal, get_args
+from typing import get_args
 
-Language = Literal["nl", "fr", "en"]
+from app.core.vocabularies import Locale
+
+Language = Locale
 LANGUAGES: tuple[Language, ...] = get_args(Language)
 
 BASE_LANGUAGE: Language = "nl"

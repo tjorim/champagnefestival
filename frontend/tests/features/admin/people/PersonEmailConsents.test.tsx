@@ -9,7 +9,7 @@ import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-const active = {
+const active: import("@/api-types").EmailConsentOut = {
   id: "ecn_1",
   category_key: "club_news",
   category_name: "Clubnieuws",
@@ -18,7 +18,7 @@ const active = {
   revoked_at: null,
   revoked_source: null,
 };
-const withdrawn = {
+const withdrawn: import("@/api-types").EmailConsentOut = {
   id: "ecn_0",
   category_key: "new_editions",
   category_name: "Nieuwe editie",

@@ -7,8 +7,9 @@ from typing import Literal
 
 from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
+from app.core.vocabularies import AnnouncementLevel, ComposedMessageState
 from app.schemas.actors import ActorLabel
-from app.schemas.announcements import AnnouncementLevel, _validate_safe_announcement_url
+from app.schemas.announcements import _validate_safe_announcement_url
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import ResourceKey, Text500, Text1000
 from app.services.composer_content import LOCALES, build_composer_payload, pick_locale_text
@@ -18,9 +19,6 @@ ComposedMessageChannel = Literal["announcement", "push", "email"]
 
 ComposedMessageToolChannel = Literal["announcement", "push"]
 """Channels the MCP tools offer: member mail (#1407) is composed and sent from the admin only."""
-
-
-ComposedMessageState = Literal["draft", "scheduled", "sent"]
 
 
 class _ComposedMessageFields[

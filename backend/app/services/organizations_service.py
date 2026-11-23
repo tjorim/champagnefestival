@@ -14,6 +14,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.vocabularies import OrganizationType
 from app.models import Edition, Organization, Person
 from app.schemas import OrganizationCreate, OrganizationDescription, OrganizationOut, OrganizationUpdate
 from app.services import organization_logos
@@ -122,7 +123,7 @@ async def apply_organization_update(
     if body.active is not None:
         e.active = body.active
     if body.type is not None:
-        if body.type == "vendor" and e.type != "vendor":
+        if body.type == OrganizationType.VENDOR and e.type != OrganizationType.VENDOR:
             # Lock this organization row so a concurrent edition update that's about
             # to link it to a lineup (see validate_organization_ids in
             # editions_service, which locks the same row) can't interleave with

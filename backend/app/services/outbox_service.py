@@ -10,6 +10,7 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.ids import make_id
+from app.core.vocabularies import DeliveryOutcome, OutboxState
 from app.models import DeliveryAttempt, OutboxJob, PollDeletionNotification
 from app.services.audit_service import write_audit_entry
 
@@ -87,8 +88,8 @@ async def claim_next_job(db: AsyncSession, *, lease_seconds: int = 300) -> Outbo
         .where(
             OutboxJob.scheduled_at <= now,
             or_(
-                OutboxJob.state == "pending",
-                and_(OutboxJob.state == "processing", OutboxJob.locked_until < now),
+                OutboxJob.state == OutboxState.PENDING,
+                and_(OutboxJob.state == OutboxState.PROCESSING, OutboxJob.locked_until < now),
             ),
         )
         .order_by(OutboxJob.scheduled_at, OutboxJob.created_at, OutboxJob.id)
@@ -98,7 +99,7 @@ async def claim_next_job(db: AsyncSession, *, lease_seconds: int = 300) -> Outbo
     if job is None:
         await db.rollback()
         return None
-    job.state = "processing"
+    job.state = OutboxState.PROCESSING
     job.attempt_count += 1
     job.locked_until = now + timedelta(seconds=lease_seconds)
     job.claim_token = secrets.token_urlsafe(24)
@@ -120,7 +121,7 @@ async def finish_attempt(
         select(OutboxJob)
         .where(
             OutboxJob.id == job_id,
-            OutboxJob.state == "processing",
+            OutboxJob.state == OutboxState.PROCESSING,
             OutboxJob.claim_token == claim_token,
         )
         .with_for_update()
@@ -128,7 +129,7 @@ async def finish_attempt(
     if job is None:
         await db.rollback()
         return False
-    outcome = "delivered" if delivered else "failed"
+    outcome = DeliveryOutcome.DELIVERED if delivered else DeliveryOutcome.FAILED
     db.add(
         DeliveryAttempt(
             id=make_id("attempt"),
@@ -144,20 +145,20 @@ async def finish_attempt(
     job.claim_token = None
     job.last_error_code = error_code
     if delivered:
-        job.state = "delivered"
+        job.state = OutboxState.DELIVERED
         job.completed_at = now
     elif job.attempt_count >= job.max_attempts:
-        job.state = "failed"
+        job.state = OutboxState.FAILED
         job.completed_at = now
     else:
-        job.state = "pending"
+        job.state = OutboxState.PENDING
         job.scheduled_at = now + timedelta(seconds=min(60 * 2 ** (job.attempt_count - 1), 3600))
     await write_audit_entry(
         db,
         actor="outbox-worker",
         action="delivery_succeeded"
         if delivered
-        else ("delivery_failed" if job.state == "failed" else "delivery_retry_scheduled"),
+        else ("delivery_failed" if job.state == OutboxState.FAILED else "delivery_retry_scheduled"),
         resource_type=job.resource_type,
         resource_id=job.resource_id,
         details={"job_id": job.id, "job_type": job.job_type, "attempt": job.attempt_count, "error_code": error_code},
@@ -217,7 +218,7 @@ async def cleanup_completed_jobs(db: AsyncSession, *, retention_days: int) -> in
         await db.execute(
             delete(OutboxJob)
             .where(
-                OutboxJob.state.in_(("delivered", "failed")),
+                OutboxJob.state.in_((OutboxState.DELIVERED, OutboxState.FAILED)),
                 OutboxJob.completed_at < cutoff,
             )
             .returning(OutboxJob.id, OutboxJob.resource_type, OutboxJob.resource_id)

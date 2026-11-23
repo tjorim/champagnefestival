@@ -3,8 +3,7 @@
 Admin-only mutation logic — order-item resolution, the table/edition guard,
 and the admin create/update/delete transitions — lives in
 ``app.services.registrations_service`` and is shared with
-``app.mcp.admin.registrations``. The public self-service endpoints below
-(guest-facing creation, CSV export) have no MCP equivalent and stay here.
+``app.mcp.admin.registrations``. Public creation also delegates to the registration service.
 The email-token "my registrations" lookup flow that used to live here was
 retired in #1044 — see docs/decisions/1044-confirm-first-registration-claiming.md;
 ``app.routers.visitor_auth`` covers the surviving magic-link flow.
@@ -14,14 +13,12 @@ from __future__ import annotations
 
 import csv
 import io
-import logging
 import re
-import secrets
 from collections.abc import AsyncIterator
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any, Literal, cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -30,7 +27,6 @@ from starlette.responses import StreamingResponse
 from app.core.auth import get_actor_id, get_optional_claims, require_admin
 from app.core.csv_safe import csv_safe
 from app.core.dependencies import DEFAULT_LIST_LIMIT, Pagination, apply_pagination
-from app.core.ids import make_id
 from app.core.ratelimit import check_rate_limit, get_client_ip
 from app.core.spam import check_form_timing, check_honeypot
 from app.db.session import get_db
@@ -50,28 +46,20 @@ from app.schemas import (
 )
 from app.schemas.openapi_responses import binary_response
 from app.schemas.registrations import RegistrationDashboardStats, RegistrationEventStats
-from app.services import email_consent_service, events_service, payments_service, registrations_service
+from app.services import events_service, payments_service, registrations_service
 from app.services.actor_labels import labels_by_actor
 from app.services.allocations_service import allocated_registration_filter
-from app.services.email_service import send_email_consent_confirmation
 from app.services.errors import ApiHTTPException
-from app.services.live import mapping as live_mapping
-from app.services.live import notify_live_event
+from app.services.member_registration import visitor_user
 from app.services.operational_search import person_search_order_by, person_search_predicate
-from app.services.outbox_service import enqueue_registration_confirmation
-from app.services.people_service import parse_phone
 from app.services.serializers import (
     edition_display_name,
     order_answer_text,
     registration_to_list_out,
-    registration_to_out,
     registration_to_out_with_token,
 )
-from app.services.users_service import get_or_create_user, verified_email_from_claims
-from app.services.visitor_session import actor_for_user
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
-logger = logging.getLogger(__name__)
 
 RegistrationSortKey = Literal["name", "event", "guest_count", "status", "payment_status", "checked_in"]
 _SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
@@ -80,7 +68,7 @@ _SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
     "guest_count": Registration.guest_count,
     "status": Registration.status,
     "payment_status": Registration.payment_status,
-    "checked_in": Registration.checked_in,
+    "checked_in": Registration.checked_in_at.is_not(None),
 }
 
 
@@ -101,130 +89,13 @@ async def create_registration(
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)
 
-    user = None
-    if claims is not None:
-        user = await get_or_create_user(db, claims["sub"])
-
-    from app.services import product_inventory as inventory
-    from app.services.member_registration import verified_member, visitor_user
-
-    session_user = await visitor_user(db, request)
-    event = await inventory.lock_event(db, body.event_id)
-    if event is not None and event.volunteers_only:
-        raise ApiHTTPException(
-            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
-        )
-    member_identity = await verified_member(db, session_user) if event.members_only else None
-    await _ensure_public_registration_allowed(db, event)
-    from app.services.order_questions_service import validate_answers
-
-    order_answers = await validate_answers(db, event.id, body.order_answers)
-    resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
-    await inventory.check_stock(db, event, resolved_order_items)
-
-    if member_identity is not None:
-        person, user = member_identity
-    else:
-        email_norm = str(body.email).lower().strip()
-        name_norm = " ".join(body.name.lower().split())
-        phone_norm = parse_phone(body.phone)
-
-        candidates = (
-            (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm)))
-            .scalars()
-            .all()
-        )
-        person = next(
-            (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
-            None,
-        )
-        if person is None:
-            person = Person(
-                id=make_id("per"),
-                preferred_language=body.preferred_language,
-                name=body.name,
-                email=email_norm,
-                phone=phone_norm,
-            )
-            db.add(person)
-            await db.flush()
-        else:
-            if user is not None and await db.scalar(
-                select(Registration.id)
-                .where(Registration.person_id == person.id, Registration.user_id == user.id)
-                .limit(1)
-            ):
-                person.preferred_language = body.preferred_language
-
-    consent_confirmation = None
-    if body.new_editions_opt_in:
-        # Ticking the box is a request, not consent: it becomes consent only for a verified address.
-        if claims is not None:
-            consent_actor, consent_auth_source = claims["sub"], None
-        elif session_user is not None:
-            consent_actor, consent_auth_source = actor_for_user(session_user, None)
-        else:
-            consent_actor, consent_auth_source = "anonymous", None
-        consent_confirmation = await email_consent_service.request_new_editions_consent(
-            db,
-            person,
-            verified_emails=[
-                email
-                for email in (verified_email_from_claims(claims), session_user.verified_email if session_user else None)
-                if email
-            ],
-            actor=consent_actor,
-            auth_source=consent_auth_source,
-            request_id=getattr(request.state, "request_id", None),
-        )
-    consent_mail = (
-        (person.email, consent_confirmation[0], consent_confirmation[1].localized_name(person.preferred_language))
-        if consent_confirmation is not None
-        else None
-    )
-    consent_language = person.preferred_language
-
-    registration = Registration(
-        id=make_id("reg"),
-        event_id=event.id,
-        guest_count=body.guest_count,
-        notes=body.notes,
-        person_id=person.id,
-        user_id=user.id if user else None,
-        check_in_token=secrets.token_urlsafe(32),
-    )
-    registration.order_answers = order_answers
-    registration.order_items = resolved_order_items
-    registration.product_snapshot = snapshot
-    registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
-    db.add(registration)
-    await enqueue_registration_confirmation(
+    return await registrations_service.create_public_registration(
         db,
-        registration.id,
-        actor=claims["sub"] if claims is not None else "anonymous",
+        body,
+        claims=claims,
+        session_user=await visitor_user(db, request),
         request_id=getattr(request.state, "request_id", None),
     )
-    await notify_live_event(
-        db,
-        live_mapping.registration_changed(
-            action="created",
-            registration_id=registration.id,
-            event_id=event.id,
-            edition_id=event.edition_id,
-        ),
-    )
-    await db.commit()
-
-    if consent_mail is not None:
-        # Best effort, like the sign-in link: the registration stands either way and the person can
-        # tick the option again (or use the preferences screen) if the mail does not arrive.
-        recipient, token, category_name = consent_mail
-        await send_email_consent_confirmation(
-            email=recipient, token=token, category_name=category_name, language=consent_language
-        )
-
-    registration = await registrations_service.get_registration_or_404(db, registration.id)
-    return registration_to_out(registration, person, event, public=True)
 
 
 @router.post(
@@ -264,7 +135,7 @@ async def get_registration_dashboard_stats(
             func.count().filter(Registration.status == "confirmed").label("confirmed"),
             func.coalesce(func.sum(Registration.guest_count).filter(attending), 0).label("guests"),
             func.coalesce(
-                func.sum(Registration.guest_count).filter(attending, Registration.checked_in.is_(True)), 0
+                func.sum(Registration.guest_count).filter(attending, Registration.checked_in_at.is_not(None)), 0
             ).label("checked_in"),
         )
         .select_from(Registration)
@@ -772,44 +643,3 @@ async def _load_guest_registrations_by_email(
         .all()
     )
     return [(row, person_map[row.person_id], row.event) for row in rows]
-
-
-async def _ensure_public_registration_allowed(
-    db: AsyncSession,
-    event: Event,
-) -> None:
-    if not event.active or not event.edition.active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registrations are not available for this event.",
-        )
-    # Registration is mandatory for events that require it (capacity-limited ones),
-    # and optional-but-offered for walk-in events that still have something to
-    # order (e.g. a VIP package) — anyone else can just show up. An event with
-    # neither accepts no registrations at all.
-    if not event.registration_required and not any(p.purchasable for p in event.products):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This event does not accept registrations.",
-        )
-
-    now = datetime.now(UTC)
-    if event.registrations_open_from is not None:
-        registrations_open_from = event.registrations_open_from
-        if registrations_open_from.tzinfo is None:
-            registrations_open_from = registrations_open_from.replace(tzinfo=UTC)
-        if registrations_open_from > now:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Registrations for this event are not open yet.",
-            )
-
-    if event.registrations_close_at is not None:
-        registrations_close_at = event.registrations_close_at
-        if registrations_close_at.tzinfo is None:
-            registrations_close_at = registrations_close_at.replace(tzinfo=UTC)
-        if registrations_close_at <= now:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Registrations for this event have closed.",
-            )

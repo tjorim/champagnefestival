@@ -44,7 +44,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -91,7 +91,7 @@ describe("OtherEvents", () => {
           },
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -154,7 +154,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -220,7 +220,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -300,7 +300,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -393,7 +393,7 @@ describe("OtherEvents", () => {
         jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -548,7 +548,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -613,7 +613,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -678,7 +678,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -763,7 +763,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -782,7 +782,7 @@ describe("OtherEvents", () => {
               description_en: null,
               id: 0,
               image: "",
-              type: "",
+              type: "producer",
               sponsor_tier: null,
               name: "Champagne Comtesse",
               website: "https://comtesse.example",
@@ -840,7 +840,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -905,7 +905,7 @@ describe("OtherEvents", () => {
         return jsonResponse<import("@/api-types").EditionPublicOut[]>([
           {
             year: 0,
-            month: "",
+            month: "march",
             dates: [],
             producers: [],
             sponsors: [],
@@ -924,7 +924,7 @@ describe("OtherEvents", () => {
               description_en: null,
               id: 0,
               image: "",
-              type: "",
+              type: "producer",
               sponsor_tier: null,
               name: "Champagne Comtesse",
               website: "javascript:alert(1)",

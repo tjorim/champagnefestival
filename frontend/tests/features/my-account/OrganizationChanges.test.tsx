@@ -15,7 +15,7 @@ const texts = {
   description_fr: null,
   description_en: null,
 };
-const row = { id: 42, name: "House", type: "producer", active: true, ...texts };
+const row = { id: 42, name: "House", type: "producer" as const, active: true, ...texts };
 const change: import("@/api-types").OrganizationChangeOut = {
   created_at: "2026-01-01T00:00:00Z",
   id: "proposal",

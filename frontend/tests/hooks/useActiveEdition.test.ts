@@ -101,7 +101,6 @@ describe("useActiveEdition", () => {
   it("preserves descriptions for all organization types in the public payload", async () => {
     const item = {
       website: "",
-      type: "",
       sponsor_tier: null,
       id: 1,
       name: "Maison",
@@ -114,9 +113,9 @@ describe("useActiveEdition", () => {
       http.get("/api/editions/active", () =>
         jsonResponse<import("@/api-types").EditionPublicOut>({
           ...apiEdition,
-          producers: [item],
-          sponsors: [item],
-          vendors: [item],
+          producers: [{ ...item, type: "producer" }],
+          sponsors: [{ ...item, type: "sponsor" }],
+          vendors: [{ ...item, type: "vendor" }],
         }),
       ),
     );
@@ -124,13 +123,9 @@ describe("useActiveEdition", () => {
       wrapper: createTestQueryClientWrapper(),
     });
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
-    for (const items of [
-      result.current.edition.producers,
-      result.current.edition.sponsors,
-      result.current.edition.vendors,
-    ]) {
-      expect(items).toEqual([item]);
-    }
+    expect(result.current.edition.producers).toEqual([{ ...item, type: "producer" }]);
+    expect(result.current.edition.sponsors).toEqual([{ ...item, type: "sponsor" }]);
+    expect(result.current.edition.vendors).toEqual([{ ...item, type: "vendor" }]);
   });
 
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {

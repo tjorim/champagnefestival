@@ -63,7 +63,7 @@ describe("AuditLogViewer", () => {
         actor: "admin@example.com",
         actor_label: { kind: "person", name: "Alex Martin" },
         action: "venue_created",
-        auth_source: "oidc",
+        auth_source: "keycloak",
         subject: null,
         integration_client_id: null,
         resource_type: "venue",

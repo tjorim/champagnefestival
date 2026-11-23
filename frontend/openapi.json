@@ -1075,8 +1075,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -1732,8 +1732,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -2534,8 +2534,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -10342,8 +10342,8 @@
                 {
                   "enum": [
                     "nl",
-                    "en",
-                    "fr"
+                    "fr",
+                    "en"
                   ],
                   "type": "string"
                 },
@@ -10583,8 +10583,8 @@
                 {
                   "enum": [
                     "nl",
-                    "en",
-                    "fr"
+                    "fr",
+                    "en"
                   ],
                   "type": "string"
                 },
@@ -10699,8 +10699,8 @@
                 {
                   "enum": [
                     "nl",
-                    "en",
-                    "fr"
+                    "fr",
+                    "en"
                   ],
                   "type": "string"
                 },
@@ -12220,8 +12220,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -12284,8 +12284,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -12348,8 +12348,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -13817,8 +13817,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -14100,8 +14100,8 @@
             "schema": {
               "enum": [
                 "nl",
-                "en",
-                "fr"
+                "fr",
+                "en"
               ],
               "type": "string",
               "default": "nl",
@@ -15795,6 +15795,14 @@
           },
           "auth_source": {
             "type": "string",
+            "enum": [
+              "unknown",
+              "none",
+              "integration",
+              "keycloak",
+              "token",
+              "visitor_session"
+            ],
             "title": "Auth Source"
           },
           "subject": {
@@ -17253,18 +17261,12 @@
           "organization_type": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "producer",
-                  "vendor",
-                  "sponsor"
-                ]
+                "$ref": "#/components/schemas/OrganizationType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Organization Type"
+            ]
           },
           "title": {
             "anyOf": [
@@ -17332,8 +17334,8 @@
             "type": "string",
             "enum": [
               "nl",
-              "en",
-              "fr"
+              "fr",
+              "en"
             ],
             "title": "Locale",
             "default": "nl"
@@ -17374,7 +17376,12 @@
           "sponsor_tier": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "main",
+                  "partner",
+                  "supporter"
+                ]
               },
               {
                 "type": "null"
@@ -17427,10 +17434,29 @@
           },
           "month": {
             "type": "string",
+            "enum": [
+              "january",
+              "february",
+              "march",
+              "april",
+              "may",
+              "june",
+              "july",
+              "august",
+              "september",
+              "october",
+              "november",
+              "december"
+            ],
             "title": "Month"
           },
           "edition_type": {
             "type": "string",
+            "enum": [
+              "festival",
+              "bourse",
+              "capsule_exchange"
+            ],
             "title": "Edition Type"
           },
           "start_date": {
@@ -17655,8 +17681,7 @@
             "title": "Website"
           },
           "type": {
-            "type": "string",
-            "title": "Type"
+            "$ref": "#/components/schemas/OrganizationType"
           },
           "sponsor_tier": {
             "anyOf": [
@@ -17703,6 +17728,20 @@
           },
           "month": {
             "type": "string",
+            "enum": [
+              "january",
+              "february",
+              "march",
+              "april",
+              "may",
+              "june",
+              "july",
+              "august",
+              "september",
+              "october",
+              "november",
+              "december"
+            ],
             "title": "Month"
           },
           "edition_type": {
@@ -17880,6 +17919,20 @@
           },
           "month": {
             "type": "string",
+            "enum": [
+              "january",
+              "february",
+              "march",
+              "april",
+              "may",
+              "june",
+              "july",
+              "august",
+              "september",
+              "october",
+              "november",
+              "december"
+            ],
             "title": "Month"
           },
           "edition_type": {
@@ -18083,6 +18136,20 @@
           },
           "month": {
             "type": "string",
+            "enum": [
+              "january",
+              "february",
+              "march",
+              "april",
+              "may",
+              "june",
+              "july",
+              "august",
+              "september",
+              "october",
+              "november",
+              "december"
+            ],
             "title": "Month"
           },
           "edition_type": {
@@ -18642,6 +18709,11 @@
           },
           "source": {
             "type": "string",
+            "enum": [
+              "self_service",
+              "registration_form",
+              "unknown"
+            ],
             "title": "Source"
           },
           "granted_at": {
@@ -18664,7 +18736,14 @@
           "revoked_source": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "self_service",
+                  "admin",
+                  "merged",
+                  "unsubscribe_link",
+                  "unknown"
+                ]
               },
               {
                 "type": "null"
@@ -20112,6 +20191,10 @@
           },
           "allowed_role": {
             "type": "string",
+            "enum": [
+              "admin",
+              "volunteer"
+            ],
             "title": "Allowed Role"
           },
           "created_by_actor": {
@@ -20193,6 +20276,10 @@
           },
           "allowed_role": {
             "type": "string",
+            "enum": [
+              "admin",
+              "volunteer"
+            ],
             "title": "Allowed Role"
           },
           "created_by_actor": {
@@ -21321,8 +21408,7 @@
             "title": "Name"
           },
           "type": {
-            "type": "string",
-            "title": "Type"
+            "$ref": "#/components/schemas/OrganizationType"
           },
           "website": {
             "type": "string",
@@ -22484,13 +22570,7 @@
             "default": true
           },
           "type": {
-            "type": "string",
-            "enum": [
-              "producer",
-              "sponsor",
-              "vendor"
-            ],
-            "title": "Type",
+            "$ref": "#/components/schemas/OrganizationType",
             "default": "vendor"
           },
           "contact_person_id": {
@@ -22568,8 +22648,7 @@
             "title": "Active"
           },
           "type": {
-            "type": "string",
-            "title": "Type"
+            "$ref": "#/components/schemas/OrganizationType"
           },
           "contact_person_id": {
             "anyOf": [
@@ -22646,6 +22725,15 @@
           "stands"
         ],
         "title": "OrganizationStandsOut"
+      },
+      "OrganizationType": {
+        "type": "string",
+        "enum": [
+          "producer",
+          "sponsor",
+          "vendor"
+        ],
+        "title": "OrganizationType"
       },
       "OrganizationUpdate": {
         "properties": {
@@ -22736,18 +22824,12 @@
           "type": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "producer",
-                  "sponsor",
-                  "vendor"
-                ]
+                "$ref": "#/components/schemas/OrganizationType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Type"
+            ]
           },
           "contact_person_id": {
             "anyOf": [
@@ -24398,8 +24480,8 @@
             "type": "string",
             "enum": [
               "nl",
-              "en",
-              "fr"
+              "fr",
+              "en"
             ],
             "title": "Locale"
           },
@@ -30583,18 +30665,7 @@
             "title": "Locale"
           },
           "state": {
-            "type": "string",
-            "enum": [
-              "preparing",
-              "submitted",
-              "queued",
-              "running",
-              "ready",
-              "failed",
-              "cancelled",
-              "expired"
-            ],
-            "title": "State"
+            "$ref": "#/components/schemas/VideoExportState"
           },
           "cancel_requested": {
             "type": "boolean",
@@ -30683,18 +30754,7 @@
             "title": "Locale"
           },
           "state": {
-            "type": "string",
-            "enum": [
-              "preparing",
-              "submitted",
-              "queued",
-              "running",
-              "ready",
-              "failed",
-              "cancelled",
-              "expired"
-            ],
-            "title": "State"
+            "$ref": "#/components/schemas/VideoExportState"
           },
           "cancel_requested": {
             "type": "boolean",
@@ -30739,6 +30799,20 @@
         ],
         "title": "VideoExportOut",
         "description": "One creator-owned video export, as ``services.signage_video.summary`` reports it."
+      },
+      "VideoExportState": {
+        "type": "string",
+        "enum": [
+          "preparing",
+          "submitted",
+          "queued",
+          "running",
+          "ready",
+          "failed",
+          "cancelled",
+          "expired"
+        ],
+        "title": "VideoExportState"
       },
       "VisitorSessionStatus": {
         "properties": {

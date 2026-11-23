@@ -6,6 +6,7 @@ from datetime import datetime
 
 from pydantic import ConfigDict
 
+from app.core.vocabularies import AuditSource
 from app.schemas.actors import ActorLabel
 from app.schemas.base import ResponseModel
 
@@ -14,7 +15,7 @@ class AuditEntryBaseOut(ResponseModel):
     id: str
     timestamp: datetime
     actor: str
-    auth_source: str
+    auth_source: AuditSource
     subject: str | None
     integration_client_id: str | None
     action: str

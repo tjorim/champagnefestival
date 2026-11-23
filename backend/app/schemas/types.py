@@ -1,25 +1,20 @@
 """Reusable request field constraints; models own defaults and nullability."""
 
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field
+
+from app.core.vocabularies import EditionMonth
+
+
+def _canonical_month(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+EditionMonthOut = Annotated[EditionMonth, BeforeValidator(_canonical_month)]
 
 AreaDimension = Annotated[float, Field(ge=0.1, le=50.0)]
-EditionMonth = Literal[
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-]
 Latitude = Annotated[float, Field(ge=-90, le=90)]
 Longitude = Annotated[float, Field(ge=-180, le=180)]
 ClockTime = Annotated[str, Field(pattern="^(?:[01]\\d|2[0-3]):[0-5]\\d$")]

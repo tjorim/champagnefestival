@@ -10,13 +10,14 @@ from pydantic import ConfigDict, Field
 from app.schemas.base import ResponseModel
 from app.schemas.editions import EditionItemOut, EditionType
 from app.schemas.events import EventOut, EventPublicOut
+from app.schemas.types import EditionMonthOut
 from app.schemas.venues import VenueOut
 
 
 class EditionOut(ResponseModel):
     id: str
     year: int
-    month: str
+    month: EditionMonthOut
     edition_type: EditionType
     dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
@@ -48,7 +49,7 @@ class EditionPublicOut(ResponseModel):
 
     id: str
     year: int
-    month: str
+    month: EditionMonthOut
     edition_type: EditionType
     dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut

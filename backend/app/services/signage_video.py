@@ -25,12 +25,12 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.vocabularies import VideoExportState
 from app.models import SignageVideoExport
 from app.schemas.signage import VideoExportOut
 from app.services import signage_service
 from app.services.errors import ApiHTTPException
 
-PROFILE = "signage-slideshow-v1"
 MAX_SLIDES = 60
 MAX_SLIDE_BYTES = 8 * 1024**2
 MAX_INPUT_BYTES = 120 * 1024**2
@@ -38,8 +38,8 @@ MAX_OUTPUT_BYTES = 160 * 1024**2
 MAX_SECONDS = 600
 RETENTION = timedelta(hours=24)
 PREPARE_TIMEOUT = timedelta(minutes=45)
-ACTIVE = {"preparing", "submitted", "queued", "running"}
-TERMINAL = {"ready", "failed", "cancelled", "expired"}
+ACTIVE = {VideoExportState.PREPARING, VideoExportState.SUBMITTED, VideoExportState.QUEUED, VideoExportState.RUNNING}
+TERMINAL = {VideoExportState.READY, VideoExportState.FAILED, VideoExportState.CANCELLED, VideoExportState.EXPIRED}
 KEY = re.compile(r"[A-Za-z0-9_-]{16,128}\Z")
 WORKER_ID = re.compile(r"[a-f0-9]{32}\Z")
 logger = logging.getLogger(__name__)

@@ -7,8 +7,10 @@ from datetime import datetime
 from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import AnnouncementLevel, ComposedMessageState
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class ComposedMessage(Base):
@@ -24,8 +26,8 @@ class ComposedMessage(Base):
 
     __tablename__ = "composed_messages"
     __table_args__ = (
-        CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_composed_messages_level"),
-        CheckConstraint("state IN ('draft', 'scheduled', 'sent')", name="ck_composed_messages_state"),
+        vocabulary_check("ck_composed_messages_level", "level", AnnouncementLevel),
+        vocabulary_check("ck_composed_messages_state", "state", ComposedMessageState),
         CheckConstraint(
             "(length(trim(title_nl)) > 0 AND length(trim(body_nl)) > 0) IS TRUE",
             name="ck_composed_messages_nl",

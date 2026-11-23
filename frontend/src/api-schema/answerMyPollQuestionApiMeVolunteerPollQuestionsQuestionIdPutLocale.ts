@@ -11,6 +11,6 @@ export type AnswerMyPollQuestionApiMeVolunteerPollQuestionsQuestionIdPutLocale =
 
 export const AnswerMyPollQuestionApiMeVolunteerPollQuestionsQuestionIdPutLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

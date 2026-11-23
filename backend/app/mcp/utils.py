@@ -178,33 +178,17 @@ def person_dict(person: Person, *, role: str) -> dict:
     return base
 
 
-def order_item_dict(item: Any) -> dict:
-    if not isinstance(item, dict):
-        item = {}
-    try:
-        quantity = int(item.get("quantity", 0))
-    except TypeError, ValueError:
-        quantity = 0
-    quantity = max(quantity, 0)
-
-    delivered_flag = bool(item.get("delivered", False))
-    delivered_quantity_raw = item.get("delivered_quantity")
-    if delivered_quantity_raw is None:
-        delivered_quantity = quantity if delivered_flag else 0
-    else:
-        try:
-            delivered_quantity = int(delivered_quantity_raw)
-        except TypeError, ValueError:
-            delivered_quantity = 0
-    delivered_quantity = max(0, min(delivered_quantity, quantity))
+def order_item_dict(item: dict) -> dict:
+    quantity = item["quantity"]
+    delivered_quantity = item["delivered_quantity"]
     remaining_quantity = quantity - delivered_quantity
 
     return {
-        "product_id": item.get("product_id", ""),
-        "name": item.get("name", ""),
-        "category": item.get("category", ""),
+        "product_id": item["product_id"],
+        "name": item["name"],
+        "category": item["category"],
         "quantity": quantity,
-        "price": item.get("price", 0.0),
+        "price": item["price"],
         "delivered_quantity": delivered_quantity,
         "remaining_quantity": remaining_quantity,
         "delivered": remaining_quantity == 0,

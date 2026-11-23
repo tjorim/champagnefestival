@@ -8,8 +8,10 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, St
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.translations import BASE_LANGUAGE, resolve_text
+from app.core.vocabularies import PolicyVersionStatus
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class Policy(Base):
@@ -54,7 +56,7 @@ class PolicyVersion(Base):
     __tablename__ = "policy_versions"
     __table_args__ = (
         UniqueConstraint("policy_key", "version_number", name="uq_policy_versions_number"),
-        CheckConstraint("status IN ('draft', 'published', 'superseded')", name="ck_policy_versions_status"),
+        vocabulary_check("ck_policy_versions_status", "status", PolicyVersionStatus),
         CheckConstraint(
             "(status = 'draft' OR length(trim(content_nl)) > 0) IS TRUE",
             name="ck_policy_versions_nl",

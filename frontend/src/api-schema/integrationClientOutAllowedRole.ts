@@ -6,11 +6,10 @@
  * OpenAPI spec version: snapshot
  */
 
-export type ContentOrganizationType = typeof ContentOrganizationType[keyof typeof ContentOrganizationType] | null;
+export type IntegrationClientOutAllowedRole = typeof IntegrationClientOutAllowedRole[keyof typeof IntegrationClientOutAllowedRole];
 
 
-export const ContentOrganizationType = {
-  producer: 'producer',
-  vendor: 'vendor',
-  sponsor: 'sponsor',
+export const IntegrationClientOutAllowedRole = {
+  admin: 'admin',
+  volunteer: 'volunteer',
 } as const;

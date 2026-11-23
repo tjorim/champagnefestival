@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import ConfigDict, Field, model_validator
 
+from app.core.vocabularies import TableHeight, TableShape
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import FloorPlanPosition, FloorPlanRotation, NonEmptyText200, TableCapacity, TableDimension
 
@@ -14,13 +15,13 @@ from app.schemas.types import FloorPlanPosition, FloorPlanRotation, NonEmptyText
 class TableTypeCreate(RequestModel):
     name: NonEmptyText200
     venue_id: str
-    shape: Literal["rectangle", "round"] = "rectangle"
+    shape: TableShape = "rectangle"
     # No defensible default exists for physical dimensions (unlike shape/height_type,
     # which have a legitimate industry-standard default) — required so a caller can't
     # silently persist a 0.7 x 1.8m table type without realising it (see #835).
     width_m: TableDimension
     length_m: TableDimension
-    height_type: Literal["low", "high"] = "low"
+    height_type: TableHeight = "low"
     capacity: TableCapacity
     active: bool = True
 
@@ -35,10 +36,10 @@ class TableTypeCreate(RequestModel):
 class TableTypeUpdate(RequestModel):
     name: NonEmptyText200 | None = None
     venue_id: str | None = None
-    shape: Literal["rectangle", "round"] | None = None
+    shape: TableShape | None = None
     width_m: TableDimension | None = None
     length_m: TableDimension | None = None
-    height_type: Literal["low", "high"] | None = None
+    height_type: TableHeight | None = None
     capacity: TableCapacity | None = None
     active: bool | None = None
 
@@ -47,10 +48,10 @@ class TableTypeOut(ResponseModel):
     id: str
     name: str
     venue_id: str
-    shape: Literal["rectangle", "round"]
+    shape: TableShape
     width_m: float
     length_m: float
-    height_type: Literal["low", "high"]
+    height_type: TableHeight
     capacity: int
     active: bool
     created_at: datetime
