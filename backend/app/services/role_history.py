@@ -38,6 +38,12 @@ def normalise_roles(roles: list[str]) -> list[str]:
     return sorted(normalised)
 
 
+def _touch(person: Person) -> None:
+    # For a new person the insert supplies both timestamps together.
+    if person.created_at is not None:
+        person.updated_at = _utcnow()
+
+
 def _append(
     person: Person, role: str, started_on: date | None, *, ended_on: date | None = None, removed: bool = False
 ) -> None:
@@ -51,7 +57,7 @@ def _append(
             removed=removed,
         )
     )
-    person.updated_at = _utcnow()
+    _touch(person)
 
 
 def is_retired(person: Person, role: str) -> bool:
@@ -70,7 +76,7 @@ def drop_role(person: Person, role: str) -> None:
     latest = person.latest_role_periods[role]
     latest.ended_on = latest.ended_on or date.today()
     latest.removed = True
-    person.updated_at = _utcnow()
+    _touch(person)
 
 
 def sync_roles(person: Person, roles: list[str]) -> None:
@@ -86,7 +92,7 @@ def retire_role(person: Person, role: str) -> bool:
     if is_retired(person, role):
         return False
     person.latest_role_periods[role].ended_on = date.today()
-    person.updated_at = _utcnow()
+    _touch(person)
     return True
 
 
@@ -106,7 +112,7 @@ def set_role_start(person: Person, role: str, day: date) -> None:
             detail=f"The {role} role ended on {latest.ended_on}; it cannot start after that.",
         )
     latest.started_on = day
-    person.updated_at = _utcnow()
+    _touch(person)
 
 
 def role_since(person: Person, role: str) -> str | None:

@@ -1,6 +1,6 @@
 """Role history: when each role was held, and the retired-role index derived from it."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -84,7 +84,9 @@ async def test_member_since_and_history_through_the_api(client):
         headers=ADMIN_HEADERS,
     )
     assert created.status_code == 201
-    member_id = created.json()["id"]
+    record = created.json()
+    member_id = record["id"]
+    assert datetime.fromisoformat(record["created_at"]) <= datetime.fromisoformat(record["updated_at"])
     assert created.json()["role_history"] == {"member": [{"started_on": "2021-04-02", "ended_on": None}]}
 
     await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)
