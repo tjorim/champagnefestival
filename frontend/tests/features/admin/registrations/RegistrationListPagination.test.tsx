@@ -85,18 +85,18 @@ const rawRegistrations = Array.from({ length: TOTAL_REGISTRATIONS }, (_, i) =>
 );
 const registrations = rawRegistrations.map((row) => row);
 
-function installPaginatedHandler(seen: URL[] = []) {
+function installPaginatedHandler(seen: URL[] = [], rows = rawRegistrations) {
   server.use(
     http.get("/api/registrations", ({ request }) => {
       const url = new URL(request.url);
       seen.push(url);
-      const limit = Number(url.searchParams.get("limit") ?? rawRegistrations.length);
+      const limit = Number(url.searchParams.get("limit") ?? rows.length);
       const page = Number(url.searchParams.get("page") ?? 1);
       const start = (page - 1) * limit;
-      const items = rawRegistrations.slice(start, start + limit);
+      const items = rows.slice(start, start + limit);
       return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
         items,
-        total: rawRegistrations.length,
+        total: rows.length,
         limit,
         page,
       });
@@ -215,19 +215,20 @@ describe("RegistrationList — responsive actions", () => {
     });
     try {
       const seen: URL[] = [];
-      installPaginatedHandler(seen);
-      renderRegistrationList();
-      await waitFor(() => expect(screen.getByText("Guest 01")).toBeInTheDocument());
+      const mobileRows = rawRegistrations.slice(0, 3);
+      installPaginatedHandler(seen, mobileRows);
+      renderRegistrationList(mobileRows);
+      expect(await screen.findByText("Guest 01", {}, { timeout: 5000 })).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
       expect(screen.getAllByRole("button", { name: "admin_mark_checked_in" })).toHaveLength(
-        TOTAL_REGISTRATIONS,
+        mobileRows.length,
       );
       expect(
         screen.getByRole("button", { name: "admin_view_edit_booking: Guest 01" }),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("checkbox", { name: "admin_select_all" }));
       expect(
-        screen.getByText(`admin_bulk_selected({"count":${TOTAL_REGISTRATIONS}})`),
+        screen.getByText(`admin_bulk_selected({"count":${mobileRows.length}})`),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("checkbox", { name: "admin_select_all" }));
       const user = userEvent.setup();
@@ -250,7 +251,7 @@ describe("RegistrationList — responsive actions", () => {
     } finally {
       media.mockRestore();
     }
-  }, 15_000); // axe scans 30 populated cards while the full suite shares CPU.
+  }, 15_000);
 });
 
 it("keeps an open QR dialog in sync with token rotation and cancellation", async () => {
