@@ -71,7 +71,7 @@ import { useAppTable, createAppColumnHelper } from "../shared/useAdminTable";
 import { exportToCsv } from "../shared/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "../shared/ColumnVisibilityDropdown";
-import { hideColumnUntilUsed, loadColVis, saveColVis } from "../shared/columnVisibility";
+import { loadColVis, saveColVis } from "../shared/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchRegistration,
@@ -190,7 +190,7 @@ function isStandaloneRegistration(registration: Registration) {
 }
 
 const columnHelper = createAppColumnHelper<Registration>();
-const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityState = { event: false };
+const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityState = { event: false, table: false };
 
 export default function RegistrationList({
   registrations,
@@ -929,19 +929,7 @@ export default function RegistrationList({
     clearSelection();
   }, [onFilterChange, clearSelection]);
 
-  // Historical bookings can have assignments even when the active floor plan has no tables.
-  // An explicit choice in the Columns menu always wins.
-  const hasTables =
-    tables.length > 0 || pageRegistrations.some((registration) => Boolean(registration.table_id));
-  const effectiveColumnVisibility = useMemo<ColumnVisibilityState>(
-    () =>
-      hideColumnUntilUsed(
-        { ...DEFAULT_COLUMN_VISIBILITY, ...columnVisibility },
-        "table",
-        hasTables,
-      ),
-    [columnVisibility, hasTables],
-  );
+  const effectiveColumnVisibility = { ...DEFAULT_COLUMN_VISIBILITY, ...columnVisibility };
   const table = useAppTable(
     {
       data: pageRegistrations,

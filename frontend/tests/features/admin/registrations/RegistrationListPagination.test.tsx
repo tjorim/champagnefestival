@@ -137,6 +137,8 @@ function renderRegistrationList(
 
 describe("RegistrationList — server-side pagination", () => {
   it("renders an older edition page when the active collection does not contain its rows", async () => {
+    // The hall-layout column is opt-in; a saved choice shows it.
+    localStorage.setItem("admin-col-vis-registrations", JSON.stringify({ table: true }));
     const older = buildRawRegistration(1);
     older.event = { ...older.event, edition_id: "older-edition" };
     older.person = { ...older.person, name: "Historical guest" };
