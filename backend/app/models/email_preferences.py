@@ -19,8 +19,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import ConsentRevocationSource, ConsentSource, SuppressionReason
 from app.db.base import Base
 from app.models.base import _optional_dutch_check, _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class EmailSuppression(Base):
@@ -32,7 +34,7 @@ class EmailSuppression(Base):
     """
 
     __tablename__ = "email_suppressions"
-    __table_args__ = (CheckConstraint("reason IN ('hard_bounce', 'complaint')", name="ck_email_suppressions_reason"),)
+    __table_args__ = (vocabulary_check("ck_email_suppressions_reason", "reason", SuppressionReason),)
 
     address_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     reason: Mapped[str] = mapped_column(String(20))
@@ -88,6 +90,8 @@ class EmailConsent(Base):
 
     __tablename__ = "email_consents"
     __table_args__ = (
+        vocabulary_check("ck_email_consents_source", "source", ConsentSource),
+        vocabulary_check("ck_email_consents_revoked_source", "revoked_source", ConsentRevocationSource),
         CheckConstraint("(revoked_at IS NULL) = (revoked_source IS NULL)", name="ck_email_consents_revocation"),
         Index(
             "uq_email_consents_open",
@@ -103,10 +107,10 @@ class EmailConsent(Base):
     person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"), index=True)
     category_key: Mapped[str] = mapped_column(ForeignKey("email_categories.key", ondelete="RESTRICT"), index=True)
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    source: Mapped[str] = mapped_column(String(30))
+    source: Mapped[ConsentSource] = mapped_column(String(30))
     """``self_service`` (preferences screen) or ``registration_form`` (confirmed through the emailed link)."""
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    revoked_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    revoked_source: Mapped[ConsentRevocationSource | None] = mapped_column(String(30), nullable=True)
     """``self_service``, ``admin`` (an administrator recorded an opt-out) or ``merged`` (superseded by the
     surviving person's own open grant when two people were merged)."""
 

@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { IntegrationClientOutAllowedRole } from './integrationClientOutAllowedRole';
 
 /**
  * Admin listing/detail shape — never includes the key hash or raw key.
@@ -13,7 +14,7 @@ export type IntegrationClientOut = {
   id: string;
   name: string;
   key_preview: string;
-  allowed_role: string;
+  allowed_role: IntegrationClientOutAllowedRole;
   created_by_actor: string;
   rate_limit_per_minute: number;
   is_active: boolean;

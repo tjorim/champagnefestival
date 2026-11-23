@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import ConfigDict, Field
 
+from app.core.vocabularies import IntegrationRole
 from app.schemas.base import RequestModel, ResponseModel
 
 
 class IntegrationClientCreate(RequestModel):
     name: str = Field(min_length=1, max_length=120)
-    allowed_role: Literal["admin", "volunteer"]
+    allowed_role: IntegrationRole
     """Fixed at creation; never more privileged than the creating admin's own tier
     (in practice always 'admin' here, since only admins can call this)."""
     rate_limit_per_minute: int = Field(default=120, ge=1, le=6000)
@@ -24,7 +24,7 @@ class IntegrationClientOut(ResponseModel):
     id: str
     name: str
     key_preview: str
-    allowed_role: str
+    allowed_role: IntegrationRole
     created_by_actor: str
     rate_limit_per_minute: int
     is_active: bool

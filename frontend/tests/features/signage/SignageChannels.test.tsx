@@ -73,7 +73,7 @@ beforeEach(() => {
           id: "march-2027",
           edition_type: "bourse",
           year: 2027,
-          month: "March",
+          month: "march",
         },
       ]),
     ),

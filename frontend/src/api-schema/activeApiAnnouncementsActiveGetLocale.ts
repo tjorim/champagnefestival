@@ -11,6 +11,6 @@ export type ActiveApiAnnouncementsActiveGetLocale = typeof ActiveApiAnnouncement
 
 export const ActiveApiAnnouncementsActiveGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

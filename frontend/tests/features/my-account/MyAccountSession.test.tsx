@@ -18,7 +18,7 @@ import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/app/router";
 import { createTestQueryClientWrapper } from "../../utils/queryClient";
 
-const organizations = [
+const organizations: import("@/api-types").ManagedOrganizationOut[] = [
   {
     description_nl: null,
     description_fr: null,

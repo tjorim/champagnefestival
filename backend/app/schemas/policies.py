@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
 
 from pydantic import ConfigDict
 
+from app.core.vocabularies import Locale, PolicyVersionStatus
 from app.schemas.base import RequestModel, ResponseModel
-from app.schemas.faq import FaqLocale
 from app.schemas.types import MarkdownSource, Text2000
-
-PolicyVersionStatus = Literal["draft", "published", "superseded"]
 
 
 class PolicyVersionOut(ResponseModel):
@@ -82,7 +79,7 @@ class PolicyRenderOut(ResponseModel):
 class PolicyPublicOut(ResponseModel):
     key: str
     title: str
-    locale: FaqLocale
+    locale: Locale
     """The language `html` is written in: the requested one, or Dutch when that locale
     has no content."""
     html: str

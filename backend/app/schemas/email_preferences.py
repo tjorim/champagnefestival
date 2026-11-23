@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import Field, field_validator, model_validator
 
+from app.core.vocabularies import ConsentRevocationSource, ConsentSource, Locale
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.categories import CATEGORY_KEY_PATTERN
 from app.schemas.types import NonEmptyText200, ResourceKey, RoleKey, SortOrder, Text100, Text500
@@ -107,7 +108,7 @@ class EmailPreferencesUpdate(RequestModel):
 
 class EmailConsentConfirm(RequestModel):
     token: NonEmptyText200
-    locale: Literal["nl", "fr", "en"] | None = None
+    locale: Locale | None = None
 
 
 class EmailConsentConfirmedOut(ResponseModel):
@@ -120,7 +121,7 @@ class EmailConsentOut(ResponseModel):
     id: str
     category_key: str
     category_name: str
-    source: str
+    source: ConsentSource
     granted_at: datetime
     revoked_at: datetime | None
-    revoked_source: str | None
+    revoked_source: ConsentRevocationSource | None

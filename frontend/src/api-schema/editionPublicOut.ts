@@ -7,6 +7,7 @@
  */
 import type { EditionItemOut } from './editionItemOut';
 import type { EditionPublicOutEditionType } from './editionPublicOutEditionType';
+import type { EditionPublicOutMonth } from './editionPublicOutMonth';
 import type { EventPublicOut } from './eventPublicOut';
 import type { VenueOut } from './venueOut';
 
@@ -17,7 +18,7 @@ import type { VenueOut } from './venueOut';
 export type EditionPublicOut = {
   id: string;
   year: number;
-  month: string;
+  month: EditionPublicOutMonth;
   edition_type: EditionPublicOutEditionType;
   dates: string[];
   venue: VenueOut;

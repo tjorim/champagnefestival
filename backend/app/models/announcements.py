@@ -8,8 +8,10 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, Uniq
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import AnnouncementLevel
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class Announcement(Base):
@@ -18,7 +20,7 @@ class Announcement(Base):
     __tablename__ = "announcements"
     __table_args__ = (
         UniqueConstraint("sort_order", name="uq_announcements_sort_order", deferrable=True, initially="DEFERRED"),
-        CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_announcements_level"),
+        vocabulary_check("ck_announcements_level", "level", AnnouncementLevel),
         CheckConstraint("ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at", name="ck_announcements_window"),
         CheckConstraint("(length(trim(text_nl)) > 0) IS TRUE", name="ck_announcements_text_nl"),
         CheckConstraint(

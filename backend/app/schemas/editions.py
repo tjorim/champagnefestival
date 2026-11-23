@@ -5,21 +5,19 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
+from app.core.vocabularies import EditionMonth, EditionType, OrganizationType, SponsorTier
 from app.schemas.base import RequestModel, ResponseModel
-from app.schemas.organizations import SponsorTier
-from app.schemas.types import EditionMonth, EditionYear, ResourceKey
-
-EditionType = Literal["festival", "bourse", "capsule_exchange"]
+from app.schemas.types import EditionMonthOut, EditionYear, ResourceKey
 
 
 class EditionSummaryOut(ResponseModel):
     id: str
     year: int
-    month: str
+    month: EditionMonthOut
     edition_type: EditionType
     active: bool
 
@@ -111,7 +109,7 @@ class EditionItemOut(ResponseModel):
     name: str
     image: str
     website: str
-    type: str
+    type: OrganizationType
     sponsor_tier: SponsorTier | None = Field(
         default=None, description="Sponsor level for this edition; null for non-sponsors and untiered sponsors."
     )
@@ -133,8 +131,8 @@ class EditionScratchpadOut(ResponseModel):
 class EditionAttendanceStats(ResponseModel):
     edition_id: str
     year: int
-    month: str
-    edition_type: str
+    month: EditionMonthOut
+    edition_type: EditionType
     start_date: dt_date | None
     events_count: int
     total_registrations: int

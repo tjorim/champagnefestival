@@ -11,6 +11,6 @@ export type SaveMyPollNoteApiMeVolunteerPollNotePutLocale = typeof SaveMyPollNot
 
 export const SaveMyPollNoteApiMeVolunteerPollNotePutLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

@@ -7,14 +7,17 @@ from datetime import datetime
 from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import AuditSource
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class AuditEntry(Base):
     """Immutable audit record for high-impact event-day mutations."""
 
     __tablename__ = "audit_entries"
+    __table_args__ = (vocabulary_check("ck_audit_entries_auth_source", "auth_source", AuditSource),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)

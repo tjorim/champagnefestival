@@ -11,6 +11,6 @@ export type ListPollQuestionsApiPollQuestionsGetLocale = typeof ListPollQuestion
 
 export const ListPollQuestionsApiPollQuestionsGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

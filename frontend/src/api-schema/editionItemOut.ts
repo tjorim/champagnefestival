@@ -6,6 +6,7 @@
  * OpenAPI spec version: snapshot
  */
 import type { EditionItemOutSponsorTier } from './editionItemOutSponsorTier';
+import type { OrganizationType } from './organizationType';
 
 /**
  * Slim organization shape embedded in the public edition response.
@@ -20,7 +21,7 @@ export type EditionItemOut = {
   name: string;
   image: string;
   website: string;
-  type: string;
+  type: OrganizationType;
   /** Sponsor level for this edition; null for non-sponsors and untiered sponsors. */
   sponsor_tier: EditionItemOutSponsorTier;
 };

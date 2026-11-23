@@ -56,7 +56,7 @@ describe("AuditLogViewer", () => {
         timestamp: "2026-01-01T12:00:00Z",
         actor: "admin@example.com",
         action: "venue_created",
-        auth_source: "oidc",
+        auth_source: "keycloak",
         subject: null,
         integration_client_id: null,
         resource_type: "venue",

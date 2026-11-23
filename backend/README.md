@@ -1197,3 +1197,20 @@ Migration `012` records these decisions for the operational schema.
   and modification timestamps. Existing rows use migration time as the
   earliest known timestamp. Stamps are immutable check-in facts and already
   store their creation time, so they have no modification timestamp.
+
+### Fixed vocabularies (#1652)
+
+Define fixed scalar database vocabularies in `app/core/vocabularies.py`.
+Use the same type in the request and response schemas and pass it to
+`vocabulary_check` in the model. Alembic revisions keep frozen copies of
+allowed values so schema replay is independent of the running application.
+
+Revision 013 preserves valid values. It maps unrecognised organisation and
+table types to the existing defaults and unsupported locales to Dutch.
+Unknown audit and consent provenance and delivery outcomes are recorded as
+`unknown`. Historical audit aliases `oidc` and `visitor` map to `keycloak`
+and `visitor_session`. Unrecognised delivery and export states become failed.
+An unsupported export profile is set to the supported profile and marked failed
+so the job is never retried under a different profile. Integration clients
+with unknown roles are revoked, disabled, and assigned the volunteer role.
+Downgrading removes the checks. It does not undo data repairs.

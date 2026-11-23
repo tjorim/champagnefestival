@@ -7,22 +7,27 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import DeliveryOutcome, OutboxState
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class OutboxJob(Base):
     """Durable, lease-claimed work item for one external side effect."""
 
     __tablename__ = "outbox_jobs"
-    __table_args__ = (UniqueConstraint("deduplication_key", name="uq_outbox_jobs_deduplication_key"),)
+    __table_args__ = (
+        vocabulary_check("ck_outbox_jobs_state", "state", OutboxState),
+        UniqueConstraint("deduplication_key", name="uq_outbox_jobs_deduplication_key"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     job_type: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     resource_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     deduplication_key: Mapped[str] = mapped_column(String(200), nullable=False)
-    state: Mapped[str] = mapped_column(String(20), default="pending", index=True, nullable=False)
+    state: Mapped[str] = mapped_column(String(20), default=OutboxState.PENDING, index=True, nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     max_attempts: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
     scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
@@ -38,6 +43,7 @@ class DeliveryAttempt(Base):
     """Non-secret operational result for one outbox delivery attempt."""
 
     __tablename__ = "delivery_attempts"
+    __table_args__ = (vocabulary_check("ck_delivery_attempts_outcome", "outcome", DeliveryOutcome),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     job_id: Mapped[str] = mapped_column(

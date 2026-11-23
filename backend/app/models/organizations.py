@@ -7,8 +7,10 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import AuditSource, OrganizationChangeStatus, OrganizationType
 from app.db.base import Base
 from app.models.base import _optional_dutch_check, _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class Organization(Base):
@@ -16,14 +18,17 @@ class Organization(Base):
 
     __tablename__ = "organizations"
 
-    __table_args__ = (CheckConstraint(_optional_dutch_check("description"), name="ck_organizations_description_nl"),)
+    __table_args__ = (
+        vocabulary_check("ck_organizations_type", "type", OrganizationType),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_organizations_description_nl"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
     website: Mapped[str] = mapped_column(String(500), default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    type: Mapped[str] = mapped_column(String(20), default="vendor")
+    type: Mapped[str] = mapped_column(String(20), default=OrganizationType.VENDOR)
     """'producer' | 'sponsor' | 'vendor'"""
     contact_person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
@@ -49,10 +54,8 @@ class OrganizationChange(Base):
             postgresql_where=text("status = 'pending'"),
             sqlite_where=text("status = 'pending'"),
         ),
-        CheckConstraint(
-            "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')",
-            name="ck_organization_change_status",
-        ),
+        vocabulary_check("ck_organization_changes_submitted_auth_source", "submitted_auth_source", AuditSource),
+        vocabulary_check("ck_organization_change_status", "status", OrganizationChangeStatus),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)

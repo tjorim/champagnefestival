@@ -7,9 +7,11 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, select
 from sqlalchemy.orm import Mapped, column_property, mapped_column
 
+from app.core.vocabularies import TableHeight, TableShape
 from app.db.base import Base
 from app.models.base import _utcnow
 from app.models.layouts import Layout
+from app.models.vocabulary import vocabulary_check
 
 
 class TableType(Base):
@@ -20,6 +22,10 @@ class TableType(Base):
     """
 
     __tablename__ = "table_types"
+    __table_args__ = (
+        vocabulary_check("ck_table_types_shape", "shape", TableShape),
+        vocabulary_check("ck_table_types_height_type", "height_type", TableHeight),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(200))

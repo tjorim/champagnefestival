@@ -11,6 +11,6 @@ export type ListPollOptionsApiPollOptionsGetLocale = typeof ListPollOptionsApiPo
 
 export const ListPollOptionsApiPollOptionsGetLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

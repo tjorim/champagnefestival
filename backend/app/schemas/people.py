@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
 
 from pydantic import ConfigDict, EmailStr, Field
 
+from app.core.vocabularies import Locale
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import MonthlyVisits, NonEmptyText200, Text20, Text50, Text300, Text2000
 
@@ -24,7 +24,7 @@ class PersonSummaryOut(ResponseModel):
     name: str
     email: str
     phone: str
-    preferred_language: Literal["nl", "fr", "en"] | None = None
+    preferred_language: Locale | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,7 +41,7 @@ class PersonOut(ResponseModel):
     name: str
     email: str
     phone: str
-    preferred_language: Literal["nl", "fr", "en"] | None = None
+    preferred_language: Locale | None = None
     address: str
     roles: list[str]
     retired_roles: dict[str, str] = {}
@@ -75,7 +75,7 @@ class PersonAdminSummaryOut(ResponseModel):
     name: str
     email: str
     phone: str
-    preferred_language: Literal["nl", "fr", "en"] | None = None
+    preferred_language: Locale | None = None
     address: str
     roles: list[str]
     retired_roles: dict[str, str] = {}
@@ -138,7 +138,7 @@ class PersonCreate(RequestModel):
     name: NonEmptyText200
     email: EmailStr | None = None
     phone: Text50 = ""
-    preferred_language: Literal["nl", "fr", "en"] | None = None
+    preferred_language: Locale | None = None
     address: Text300 = ""
     roles: list[str] = Field(default_factory=list)
     national_register_number: Text20 | None = None
@@ -155,7 +155,7 @@ class PersonUpdate(RequestModel):
     name: NonEmptyText200 | None = None
     email: EmailStr | None = None
     phone: Text50 | None = None
-    preferred_language: Literal["nl", "fr", "en"] | None = None
+    preferred_language: Locale | None = None
     address: Text300 | None = None
     roles: list[str] | None = None
     national_register_number: Text20 | None = None

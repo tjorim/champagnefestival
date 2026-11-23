@@ -26,7 +26,6 @@ from app.models.policies import Policy, PolicyVersion
 from app.models.poll import (
     MAX_POLL_PEOPLE,
     MAX_POLL_QUANTITY,
-    POLL_QUESTION_KINDS,
     EditionPollOption,
     EditionPollQuestion,
     PollDeletionNotification,
@@ -80,7 +79,6 @@ __all__ = [
     "Organization",
     "OrganizationChange",
     "OutboxJob",
-    "POLL_QUESTION_KINDS",
     "PaymentTransaction",
     "PebbleAccessToken",
     "Person",
