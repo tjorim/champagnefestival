@@ -36,6 +36,7 @@ import { queryKeys } from "@/lib/query/queryKeys";
 interface UseAdminQueriesOptions {
   visible: boolean;
   editionId: string;
+  activeEditionLoaded?: boolean;
   isAuthenticated: boolean;
   canManageAdminSections: boolean;
   authHeaders: () => Record<string, string>;
@@ -44,6 +45,7 @@ interface UseAdminQueriesOptions {
 export function useAdminQueries({
   visible,
   editionId,
+  activeEditionLoaded = true,
   isAuthenticated,
   canManageAdminSections,
   authHeaders,
@@ -54,7 +56,7 @@ export function useAdminQueries({
     editionId,
     today,
     authHeaders,
-    visible && isAuthenticated && canManageAdminSections,
+    visible && isAuthenticated && canManageAdminSections && activeEditionLoaded,
   );
 
   // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
@@ -259,7 +261,11 @@ export function useAdminQueries({
         ? queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "page"] })
         : undefined,
       registrationsQueryOptions.enabled
-        ? queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "counts"] })
+        ? queryClient.invalidateQueries({
+            queryKey: canManageAdminSections
+              ? queryKeys.admin.registrationCounts
+              : queryKeys.admin.eventCheckInStats,
+          })
         : undefined,
       adminQueryOptions.enabled
         ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.editionStats })

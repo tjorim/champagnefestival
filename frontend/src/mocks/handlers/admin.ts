@@ -5,6 +5,8 @@ import type {
   EditionAttendanceStats,
   EventCheckInStats,
   LayoutOut,
+  RegistrationDashboardStats,
+  RegistrationEventStats,
   RoomOut,
   TableOut,
   TableTypeOut,
@@ -36,6 +38,7 @@ import { localIsoDate } from "@/types/person";
 import { seedPeople, type MockPerson } from "../data/people";
 import {
   type RegistrationScenario,
+  seedTransactions,
   sharedStore,
   resetSharedStore,
   setRegistrationScenario,
@@ -611,6 +614,61 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Registration detail / update
   // ──────────────────────────────────────────────────────────────
+  http.get("/api/registrations/stats", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const params = new URL(request.url).searchParams;
+    const editionId = params.get("edition_id");
+    const date = params.get("event_date");
+    const stats: RegistrationDashboardStats = {
+      all: 0,
+      pending: 0,
+      confirmed: 0,
+      festival: 0,
+      standalone: 0,
+      active: 0,
+      today: 0,
+      events: [],
+    };
+    const byEvent = new Map<string, RegistrationEventStats>();
+    for (const registration of sharedStore.registrations) {
+      const event = events.find(({ id }) => id === registration.event_id) ?? registration.event;
+      if (!event) continue;
+      const edition = editions.find(({ id }) => id === event.edition_id);
+      stats.all += 1;
+      if (registration.status === "confirmed" || registration.status === "pending") {
+        stats[registration.status] += 1;
+      }
+      if (edition) stats[edition.edition_type === "festival" ? "festival" : "standalone"] += 1;
+      if (editionId && event.edition_id === editionId) stats.active += 1;
+      if (event.date === date) stats.today += 1;
+      if (registration.status === "cancelled") continue;
+      const attendance = byEvent.get(event.id) ?? {
+        event_id: event.id,
+        event_title: event.title,
+        edition_id: event.edition_id,
+        total: 0,
+        checked_in: 0,
+      };
+      attendance.total += registration.guest_count;
+      if (registration.checked_in) attendance.checked_in += registration.guest_count;
+      byEvent.set(event.id, attendance);
+    }
+    stats.events = [...byEvent.values()];
+    return jsonResponse<RegistrationDashboardStats>(stats);
+  }),
+
+  http.get("/api/registrations/:id/transactions", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    if (!sharedStore.registrations.some(({ id }) => id === params.id)) {
+      return HttpResponse.json(null, { status: 404 });
+    }
+    return jsonResponse<import("@/api-types").PaymentTransactionOut[]>(
+      seedTransactions.filter((entry) => entry.registration_id === params.id),
+    );
+  }),
+
   http.get("/api/registrations/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

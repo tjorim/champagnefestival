@@ -18,7 +18,7 @@ export function auditRecordId(type: string, id: string | number) {
 }
 
 export function auditRecordHref(type: string, id: string) {
-  if (type === "signage_channel") {
+  if (type === "signage_channels") {
     return `${import.meta.env.BASE_URL}admin?section=signage-channels&signageChannel=${encodeURIComponent(id)}`;
   }
   const section = Object.hasOwn(recordSections, type) ? recordSections[type] : undefined;

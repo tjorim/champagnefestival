@@ -110,7 +110,7 @@ async def test_audit_actions_lists_distinct_values(client):
 
 
 @pytest.mark.anyio
-async def test_audit_resolves_an_edition_display_name(client):
+async def test_audit_resolves_edition_and_signage_channel_names(client):
     venue = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     edition = await client.post(
         "/api/editions",
@@ -126,4 +126,15 @@ async def test_audit_resolves_an_edition_display_name(client):
     r = await client.get("/api/audit", params={"resource_type": "edition"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
     assert r.json()[0]["resource_name"] == "March 2027"
+    assert r.json()[0]["resource_exists"] is True
+
+    channel = await client.post(
+        "/api/signage/channels",
+        json={"slug": "main-hall", "name": "Main Hall", "edition_id": edition.json()["id"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert channel.status_code == 201, channel.text
+    r = await client.get("/api/audit", params={"resource_type": "signage_channels"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["resource_name"] == "Main Hall"
     assert r.json()[0]["resource_exists"] is True

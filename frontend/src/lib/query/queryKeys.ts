@@ -27,6 +27,7 @@ export const queryKeys = {
      * registrations, so every invalidation of that key — mutations, live-stream
      * events, reconnect recovery — refreshes them without a separate wiring.
      */
+    registrationCounts: ["admin", "registrations", "counts"] as const,
     eventCheckInStats: ["admin", "registrations", "checkin-stats"] as const,
     /** One server-paginated page of the admin registration table; see RegistrationList. */
     registrationsPage: (filters: {

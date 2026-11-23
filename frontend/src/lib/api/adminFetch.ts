@@ -14,6 +14,7 @@ import type {
   LayoutWithTablesOut,
   PaymentTransaction,
   PaymentTransactionLedgerEnvelope,
+  RegistrationDashboardStats,
   RegistrationListEnvelope,
   RegistrationOutWithToken,
   Room,
@@ -509,6 +510,21 @@ export async function fetchEventCheckInStats(
   return fetchArrayOrThrow(
     `/api/events/checkin-stats${suffix}`,
     { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+}
+
+export async function fetchRegistrationDashboardStats(
+  authHeaders: () => Record<string, string>,
+  editionId: string,
+  eventDate: string,
+  signal: AbortSignal,
+): Promise<RegistrationDashboardStats> {
+  const params = new URLSearchParams({ event_date: eventDate });
+  if (editionId) params.set("edition_id", editionId);
+  return fetchJsonOrThrowWithUnauthorized(
+    `/api/registrations/stats?${params}`,
+    { headers: authHeaders(), signal },
     m.admin_error_load_data(),
   );
 }

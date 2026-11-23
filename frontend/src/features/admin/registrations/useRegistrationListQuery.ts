@@ -1,5 +1,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { fetchRegistrationsPage, type RegistrationsPageOptions } from "@/lib/api/adminFetch";
+import type { EventCheckInStats } from "@/api-types";
+import {
+  fetchEventCheckInStats,
+  fetchRegistrationDashboardStats,
+  fetchRegistrationsPage,
+  type RegistrationsPageOptions,
+} from "@/lib/api/adminFetch";
 import { queryKeys } from "@/lib/query/queryKeys";
 
 /** Server-owned membership, order and totals; collections only overlay known rows. */
@@ -27,7 +33,6 @@ export function useRegistrationListQuery(
   });
 }
 
-/** Totals are counted by the existing server list endpoint; only one row per facet is requested. */
 export function useRegistrationCountsQuery(
   editionId: string,
   today: string,
@@ -35,31 +40,30 @@ export function useRegistrationCountsQuery(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: [...queryKeys.admin.registrations, "counts", editionId, today],
-    queryFn: async ({ signal }) => {
-      const facets: Record<string, RegistrationsPageOptions> = {
-        all: {},
-        pending: { status: "pending" },
-        confirmed: { status: "confirmed" },
-        festival: { editionCategory: "festival" },
-        standalone: { editionCategory: "standalone" },
-        active: { editionId },
-        today: { eventDate: today },
-      };
-      const counts = await Promise.all(
-        Object.entries(facets).map(async ([name, options]) => {
-          if (name === "active" && !editionId) return [name, 0] as const;
-          const page = await fetchRegistrationsPage(authHeaders, { ...options, limit: 1, signal });
-          return [name, page.total] as const;
-        }),
-      );
-      return Object.fromEntries(counts) as Record<
-        "all" | "pending" | "confirmed" | "festival" | "standalone" | "active" | "today",
-        number
-      >;
-    },
+    queryKey: [...queryKeys.admin.registrationCounts, editionId, today],
+    queryFn: ({ signal }) => fetchRegistrationDashboardStats(authHeaders, editionId, today, signal),
     enabled,
     staleTime: 30 * 1000,
     retry: false,
   });
+}
+
+export function useVolunteerCheckInStats(
+  authHeaders: () => Record<string, string>,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: queryKeys.admin.eventCheckInStats,
+    queryFn: () => fetchEventCheckInStats(authHeaders),
+    enabled,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+}
+
+export function summarizeGuestCheckIns(events: readonly EventCheckInStats[]) {
+  return {
+    checkedIn: events.reduce((sum, event) => sum + event.checked_in, 0),
+    total: events.reduce((sum, event) => sum + event.total, 0),
+  };
 }

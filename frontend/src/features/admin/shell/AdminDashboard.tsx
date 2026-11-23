@@ -15,6 +15,10 @@ import "./admin.css";
 import RegistrationList from "../registrations/RegistrationList";
 import { fetchRegistration } from "@/lib/api/adminFetch";
 import { readAuditRegistrationTarget } from "../shared/auditRecordLink";
+import {
+  summarizeGuestCheckIns,
+  useVolunteerCheckInStats,
+} from "../registrations/useRegistrationListQuery";
 import RegistrationDetail from "../registrations/RegistrationDetail";
 import type { OrganizationOut } from "@/api-types";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -87,7 +91,7 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // "any" rather than the public festival scope: floor plans and the event-day
   // views have to follow whichever edition is next, including a bourse.
-  const { edition: activeEdition } = useActiveEdition("any");
+  const { edition: activeEdition, isLoaded: activeEditionLoaded } = useActiveEdition("any");
   const queryClient = useQueryClient();
   const cache = adminCachePersistence(queryClient);
   const cacheStatus = useSyncExternalStore(cache.subscribe, cache.getSnapshot);
@@ -227,6 +231,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     loadData: loadDataBase,
   } = useAdminQueries({
     editionId: activeEdition.id,
+    activeEditionLoaded,
     visible,
     isAuthenticated,
     canManageAdminSections,
@@ -255,13 +260,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     activeDayIndex,
     activeEditionDateKeys,
-    activeEditionStats,
+    eventsToday,
     isActiveEditionDay,
     layoutDayOptions,
-  } = useAdminDashboardData({
-    activeEdition,
-    registrations,
-  });
+  } = useAdminDashboardData(activeEdition);
+  const volunteerStats = useVolunteerCheckInStats(
+    authHeaders,
+    visible && isAuthenticated && !canManageAdminSections,
+  );
+  const editionEvents = canManageAdminSections
+    ? registrationCountsQuery.data?.events.filter((event) => event.edition_id === activeEdition.id)
+    : volunteerStats.data?.filter((event) =>
+        activeEdition.events.some(({ id }) => id === event.event_id),
+      );
 
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const confirmOverCapacity = useCallback(
@@ -543,16 +554,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                       })}
                     </span>
                   )}
-                  <span>
-                    {m.admin_active_edition_checkins({
-                      checkedIn: activeEditionStats.checkedIn,
-                      total: activeEditionStats.total,
-                    })}
-                  </span>
+                  {editionEvents && (
+                    <span>
+                      {m.admin_active_edition_checkins(summarizeGuestCheckIns(editionEvents))}
+                    </span>
+                  )}
                   {isActiveEditionDay && (
                     <span>
                       {m.admin_active_edition_events_today({
-                        count: activeEditionStats.eventsToday,
+                        count: eventsToday,
                       })}
                     </span>
                   )}
@@ -609,6 +619,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onAddRegistration={handleAddRegistration}
                     authHeaders={authHeaders}
                     activeEdition={activeEdition}
+                    activeEditionLoaded={activeEditionLoaded}
+                    canManageAdminSections={canManageAdminSections}
                     countedPendingQueue={locationSearch.workQueue === "pending"}
                     applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
                     sectionError={registrationError}
