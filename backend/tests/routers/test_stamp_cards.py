@@ -295,7 +295,18 @@ async def test_manual_volunteer_missing_type_rolls_back(client):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("source", ["qr", "volunteer", "admin"])
-async def test_check_in_entry_points_share_transactional_side_effects(client, db_session, source):
+async def test_check_in_entry_points_share_transactional_side_effects(client, db_session, source, monkeypatch):
+    import app.services.registrations_service as registrations_service
+
+    check_in_notifications: list[str] = []
+    notify = registrations_service.notify_live_event
+
+    async def counting_notify(db, event):
+        if event.topic == "check_in":
+            check_in_notifications.append(event.scope.registration_id)
+        return await notify(db, event)
+
+    monkeypatch.setattr(registrations_service, "notify_live_event", counting_notify)
     _, event, booking = await setup_card(client, boxes=1)
     registration_id = booking["id"]
     admin_url = f"/api/registrations/{registration_id}"
@@ -319,6 +330,7 @@ async def test_check_in_entry_points_share_transactional_side_effects(client, db
         assert notice.scope.registration_id == registration_id
         assert notice.scope.event_id == event["id"]
         assert notice.scope.edition_id == event["edition_id"]
+        assert check_in_notifications == [registration_id]
         assert first.json()["stamp_progress"]["reward_earned"]
         first_detail = first.json().get("registration", first.json())
         assert first_detail["checked_in"] and first_detail["strap_issued"]
@@ -329,7 +341,7 @@ async def test_check_in_entry_points_share_transactional_side_effects(client, db
         assert repeated.json()["stamp_progress"] == first.json()["stamp_progress"]
         repeat_detail = repeated.json().get("registration", repeated.json())
         assert repeat_detail["checked_in_at"] == first_detail["checked_in_at"]
-        assert queue.empty()
+        assert check_in_notifications == [registration_id]
 
     entries = (
         await db_session.scalars(

@@ -1292,7 +1292,7 @@ send these writes without automatic retries.
   commit. Clients reconcile before retrying an ambiguous create.
 - QR and volunteer check-in and admin attendance updates share the same registration row lock and
   transaction for the timestamp, stamp, audit and live update. A repeat against the same state keeps
-  the first timestamp and does not add a stamp, audit entry or live update. A retry after a separate
+  the first timestamp, does not duplicate an existing stamp and adds no audit entry or live update. A repeat can still create a missing stamp when the booking has become eligible (for example after an edition type change), without changing the timestamp or strap. A retry after a separate
   undo can check the guest in again. The general admin update keeps its existing read-and-reconcile
   contract for ambiguous results.
 - Volunteer entrance details continue to accept absolute strap and delivery values. Clients must

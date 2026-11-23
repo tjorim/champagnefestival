@@ -101,7 +101,7 @@ async def create_public_registration(
 ) -> RegistrationPublicOut:
     user = None
     if claims is not None:
-        user = await get_or_create_user(db, claims["sub"])
+        user = await get_or_create_user(db, claims["sub"], commit=False)
 
     event = await inventory.lock_event(db, body.event_id)
     if event.volunteers_only:
