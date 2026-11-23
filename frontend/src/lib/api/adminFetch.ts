@@ -1,5 +1,6 @@
 import type {
   AreaOut,
+  AuditActorOut,
   AuditEntryOut,
   EditionAttendanceStats,
   EventCheckInStats,
@@ -644,6 +645,16 @@ export async function fetchAuditActions(
 ): Promise<string[]> {
   return fetchArrayOrThrow(
     "/api/audit/actions",
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+}
+
+export async function fetchAuditActors(
+  authHeaders: () => Record<string, string>,
+): Promise<AuditActorOut[]> {
+  return fetchArrayOrThrow(
+    "/api/audit/actors",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );

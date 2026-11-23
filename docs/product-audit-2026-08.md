@@ -32,7 +32,7 @@ listing does not assign a new priority.
 
 - [#1663 — one registration check-in path](https://github.com/tjorim/champagnefestival/issues/1663): Public booking creation and QR, volunteer and admin check-in now share registration services. Tests cover stamps, audit entries and live updates across all three check-in entry points. Attendance reads and filters use `checked_in_at`. **Still active:** replace the legacy attendance column and composite index in the separately coordinated Alembic revision.
 
-- [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names belong to #1660.
+- [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names and selection are implemented in #1660.
 
 
 - [#1435 — organisation preparation](https://github.com/tjorim/champagnefestival/issues/1435): Organisation-specific labels, identity/type/contact first, an explicit public temporary-image choice, upload-after-save guidance, mounted language tabs and a saved-content manager overview are implemented, with component, API and laptop/phone Chromium coverage; the implementation record is under **Organisation preparation follow-up (#1435, 2026-10-29)** below. **Still active:** one combined real-backend browser rehearsal of create → contact → proposal → acceptance/rejection. File storage and side-by-side review contracts are unchanged.
@@ -98,6 +98,7 @@ Git history; current decisions live in the linked decisions.
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
 | [#1649](https://github.com/tjorim/champagnefestival/issues/1649) | Repository implementation complete | 2026-11-23 | Migration `015`; [role storage and rollback](../backend/README.md#person-role-periods-1649); PostgreSQL migration test | Directory role history, filters, counts and exports use indexed periods. REST and MCP derive the existing role fields. The editor offers Member and Volunteer, and migration normalises aliases. |
+| [#1660](https://github.com/tjorim/champagnefestival/issues/1660) | Repository implementation complete | 2026-11-23 | REST, MCP and dashboard actor-filter regression tests | Resolve names at read time in the audit log, payment ledger, layout revisions, policy history and composer. The dashboard reveals IDs on demand and filters by selecting a named actor. Audit storage and token-IP redaction are unchanged. |
 | [#1650](https://github.com/tjorim/champagnefestival/issues/1650) | Repository implementation complete | 2026-11-23 | Migration `014`; [order storage and rollback](../backend/README.md#booking-order-lines-1650); PostgreSQL round-trip test | Indexed stock, canonical delivery quantities, booked price/unit/category and translations on each line. Frozen package rules remain on the booking. Booking edits, product previews, check-in, CSV and MCP keep their existing contracts. |
 | [#1652](https://github.com/tjorim/champagnefestival/issues/1652) | Repository implementation complete | 2026-11-23 | Migration `013`; PostgreSQL migration and OpenAPI tests | Shared fixed vocabularies drive API enums and database checks. The migration normalises historical values before enforcing the checks. |
 | [#1667](https://github.com/tjorim/champagnefestival/issues/1667) | Repository implementation complete | 2026-11-23 | Interface formatting and plural regression tests, locale audit | Shared locale-aware formatting for dashboard and public dates and times, localised ledger dates and amounts, plural forms in Dutch, French and English, and order fulfilment wording for every product. |
@@ -403,3 +404,11 @@ still require connectivity; the saved venue address remains available.
 
 The signage cache has its own lifecycle. Authenticated APIs and all writes remain
 outside the public cache; existing retry contracts remain in force.
+
+
+### Actor attribution (#1660)
+
+- [x] Audit, ledger, layout revision, policy and composer views show actor names with IDs available on demand.
+- [x] REST and MCP share the actor resolver.
+- [x] The audit filter offers named actors.
+- [x] No additional personal data is stored in audit rows.

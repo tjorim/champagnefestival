@@ -13,16 +13,10 @@ from sqlalchemy import select
 
 from app.mcp.utils import MCPToolError
 from app.models import AuditEntry
-from app.schemas.audit import AuditEntryBaseOut
+from app.services.audit_resources import audit_entries_with_resource_names
 
 DEFAULT_AUDIT_LIMIT = 100
 MAX_AUDIT_LIMIT = 1000
-
-
-def _entry_to_dict(entry: AuditEntry) -> dict:
-    result = AuditEntryBaseOut.model_validate(entry, from_attributes=True).model_dump()
-    result["timestamp"] = entry.timestamp.isoformat()
-    return result
 
 
 async def list_audit_entries(
@@ -87,8 +81,9 @@ async def list_audit_entries(
         stmt = stmt.limit(effective_limit)
         result = await db.execute(stmt)
         entries = list(result.scalars().all())
+        enriched = await audit_entries_with_resource_names(db, entries)
         return {
-            "entries": [_entry_to_dict(entry) for entry in entries],
+            "entries": [entry.model_dump() | {"timestamp": entry.timestamp.isoformat()} for entry in enriched],
             "next_before_id": entries[-1].id if len(entries) == effective_limit else None,
         }
 

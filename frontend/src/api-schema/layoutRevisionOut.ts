@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ActorLabel } from './actorLabel';
 import type { LayoutRevisionSnapshot } from './layoutRevisionSnapshot';
 
 export type LayoutRevisionOut = {
@@ -14,6 +15,7 @@ export type LayoutRevisionOut = {
   label: string;
   change_note: string | null;
   created_by: string;
+  actor_label: ActorLabel;
   created_at: string;
   snapshot: LayoutRevisionSnapshot;
 };

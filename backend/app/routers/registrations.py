@@ -47,6 +47,7 @@ from app.schemas import (
 from app.schemas.openapi_responses import binary_response
 from app.schemas.registrations import RegistrationDashboardStats, RegistrationEventStats
 from app.services import events_service, payments_service, registrations_service
+from app.services.actor_labels import labels_by_actor
 from app.services.allocations_service import allocated_registration_filter
 from app.services.errors import ApiHTTPException
 from app.services.member_registration import visitor_user
@@ -370,8 +371,9 @@ async def list_payment_transactions_filtered(
     effective_pagination = Pagination(page=pagination.page, limit=pagination.limit or 100)
     stmt = apply_pagination(stmt, effective_pagination)
     rows = (await db.execute(stmt)).all()
+    labels = await labels_by_actor(db, (txn.recorded_by for txn, *_ in rows))
     items = [
-        payments_service.ledger_row_to_out(txn, registration, person, event)
+        payments_service.ledger_row_to_out(txn, registration, person, event, labels[txn.recorded_by])
         for txn, registration, person, event in rows
     ]
     return PaymentTransactionLedgerEnvelope(
@@ -553,7 +555,8 @@ async def list_payment_transactions(
     behind its `amount_paid`/`payment_status`/`refund_due` fields."""
     await registrations_service.get_registration_or_404(db, registration_id)
     rows = await payments_service.list_transactions(db, registration_id)
-    return [payments_service.payment_transaction_to_out(t) for t in rows]
+    labels = await labels_by_actor(db, (t.recorded_by for t in rows))
+    return [payments_service.payment_transaction_to_out(t, labels[t.recorded_by]) for t in rows]
 
 
 @router.put(

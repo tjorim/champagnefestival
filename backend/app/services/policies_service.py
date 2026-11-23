@@ -19,6 +19,7 @@ Publication rules (see #944):
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +27,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.ids import make_id
 from app.models import Policy, PolicyVersion
 from app.schemas import PolicyDraftCreate, PolicyDraftUpdate, PolicyOut, PolicyVersionOut
+from app.schemas.actors import ActorLabel
+from app.schemas.policies import PolicyVersionStatus
+from app.services.actor_labels import labels_by_actor
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
@@ -38,17 +42,39 @@ def resolve_published(policy: Policy, version: PolicyVersion, locale: str | None
     return policy.localized_title(locale), content, language
 
 
-def _version_to_out(item: PolicyVersion) -> PolicyVersionOut:
-    return PolicyVersionOut.model_validate(item, from_attributes=True)
+def _version_to_out(item: PolicyVersion, labels: dict[str, ActorLabel]) -> PolicyVersionOut:
+    return PolicyVersionOut(
+        id=item.id,
+        policy_key=item.policy_key,
+        version_number=item.version_number,
+        status=cast(PolicyVersionStatus, item.status),
+        content_nl=item.content_nl,
+        content_fr=item.content_fr,
+        content_en=item.content_en,
+        change_summary=item.change_summary,
+        created_at=item.created_at,
+        created_by=item.created_by,
+        updated_at=item.updated_at,
+        published_at=item.published_at,
+        published_by=item.published_by,
+        created_by_label=labels[item.created_by],
+        published_by_label=labels.get(item.published_by) if item.published_by is not None else None,
+    )
 
 
-def _policy_to_out(policy: Policy, versions: list[PolicyVersion]) -> PolicyOut:
+async def _version_labels(db: AsyncSession, versions: list[PolicyVersion]) -> dict[str, ActorLabel]:
+    return await labels_by_actor(
+        db, (actor for item in versions for actor in (item.created_by, item.published_by) if actor is not None)
+    )
+
+
+def _policy_to_out(policy: Policy, versions: list[PolicyVersion], labels: dict[str, ActorLabel]) -> PolicyOut:
     return PolicyOut(
         key=policy.key,
         title_nl=policy.title_nl,
         title_fr=policy.title_fr,
         title_en=policy.title_en,
-        versions=[_version_to_out(v) for v in sorted(versions, key=lambda v: v.version_number, reverse=True)],
+        versions=[_version_to_out(v, labels) for v in sorted(versions, key=lambda v: v.version_number, reverse=True)],
     )
 
 
@@ -63,8 +89,8 @@ async def list_policies(db: AsyncSession) -> list[PolicyOut]:
     policies = (await db.execute(select(Policy))).scalars().all()
     out = []
     for policy in policies:
-        versions = (await db.execute(select(PolicyVersion).where(PolicyVersion.policy_key == policy.key))).scalars()
-        out.append(_policy_to_out(policy, list(versions)))
+        versions = list((await db.scalars(select(PolicyVersion).where(PolicyVersion.policy_key == policy.key))).all())
+        out.append(_policy_to_out(policy, versions, await _version_labels(db, versions)))
     return out
 
 
@@ -72,8 +98,8 @@ async def get_policy(db: AsyncSession, *, policy_key: str) -> PolicyOut:
     policy = await db.get(Policy, policy_key)
     if policy is None:
         raise NotFoundError(f"Policy '{policy_key}' not found.")
-    versions = (await db.execute(select(PolicyVersion).where(PolicyVersion.policy_key == policy_key))).scalars()
-    return _policy_to_out(policy, list(versions))
+    versions = list((await db.scalars(select(PolicyVersion).where(PolicyVersion.policy_key == policy_key))).all())
+    return _policy_to_out(policy, versions, await _version_labels(db, versions))
 
 
 async def get_published(db: AsyncSession, *, policy_key: str) -> tuple[Policy, PolicyVersion]:
@@ -157,7 +183,7 @@ async def create_draft(
     )
     await db.commit()
     await db.refresh(draft)
-    return _version_to_out(draft)
+    return _version_to_out(draft, await _version_labels(db, [draft]))
 
 
 async def _get_draft_locked(db: AsyncSession, policy_key: str) -> PolicyVersion:
@@ -190,7 +216,7 @@ async def update_draft(
     )
     await db.commit()
     await db.refresh(draft)
-    return _version_to_out(draft)
+    return _version_to_out(draft, await _version_labels(db, [draft]))
 
 
 async def discard_draft(db: AsyncSession, *, actor: str, policy_key: str, request_id: str | None) -> None:
@@ -256,4 +282,4 @@ async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
     await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(draft)
-    return _version_to_out(draft)
+    return _version_to_out(draft, await _version_labels(db, [draft]))

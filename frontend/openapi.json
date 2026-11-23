@@ -2897,6 +2897,37 @@
         ]
       }
     },
+    "/api/audit/actors": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Audit Actors",
+        "description": "Named actors across the audit trail, for the admin filter.",
+        "operationId": "list_audit_actors_api_audit_actors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditActorOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Audit Actors Api Audit Actors Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/members": {
       "post": {
         "tags": [
@@ -14678,6 +14709,38 @@
   },
   "components": {
     "schemas": {
+      "ActorLabel": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "person",
+              "integration",
+              "visitor",
+              "system",
+              "unknown"
+            ],
+            "title": "Kind"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "ActorLabel"
+      },
       "AdminPollOrderIn": {
         "properties": {
           "selections": {
@@ -15698,6 +15761,23 @@
         "type": "object",
         "title": "AreaUpdate"
       },
+      "AuditActorOut": {
+        "properties": {
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "actor_label": {
+            "$ref": "#/components/schemas/ActorLabel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actor",
+          "actor_label"
+        ],
+        "title": "AuditActorOut"
+      },
       "AuditEntryOut": {
         "properties": {
           "id": {
@@ -15775,6 +15855,9 @@
             "type": "object",
             "title": "Details"
           },
+          "actor_label": {
+            "$ref": "#/components/schemas/ActorLabel"
+          },
           "resource_name": {
             "anyOf": [
               {
@@ -15804,6 +15887,7 @@
           "resource_id",
           "request_id",
           "details",
+          "actor_label",
           "resource_name",
           "resource_exists"
         ],
@@ -16755,6 +16839,16 @@
             ],
             "title": "Sent By"
           },
+          "actor_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActorLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -16826,6 +16920,7 @@
           "email_audience_snapshot",
           "sent_at",
           "sent_by",
+          "actor_label",
           "created_at",
           "updated_at",
           "estimated_push_audience",
@@ -20917,6 +21012,9 @@
             "type": "string",
             "title": "Created By"
           },
+          "actor_label": {
+            "$ref": "#/components/schemas/ActorLabel"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -20934,6 +21032,7 @@
           "label",
           "change_note",
           "created_by",
+          "actor_label",
           "created_at",
           "snapshot"
         ],
@@ -23011,6 +23110,9 @@
             "type": "string",
             "title": "Recorded By"
           },
+          "actor_label": {
+            "$ref": "#/components/schemas/ActorLabel"
+          },
           "reference": {
             "anyOf": [
               {
@@ -23065,6 +23167,7 @@
           "effective_date",
           "recorded_at",
           "recorded_by",
+          "actor_label",
           "reference",
           "note",
           "reversed_transaction_id",
@@ -23102,6 +23205,9 @@
           "recorded_by": {
             "type": "string",
             "title": "Recorded By"
+          },
+          "actor_label": {
+            "$ref": "#/components/schemas/ActorLabel"
           },
           "reference": {
             "anyOf": [
@@ -23145,6 +23251,7 @@
           "effective_date",
           "recorded_at",
           "recorded_by",
+          "actor_label",
           "reference",
           "note",
           "reversed_transaction_id"
@@ -24533,6 +24640,19 @@
               }
             ],
             "title": "Published By"
+          },
+          "created_by_label": {
+            "$ref": "#/components/schemas/ActorLabel"
+          },
+          "published_by_label": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActorLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -24549,7 +24669,9 @@
           "created_by",
           "updated_at",
           "published_at",
-          "published_by"
+          "published_by",
+          "created_by_label",
+          "published_by_label"
         ],
         "title": "PolicyVersionOut",
         "description": "Admin shape: full per-locale Markdown source and provenance for one version."

@@ -34,7 +34,8 @@ from app.models import (
     TableType,
     Venue,
 )
-from app.schemas.audit import AuditEntryBaseOut, AuditEntryOut
+from app.schemas.audit import AuditActorOut, AuditEntryBaseOut, AuditEntryOut
+from app.services.actor_labels import resolve_actor_labels
 
 NAMED_RESOURCES = {
     "announcement": (Announcement.id, Announcement.text_nl),
@@ -88,6 +89,7 @@ async def audit_entries_with_resource_names(db: AsyncSession, entries: list[Audi
             continue
         resources.update({(resource_type, str(resource_id)): name for resource_id, name in rows})
 
+    labels = await resolve_actor_labels(db, ((entry.actor, entry.auth_source) for entry in entries))
     result = []
     for entry in entries:
         key = (entry.resource_type, entry.resource_id)
@@ -97,8 +99,25 @@ async def audit_entries_with_resource_names(db: AsyncSession, entries: list[Audi
         result.append(
             AuditEntryOut(
                 **AuditEntryBaseOut.model_validate(entry).model_dump(),
+                actor_label=labels[entry.actor, entry.auth_source],
                 resource_name=name,
                 resource_exists=key in resources,
             )
         )
     return result
+
+
+async def list_named_audit_actors(db: AsyncSession) -> list[AuditActorOut]:
+    stmt = (
+        select(AuditEntry.actor, AuditEntry.auth_source)
+        .where(AuditEntry.auth_source.not_in(("token", "none")), AuditEntry.actor != "")
+        .distinct()
+    )
+    result = await db.stream(stmt)
+    named: dict[str, AuditActorOut] = {}
+    async for rows in result.partitions(500):
+        labels = await resolve_actor_labels(db, ((row.actor, row.auth_source) for row in rows))
+        for (actor, _), label in labels.items():
+            if label.name:
+                named[actor] = AuditActorOut(actor=actor, actor_label=label)
+    return sorted(named.values(), key=lambda option: ((option.actor_label.name or "").casefold(), option.actor))

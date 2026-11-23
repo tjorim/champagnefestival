@@ -26,7 +26,9 @@ from app.schemas import (
     ComposedMessageUpdate,
     ComposedMessageWrite,
 )
+from app.schemas.actors import ActorLabel
 from app.services import member_mail
+from app.services.actor_labels import labels_by_actor
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.member_mail import MemberMailSkipped
@@ -119,7 +121,11 @@ async def _result_fields(db: AsyncSession, item: ComposedMessage) -> dict[str, i
     }
 
 
-async def to_out(db: AsyncSession, item: ComposedMessage) -> ComposedMessageOut:
+async def to_out(
+    db: AsyncSession, item: ComposedMessage, labels: dict[str, ActorLabel] | None = None
+) -> ComposedMessageOut:
+    if labels is None:
+        labels = await labels_by_actor(db, [item.sent_by] if item.sent_by is not None else [])
     return ComposedMessageOut(
         id=item.id,
         title_nl=item.title_nl,
@@ -139,6 +145,7 @@ async def to_out(db: AsyncSession, item: ComposedMessage) -> ComposedMessageOut:
         email_audience_snapshot=item.email_audience_snapshot,
         sent_at=item.sent_at,
         sent_by=item.sent_by,
+        actor_label=labels.get(item.sent_by) if item.sent_by is not None else None,
         created_at=item.created_at,
         updated_at=item.updated_at,
         estimated_push_audience=await _estimated_push_audience(db),
@@ -150,7 +157,9 @@ async def to_out(db: AsyncSession, item: ComposedMessage) -> ComposedMessageOut:
 
 async def list_messages(db: AsyncSession) -> list[ComposedMessageOut]:
     result = await db.execute(select(ComposedMessage).order_by(ComposedMessage.created_at.desc()))
-    return [await to_out(db, item) for item in result.scalars()]
+    items = result.scalars().all()
+    labels = await labels_by_actor(db, (item.sent_by for item in items if item.sent_by is not None))
+    return [await to_out(db, item, labels) for item in items]
 
 
 async def get_message(db: AsyncSession, message_id: str, *, for_update: bool = False) -> ComposedMessage:

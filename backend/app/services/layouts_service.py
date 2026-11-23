@@ -44,6 +44,8 @@ from app.schemas import (
     LayoutRevisionSaveRequest,
     LayoutWithTablesOut,
 )
+from app.schemas.actors import ActorLabel
+from app.services.actor_labels import labels_by_actor
 from app.services.allocations_service import registration_ids_by_table
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
@@ -511,7 +513,7 @@ async def delete_layout(db: AsyncSession, *, actor: str, layout_id: str, request
 # ---------------------------------------------------------------------------
 
 
-def _revision_to_out(rev: LayoutRevision) -> LayoutRevisionOut:
+def _revision_to_out(rev: LayoutRevision, label: ActorLabel) -> LayoutRevisionOut:
     return LayoutRevisionOut(
         id=rev.id,
         layout_id=rev.layout_id,
@@ -519,6 +521,7 @@ def _revision_to_out(rev: LayoutRevision) -> LayoutRevisionOut:
         label=rev.label,
         change_note=rev.change_note,
         created_by=rev.created_by,
+        actor_label=label,
         created_at=rev.created_at,
         snapshot=rev.snapshot,
     )
@@ -626,7 +629,8 @@ async def save_layout_revision(
     )
     await db.commit()
     await db.refresh(revision)
-    return _revision_to_out(revision)
+    labels = await labels_by_actor(db, [revision.created_by])
+    return _revision_to_out(revision, labels[revision.created_by])
 
 
 async def list_layout_revisions(db: AsyncSession, layout_id: str) -> list[LayoutRevisionOut]:
@@ -637,7 +641,9 @@ async def list_layout_revisions(db: AsyncSession, layout_id: str) -> list[Layout
         .where(LayoutRevision.layout_id == layout_id)
         .order_by(LayoutRevision.revision_number.desc())
     )
-    return [_revision_to_out(r) for r in result.scalars().all()]
+    revisions = result.scalars().all()
+    labels = await labels_by_actor(db, (rev.created_by for rev in revisions))
+    return [_revision_to_out(rev, labels[rev.created_by]) for rev in revisions]
 
 
 async def _get_revision(db: AsyncSession, layout_id: str, revision_number: int) -> LayoutRevision:
@@ -654,7 +660,9 @@ async def _get_revision(db: AsyncSession, layout_id: str, revision_number: int) 
 
 
 async def get_layout_revision(db: AsyncSession, layout_id: str, revision_number: int) -> LayoutRevisionOut:
-    return _revision_to_out(await _get_revision(db, layout_id, revision_number))
+    revision = await _get_revision(db, layout_id, revision_number)
+    labels = await labels_by_actor(db, [revision.created_by])
+    return _revision_to_out(revision, labels[revision.created_by])
 
 
 async def _resolve_snapshot(db: AsyncSession, layout_id: str, ref: str) -> dict:

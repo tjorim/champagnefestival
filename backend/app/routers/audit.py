@@ -13,7 +13,8 @@ from app.core.dependencies import Pagination, apply_pagination
 from app.db.session import get_db
 from app.models import AuditEntry
 from app.schemas import AuditEntryOut
-from app.services.audit_resources import audit_entries_with_resource_names
+from app.schemas.audit import AuditActorOut
+from app.services.audit_resources import audit_entries_with_resource_names, list_named_audit_actors
 
 router = APIRouter(
     prefix="/api/audit",
@@ -78,3 +79,9 @@ async def list_audit_actions(db: AsyncSession = Depends(get_db)) -> list[str]:
     """Distinct actions recorded across the entire audit trail."""
     result = await db.execute(select(AuditEntry.action).distinct().order_by(AuditEntry.action))
     return list(result.scalars().all())
+
+
+@router.get("/actors", response_model=list[AuditActorOut])
+async def list_audit_actors(db: AsyncSession = Depends(get_db)) -> list[AuditActorOut]:
+    """Named actors across the audit trail, for the admin filter."""
+    return await list_named_audit_actors(db)

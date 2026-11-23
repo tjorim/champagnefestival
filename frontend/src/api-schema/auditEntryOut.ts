@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ActorLabel } from './actorLabel';
 import type { AuditEntryOutAuthSource } from './auditEntryOutAuthSource';
 import type { AuditEntryOutDetails } from './auditEntryOutDetails';
 
@@ -20,6 +21,7 @@ export type AuditEntryOut = {
   resource_id: string;
   request_id: string | null;
   details: AuditEntryOutDetails;
+  actor_label: ActorLabel;
   resource_name: string | null;
   resource_exists: boolean;
 };

@@ -1,3 +1,4 @@
+import { ActorName } from "@/components/admin/ActorName";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDateTime } from "@/lib/format/dateUtils";
 import { useQuery } from "@tanstack/react-query";
@@ -390,8 +391,12 @@ function LayoutRevisionsSession({
                       #{revision.revision_number} {revision.label}
                     </div>
                     <div className="text-subtle text-micro">
-                      {m.admin_layout_revisions_created_by({ actor: revision.created_by })} ·{" "}
-                      {formatDateTime(revision.created_at, getLocale())}
+                      <ActorName
+                        actor={revision.created_by}
+                        label={revision.actor_label}
+                        formatLabel={(actor) => m.admin_layout_revisions_created_by({ actor })}
+                      />{" "}
+                      · {formatDateTime(revision.created_at, getLocale())}
                       {revision.change_note ? ` — ${revision.change_note}` : ""}
                     </div>
                   </div>
