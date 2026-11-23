@@ -178,7 +178,7 @@ describe("RegistrationList — Gmail-style select-all-matching", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(
-      within(dialog).getByText(`Bulk Selection Test Event · 2026-03-06: ${TOTAL_REGISTRATIONS}`),
+      within(dialog).getByText(`Bulk Selection Test Event · 6 Mar 2026: ${TOTAL_REGISTRATIONS}`),
     ).toBeInTheDocument();
     fireEvent.click(
       within(dialog).getByRole("button", {
