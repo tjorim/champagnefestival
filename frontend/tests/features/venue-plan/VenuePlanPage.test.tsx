@@ -108,7 +108,7 @@ describe("VenuePlanPage recovery states", () => {
             updated_at: "2026-01-01T00:00:00Z",
             id: "ed-1",
             year: 2026,
-            month: "October",
+            month: "october",
             venue: {
               id: "",
               address: "",
@@ -158,7 +158,7 @@ describe("VenuePlanPage recovery states", () => {
                 updated_at: "2026-01-01T00:00:00Z",
                 id: "ed-1",
                 year: 2026,
-                month: "October",
+                month: "october",
                 venue: {
                   id: "",
                   address: "",

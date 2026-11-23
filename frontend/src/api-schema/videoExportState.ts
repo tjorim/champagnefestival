@@ -6,10 +6,10 @@
  * OpenAPI spec version: snapshot
  */
 
-export type VideoExportCreatedOutState = typeof VideoExportCreatedOutState[keyof typeof VideoExportCreatedOutState];
+export type VideoExportState = typeof VideoExportState[keyof typeof VideoExportState];
 
 
-export const VideoExportCreatedOutState = {
+export const VideoExportState = {
   preparing: 'preparing',
   submitted: 'submitted',
   queued: 'queued',

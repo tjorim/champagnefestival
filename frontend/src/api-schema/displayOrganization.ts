@@ -5,11 +5,12 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { DisplayOrganizationSponsorTier } from './displayOrganizationSponsorTier';
 
 export type DisplayOrganization = {
   name: string;
   logo: string;
   description: string | null;
   sponsor: boolean;
-  sponsor_tier: string | null;
+  sponsor_tier: DisplayOrganizationSponsorTier;
 };

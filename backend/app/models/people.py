@@ -5,12 +5,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, Index, Integer, String, Text, func, text
+from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.vocabularies import Locale
 from app.db.base import Base
 from app.db.dialect_functions import trim_spaces
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.registrations import Registration
@@ -21,10 +23,7 @@ class Person(Base):
 
     __tablename__ = "people"
     __table_args__ = (
-        CheckConstraint(
-            "preferred_language IS NULL OR preferred_language IN ('nl', 'fr', 'en')",
-            name="ck_people_preferred_language",
-        ),
+        vocabulary_check("ck_people_preferred_language", "preferred_language", Locale),
         # Trigram (pg_trgm) GIN indexes backing fuzzy operational search, in
         # addition to the plain btree index=True below on search_email — the
         # migration creates both, since exact-match lookup and fuzzy search

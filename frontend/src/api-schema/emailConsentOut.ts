@@ -5,13 +5,15 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { EmailConsentOutRevokedSource } from './emailConsentOutRevokedSource';
+import type { EmailConsentOutSource } from './emailConsentOutSource';
 
 export type EmailConsentOut = {
   id: string;
   category_key: string;
   category_name: string;
-  source: string;
+  source: EmailConsentOutSource;
   granted_at: string;
   revoked_at: string | null;
-  revoked_source: string | null;
+  revoked_source: EmailConsentOutRevokedSource;
 };

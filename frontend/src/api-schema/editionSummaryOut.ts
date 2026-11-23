@@ -6,11 +6,12 @@
  * OpenAPI spec version: snapshot
  */
 import type { EditionSummaryOutEditionType } from './editionSummaryOutEditionType';
+import type { EditionSummaryOutMonth } from './editionSummaryOutMonth';
 
 export type EditionSummaryOut = {
   id: string;
   year: number;
-  month: string;
+  month: EditionSummaryOutMonth;
   edition_type: EditionSummaryOutEditionType;
   active: boolean;
 };

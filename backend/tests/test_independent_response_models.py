@@ -338,7 +338,7 @@ def test_policy_history_and_consent_payload_parity():
         "versions": [VERSION, {**VERSION, "id": "old", "version_number": 1}],
     }
     consent = EmailConsent(
-        id="consent", category_key="parity", source="visitor", granted_at=NOW, revoked_at=None, revoked_source=None
+        id="consent", category_key="parity", source="self_service", granted_at=NOW, revoked_at=None, revoked_source=None
     )
     assert email_consent_service.consent_to_out(consent, EmailCategory(**EMAIL_CATEGORY)).model_dump() == {
         "id": "consent",

@@ -11,6 +11,6 @@ export type PreviewPlaylistApiSignagePreviewPostLocale = typeof PreviewPlaylistA
 
 export const PreviewPlaylistApiSignagePreviewPostLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

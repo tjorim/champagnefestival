@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
+from app.core.vocabularies import Locale, OrganizationType, SlideKind, SponsorTier, VideoExportState
 from app.schemas import ResponseModel
 from app.schemas.types import (
     NonEmptyText200,
@@ -100,7 +101,7 @@ class ChannelOut(ChannelWrite):
 
 
 class Content(Document):
-    organization_type: Literal["producer", "vendor", "sponsor"] | None = None
+    organization_type: OrganizationType | None = None
     title: Text120 | None = None
     text: Text500 | None = None
     icon: SignageIconName | None = None
@@ -110,9 +111,6 @@ class Content(Document):
     @classmethod
     def strip_text(cls, value):
         return value.strip() or None if isinstance(value, str) else value
-
-
-SlideKind = Literal["organizations", "notice", "image"]
 
 
 class SlideWrite(Document):
@@ -169,7 +167,7 @@ class DisplayOrganization(Document):
     logo: str
     description: str | None
     sponsor: bool
-    sponsor_tier: str | None
+    sponsor_tier: SponsorTier | None
 
 
 class DisplayTemplate(Document):
@@ -223,16 +221,13 @@ class VideoExportCapabilityOut(ResponseModel):
     max_seconds: int
 
 
-VideoExportState = Literal["preparing", "submitted", "queued", "running", "ready", "failed", "cancelled", "expired"]
-
-
 class VideoExportOut(ResponseModel):
     """One creator-owned video export, as ``services.signage_video.summary`` reports it."""
 
     id: str
     channel_id: str | None
     channel_name: str
-    locale: Literal["nl", "fr", "en"]
+    locale: Locale
     state: VideoExportState
     cancel_requested: bool
     retrying: bool

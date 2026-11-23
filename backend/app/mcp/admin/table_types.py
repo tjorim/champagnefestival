@@ -6,8 +6,9 @@ Mirrors ``app.routers.table_types``. Business logic lives in
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
+from app.core.vocabularies import TableHeight, TableShape
 from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import TableTypeBulkCreate, TableTypeCreate, TableTypeUpdate
 from app.services import table_types_service
@@ -22,8 +23,8 @@ async def create_table_type(
     venue_id: str,
     width_m: float,
     length_m: float,
-    shape: Literal["rectangle", "round"] = "rectangle",
-    height_type: Literal["low", "high"] = "low",
+    shape: TableShape = "rectangle",
+    height_type: TableHeight = "low",
     capacity: int,
     active: bool = True,
 ) -> dict:
@@ -84,10 +85,10 @@ async def update_table_type(
     *,
     name: str | None = None,
     venue_id: str | None = None,
-    shape: Literal["rectangle", "round"] | None = None,
+    shape: TableShape | None = None,
     width_m: float | None = None,
     length_m: float | None = None,
-    height_type: Literal["low", "high"] | None = None,
+    height_type: TableHeight | None = None,
     capacity: int | None = None,
     active: bool | None = None,
 ) -> dict:

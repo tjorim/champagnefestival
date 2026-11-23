@@ -27,7 +27,7 @@ import logging
 from collections.abc import Sequence
 from datetime import date as dt_date
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.core.dependencies import SortDirection
 from app.core.translations import Language
+from app.core.vocabularies import TableHeight, TableShape
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -654,8 +655,8 @@ class ChampagneFestivalMcpBackend:
         capacity: int,
         width_m: float,
         length_m: float,
-        shape: Literal["rectangle", "round"] = "rectangle",
-        height_type: Literal["low", "high"] = "low",
+        shape: TableShape = "rectangle",
+        height_type: TableHeight = "low",
         active: bool = True,
     ) -> dict:
         """Create a table type within a venue. Requires the ``admin`` role.
@@ -697,10 +698,10 @@ class ChampagneFestivalMcpBackend:
         type_id: str,
         venue_id: str | None = None,
         name: str | None = None,
-        shape: Literal["rectangle", "round"] | None = None,
+        shape: TableShape | None = None,
         width_m: float | None = None,
         length_m: float | None = None,
-        height_type: Literal["low", "high"] | None = None,
+        height_type: TableHeight | None = None,
         capacity: int | None = None,
         active: bool | None = None,
     ) -> dict:

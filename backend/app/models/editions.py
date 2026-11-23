@@ -5,11 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.vocabularies import EditionMonth, EditionType, SponsorTier
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.events import Event
@@ -27,11 +29,8 @@ class Edition(Base):
             postgresql_where=text("active = true"),
             sqlite_where=text("active = true"),
         ),
-        CheckConstraint(
-            "lower(trim(month)) IN ('january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december')",
-            name="ck_editions_month",
-        ),
-        CheckConstraint("edition_type IN ('festival', 'bourse', 'capsule_exchange')", name="ck_editions_edition_type"),
+        vocabulary_check("ck_editions_month", "lower(trim(month))", EditionMonth),
+        vocabulary_check("ck_editions_edition_type", "edition_type", EditionType),
     )
 
     id: Mapped[str] = mapped_column(String(100), primary_key=True)
@@ -125,12 +124,7 @@ class EditionOrganization(Base):
     """One organization in an edition's lineup (see `Edition.lineup`)."""
 
     __tablename__ = "edition_organizations"
-    __table_args__ = (
-        CheckConstraint(
-            "sponsor_tier IS NULL OR sponsor_tier IN ('main', 'partner', 'supporter')",
-            name="ck_edition_organizations_sponsor_tier",
-        ),
-    )
+    __table_args__ = (vocabulary_check("ck_edition_organizations_sponsor_tier", "sponsor_tier", SponsorTier),)
 
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), primary_key=True

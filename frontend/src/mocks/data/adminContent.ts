@@ -93,7 +93,7 @@ export const seedAuditEntries: AuditEntryOut[] = [
     id: "audit-1",
     timestamp: "2026-10-03T12:00:00Z",
     actor: "admin",
-    auth_source: "oidc",
+    auth_source: "keycloak",
     subject: null,
     integration_client_id: null,
     action: "update",

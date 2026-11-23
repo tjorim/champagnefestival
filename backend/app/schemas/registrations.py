@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date as dt_date
 from datetime import datetime
 from decimal import Decimal
-from typing import Literal
 
 from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, field_validator, model_validator
 
+from app.core.vocabularies import Locale, PaymentStatus, RegistrationStatus
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.events import EventCheckInStats, EventOut, EventPublicOut
 from app.schemas.orders import OrderAnswerIn, OrderAnswerOut, OrderItemOut, OrderItemRequest
@@ -23,12 +23,6 @@ from app.schemas.types import (
     ResourceId,
     Text4000,
 )
-
-RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
-
-
-PaymentStatus = Literal["unpaid", "partial", "paid"]
-
 
 _MAX_REQUESTED_ORDER_LINE_QUANTITY = 1000
 """Ceiling on a client-requested (not yet package-expanded) order line quantity.
@@ -72,7 +66,7 @@ class RegistrationCreate(RegistrationNotesRequest):
     name: NonEmptyText200
     email: EmailStr
     phone: NonEmptyText50
-    preferred_language: Literal["nl", "fr", "en"] = "nl"
+    preferred_language: Locale = "nl"
     event_id: ResourceId
     guest_count: GuestCount
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)

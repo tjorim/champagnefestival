@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import Field, field_validator
 
+from app.core.vocabularies import Locale
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import NonEmptyText50, NonEmptyText200, NonEmptyText600, ResourceId
 
@@ -20,7 +19,7 @@ class PushSubscriptionKeys(RequestModel):
 class PushSubscribeRequest(RequestModel):
     endpoint: NonEmptyText600
     keys: PushSubscriptionKeys
-    locale: Literal["nl", "fr", "en"]
+    locale: Locale
     categories: list[str] = Field(default_factory=list, max_length=10)
     event_ids: list[str] = Field(default_factory=list, max_length=20)
 

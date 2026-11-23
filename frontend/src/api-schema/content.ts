@@ -5,10 +5,10 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
-import type { ContentOrganizationType } from './contentOrganizationType';
+import type { OrganizationType } from './organizationType';
 
 export type Content = {
-  organization_type?: ContentOrganizationType;
+  organization_type?: OrganizationType | null;
   title?: string | null;
   text?: string | null;
   icon?: string | null;

@@ -6,7 +6,7 @@
  * OpenAPI spec version: snapshot
  */
 import type { VideoExportOutLocale } from './videoExportOutLocale';
-import type { VideoExportOutState } from './videoExportOutState';
+import type { VideoExportState } from './videoExportState';
 
 /**
  * One creator-owned video export, as ``services.signage_video.summary`` reports it.
@@ -16,7 +16,7 @@ export type VideoExportOut = {
   channel_id: string | null;
   channel_name: string;
   locale: VideoExportOutLocale;
-  state: VideoExportOutState;
+  state: VideoExportState;
   cancel_requested: boolean;
   retrying: boolean;
   created_at: string;

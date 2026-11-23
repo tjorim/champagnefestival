@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.vocabularies import OrganizationType
 from app.db.queries import get_or_404
 from app.db.session import violated_constraint_name
 from app.models import Edition, Event, Organization, Venue
@@ -205,7 +206,7 @@ async def validate_organization_ids(db: AsyncSession, organization_ids: list[int
     invalid = [eid for eid in organization_ids if eid not in organization_map]
     if invalid:
         raise HTTPException(status_code=400, detail=f"Invalid or inactive organization IDs: {invalid}")
-    vendor_ids = [eid for eid in organization_ids if organization_map[eid].type == "vendor"]
+    vendor_ids = [eid for eid in organization_ids if organization_map[eid].type == OrganizationType.VENDOR]
     if vendor_ids:
         raise HTTPException(
             status_code=400, detail=f"Vendor-type organizations may not be linked to editions: {vendor_ids}"
@@ -252,7 +253,7 @@ async def validate_sponsor_tiers(db: AsyncSession, organizations: list[int], tie
         )
     organization_map = await _load_organizations_by_ids(db, set(tiers))
     not_sponsors = sorted(
-        oid for oid in tiers if oid not in organization_map or organization_map[oid].type != "sponsor"
+        oid for oid in tiers if oid not in organization_map or organization_map[oid].type != OrganizationType.SPONSOR
     )
     if not_sponsors:
         raise HTTPException(status_code=400, detail=f"Sponsor tiers can only be set for sponsors: {not_sponsors}")
@@ -334,15 +335,15 @@ def _resolve_organizations(
         item = organization_map.get(organization_id)
         if item is None:
             continue
-        if item.type == "producer":
+        if item.type == OrganizationType.PRODUCER:
             producers.append(item)
-        elif item.type == "sponsor":
+        elif item.type == OrganizationType.SPONSOR:
             sponsors.append(
                 EditionItemOut.model_validate(
                     {**item.model_dump(), "sponsor_tier": edition.sponsor_tiers.get(str(organization_id))}
                 )
             )
-        elif item.type == "vendor":
+        elif item.type == OrganizationType.VENDOR:
             vendors.append(item)
     sponsors.sort(key=lambda sponsor: SPONSOR_TIER_ORDER.get(sponsor.sponsor_tier, len(SPONSOR_TIER_ORDER)))
     return producers, sponsors, vendors

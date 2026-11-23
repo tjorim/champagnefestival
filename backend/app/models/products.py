@@ -23,10 +23,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import ProductUnit
 from app.db.base import Base
 from app.db.dialect_functions import json_array_elements
 from app.models.base import _optional_dutch_check, _utcnow
 from app.models.registrations import Registration
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.events import Event
@@ -91,7 +93,7 @@ class Product(Base):
     """
     __table_args__ = (
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
-        CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
+        vocabulary_check("ck_product_unit", "unit", ProductUnit),
         CheckConstraint("NOT required OR purchasable", name="ck_products_required_implies_purchasable"),
         CheckConstraint("(length(trim(name_nl)) > 0) IS TRUE", name="ck_products_name_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_products_description_nl"),

@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from typing import get_args
 
-from app.models import POLL_QUESTION_KINDS
-from app.schemas import PollQuestionKind
+from app.core.vocabularies import PollQuestionKind
 from app.services.poll_kinds import KINDS, PollKind
 
 
 def test_every_kind_has_exactly_one_handler() -> None:
-    assert set(KINDS) == set(POLL_QUESTION_KINDS) == set(get_args(PollQuestionKind))
+    assert set(KINDS) == set(get_args(PollQuestionKind))
     assert all(isinstance(handler, PollKind) and handler.name == name for name, handler in KINDS.items())
 
 

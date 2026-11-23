@@ -3,6 +3,8 @@
 ``from app.schemas import X`` keeps working through the re-exports below; new code may import the
 submodule (``from app.schemas.registrations import RegistrationOut``)."""
 
+from app.core.vocabularies import AnnouncementLevel, EditionType, SponsorTier
+from app.core.vocabularies import Locale as FaqLocale
 from app.schemas.account import (
     CommunicationPreferenceOut,
     CommunicationPreferenceUpdate,
@@ -15,7 +17,6 @@ from app.schemas.account import (
 from app.schemas.announcements import (
     AnnouncementCreate,
     AnnouncementFields,
-    AnnouncementLevel,
     AnnouncementOut,
     AnnouncementPublicOut,
     AnnouncementReorder,
@@ -65,7 +66,6 @@ from app.schemas.editions import (
     EditionScratchpadOut,
     EditionScratchpadUpdate,
     EditionSummaryOut,
-    EditionType,
     EditionUpdate,
 )
 from app.schemas.email_preferences import (
@@ -95,7 +95,6 @@ from app.schemas.faq import (
     FaqItemPublicOut,
     FaqItemReorder,
     FaqItemUpdate,
-    FaqLocale,
     FaqTextFields,
 )
 from app.schemas.health import HealthOut, HealthStatusOut, MetricsOut, OkOut, ServerTimeOut
@@ -146,7 +145,6 @@ from app.schemas.organizations import (
     OrganizationDescription,
     OrganizationOut,
     OrganizationUpdate,
-    SponsorTier,
 )
 from app.schemas.payments import (
     PaymentTransactionCreate,

@@ -1,5 +1,5 @@
-import type { EventOut, ProductOut } from "@/api-types";
-export type EventLanguage = "nl" | "fr" | "en";
+import type { EventOut, ProductOut, PushSubscribeRequest } from "@/api-types";
+export type EventLanguage = PushSubscribeRequest["locale"];
 export type EventTranslations = Pick<
   EventOut,
   "title_nl" | "title_fr" | "title_en" | "description_nl" | "description_fr" | "description_en"
