@@ -25,7 +25,7 @@ test("language menu changes the document language on /admin", async ({ page }) =
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("section#admin.admin-authenticated")).toBeVisible();
 
-  await page.locator(".site-lang-toggle").first().click();
+  await page.getByRole("button", { name: /^EN: / }).click();
   await page.getByRole("menuitem", { name: /Français/ }).click();
 
   await expect(page.locator("html")).toHaveAttribute("lang", "fr");
