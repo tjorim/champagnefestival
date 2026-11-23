@@ -12,6 +12,11 @@ import { registrationRow } from "../../../utils/registrationFixtures";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 import { noEventTranslations } from "../../../utils/eventFixtures";
 
+vi.mock("@/paraglide/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/paraglide/runtime")>()),
+  getLocale: () => "en",
+}));
+
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
     get(_target, key: string) {
@@ -238,7 +243,7 @@ describe("RegistrationDetail", () => {
         allocations: [{ table_id: "table-1", guest_count: 0, exclusive: true }],
       }),
     });
-    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+    expect(screen.getByText(/admin_allocation_table_progress/)).toHaveTextContent(
       '"assigned":1,"total":3',
     );
     fireEvent.click(screen.getByRole("button", { name: "admin_allocation_add" }));

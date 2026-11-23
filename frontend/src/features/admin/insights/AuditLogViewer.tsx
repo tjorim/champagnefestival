@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import {
   Pagination,
   PaginationContent,
@@ -48,7 +50,7 @@ interface AuditLogViewerProps {
 }
 
 function formatTimestamp(iso: string): string {
-  return new Date(iso).toLocaleString();
+  return formatDateTime(iso, getLocale());
 }
 
 export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {

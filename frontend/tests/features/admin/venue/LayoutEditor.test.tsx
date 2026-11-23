@@ -16,6 +16,11 @@ import LayoutEditor, { getDayLabel } from "@/features/admin/venue/LayoutEditor";
 import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/api-types";
 import type { Registration } from "@/types/registration";
 
+vi.mock("@/paraglide/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/paraglide/runtime")>()),
+  getLocale: () => "en",
+}));
+
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
     get(_target, key: string) {
@@ -276,9 +281,7 @@ describe("getDayLabel", () => {
       event_title: "Breakfast tasting",
       date: "2025-08-01",
     });
-    expect(getDayLabel(lastYear, dayOptions)).toBe(
-      `Breakfast tasting — ${new Date("2025-08-01T00:00:00").toLocaleDateString()}`,
-    );
+    expect(getDayLabel(lastYear, dayOptions)).toBe("Breakfast tasting — 1 Aug 2025");
   });
 
   it("falls back to the layout's own label when neither the day option nor an event title is available", async () => {

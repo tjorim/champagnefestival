@@ -1,3 +1,5 @@
+import { formatNumber } from "@/lib/format/numberUtils";
+import { formatDate } from "@/lib/format/dateUtils";
 import { accountReturnTo } from "@/hooks/useLocationChoice";
 import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
@@ -566,7 +568,7 @@ export default function MyRegistrationsPage({
                           {registration.event_title}
                         </span>
                         <span className="text-subtle text-sm">
-                          {new Date(registration.created_at).toLocaleDateString()}
+                          {formatDate(registration.created_at, getLocale())}
                         </span>
                       </CardHeader>
                       <CardContent className="pb-2">
@@ -628,7 +630,7 @@ export default function MyRegistrationsPage({
                         </div>
                         <div className="text-subtle text-sm">
                           <Icon icon={UsersIcon} className="me-1" />
-                          {registration.guest_count} {m.my_registrations_guests_label()}
+                          {m.my_registrations_guests_label({ count: registration.guest_count })}
                         </div>
                         {registration.event_date && (
                           <ButtonLink
@@ -670,7 +672,10 @@ export default function MyRegistrationsPage({
                                   className="flex justify-between items-center px-0 py-1"
                                 >
                                   <span className="text-sm">
-                                    {item.name} <Badge variant="secondary">×{item.quantity}</Badge>
+                                    {item.name}{" "}
+                                    <Badge variant="secondary">
+                                      ×{formatNumber(item.quantity, getLocale())}
+                                    </Badge>
                                   </span>
                                 </PresentationListItem>
                               ))}
@@ -700,7 +705,7 @@ export default function MyRegistrationsPage({
               {hasEmailSession && sessionExpiresAt && (
                 <p className="text-sm text-subtle text-center mt-4 mb-0">
                   {m.my_registrations_session_expires({
-                    date: new Date(sessionExpiresAt).toLocaleDateString(),
+                    date: formatDate(sessionExpiresAt, getLocale()),
                   })}
                 </p>
               )}

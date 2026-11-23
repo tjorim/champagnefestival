@@ -1,3 +1,5 @@
+import { formatEuro } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import {
@@ -95,7 +97,7 @@ const BLANK_FORM: RegistrationCreateForm = {
   personOption: null,
 };
 
-const formatMoney = (amount: number) => `€${amount.toFixed(2)}`;
+const formatMoney = (amount: number) => formatEuro(amount, getLocale());
 
 const paymentStatusLabel = (status: Registration["payment_status"]) =>
   status === "paid"

@@ -34,8 +34,8 @@ it("names the room only when asked", () => {
 it("lists one line per day when the stand moves", () => {
   const moved: Stand = { ...saturday, label: "Stand 3" };
   expect(summarizeStands([friday, moved], "en", false)).toEqual([
-    { day: "Fri, Mar 20", stand: "Stand 12" },
-    { day: "Sat, Mar 21", stand: "Stand 3" },
+    { day: "Fri 20 Mar", stand: "Stand 12" },
+    { day: "Sat 21 Mar", stand: "Stand 3" },
   ]);
 });
 

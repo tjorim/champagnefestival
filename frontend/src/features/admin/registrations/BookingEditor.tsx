@@ -1,3 +1,6 @@
+import { formatEuro } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { OrderAnswerInputs } from "@/components/OrderAnswers";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -292,24 +295,26 @@ export default function BookingEditor({
           </AdminField>
           <div className="site-sm:w-4/12 text-sm self-end">
             <div>
-              {m.admin_booking_total()}: €{amountDue.toFixed(2)}
+              {m.admin_booking_total()}: {formatEuro(amountDue, getLocale())}
             </div>
             <div>
-              {m.admin_inventory_paid()}: €{amountPaid.toFixed(2)}
+              {m.admin_inventory_paid()}: {formatEuro(amountPaid, getLocale())}
             </div>
             <div>
-              {m.admin_inventory_refund()}: €{Math.max(0, amountPaid - amountDue).toFixed(2)}
+              {m.admin_inventory_refund()}:{" "}
+              {formatEuro(Math.max(0, amountPaid - amountDue), getLocale())}
             </div>
             {amountPaid < amountDue && (
               <div>
-                {m.admin_booking_balance()}: €{(amountDue - amountPaid).toFixed(2)}
+                {m.admin_booking_balance()}: {formatEuro(amountDue - amountPaid, getLocale())}
               </div>
             )}
           </div>
           {products.map((product) => (
             <AdminField className="site-sm:w-6/12" key={product.id}>
               <AdminLabel>
-                {product.name} · €{(bookedPrices[product.id] ?? Number(product.price)).toFixed(2)}
+                {product.name} ·{" "}
+                {formatEuro(bookedPrices[product.id] ?? product.price, getLocale())}
               </AdminLabel>
               <AdminInput
                 aria-label={`${m.admin_booking_quantity()} ${product.name}`}
@@ -362,11 +367,9 @@ export default function BookingEditor({
       <fieldset id="registration-seating" tabIndex={-1} className="mt-4">
         <legend className="text-base font-medium">{m.admin_action_assign_table()}</legend>
         <p className="text-sm">
-          {m.admin_allocation_progress({
-            assigned,
-            total: allocationTotal,
-            unit: tableQuantity ? m.admin_inventory_unit_table() : m.admin_allocation_unit_person(),
-          })}
+          {tableQuantity
+            ? m.admin_allocation_table_progress({ assigned, total: allocationTotal })
+            : m.admin_allocation_progress({ assigned, total: allocationTotal })}
         </p>
         {allocationShortage && tableQuantity > 0 && (
           <Alert variant="warning">
@@ -495,12 +498,12 @@ export default function BookingEditor({
                     <div className="text-sm flex justify-between flex-wrap gap-2">
                       <span>
                         <strong>{transactionAmountLabel(Number(entry.amount))}</strong>{" "}
-                        {Number(entry.amount) >= 0 ? "+" : ""}€{Number(entry.amount).toFixed(2)}
+                        {formatEuro(entry.amount, getLocale(), { signDisplay: "always" })}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                       <span className="text-subtle">
-                        {entry.effective_date} · {entry.recorded_by}
+                        {formatDate(entry.effective_date, getLocale())} · {entry.recorded_by}
                       </span>
                     </div>
                   </PresentationListItem>

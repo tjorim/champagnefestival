@@ -9,6 +9,11 @@ import RegistrationCreateModal from "@/features/admin/registrations/Registration
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../../../utils/queryClient";
 
+vi.mock("@/paraglide/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/paraglide/runtime")>()),
+  getLocale: () => "en",
+}));
+
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
     get(_target, key: string) {

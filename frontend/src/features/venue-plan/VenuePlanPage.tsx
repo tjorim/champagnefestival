@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -229,6 +231,7 @@ function PlanExplorer({
   linkedTable?: string;
   registration?: string;
 }) {
+  const locale = getLocale();
   const [search, setSearch] = useState("");
   const initialLayout = layouts.find((layout) =>
     layout.tables.some((item) => item.id === linkedTable),
@@ -249,7 +252,7 @@ function PlanExplorer({
       (!room || (layout.room?.id ?? layout.id) === room) &&
       (!event || layout.event_id === event) &&
       (!date || layout.date === date) &&
-      item.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
+      item.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
   const visibleLayouts = layouts.filter(
     (layout) =>
@@ -323,7 +326,9 @@ function PlanExplorer({
           value={date}
           onChange={setDate}
           options={options(
-            layouts.filter((l) => l.date).map((l) => ({ value: l.date!, label: l.date! })),
+            layouts
+              .filter((l) => l.date)
+              .map((l) => ({ value: l.date!, label: formatDate(l.date!, locale) })),
             m.venue_plan_all_dates(),
           )}
         />
@@ -362,7 +367,7 @@ function PlanExplorer({
               <h2 className="text-lg font-semibold">{target.item.name}</h2>
               <p>
                 {target.layout.room?.name ?? target.layout.label} — {target.layout.event_title}{" "}
-                {target.layout.date}
+                {target.layout.date && formatDate(target.layout.date, locale)}
               </p>
               <p>
                 {target.item.occupied_seats}/{target.item.capacity} · {tableStatus(target.item)}
@@ -387,7 +392,8 @@ function PlanExplorer({
               <li key={item.id} className="rounded-md border p-3 min-w-0 break-words">
                 <h3 className="font-semibold">{item.name}</h3>
                 <p>
-                  {layout.room?.name ?? layout.label} — {layout.event_title} {layout.date}
+                  {layout.room?.name ?? layout.label} — {layout.event_title}{" "}
+                  {layout.date && formatDate(layout.date, locale)}
                 </p>
                 <p>
                   {m.venue_plan_seats({ occupied: item.occupied_seats, capacity: item.capacity })} ·{" "}
@@ -414,7 +420,9 @@ function PlanExplorer({
                   <h3 className="font-semibold">
                     {layout.room?.name ?? layout.label} — {layout.event_title}
                   </h3>
-                  {layout.date && <Badge variant="secondary">{layout.date}</Badge>}
+                  {layout.date && (
+                    <Badge variant="secondary">{formatDate(layout.date, locale)}</Badge>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div

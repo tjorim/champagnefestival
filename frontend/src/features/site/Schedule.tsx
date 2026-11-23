@@ -1,3 +1,4 @@
+import { formatDate, formatTime } from "@/lib/format/dateUtils";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,25 +48,6 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
     }
   };
 
-  const getDayName = (dayDate: string) => {
-    try {
-      switch (new Date(dayDate + "T00:00:00").getDay()) {
-        case 5:
-          return m.schedule_days_friday();
-        case 6:
-          return m.schedule_days_saturday();
-        case 0:
-          return m.schedule_days_sunday();
-        default:
-          return new Date(dayDate + "T00:00:00").toLocaleDateString(getLocale(), {
-            weekday: "long",
-          });
-      }
-    } catch {
-      return dayDate;
-    }
-  };
-
   if (days.length === 0) {
     return <p className="mb-0 text-center">{m.schedule_no_events()}</p>;
   }
@@ -77,18 +59,9 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
           {days.map((day) => (
             <div key={day.id}>
               <TabsTrigger value={day.id}>
-                {getDayName(day.date)}
+                {formatDate(day.date, locale, { weekday: "long" })}
                 <span className="block text-sm">
-                  {(() => {
-                    try {
-                      return new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
-                        month: "short",
-                        day: "numeric",
-                      });
-                    } catch {
-                      return day.date;
-                    }
-                  })()}
+                  {formatDate(day.date, locale, { month: "short", day: "numeric" })}
                 </span>
               </TabsTrigger>
             </div>
@@ -105,24 +78,26 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                 <div className="events-list">
                   {sortedEvents.map((event) => {
                     const label = categoryLabel(categories, event.category, locale);
+                    const startTime = formatTime(event.start_time, locale);
+                    const endTime = event.end_time ? formatTime(event.end_time, locale) : null;
                     return (
                       <Card key={event.id} className="event-card mb-4 border-0">
                         <CardContent>
                           <div className="flex justify-between items-start gap-4">
                             <div className="event-time me-4 whitespace-nowrap">
-                              {event.end_time ? (
+                              {endTime ? (
                                 <>
-                                  <div title={m.schedule_start_time()}>{event.start_time}</div>
-                                  <div title={m.schedule_end_time()}>{event.end_time}</div>
+                                  <div title={m.schedule_start_time()}>{startTime}</div>
+                                  <div title={m.schedule_end_time()}>{endTime}</div>
                                   <span className="sr-only">
                                     {m.schedule_time_range({
-                                      start: event.start_time,
-                                      end: event.end_time,
+                                      start: startTime,
+                                      end: endTime,
                                     })}
                                   </span>
                                 </>
                               ) : (
-                                <span title={m.schedule_time()}>{event.start_time}</span>
+                                <span title={m.schedule_time()}>{startTime}</span>
                               )}
                             </div>
                             <div className="grow">

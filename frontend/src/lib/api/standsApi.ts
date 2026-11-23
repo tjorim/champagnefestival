@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/format/dateUtils";
 import type { StandOut, OrganizationStandsOut, EditionStandsOut } from "@/api-types";
 import { queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "../query/queryKeys";
@@ -35,17 +36,9 @@ export function standsByOrganization(
   return new Map((organizations ?? []).map((item) => [item.organization_id, item.stands]));
 }
 
-/** Parse `YYYY-MM-DD` as a local date so it never shifts a day across timezones. */
-function parseStandDate(value: string): Date {
-  const [year = 0, month = 1, day = 1] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-/** Localized weekday and date for a stand's day, for example "Fri, Mar 20". */
+/** Localized weekday and date for a stand's day, for example "Fri 20 Mar". */
 export function formatStandDay(date: string, locale: string, weekday: "short" | "long" = "short") {
-  return new Intl.DateTimeFormat(locale, { weekday, day: "numeric", month: "short" }).format(
-    parseStandDate(date),
-  );
+  return formatDate(date, locale, { weekday, day: "numeric", month: "short" });
 }
 
 export interface StandSummaryLine {

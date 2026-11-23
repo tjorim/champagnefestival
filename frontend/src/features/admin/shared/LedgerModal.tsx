@@ -1,3 +1,6 @@
+import { formatEuro } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate } from "@/lib/format/dateUtils";
 import {
   Pagination,
   PaginationContent,
@@ -94,6 +97,7 @@ export default function LedgerModal({
       columnHelper.columns([
         columnHelper.accessor("effective_date", {
           header: m.admin_payment_transaction_date(),
+          cell: ({ getValue }) => formatDate(getValue(), getLocale()),
         }),
         columnHelper.accessor("amount", {
           header: m.admin_payment_amount_label(),
@@ -101,8 +105,8 @@ export default function LedgerModal({
             const amount = Number(getValue());
             return (
               <>
-                <strong>{transactionAmountLabel(amount)}</strong> {amount >= 0 ? "+" : ""}€
-                {amount.toFixed(2)}
+                <strong>{transactionAmountLabel(amount)}</strong>{" "}
+                {formatEuro(amount, getLocale(), { signDisplay: "always" })}
               </>
             );
           },

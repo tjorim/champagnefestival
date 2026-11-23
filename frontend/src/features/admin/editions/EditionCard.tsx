@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDate, formatDateRange, formatTime } from "@/lib/format/dateUtils";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -36,7 +38,6 @@ import EditionModal from "./EditionModal";
 import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
-import { parseEditionDate } from "./editionTypes";
 import type { Edition } from "@/api-types";
 import type { Venue } from "@/api-types";
 import type { Event } from "@/api-types";
@@ -118,9 +119,7 @@ export default function EditionCard({
     [eventsQuery.data, edition.events],
   );
   const dates = edition.dates.length > 0 ? edition.dates : sortedEvents.map((event) => event.date);
-  const startDate = dates[0] ? parseEditionDate(dates[0]) : null;
-  const endDateIso = dates.length > 0 ? dates[dates.length - 1] : undefined;
-  const endDate = endDateIso ? parseEditionDate(endDateIso) : null;
+  const locale = getLocale();
   const typeDisplay = editionTypeBadge(edition.edition_type);
   const displayName = editionDisplayName(edition);
 
@@ -184,12 +183,9 @@ export default function EditionCard({
           </CollapsibleTrigger>
           <span className="flex items-center gap-2 flex-wrap">
             <Badge variant={typeDisplay.bg}>{typeDisplay.label}</Badge>
-            {startDate && endDate ? (
+            {dates.length > 0 ? (
               <span className="text-subtle text-sm">
-                {startDate.toLocaleDateString()}
-                {startDate.getTime() !== endDate.getTime()
-                  ? ` – ${endDate.toLocaleDateString()}`
-                  : ""}
+                {formatDateRange([...new Set(dates)], locale)}
               </span>
             ) : (
               <span className="text-subtle text-sm">
@@ -201,16 +197,16 @@ export default function EditionCard({
             {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
           </Badge>
           <Badge variant="secondary">
-            {sortedEvents.length} {m.admin_edition_events()}
+            {m.admin_edition_events({ count: sortedEvents.length })}
           </Badge>
           {(edition.producers?.length ?? 0) > 0 && (
             <Badge variant="secondary">
-              {edition.producers!.length} {m.admin_edition_producers()}
+              {m.admin_edition_producers({ count: edition.producers!.length })}
             </Badge>
           )}
           {(edition.sponsors?.length ?? 0) > 0 && (
             <Badge variant="secondary">
-              {edition.sponsors!.length} {m.admin_edition_sponsors()}
+              {m.admin_edition_sponsors({ count: edition.sponsors!.length })}
             </Badge>
           )}
           {eventsQuery.isFetching && (
@@ -285,11 +281,11 @@ export default function EditionCard({
                 >
                   <span className="flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-micro">
-                      {event.date}
+                      {formatDate(event.date, locale)}
                     </Badge>
                     <span className="text-subtle text-sm">
-                      {event.start_time}
-                      {event.end_time ? `–${event.end_time}` : ""}
+                      {formatTime(event.start_time, locale)}
+                      {event.end_time ? `–${formatTime(event.end_time, locale)}` : ""}
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">

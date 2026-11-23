@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -204,7 +205,7 @@ export default function SignageVideoExports({
               {job.retrying && active(job.state) && <span>{m.signage_video_retrying()}</span>}
               <time dateTime={job.expires_at}>
                 {m.signage_video_until({
-                  date: new Date(job.expires_at).toLocaleString(getLocale()),
+                  date: formatDateTime(job.expires_at, getLocale()),
                 })}
               </time>
               {job.state === "ready" && (

@@ -1,3 +1,4 @@
+import { formatDate, formatTime } from "@/lib/format/dateUtils";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
@@ -8,11 +9,6 @@ import { eventDescription, eventTitle } from "@/lib/editions/eventText";
 
 interface BilletProgrammeProps {
   events: Event[];
-}
-
-function formatDay(date: string, locale: string, options: Intl.DateTimeFormatOptions): string {
-  const parsed = new Date(`${date}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString(locale, options);
 }
 
 /**
@@ -44,30 +40,35 @@ const BilletProgramme = ({ events }: BilletProgrammeProps) => {
         <section key={day.date} className="billet-day" aria-labelledby={`billet-day-${day.date}`}>
           <h3 id={`billet-day-${day.date}`} className="billet-day__head">
             <span className="billet-day__name">
-              {formatDay(day.date, locale, { weekday: "long" })}
+              {formatDate(day.date, locale, { weekday: "long" })}
             </span>
             <span className="billet-day__date">
-              {formatDay(day.date, locale, { day: "numeric", month: "short" })}
+              {formatDate(day.date, locale, { day: "numeric", month: "short" })}
             </span>
           </h3>
           <ol className="billet-day__list">
             {day.events.map((event) => {
               const label = categoryLabel(categories, event.category, locale);
+              const startTime = formatTime(event.start_time, locale);
+              const endTime = event.end_time ? formatTime(event.end_time, locale) : null;
               return (
                 <li key={event.id} className="billet-event">
                   <div className="billet-event__time">
-                    {event.end_time ? (
+                    {endTime ? (
                       <>
-                        <span aria-hidden="true">{event.start_time}</span>
+                        <span aria-hidden="true">{startTime}</span>
                         <span aria-hidden="true" className="billet-event__end">
-                          {event.end_time}
+                          {endTime}
                         </span>
                         <span className="sr-only">
-                          {m.schedule_time_range({ start: event.start_time, end: event.end_time })}
+                          {m.schedule_time_range({
+                            start: startTime,
+                            end: endTime,
+                          })}
                         </span>
                       </>
                     ) : (
-                      <span>{event.start_time}</span>
+                      <span>{startTime}</span>
                     )}
                   </div>
                   <div className="billet-event__body">

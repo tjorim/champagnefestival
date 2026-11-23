@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -389,7 +391,7 @@ function LayoutRevisionsSession({
                     </div>
                     <div className="text-subtle text-micro">
                       {m.admin_layout_revisions_created_by({ actor: revision.created_by })} ·{" "}
-                      {new Date(revision.created_at).toLocaleString()}
+                      {formatDateTime(revision.created_at, getLocale())}
                       {revision.change_note ? ` — ${revision.change_note}` : ""}
                     </div>
                   </div>

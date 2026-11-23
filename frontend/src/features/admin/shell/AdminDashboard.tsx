@@ -1,3 +1,6 @@
+import { formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime, formatDateRange } from "@/lib/format/dateUtils";
 import { useSearch } from "@tanstack/react-router";
 import { adminSections, useLocationChoice } from "@/hooks/useLocationChoice";
 import { useSyncExternalStore } from "react";
@@ -477,7 +480,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             isSigningOut={auth.isSigningOut}
             canManageAdminSections={canManageAdminSections}
             lastSynced={
-              cacheStatus.lastSynced ? new Date(cacheStatus.lastSynced).toLocaleString() : null
+              cacheStatus.lastSynced ? formatDateTime(cacheStatus.lastSynced, getLocale()) : null
             }
           />
 
@@ -510,15 +513,15 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   {isActiveEditionDay && (
                     <span className="text-highlight">
                       {m.admin_active_edition_day_progress({
-                        current: activeDayIndex + 1,
-                        total: activeEditionDateKeys.length,
+                        current: formatNumber(activeDayIndex + 1, getLocale()),
+                        total: formatNumber(activeEditionDateKeys.length, getLocale()),
                       })}
                     </span>
                   )}
                   <span>
                     {m.admin_active_edition_checkins({
-                      checkedIn: activeEditionStats.checkedIn,
-                      total: activeEditionStats.total,
+                      checkedIn: formatNumber(activeEditionStats.checkedIn, getLocale()),
+                      total: formatNumber(activeEditionStats.total, getLocale()),
                     })}
                   </span>
                   {isActiveEditionDay && (
@@ -560,7 +563,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     editionId={activeEdition.id || undefined}
                     editionLabel={
                       activeEdition.id
-                        ? `${editionDisplayNameWithType(activeEdition)} · ${activeEdition.dates.map((date) => new Date(date).toLocaleDateString()).join(", ")}`
+                        ? `${editionDisplayNameWithType(activeEdition)} · ${formatDateRange(activeEdition.dates, getLocale())}`
                         : undefined
                     }
                   />

@@ -1,8 +1,9 @@
+import { getLocale } from "@/paraglide/runtime";
 import { useMemo } from "react";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { isRegistrationInEdition } from "./adminUtils";
-import { toLocalDateKey } from "@/lib/format/dateUtils";
+import { toLocalDateKey, formatDate, formatTime } from "@/lib/format/dateUtils";
 import { useTodayKey } from "@/hooks/useTodayKey";
 
 interface UseAdminDashboardDataOptions {
@@ -40,15 +41,16 @@ export function useAdminDashboardData({
     return { checkedIn, total, eventsToday: eventIdsToday.size };
   }, [activeEdition.events, activeEdition.id, registrations, todayKey]);
 
+  const locale = getLocale();
   const layoutDayOptions = useMemo(() => {
     return [...activeEdition.events]
       .sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`))
       .map((event) => ({
         eventId: event.id,
         date: event.date,
-        label: `${event.title} — ${new Date(`${event.date}T00:00:00`).toLocaleDateString()} ${event.start_time}`,
+        label: `${event.title} — ${formatDate(event.date, locale)} ${formatTime(event.start_time, locale)}`,
       }));
-  }, [activeEdition.events]);
+  }, [activeEdition.events, locale]);
 
   return {
     activeDayIndex,

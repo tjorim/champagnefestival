@@ -1,3 +1,5 @@
+import { formatNumber } from "@/lib/format/numberUtils";
+import { getLocale } from "@/paraglide/runtime";
 import React, { useMemo } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useNow } from "@/hooks/useNow";
@@ -101,9 +103,10 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate, endDate, autoHideAfte
           : COUNTDOWN_STATUS.hidden;
 
   // Map time units to display components
+  const locale = getLocale();
   const timerComponents = Object.entries(timeLeft).map(([unit, value]) => (
     <div key={unit} className="countdown-unit">
-      <span className="countdown-value">{value}</span>
+      <span className="countdown-value">{formatNumber(value, locale)}</span>
       <span className="countdown-label">{t[unit as keyof TimeUnitsTranslations] || unit}</span>
     </div>
   ));

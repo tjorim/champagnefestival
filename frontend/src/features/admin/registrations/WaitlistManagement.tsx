@@ -1,3 +1,5 @@
+import { getLocale } from "@/paraglide/runtime";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useCallback, useMemo, useState } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
@@ -175,7 +177,7 @@ export default function WaitlistManagement({
         id: "requested",
         header: m.admin_waitlist_col_requested(),
         enableSorting: false,
-        cell: (info) => new Date(info.row.original.created_at).toLocaleString(),
+        cell: (info) => formatDateTime(info.row.original.created_at, getLocale()),
       }),
       columnHelper.display({
         id: "notes",
@@ -250,7 +252,7 @@ export default function WaitlistManagement({
               </div>
               <div className="text-sm text-subtle">
                 {m.admin_waitlist_guest_count({ count: entry.guest_count })} ·{" "}
-                {new Date(entry.created_at).toLocaleString()}
+                {formatDateTime(entry.created_at, getLocale())}
               </div>
               {entry.notes && <p className="mb-0 text-sm whitespace-pre-wrap">{entry.notes}</p>}
               <Status entry={entry} />

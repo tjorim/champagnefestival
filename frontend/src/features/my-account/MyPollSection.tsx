@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ANSWER_INPUTS } from "./MyPollAnswers";
@@ -27,7 +28,7 @@ function Closing({ question }: { question: MyPollQuestion }) {
   }
   return question.closes_at ? (
     <p className="text-sm mb-2">
-      {m.my_poll_closes_at({ time: new Date(question.closes_at).toLocaleString(getLocale()) })}
+      {m.my_poll_closes_at({ time: formatDateTime(question.closes_at, getLocale()) })}
     </p>
   ) : null;
 }

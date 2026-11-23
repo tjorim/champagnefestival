@@ -12,6 +12,11 @@ import { createTestQueryClientWrapper } from "../../utils/queryClient";
 
 let search: { edition?: string; table?: string; registration?: string } = {};
 
+vi.mock("@/paraglide/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/paraglide/runtime")>()),
+  getLocale: () => "en",
+}));
+
 vi.mock("@tanstack/react-router", () => ({
   useSearch: () => search,
   useLocation: () => ({ pathname: "/venue-plan", searchStr: "?edition=ed-1" }),
@@ -358,7 +363,7 @@ describe("VenuePlanPage table navigation", () => {
     await userEvent.click(screen.getByRole("combobox", { name: m.venue_plan_event() }));
     await userEvent.click(screen.getByRole("option", { name: "Dinner" }));
     await userEvent.click(screen.getByRole("combobox", { name: m.floor_plan_day() }));
-    await userEvent.click(screen.getByRole("option", { name: "2026-10-28" }));
+    await userEvent.click(screen.getByRole("option", { name: "28 Oct 2026" }));
     expect(screen.getByText(m.venue_plan_no_results())).toBeVisible();
   });
 });
