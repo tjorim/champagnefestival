@@ -106,7 +106,7 @@ function mockSettings(): import("@/api-types").AppSettingsOut {
     maintenance_mode: seededState("maintenance", false),
     public_email: "",
     public_phone: "",
-    facebook_url: "",
+    facebook_url: "https://www.facebook.com/champagnefestival.kust",
   };
 }
 
@@ -127,7 +127,7 @@ export const publicHandlers = [
       maintenance_mode: seededState("maintenance", false),
       public_email: "",
       public_phone: "",
-      facebook_url: "",
+      facebook_url: "https://www.facebook.com/champagnefestival.kust",
     }),
   ),
 
