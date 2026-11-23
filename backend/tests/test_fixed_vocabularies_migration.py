@@ -21,7 +21,6 @@ from app.models import (
     Organization,
     OrganizationChange,
     OutboxJob,
-    Person,
     PushSubscription,
     SignageVideoExport,
     TableType,
@@ -49,7 +48,12 @@ def test_fixed_vocabularies_round_trip(monkeypatch):
         command.upgrade(config, "012")
         with database.begin() as connection:
             connection.execute(insert(Venue).values(id="venue", name="Venue"))
-            connection.execute(insert(Person).values(id="person", name="Person"))
+            connection.execute(
+                text("""
+                    INSERT INTO people (id, name, retired_roles, role_history, anonymised)
+                    VALUES ('person', 'Person', '{}', '{}', false)
+                """)
+            )
             connection.execute(insert(EmailCategory).values(key="mail", name_nl="Post"))
             organization_id = connection.scalar(
                 insert(Organization).values(name="Legacy", type="legacy").returning(Organization.id)
