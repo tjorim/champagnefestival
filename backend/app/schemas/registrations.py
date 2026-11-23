@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import ConfigDict, EmailStr, Field, PrivateAttr, field_validator, model_validator
 
 from app.schemas.base import RequestModel, ResponseModel
-from app.schemas.events import EventOut, EventPublicOut
+from app.schemas.events import EventCheckInStats, EventOut, EventPublicOut
 from app.schemas.orders import OrderAnswerIn, OrderAnswerOut, OrderItemOut, OrderItemRequest
 from app.schemas.people import PersonSummaryOut
 from app.schemas.stamp_cards import StampProgress
@@ -223,6 +223,23 @@ class RegistrationListOut(ResponseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RegistrationEventStats(EventCheckInStats):
+    edition_id: str | None
+
+
+class RegistrationDashboardStats(ResponseModel):
+    """Booking facets include cancelled bookings unless filtered by status."""
+
+    all: int
+    pending: int
+    confirmed: int
+    festival: int
+    standalone: int
+    active: int
+    today: int
+    events: list[RegistrationEventStats]
 
 
 class RegistrationListEnvelope(ResponseModel):

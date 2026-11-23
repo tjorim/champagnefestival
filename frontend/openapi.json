@@ -374,6 +374,78 @@
         ]
       }
     },
+    "/api/registrations/stats": {
+      "get": {
+        "tags": [
+          "registrations"
+        ],
+        "summary": "Get Registration Dashboard Stats",
+        "description": "Count booking facets and attendance together from one database snapshot.",
+        "operationId": "get_registration_dashboard_stats_api_registrations_stats_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "edition_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Edition Id"
+            }
+          },
+          {
+            "name": "event_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationDashboardStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/registrations/export": {
       "get": {
         "tags": [
@@ -26833,6 +26905,58 @@
         ],
         "title": "RegistrationCreate"
       },
+      "RegistrationDashboardStats": {
+        "properties": {
+          "all": {
+            "type": "integer",
+            "title": "All"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "confirmed": {
+            "type": "integer",
+            "title": "Confirmed"
+          },
+          "festival": {
+            "type": "integer",
+            "title": "Festival"
+          },
+          "standalone": {
+            "type": "integer",
+            "title": "Standalone"
+          },
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "today": {
+            "type": "integer",
+            "title": "Today"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/RegistrationEventStats"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "all",
+          "pending",
+          "confirmed",
+          "festival",
+          "standalone",
+          "active",
+          "today",
+          "events"
+        ],
+        "title": "RegistrationDashboardStats",
+        "description": "Booking facets include cancelled bookings unless filtered by status."
+      },
       "RegistrationDeliveryUpdate": {
         "properties": {
           "product_id": {
@@ -26854,6 +26978,46 @@
         ],
         "title": "RegistrationDeliveryUpdate",
         "description": "The only order-line fields an entrance volunteer may change."
+      },
+      "RegistrationEventStats": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "title": "Event Id"
+          },
+          "event_title": {
+            "type": "string",
+            "title": "Event Title"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "checked_in": {
+            "type": "integer",
+            "title": "Checked In"
+          },
+          "edition_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edition Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "event_title",
+          "total",
+          "checked_in",
+          "edition_id"
+        ],
+        "title": "RegistrationEventStats"
       },
       "RegistrationGuestOut": {
         "properties": {

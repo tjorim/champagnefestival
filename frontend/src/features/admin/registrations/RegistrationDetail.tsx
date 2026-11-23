@@ -142,6 +142,9 @@ export default function RegistrationDetail({
 
   if (!registration) return null;
   const simpleRsvp = isSimpleRsvp(registration);
+  const paid = toAmount(registration.amount_paid);
+  const balance = Math.max(0, toAmount(registration.amount_due) - paid);
+  const refund = toAmount(registration.refund_due);
   const changedPrices = registration.order_items.flatMap((item) => {
     const current = registration.event?.products?.find((product) => product.id === item.product_id);
     return current && Number(current.price) !== item.price && item.quantity > item.included_quantity
@@ -167,12 +170,9 @@ export default function RegistrationDetail({
             {registration.guest_count}
           </p>
           <p className="text-sm">
-            {m.admin_inventory_paid()}: €{toAmount(registration.amount_paid).toFixed(2)} ·{" "}
-            {m.admin_booking_balance()}: €
-            {Math.max(
-              0,
-              toAmount(registration.amount_due) - toAmount(registration.amount_paid),
-            ).toFixed(2)}
+            {m.admin_inventory_paid()}: €{paid.toFixed(2)} ·{" "}
+            {refund > 0 ? m.admin_inventory_refund() : m.admin_booking_balance()}: €
+            {(refund > 0 ? refund : balance).toFixed(2)}
           </p>
           <nav className="flex flex-wrap gap-2" aria-label={m.admin_booking_editor()}>
             {onSaveBooking && (
@@ -269,13 +269,6 @@ export default function RegistrationDetail({
                 : registration.payment_status === "partial"
                   ? m.admin_payment_partial()
                   : m.admin_payment_unpaid()}
-              {registration.amount_due != null && (
-                <span className="ms-1 font-normal">
-                  {m.admin_registration_amount_due({
-                    amount: toAmount(registration.amount_due).toFixed(2),
-                  })}
-                </span>
-              )}
             </Badge>
             {registration.checked_in ? (
               <Badge variant="success">

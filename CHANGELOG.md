@@ -22,6 +22,10 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 - An eighth preview design, "Affiche": a poster of flat blue, red and yellow blocks with ink outlines. Its landing page opens with a grid of tiles showing the title, the mascot, the dates, the countdown, the venue and a running band of producer names.
 - A ninth preview design, "Billet": the festival as an admission ticket. A portrait ticket with the title, dates, venue, countdown and registration stays beside the page on wide screens while the sections scroll past, and the programme shows every day side by side.
 
+### Fixed
+
+- Admin registration counters use one server response and label check-in totals as guests. Booking details show the saved payment figures separately from the estimated total after edits (#1668).
+
 ### Internal
 
 - Keep generated API schema files out of CodeRabbit reviews so large API changes stay under its file limit. Reviews remain on request only.

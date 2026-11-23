@@ -163,6 +163,7 @@ describe("LiveUpdatesProvider", () => {
     expect(spy).toHaveBeenCalledWith({
       queryKey: ["admin", "registrations", "checkin-stats"],
     });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations", "counts"] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations", "page"] });
     expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "edition-stats"] });
   });

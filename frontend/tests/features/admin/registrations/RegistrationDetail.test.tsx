@@ -113,6 +113,8 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
 
     status: "confirmed",
     payment_status: "paid",
+    amount_due: "75.00",
+    amount_paid: "75.00",
     checked_in: false,
     strap_issued: false,
     check_in_token: "token-abc",
@@ -184,6 +186,20 @@ describe("RegistrationDetail", () => {
     expect(
       screen.getByText("Please seat near the window. Wheelchair access needed."),
     ).toBeInTheDocument();
+  });
+
+  it("keeps saved payment figures separate from the projected order total", () => {
+    renderDetail({ onSaveBooking: vi.fn() });
+    const saved = screen.getByText("admin_inventory_paid: €75.00 · admin_booking_balance: €0.00");
+    expect(screen.queryByText(/admin_booking_total/)).not.toBeInTheDocument();
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "admin_booking_quantity Brut Reserve" }),
+      {
+        target: { value: "4" },
+      },
+    );
+    expect(screen.getByText("admin_booking_total: €100.00")).toBeInTheDocument();
+    expect(saved).toHaveTextContent("admin_inventory_paid: €75.00 · admin_booking_balance: €0.00");
   });
 
   it("hides notes when absent", async () => {
@@ -436,6 +452,7 @@ describe("RegistrationDetail", () => {
     renderDetail({
       onSaveBooking,
       registration: buildRegistration({
+        amount_due: "100.00",
         amount_paid: "100.00",
         order_items: [
           {
@@ -468,7 +485,8 @@ describe("RegistrationDetail", () => {
       },
     );
     expect(screen.getByText(/admin_booking_release_tables/)).toBeInTheDocument();
-    expect(screen.getByText(/admin_inventory_refund/)).toHaveTextContent("€50.00");
+    expect(screen.getByText("admin_booking_total: €50.00")).toBeInTheDocument();
+    expect(screen.getByText("admin_booking_projected_refund: €50.00")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "admin_booking_save_all" })).toBeDisabled();
     fireEvent.click(screen.getAllByRole("button", { name: "admin_inventory_remove" })[1]!);
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
