@@ -217,6 +217,7 @@ def registration():
         payment_status="paid",
         amount_due=Decimal("20.00"),
         amount_paid=Decimal("25.00"),
+        checked_in=False,
         checked_in_at=None,
         strap_issued=False,
         check_in_token="secret",
