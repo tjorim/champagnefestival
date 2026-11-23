@@ -62,6 +62,7 @@ const cases = [
       email_audience_snapshot: null,
       sent_at: null,
       sent_by: null,
+      actor_label: null,
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
       push_delivered_count: 0,

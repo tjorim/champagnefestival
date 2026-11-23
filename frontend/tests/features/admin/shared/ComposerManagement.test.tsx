@@ -10,6 +10,7 @@ import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
 const draftMessage: import("@/api-types").ComposedMessageOut = {
   sent_by: null,
+  actor_label: null,
   id: "cmp_1",
   title_nl: "Festivalupdate",
   title_en: "Festival update",

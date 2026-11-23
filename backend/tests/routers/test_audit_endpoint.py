@@ -138,3 +138,73 @@ async def test_audit_resolves_edition_and_signage_channel_names(client):
     assert r.status_code == 200, r.text
     assert r.json()[0]["resource_name"] == "Main Hall"
     assert r.json()[0]["resource_exists"] is True
+
+
+@pytest.mark.anyio
+async def test_read_time_actor_labels_are_shared_with_mcp_and_can_filter(client, db_session):
+    from app.mcp.admin.audit import list_audit_entries
+    from app.models import AuditEntry, IntegrationClient, Person, User
+    from tests.helpers import mcp_session_factory
+
+    db_session.add_all(
+        [
+            Person(id="person_actor", name="Alex Martin", oidc_subject="staff-subject"),
+            Person(id="person_visitor", name="Sam Martin", email="sam@example.net"),
+            Person(id="person_erased", name="Erased", oidc_subject="erased-subject", anonymised=True),
+            User(id="usr_visitor", verified_email="sam@example.net"),
+            IntegrationClient(
+                id="integration_actor",
+                name="Door scanner",
+                key_hash="placeholder",
+                key_preview="abcdefgh",
+                allowed_role="volunteer",
+                created_by_actor="staff-subject",
+            ),
+        ]
+    )
+    actors = [
+        ("staff-subject", "keycloak", "person", "Alex Martin"),
+        ("usr_visitor", "visitor_session", "person", "Sam Martin"),
+        ("integration:integration_actor", "integration", "integration", "Door scanner"),
+        ("", "token", "visitor", None),
+        ("192.0.2.5", "token", "visitor", None),
+        ("migration:001_contact_messages", "keycloak", "system", None),
+        ("erased-subject", "keycloak", "unknown", None),
+    ]
+    for index, (actor, source, _, _) in enumerate(actors):
+        db_session.add(
+            AuditEntry(
+                id=f"audit-actor-{index}",
+                actor=actor,
+                auth_source=source,
+                action="actor_test",
+                resource_type="test",
+                resource_id="actor-test",
+            )
+        )
+    await db_session.commit()
+    expected = {actor: {"kind": kind, "name": name} for actor, _, kind, name in actors}
+
+    params = {"resource_id": "actor-test"}
+    response = await client.get("/api/audit", params=params)
+    assert response.status_code == 200, response.text
+    assert {row["actor"]: row["actor_label"] for row in response.json()} == expected
+    mcp = await list_audit_entries(mcp_session_factory(db_session), resource_id="actor-test")
+    assert {row["actor"]: row["actor_label"] for row in mcp["entries"]} == expected
+
+    options = await client.get("/api/audit/actors")
+    assert options.status_code == 200, options.text
+    assert options.json() == [
+        {"actor": actor, "actor_label": expected[actor]}
+        for actor in ["staff-subject", "integration:integration_actor", "usr_visitor"]
+    ]
+    filtered = await client.get("/api/audit", params=params | {"actor": "staff-subject"})
+    assert [row["actor"] for row in filtered.json()] == ["staff-subject"]
+
+    person = await db_session.get(Person, "person_actor")
+    assert person is not None
+    person.name = "Alex Renamed"
+    await db_session.commit()
+    refreshed = await client.get("/api/audit", params=params | {"actor": "staff-subject"})
+    assert refreshed.json()[0]["actor_label"]["name"] == "Alex Renamed"
+    assert refreshed.json()[0]["details"] == {}

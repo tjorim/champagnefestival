@@ -13,6 +13,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import PaymentTransactionCreate, PaymentTransactionOut
 from app.services import payments_service, registrations_service
+from app.services.actor_labels import labels_by_actor
 
 
 def _payload(transaction: PaymentTransactionOut) -> dict:
@@ -81,7 +82,10 @@ async def list_payment_transactions(session_factory: Any, registration_id: str) 
         except HTTPException as exc:
             raise as_value_error(exc) from exc
         rows = await payments_service.list_transactions(db, registration_id)
+        labels = await labels_by_actor(db, (t.recorded_by for t in rows))
         return {
-            "transactions": [_payload(payments_service.payment_transaction_to_out(t)) for t in rows],
+            "transactions": [
+                _payload(payments_service.payment_transaction_to_out(t, labels[t.recorded_by])) for t in rows
+            ],
             "count": len(rows),
         }

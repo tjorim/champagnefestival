@@ -2066,6 +2066,14 @@ export const adminHandlers = [
       requireAuth(request) ??
       jsonResponse<string[]>([...new Set(seedAuditEntries.map((entry) => entry.action))]),
   ),
+  http.get(
+    "/api/audit/actors",
+    ({ request }) =>
+      requireAuth(request) ??
+      jsonResponse<import("@/api-types").AuditActorOut[]>(
+        seedAuditEntries.map(({ actor, actor_label }) => ({ actor, actor_label })),
+      ),
+  ),
   http.get("/api/audit", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

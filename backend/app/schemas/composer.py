@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from app.core.vocabularies import AnnouncementLevel, ComposedMessageState
+from app.schemas.actors import ActorLabel
 from app.schemas.announcements import _validate_safe_announcement_url
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import ResourceKey, Text500, Text1000
@@ -112,6 +113,7 @@ class ComposedMessageOut(ResponseModel):
     email_audience_snapshot: list[str] | None
     sent_at: datetime | None
     sent_by: str | None
+    actor_label: ActorLabel | None
     created_at: datetime
     updated_at: datetime
     estimated_push_audience: int

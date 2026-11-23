@@ -7,6 +7,7 @@ from datetime import datetime
 from pydantic import ConfigDict
 
 from app.core.vocabularies import AuditSource
+from app.schemas.actors import ActorLabel
 from app.schemas.base import ResponseModel
 
 
@@ -27,5 +28,11 @@ class AuditEntryBaseOut(ResponseModel):
 
 
 class AuditEntryOut(AuditEntryBaseOut):
+    actor_label: ActorLabel
     resource_name: str | None
     resource_exists: bool
+
+
+class AuditActorOut(ResponseModel):
+    actor: str
+    actor_label: ActorLabel

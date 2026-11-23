@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from pydantic import ConfigDict, Field, field_validator
 
+from app.schemas.actors import ActorLabel
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.types import NonEmptyText200, ResourceId, Text200, Text2000
 
@@ -50,6 +51,7 @@ class PaymentTransactionOut(ResponseModel):
     effective_date: dt_date
     recorded_at: datetime
     recorded_by: str
+    actor_label: ActorLabel
     reference: str | None
     note: str | None
     reversed_transaction_id: str | None

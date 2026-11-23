@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ActorLabel } from './actorLabel';
 import type { ComposedMessageOutLevel } from './composedMessageOutLevel';
 import type { ComposedMessageOutState } from './composedMessageOutState';
 
@@ -27,6 +28,7 @@ export type ComposedMessageOut = {
   email_audience_snapshot: string[] | null;
   sent_at: string | null;
   sent_by: string | null;
+  actor_label: ActorLabel | null;
   created_at: string;
   updated_at: string;
   estimated_push_audience: number;

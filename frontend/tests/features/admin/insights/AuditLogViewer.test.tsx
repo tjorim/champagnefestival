@@ -13,14 +13,17 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const { fetchAuditActions, fetchAuditEntries, fetchAuditResourceTypes } = vi.hoisted(() => ({
-  fetchAuditActions: vi.fn(),
-  fetchAuditEntries: vi.fn(),
-  fetchAuditResourceTypes: vi.fn(),
-}));
+const { fetchAuditActions, fetchAuditActors, fetchAuditEntries, fetchAuditResourceTypes } =
+  vi.hoisted(() => ({
+    fetchAuditActions: vi.fn(),
+    fetchAuditActors: vi.fn(),
+    fetchAuditEntries: vi.fn(),
+    fetchAuditResourceTypes: vi.fn(),
+  }));
 
 vi.mock("@/lib/api/adminFetch", () => ({
   fetchAuditActions,
+  fetchAuditActors,
   fetchAuditEntries,
   fetchAuditResourceTypes,
 }));
@@ -36,6 +39,9 @@ function renderAuditLogViewer() {
 
 describe("AuditLogViewer", () => {
   beforeEach(() => {
+    fetchAuditActors.mockResolvedValue([
+      { actor: "admin@example.com", actor_label: { kind: "person", name: "Alex Martin" } },
+    ]);
     fetchAuditActions.mockResolvedValue(["venue_created"]);
     fetchAuditEntries.mockReset();
     fetchAuditResourceTypes.mockReset();
@@ -55,6 +61,7 @@ describe("AuditLogViewer", () => {
         id: "aud_1",
         timestamp: "2026-01-01T12:00:00Z",
         actor: "admin@example.com",
+        actor_label: { kind: "person", name: "Alex Martin" },
         action: "venue_created",
         auth_source: "keycloak",
         subject: null,
@@ -74,7 +81,9 @@ describe("AuditLogViewer", () => {
         screen.getByText("admin_audit_action_created · admin_audit_resource_venue"),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByText("admin@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("admin@example.com")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Alex Martin"));
+    expect(await screen.findByText("admin@example.com")).toBeVisible();
     expect(screen.getByRole("link", { name: "Renamed Venue" })).toHaveAttribute(
       "href",
       "/admin?section=venues#audit-venue-venue_abc123",

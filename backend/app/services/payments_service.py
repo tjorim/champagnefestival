@@ -34,6 +34,8 @@ from sqlalchemy.orm import selectinload
 from app.core.ids import make_id
 from app.models import Event, PaymentTransaction, Person, Registration
 from app.schemas import PaymentTransactionLedgerRow, PaymentTransactionOut, PersonPaymentSummary
+from app.schemas.actors import ActorLabel
+from app.services.actor_labels import labels_by_actor
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
 from app.services.idempotency import (
@@ -176,13 +178,13 @@ def count_ledger_entries(
 
 
 def ledger_row_to_out(
-    txn: PaymentTransaction, registration: Registration, person: Person, event: Event
+    txn: PaymentTransaction, registration: Registration, person: Person, event: Event, label: ActorLabel
 ) -> PaymentTransactionLedgerRow:
     """One joined ledger row as returned by ``build_ledger_query``, shaped for
     ``PaymentTransactionLedgerRow`` (#1019)."""
     edition = event.edition
     return PaymentTransactionLedgerRow(
-        **payment_transaction_to_out(txn).model_dump(),
+        **payment_transaction_to_out(txn, label).model_dump(),
         person_name=person.name,
         event_title=event.title,
         edition_label=edition_display_name(edition) if edition else "",
@@ -246,7 +248,7 @@ async def person_payment_summary(db: AsyncSession, person_id: str) -> PersonPaym
     )
 
 
-def payment_transaction_to_out(t: PaymentTransaction) -> PaymentTransactionOut:
+def payment_transaction_to_out(t: PaymentTransaction, label: ActorLabel) -> PaymentTransactionOut:
     return PaymentTransactionOut(
         id=t.id,
         registration_id=t.registration_id,
@@ -254,6 +256,7 @@ def payment_transaction_to_out(t: PaymentTransaction) -> PaymentTransactionOut:
         effective_date=t.effective_date,
         recorded_at=t.recorded_at,
         recorded_by=t.recorded_by,
+        actor_label=label,
         reference=t.reference,
         note=t.note,
         reversed_transaction_id=t.reversed_transaction_id,
@@ -296,18 +299,22 @@ async def record_payment_transaction(
         }
     )
 
-    async def replay() -> dict | None:
+    async def replay() -> PaymentTransactionOut | None:
         if not idempotency_key:
             return None
         try:
-            return await check_idempotency_key(
+            cached = await check_idempotency_key(
                 db, scope=PAYMENT_TRANSACTION_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
             )
         except ConflictError as exc:
             raise to_http_exception(exc) from exc
+        if cached is None:
+            return None
+        label = (await labels_by_actor(db, [actor]))[actor]
+        return PaymentTransactionOut.model_validate(cached | {"actor_label": label})
 
     if (cached := await replay()) is not None:
-        return PaymentTransactionOut.model_validate(cached)
+        return cached
 
     if reversed_transaction_id is not None:
         reversed_row = await db.get(PaymentTransaction, reversed_transaction_id)
@@ -333,7 +340,7 @@ async def record_payment_transaction(
     # A concurrent request with the same key may have committed while we waited for the lock; replay
     # its result rather than judging this retry against the balance it already changed.
     if (cached := await replay()) is not None:
-        return PaymentTransactionOut.model_validate(cached)
+        return cached
 
     if reversed_transaction_id is not None:
         # Checked under the booking lock so two concurrent refunds cannot both
@@ -397,7 +404,8 @@ async def record_payment_transaction(
         ),
     )
 
-    response = payment_transaction_to_out(transaction)
+    label = (await labels_by_actor(db, [actor]))[actor]
+    response = payment_transaction_to_out(transaction, label)
     if idempotency_key:
         record_idempotency_key(
             db,
@@ -407,7 +415,7 @@ async def record_payment_transaction(
             request_hash=request_hash,
             # Keep the existing replay encoder responsible for dates/timestamps;
             # only the Decimal needs the historical string representation here.
-            response_body=response.model_dump() | {"amount": str(response.amount)},
+            response_body=response.model_dump(exclude={"actor_label"}) | {"amount": str(response.amount)},
         )
     try:
         await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)

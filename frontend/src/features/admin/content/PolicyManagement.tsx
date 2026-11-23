@@ -1,3 +1,4 @@
+import { ActorName } from "@/components/admin/ActorName";
 import { getLocale } from "@/paraglide/runtime";
 import { formatDateTime, formatDate } from "@/lib/format/dateUtils";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
@@ -315,7 +316,14 @@ export default function PolicyManagement({
           id: "by",
           header: m.admin_policy_by_column(),
           enableSorting: false,
-          cell: ({ row }) => row.original.published_by ?? row.original.created_by,
+          cell: ({ row }) => {
+            const { created_by, created_by_label, published_by, published_by_label } = row.original;
+            return published_by === null ? (
+              <ActorName actor={created_by} label={created_by_label} />
+            ) : (
+              <ActorName actor={published_by} label={published_by_label} />
+            );
+          },
         }),
         historyColumnHelper.display({
           id: "changeSummary",
