@@ -30,6 +30,8 @@ listing does not assign a new priority.
 
 ### Active implementation and work needing scope decisions
 
+- [#1666 — recognisable dashboard lists](https://github.com/tjorim/champagnefestival/issues/1666): Organisation logos, assigned table names, schedule dates, room dimensions, table-type properties, edition lineup names and labelled check-in links are implemented. The audit log resolves names on the server and offers action and resource-type selects. Record links cover resources with matching dashboard destinations added in this change. Other audit resources still need individual destinations before the linking criterion is fully met. Actor names belong to #1660.
+
 
 - [#1435 — organisation preparation](https://github.com/tjorim/champagnefestival/issues/1435): Organisation-specific labels, identity/type/contact first, an explicit public temporary-image choice, upload-after-save guidance, mounted language tabs and a saved-content manager overview are implemented, with component, API and laptop/phone Chromium coverage; the implementation record is under **Organisation preparation follow-up (#1435, 2026-10-29)** below. **Still active:** one combined real-backend browser rehearsal of create → contact → proposal → acceptance/rejection. File storage and side-by-side review contracts are unchanged.
 

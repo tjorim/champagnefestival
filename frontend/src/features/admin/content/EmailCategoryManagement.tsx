@@ -1,3 +1,4 @@
+import { auditRecordId, focusAuditRecord } from "@/features/admin/shared/auditRecordLink";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, TrashIcon } from "lucide-react";
@@ -316,7 +317,12 @@ export default function EmailCategoryManagement({
               </TableHeader>
               <TableBody>
                 {list.map((category) => (
-                  <TableRow key={category.key}>
+                  <TableRow
+                    key={category.key}
+                    id={auditRecordId("email_category", category.key)}
+                    tabIndex={-1}
+                    ref={focusAuditRecord}
+                  >
                     <TableCell className="font-mono text-sm">{category.key}</TableCell>
                     <TableCell>
                       {category.name_nl}{" "}

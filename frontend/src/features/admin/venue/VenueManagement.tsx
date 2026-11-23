@@ -1,3 +1,8 @@
+import {
+  auditRecordId,
+  focusAuditRecord,
+  isAuditRecordTarget,
+} from "@/features/admin/shared/auditRecordLink";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 import {
@@ -45,6 +50,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type {
@@ -590,6 +596,8 @@ export default function VenueManagement({
     [onRestoreTableType],
   );
 
+  const number = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 3 });
+
   return (
     <Card tone="secondary">
       <CardHeader className="flex items-center justify-between">
@@ -625,11 +633,22 @@ export default function VenueManagement({
             const isArchived = !venue.active;
             const venueRooms = rooms.filter((r) => r.venue_id === venue.id);
             const venueTableTypes = tableTypes.filter((tt) => tt.venue_id === venue.id);
+            const showProperties =
+              !isArchived ||
+              venueRooms.some((room) => isAuditRecordTarget("room", room.id)) ||
+              venueTableTypes.some((type) => isAuditRecordTarget("table_type", type.id));
             const locationLine = [venue.address, venue.city, venue.postal_code, venue.country]
               .filter(Boolean)
               .join(", ");
             return (
-              <Card key={venue.id} tone="secondary" className={cn(isArchived && "opacity-75")}>
+              <Card
+                key={venue.id}
+                id={auditRecordId("venue", venue.id)}
+                tabIndex={-1}
+                ref={focusAuditRecord}
+                tone="secondary"
+                className={cn(isArchived && "opacity-75")}
+              >
                 <CardHeader className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold">
@@ -676,15 +695,17 @@ export default function VenueManagement({
                     )}
                   </RowActions>
                 </CardHeader>
-                {!isArchived && (
+                {showProperties && (
                   <CardContent className="py-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-subtle text-sm uppercase font-semibold">
                         {m.admin_rooms_tab()}
                       </span>
-                      <AdminAddButton variant="outline" onClick={() => openAddRoom(venue.id)}>
-                        {m.admin_room_add()}
-                      </AdminAddButton>
+                      {!isArchived && (
+                        <AdminAddButton variant="outline" onClick={() => openAddRoom(venue.id)}>
+                          {m.admin_room_add()}
+                        </AdminAddButton>
+                      )}
                     </div>
                     {venueRooms.length === 0 ? (
                       <AdminEmptyState>{m.admin_room_no_rooms()}</AdminEmptyState>
@@ -693,6 +714,9 @@ export default function VenueManagement({
                         {venueRooms.map((room) => (
                           <PresentationListItem
                             key={room.id}
+                            id={auditRecordId("room", room.id)}
+                            tabIndex={-1}
+                            ref={focusAuditRecord}
                             className={cn(
                               "flex justify-between items-center gap-2 py-1 px-0",
                               !room.active && "opacity-50",
@@ -708,6 +732,14 @@ export default function VenueManagement({
                                 /* oxlint-enable shadcn/no-inline-styles */
                               />
                               {room.name}
+                              {!room.dimensions_placeholder && (
+                                <small className="text-subtle">
+                                  {m.admin_room_dimensions_summary({
+                                    width: number.format(room.width_m),
+                                    length: number.format(room.length_m),
+                                  })}
+                                </small>
+                              )}
                               {room.dimensions_placeholder && (
                                 <span
                                   role="img"
@@ -718,41 +750,43 @@ export default function VenueManagement({
                                 </span>
                               )}
                             </span>
-                            <RowActions
-                              className="shrink-0"
-                              destructive={
-                                room.active ? undefined : (
+                            {!isArchived && (
+                              <RowActions
+                                className="shrink-0"
+                                destructive={
+                                  room.active ? undefined : (
+                                    <RowActionButton
+                                      destructive
+                                      icon={TrashIcon}
+                                      label={m.admin_delete_item({ name: room.name })}
+                                      onClick={() => setConfirmDeleteRoomId(room.id)}
+                                    />
+                                  )
+                                }
+                              >
+                                {room.active && (
                                   <RowActionButton
-                                    destructive
-                                    icon={TrashIcon}
-                                    label={m.admin_delete_item({ name: room.name })}
-                                    onClick={() => setConfirmDeleteRoomId(room.id)}
+                                    icon={PencilIcon}
+                                    label={m.admin_edit_item({ name: room.name })}
+                                    onClick={() => openEditRoom(room)}
                                   />
-                                )
-                              }
-                            >
-                              {room.active && (
-                                <RowActionButton
-                                  icon={PencilIcon}
-                                  label={m.admin_edit_item({ name: room.name })}
-                                  onClick={() => openEditRoom(room)}
-                                />
-                              )}
-                              {room.active ? (
-                                <RowActionButton
-                                  icon={ArchiveIcon}
-                                  label={`${m.admin_content_archive()}: ${room.name}`}
-                                  onClick={() => handleArchiveRoom(room.id)}
-                                />
-                              ) : (
-                                <RowActionButton
-                                  variant="outline-success"
-                                  icon={RotateCcwIcon}
-                                  label={`${m.admin_content_restore()}: ${room.name}`}
-                                  onClick={() => handleRestoreRoom(room.id)}
-                                />
-                              )}
-                            </RowActions>
+                                )}
+                                {room.active ? (
+                                  <RowActionButton
+                                    icon={ArchiveIcon}
+                                    label={`${m.admin_content_archive()}: ${room.name}`}
+                                    onClick={() => handleArchiveRoom(room.id)}
+                                  />
+                                ) : (
+                                  <RowActionButton
+                                    variant="outline-success"
+                                    icon={RotateCcwIcon}
+                                    label={`${m.admin_content_restore()}: ${room.name}`}
+                                    onClick={() => handleRestoreRoom(room.id)}
+                                  />
+                                )}
+                              </RowActions>
+                            )}
                           </PresentationListItem>
                         ))}
                       </PresentationList>
@@ -762,9 +796,14 @@ export default function VenueManagement({
                       <span className="text-subtle text-sm uppercase font-semibold">
                         {m.admin_table_types_tab()}
                       </span>
-                      <AdminAddButton variant="outline" onClick={() => openAddTableType(venue.id)}>
-                        {m.admin_add_table_type()}
-                      </AdminAddButton>
+                      {!isArchived && (
+                        <AdminAddButton
+                          variant="outline"
+                          onClick={() => openAddTableType(venue.id)}
+                        >
+                          {m.admin_add_table_type()}
+                        </AdminAddButton>
+                      )}
                     </div>
                     {venueTableTypes.length === 0 ? (
                       <AdminEmptyState>{m.admin_no_table_types()}</AdminEmptyState>
@@ -773,6 +812,9 @@ export default function VenueManagement({
                         {venueTableTypes.map((tt) => (
                           <PresentationListItem
                             key={tt.id}
+                            id={auditRecordId("table_type", tt.id)}
+                            tabIndex={-1}
+                            ref={focusAuditRecord}
                             className={cn(
                               "flex justify-between items-center gap-2 py-1 px-0",
                               !tt.active && "opacity-50",
@@ -780,43 +822,60 @@ export default function VenueManagement({
                           >
                             <span className="flex items-center gap-2">
                               <Icon icon={tt.shape === "round" ? CircleIcon : SquareIcon} />
-                              {tt.name}
+                              <span>
+                                {tt.name}
+                                <small className="block text-subtle">
+                                  {tt.shape === "round"
+                                    ? m.admin_table_shape_round()
+                                    : m.admin_table_shape_rectangle()}
+                                  {" · "}
+                                  {tt.height_type === "high"
+                                    ? m.admin_table_height_type_high()
+                                    : m.admin_table_height_type_low()}
+                                  {" · "}
+                                  {tt.capacity === 1
+                                    ? m.admin_table_type_seat()
+                                    : m.admin_table_type_seats({ count: tt.capacity })}
+                                </small>
+                              </span>
                             </span>
-                            <RowActions
-                              className="shrink-0"
-                              destructive={
-                                tt.active ? undefined : (
+                            {!isArchived && (
+                              <RowActions
+                                className="shrink-0"
+                                destructive={
+                                  tt.active ? undefined : (
+                                    <RowActionButton
+                                      destructive
+                                      icon={TrashIcon}
+                                      label={m.admin_delete_item({ name: tt.name })}
+                                      onClick={() => setConfirmDeleteTableTypeId(tt.id)}
+                                    />
+                                  )
+                                }
+                              >
+                                {tt.active && (
                                   <RowActionButton
-                                    destructive
-                                    icon={TrashIcon}
-                                    label={m.admin_delete_item({ name: tt.name })}
-                                    onClick={() => setConfirmDeleteTableTypeId(tt.id)}
+                                    icon={PencilIcon}
+                                    label={m.admin_edit_item({ name: tt.name })}
+                                    onClick={() => openEditTableType(tt)}
                                   />
-                                )
-                              }
-                            >
-                              {tt.active && (
-                                <RowActionButton
-                                  icon={PencilIcon}
-                                  label={m.admin_edit_item({ name: tt.name })}
-                                  onClick={() => openEditTableType(tt)}
-                                />
-                              )}
-                              {tt.active ? (
-                                <RowActionButton
-                                  icon={ArchiveIcon}
-                                  label={`${m.admin_content_archive()}: ${tt.name}`}
-                                  onClick={() => handleArchiveTableType(tt.id)}
-                                />
-                              ) : (
-                                <RowActionButton
-                                  variant="outline-success"
-                                  icon={RotateCcwIcon}
-                                  label={`${m.admin_content_restore()}: ${tt.name}`}
-                                  onClick={() => handleRestoreTableType(tt.id)}
-                                />
-                              )}
-                            </RowActions>
+                                )}
+                                {tt.active ? (
+                                  <RowActionButton
+                                    icon={ArchiveIcon}
+                                    label={`${m.admin_content_archive()}: ${tt.name}`}
+                                    onClick={() => handleArchiveTableType(tt.id)}
+                                  />
+                                ) : (
+                                  <RowActionButton
+                                    variant="outline-success"
+                                    icon={RotateCcwIcon}
+                                    label={`${m.admin_content_restore()}: ${tt.name}`}
+                                    onClick={() => handleRestoreTableType(tt.id)}
+                                  />
+                                )}
+                              </RowActions>
+                            )}
                           </PresentationListItem>
                         ))}
                       </PresentationList>

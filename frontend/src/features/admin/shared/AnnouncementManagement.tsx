@@ -1,3 +1,4 @@
+import { auditRecordId, focusAuditRecord } from "@/features/admin/shared/auditRecordLink";
 import { useNow } from "@/hooks/useNow";
 import {
   AdminField,
@@ -570,7 +571,12 @@ export default function AnnouncementManagement({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  id={auditRecordId("announcement", row.original.id)}
+                  tabIndex={-1}
+                  ref={focusAuditRecord}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                       <table.FlexRender cell={cell} />

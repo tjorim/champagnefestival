@@ -9,7 +9,7 @@ from pydantic import ConfigDict
 from app.schemas.base import ResponseModel
 
 
-class AuditEntryOut(ResponseModel):
+class AuditEntryBaseOut(ResponseModel):
     id: str
     timestamp: datetime
     actor: str
@@ -23,3 +23,8 @@ class AuditEntryOut(ResponseModel):
     details: dict
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AuditEntryOut(AuditEntryBaseOut):
+    resource_name: str | None
+    resource_exists: bool

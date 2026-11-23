@@ -260,6 +260,17 @@ describe("VenueManagement", () => {
     expect(activeScope.getByText("1 Main St, Ghent, 9000, BE")).toBeInTheDocument();
     expect(activeScope.getByText("Room A")).toBeInTheDocument();
     expect(activeScope.getByText("Room B")).toBeInTheDocument();
+    expect(
+      within(listItem("Room A")).getByText(
+        'admin_room_dimensions_summary({"width":"20","length":"15"})',
+      ),
+    ).toBeVisible();
+    const tableType = within(listItem("Standard Rectangle"));
+    expect(
+      tableType.getByText(
+        /admin_table_shape_rectangle.*admin_table_height_type_low.*admin_table_type_seats/,
+      ),
+    ).toBeVisible();
 
     expect(
       within(venueCard("Old Barn")).getByText("admin_venue_archived_badge"),

@@ -1,3 +1,4 @@
+import { auditRecordId, focusAuditRecord } from "@/features/admin/shared/auditRecordLink";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 import { Button } from "@/components/ui/button";
@@ -401,6 +402,9 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   {table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
+                      id={auditRecordId("faq_item", row.original.id)}
+                      tabIndex={-1}
+                      ref={focusAuditRecord}
                       className={!row.original.active ? "opacity-50" : undefined}
                     >
                       {row.getVisibleCells().map((cell) => (

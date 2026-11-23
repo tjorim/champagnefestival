@@ -211,6 +211,7 @@ class RegistrationListOut(ResponseModel):
     order_items: list[OrderItemOut]
     notes: str
     table_id: str | None
+    table_names: list[str]
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
