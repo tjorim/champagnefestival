@@ -135,7 +135,7 @@ describe("RegistrationList — per-event capacity panel", () => {
     await waitFor(() => expect(screen.getByText(/admin_checked_in: 12\/30/)).toBeInTheDocument());
     expect(screen.getByText("Historical event title")).toBeInTheDocument();
     const summary = screen.getByRole("button", { name: /admin_event_checkin_summary/ });
-    expect(summary).toHaveTextContent('"checkedIn":12,"total":32');
+    expect(summary).toHaveTextContent('"checkedIn":"12","total":"32"');
     expect(summary).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("Historical event title")).not.toBeVisible();
     fireEvent.click(summary);
