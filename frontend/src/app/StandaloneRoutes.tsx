@@ -47,7 +47,7 @@ function StandaloneNavBar({
     <nav
       data-theme-scope={admin ? "admin" : undefined}
       data-theme-mode={admin ? "dark" : undefined}
-      className={`standalone-navbar fixed inset-x-0 top-0 z-header flex flex-wrap items-center justify-between px-4 py-2 ${admin ? "border-b border-border bg-sidebar text-foreground shadow-none" : ""}`}
+      className={`standalone-navbar fixed inset-x-0 top-0 z-header flex flex-wrap items-center justify-between px-4 py-2 ${admin ? "border-b border-border bg-background text-foreground shadow-none" : ""}`}
     >
       <div className="site-fluid-container mx-auto w-full px-3 flex justify-between items-center gap-2">
         {!admin && (
@@ -60,8 +60,9 @@ function StandaloneNavBar({
           <LanguageSwitcher admin={admin} />
           <ButtonLink
             render={<a href={localizedPublicPath("/", getLocale())} />}
-            variant="outline"
+            variant={admin ? "ghost" : "outline"}
             size="sm"
+            className={admin ? "border border-border" : undefined}
           >
             <Icon icon={ArrowLeftIcon} />
             {/* Icon-only on phones so the title keeps its room; the text stays the accessible name. */}

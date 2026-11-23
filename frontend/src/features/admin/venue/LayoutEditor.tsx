@@ -1078,6 +1078,7 @@ export default function LayoutEditor({
             <ToggleGroup
               variant="outline"
               size="sm"
+              className="text-foreground"
               aria-label={m.admin_layout_layer_aria()}
               value={[layer]}
               onValueChange={(values) => {
