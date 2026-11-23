@@ -7,8 +7,6 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 function category(key: string, nl: string, order: number): import("@/api-types").CategoryOut {
   return {
     created_at: "2026-01-01T00:00:00Z",
@@ -28,7 +26,7 @@ let kind: Kind = "event";
 const path = () => `/api/${kind}-categories`;
 
 function mount() {
-  render(<CategoryManagement kind={kind} authHeaders={authHeaders} />, {
+  render(<CategoryManagement kind={kind} />, {
     wrapper: createTestQueryClientWrapper(),
   });
 }

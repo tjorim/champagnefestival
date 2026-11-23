@@ -8,11 +8,9 @@ import type { Organization } from "@/types/admin";
 import { fetchOrganizations } from "../api/adminFetch";
 import { queryKeys } from "../query/queryKeys";
 
-type AuthHeadersProvider = () => Record<string, string>;
-
 interface CreateAdminOrganizationsCollectionOptions {
   queryClient: QueryClient;
-  authHeaders: AuthHeadersProvider;
+
   enabled: boolean;
   syncMode?: AdminCollectionSyncMode;
 }
@@ -29,13 +27,13 @@ interface CreateAdminOrganizationsCollectionOptions {
  */
 export function createAdminOrganizationsCollection({
   queryClient,
-  authHeaders,
+
   enabled,
   syncMode,
 }: CreateAdminOrganizationsCollectionOptions) {
   return createAdminCollection<Organization, number>({
     queryKey: queryKeys.admin.organizations,
-    queryFn: () => fetchOrganizations(authHeaders),
+    queryFn: () => fetchOrganizations(),
     queryClient,
     enabled,
     syncMode,

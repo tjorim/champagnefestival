@@ -13,21 +13,16 @@ afterEach(cleanup);
 it("offers reuse and deliberate separate creation from authorised search results", async () => {
   query.mockReturnValue({ data: { items: [guest] }, isPlaceholderData: false });
   const reuse = vi.fn();
-  const headers = () => ({ Authorization: "Bearer test" });
   render(
     <PersonDirectoryMatches
       name="Guest"
       email="guest@example.com"
-      authHeaders={headers}
+
       onReuse={reuse}
     />,
   );
   await waitFor(() => expect(screen.getByText(m.admin_person_continue_help())).toBeTruthy());
-  expect(query).toHaveBeenLastCalledWith(
-    { page: 1, limit: 5, q: "guest@example.com" },
-    headers,
-    true,
-  );
+  expect(query).toHaveBeenLastCalledWith({ page: 1, limit: 5, q: "guest@example.com" }, true);
   await userEvent.click(screen.getByRole("button", { name: m.admin_person_reuse() }));
   expect(reuse).toHaveBeenCalledWith(guest);
 });
@@ -37,7 +32,7 @@ it("warns instead of staying silent when the directory search fails", () => {
     <PersonDirectoryMatches
       name="Guest"
       email="guest@example.com"
-      authHeaders={() => ({})}
+
       onReuse={vi.fn()}
     />,
   );
@@ -51,7 +46,7 @@ it("does not offer stale placeholder matches", async () => {
     <PersonDirectoryMatches
       name="Guest"
       email="guest@example.com"
-      authHeaders={() => ({})}
+
       onReuse={vi.fn()}
     />,
   );

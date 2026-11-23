@@ -1,3 +1,4 @@
+import { adminRequest } from "@/lib/api/adminApi";
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
 import ResponsiveImage from "@/components/ResponsiveImage";
@@ -8,14 +9,18 @@ export default function OrganizationLogoPreview({
   headers,
 }: {
   url: string;
-  headers: () => Record<string, string>;
+  headers?: () => Record<string, string>;
 }) {
   const [image, setImage] = useState<{ url: string; src: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     let objectUrl: string | undefined;
-    void fetch(url, { headers: headers(), signal: controller.signal, cache: "no-store" })
+    void (headers ? fetch : adminRequest)(url, {
+      headers: headers?.(),
+      signal: controller.signal,
+      cache: "no-store",
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error();
         const blob = await response.blob();

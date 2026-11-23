@@ -12,7 +12,6 @@ import { peopleListSearchParams, type PeopleListParams } from "@/lib/query/admin
 import { queryKeys } from "@/lib/query/queryKeys";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
-const headers = () => ({ Authorization: "Bearer session" });
 const page = (name: string, params: PeopleListParams) => ({
   items: [
     {
@@ -55,7 +54,7 @@ describe("people server pages", () => {
     const { Wrapper } = createTestQueryClientHarness();
     const { result, rerender } = renderHook(
       (enabled: boolean) =>
-        usePeopleCountsQuery({ q: "club", role: "member", active: false }, headers, enabled),
+        usePeopleCountsQuery({ q: "club", role: "member", active: false }, enabled),
       { wrapper: Wrapper, initialProps: true },
     );
     await waitFor(() => expect(result.current.data?.total).toBe(200));
@@ -82,7 +81,7 @@ describe("people server pages", () => {
     );
     const { Wrapper } = createTestQueryClientHarness();
     const { result, rerender } = renderHook(
-      (params: PeopleListParams) => usePeopleListQuery(params, headers),
+      (params: PeopleListParams) => usePeopleListQuery(params),
       { wrapper: Wrapper, initialProps: { page: 1, limit: 5 } as PeopleListParams },
     );
     await waitFor(() => expect(result.current.data?.total).toBe(200));
@@ -125,7 +124,7 @@ describe("people server pages", () => {
     );
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const { result, rerender } = renderHook(
-      (q: string) => usePeopleListQuery({ page: 1, limit: 5, q }, headers),
+      (q: string) => usePeopleListQuery({ page: 1, limit: 5, q }),
       { wrapper: Wrapper, initialProps: "old" },
     );
     await waitFor(() => expect(requests).toHaveLength(1));
@@ -175,7 +174,7 @@ describe("people server pages", () => {
     );
     const { Wrapper } = createTestQueryClientHarness();
     const { result } = renderHook(
-      () => usePeopleListQuery({ page: 2, limit: 10, role: "volunteer", active: true }, headers),
+      () => usePeopleListQuery({ page: 2, limit: 10, role: "volunteer", active: true }),
       { wrapper: Wrapper },
     );
     await waitFor(() => expect(result.current.data?.items[0]?.help_periods).toHaveLength(1));

@@ -39,11 +39,11 @@ const empty: StampCardTypeWrite = {
 
 function TypeEditor({
   value,
-  authHeaders,
+
   onClose,
 }: {
   value: StampCardType | null;
-  authHeaders: () => Record<string, string>;
+
   onClose: () => void;
 }) {
   const client = useQueryClient();
@@ -68,7 +68,7 @@ function TypeEditor({
       } = draft;
       await stampRequest(
         `/api/stamp-cards/types${value ? `/${encodeURIComponent(value.id)}` : ""}`,
-        authHeaders,
+
         undefined,
         {
           name_nl,
@@ -164,21 +164,16 @@ function TypeEditor({
   );
 }
 
-export default function StampCardTypes({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function StampCardTypes() {
   const client = useQueryClient();
   const types = useQuery({
     queryKey: stampKeys.types,
-    queryFn: ({ signal }) =>
-      stampRequest<StampCardType[]>("/api/stamp-cards/types", authHeaders, signal),
+    queryFn: ({ signal }) => stampRequest<StampCardType[]>("/api/stamp-cards/types", signal),
   });
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
     queryFn: ({ signal }) =>
-      stampRequest<{ stamp_card_type_id: string | null }>("/api/settings", authHeaders, signal),
+      stampRequest<{ stamp_card_type_id: string | null }>("/api/settings", signal),
   });
   const [editing, setEditing] = useState<StampCardType | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -190,7 +185,7 @@ export default function StampCardTypes({
     try {
       await stampRequest(
         "/api/settings",
-        authHeaders,
+
         undefined,
         { stamp_card_type_id: id || null },
         "PUT",
@@ -269,7 +264,7 @@ export default function StampCardTypes({
         {editing !== undefined && (
           <TypeEditor
             value={editing}
-            authHeaders={authHeaders}
+
             onClose={() => setEditing(undefined)}
           />
         )}

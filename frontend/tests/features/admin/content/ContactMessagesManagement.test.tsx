@@ -48,10 +48,7 @@ function serve() {
 }
 
 function renderInbox() {
-  return render(
-    <ContactMessagesManagement authHeaders={() => ({ Authorization: "Bearer test" })} />,
-    { wrapper: createTestQueryClientWrapper() },
-  );
+  return render(<ContactMessagesManagement />, { wrapper: createTestQueryClientWrapper() });
 }
 
 describe("ContactMessagesManagement", () => {

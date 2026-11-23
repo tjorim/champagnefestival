@@ -105,7 +105,7 @@ function OptionFields({
 
 interface PollOptionsEditorProps {
   question: PollQuestion;
-  authHeaders: () => Record<string, string>;
+
   /** The question's options changed (created, edited, deleted or reordered). */
   onOptionsChange: (options: PollOption[]) => void;
 }
@@ -113,7 +113,7 @@ interface PollOptionsEditorProps {
 /** The meal options of one ``meals`` question: add, edit, order and delete them. */
 export default function PollOptionsEditor({
   question,
-  authHeaders,
+
   onOptionsChange,
 }: PollOptionsEditorProps) {
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
@@ -132,8 +132,7 @@ export default function PollOptionsEditor({
   }
 
   const createMutation = useMutation({
-    mutationFn: (write: PollOptionWrite) =>
-      createPollOption({ questionId: question.id, ...write }, authHeaders),
+    mutationFn: (write: PollOptionWrite) => createPollOption({ questionId: question.id, ...write }),
     retry: false,
     onSuccess: (created) => {
       onOptionsChange([...options, created]);
@@ -142,7 +141,7 @@ export default function PollOptionsEditor({
   });
   const updateMutation = useMutation({
     mutationFn: (payload: { id: string; write: PollOptionWrite }) =>
-      updatePollOption(payload.id, payload.write, authHeaders),
+      updatePollOption(payload.id, payload.write),
     retry: false,
     onSuccess: (updated) => {
       onOptionsChange(options.map((o) => (o.id === updated.id ? updated : o)));
@@ -151,11 +150,11 @@ export default function PollOptionsEditor({
   });
   const deleteMutation = useMutation({
     mutationFn: ({ option, notify }: { option: PollOption; notify: boolean }) =>
-      deletePollOption(option.id, authHeaders, option.volunteer_count > 0, notify),
+      deletePollOption(option.id, option.volunteer_count > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) => reorderPollOptions(question.id, orderedIds, authHeaders),
+    mutationFn: (orderedIds: string[]) => reorderPollOptions(question.id, orderedIds),
     retry: false,
     onSuccess: onOptionsChange,
   });

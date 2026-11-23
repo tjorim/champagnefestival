@@ -131,7 +131,7 @@ interface RegistrationListProps {
   onCheckIn: (registrationId: string, checkedIn?: boolean) => Promise<boolean | void>;
   onIssueStrap: (registrationId: string) => Promise<void>;
   onAddRegistration: (registration: Registration) => void;
-  authHeaders: () => Record<string, string>;
+
   activeEdition: ActiveEdition;
   activeEditionLoaded?: boolean;
   canManageAdminSections?: boolean;
@@ -206,7 +206,7 @@ export default function RegistrationList({
   onCheckIn,
   onIssueStrap,
   onAddRegistration,
-  authHeaders,
+
   activeEdition,
   activeEditionLoaded = true,
   canManageAdminSections = true,
@@ -282,7 +282,7 @@ export default function RegistrationList({
     return () => clearTimeout(timer);
   }, [q, clearSelection]);
 
-  const volunteerStats = useVolunteerCheckInStats(authHeaders, !canManageAdminSections);
+  const volunteerStats = useVolunteerCheckInStats(!canManageAdminSections);
 
   const allContactPersonIds = useMemo(
     () =>
@@ -422,10 +422,7 @@ export default function RegistrationList({
     ],
   );
 
-  const pageQuery = useRegistrationListQuery(
-    { ...currentFilterParams, page, limit: pageSize },
-    authHeaders,
-  );
+  const pageQuery = useRegistrationListQuery({ ...currentFilterParams, page, limit: pageSize });
 
   // The paginated fetch decides *which* registrations are on this page (and in
   // what order) — but for the actual row data we prefer whatever the live-synced
@@ -472,7 +469,7 @@ export default function RegistrationList({
 
   const qrDetailQuery = useQuery({
     queryKey: [...queryKeys.admin.registrations, "qr", qrTargetId],
-    queryFn: () => fetchRegistration(qrTargetId!, authHeaders),
+    queryFn: () => fetchRegistration(qrTargetId!),
     enabled: qrTargetId !== null,
     staleTime: 0,
   });
@@ -495,9 +492,9 @@ export default function RegistrationList({
   // current page), reading all pages — used by "export all matching" and by the
   // "select all N matching" bulk action.
   const fetchAllMatchingRegistrations = useCallback(async (): Promise<Registration[]> => {
-    const matched = await fetchAllRegistrationPages(authHeaders, currentFilterParams);
+    const matched = await fetchAllRegistrationPages(currentFilterParams);
     return matched.map((r) => registrationsById.get(r.id) ?? r);
-  }, [authHeaders, currentFilterParams, registrationsById]);
+  }, [currentFilterParams, registrationsById]);
 
   const handleAssignTable = useCallback(
     (registrationId: string, tableId: string) => {
@@ -509,7 +506,7 @@ export default function RegistrationList({
   const countsQuery = useRegistrationCountsQuery(
     activeEdition.id,
     todayKey,
-    authHeaders,
+
     canManageAdminSections && activeEditionLoaded,
   );
   const statusCounts = countsQuery.data ?? { all: 0, pending: 0, confirmed: 0 };
@@ -1012,21 +1009,18 @@ export default function RegistrationList({
     }
   }, [fetchAllMatchingRegistrations]);
 
-  const handleExportEventCsv = useCallback(
-    async (eventId: string) => {
-      setEventExportError(null);
-      setExportingEventId(eventId);
-      try {
-        await downloadRegistrationsCsv(authHeaders, eventId);
-      } catch (err) {
-        devError("Failed to export guest list", err);
-        setEventExportError(apiErrorMessage(err, m.admin_registrations_export_event_csv_error()));
-      } finally {
-        setExportingEventId(null);
-      }
-    },
-    [authHeaders],
-  );
+  const handleExportEventCsv = useCallback(async (eventId: string) => {
+    setEventExportError(null);
+    setExportingEventId(eventId);
+    try {
+      await downloadRegistrationsCsv(eventId);
+    } catch (err) {
+      devError("Failed to export guest list", err);
+      setEventExportError(apiErrorMessage(err, m.admin_registrations_export_event_csv_error()));
+    } finally {
+      setExportingEventId(null);
+    }
+  }, []);
 
   // Selecting a whole page whose filters match more than fits on it offers a
   // Gmail-style "select all N matching" expansion. `selectedIds` becomes the
@@ -1609,7 +1603,7 @@ export default function RegistrationList({
       </Dialog>
       <RegistrationCreateModal
         show={showCreateModal}
-        authHeaders={authHeaders}
+
         onSaved={onAddRegistration}
         onOpenBooking={(registration) => {
           setShowCreateModal(false);

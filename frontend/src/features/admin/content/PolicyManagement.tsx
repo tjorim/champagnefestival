@@ -22,10 +22,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -87,21 +84,13 @@ export function applyMarkdownSnippet(
   return next;
 }
 
-export default function PolicyManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function PolicyManagement() {
   const client = useQueryClient();
   const key = queryKeys.admin.policy(POLICY_KEY);
   const query = useQuery({
     queryKey: key,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<Policy>(
-        `/api/policies/${POLICY_KEY}`,
-        { headers: authHeaders() },
-        m.admin_error_load_policy(),
-      ),
+      fetchJsonOrThrow<Policy>(`/api/policies/${POLICY_KEY}`, {}, m.admin_error_load_policy()),
   });
   const refresh = () => client.invalidateQueries({ queryKey: key });
 
@@ -169,9 +158,9 @@ export default function PolicyManagement({
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").PolicyRenderOut>(
+      fetchJsonOrThrow<import("@/api-types").PolicyRenderOut>(
         "/api/policies/render",
-        { method: "POST", headers: authHeaders(), body: JSON.stringify({ markdown }) },
+        { method: "POST", body: JSON.stringify({ markdown }) },
         m.admin_error_render_preview(),
       )
         .then((result) => {
@@ -185,15 +174,15 @@ export default function PolicyManagement({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [values, locale, authHeaders]);
+  }, [values, locale]);
 
   const createDraft = useMutation({
     mutationFn: (sourceVersionNumber?: number) =>
-      fetchJsonOrThrowWithUnauthorized<PolicyVersion>(
+      fetchJsonOrThrow<PolicyVersion>(
         `/api/policies/${POLICY_KEY}/draft`,
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({ source_version_number: sourceVersionNumber ?? null }),
         },
         m.admin_error_create_draft(),
@@ -204,11 +193,11 @@ export default function PolicyManagement({
 
   const saveDraft = useMutation({
     mutationFn: (payload: typeof emptyDraftForm) =>
-      fetchJsonOrThrowWithUnauthorized<PolicyVersion>(
+      fetchJsonOrThrow<PolicyVersion>(
         `/api/policies/${POLICY_KEY}/draft`,
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             content_nl: payload.nl || null,
             content_en: payload.en || null,
@@ -224,9 +213,9 @@ export default function PolicyManagement({
 
   const discardDraft = useMutation({
     mutationFn: () =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `/api/policies/${POLICY_KEY}/draft`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_discard_draft_request(),
       ),
     onSuccess: () => void refresh(),
@@ -235,9 +224,9 @@ export default function PolicyManagement({
 
   const publishDraft = useMutation({
     mutationFn: () =>
-      fetchJsonOrThrowWithUnauthorized<PolicyVersion>(
+      fetchJsonOrThrow<PolicyVersion>(
         `/api/policies/${POLICY_KEY}/draft/publish`,
-        { method: "POST", headers: authHeaders() },
+        { method: "POST" },
         m.admin_error_publish_draft_request(),
       ),
     onSuccess: () => void refresh(),

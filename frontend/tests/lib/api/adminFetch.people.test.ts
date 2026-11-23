@@ -4,8 +4,6 @@ import { describe, expect, it } from "vitest";
 import { fetchVolunteer } from "@/lib/api/adminFetch";
 import { server } from "@/mocks/server";
 
-const authHeaders = () => ({ Authorization: "Bearer test-token" });
-
 function personPayload(id: string, overrides: Record<string, unknown> = {}) {
   return {
     id,
@@ -39,7 +37,7 @@ describe("bounded volunteer detail", () => {
       ),
     );
 
-    const volunteer = await fetchVolunteer("v1", authHeaders);
+    const volunteer = await fetchVolunteer("v1");
 
     expect(volunteer.id).toBe("v1");
     expect(volunteer.help_periods).toEqual([

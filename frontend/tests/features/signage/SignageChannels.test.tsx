@@ -10,8 +10,6 @@ import { setLocale } from "@/paraglide/runtime";
 import { renderLocation } from "../../utils/locationRouter";
 import { createTestQueryClientWrapper } from "../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const channels = [
   {
     id: "channel-a",
@@ -85,7 +83,7 @@ afterEach(cleanup);
 describe("SignageChannels", () => {
   it("adopts the channel named in the URL when the page loads", async () => {
     await renderLocation(
-      <SignageChannels authHeaders={authHeaders} />,
+      <SignageChannels />,
       "/admin?signageChannel=channel-b",
       createTestQueryClientWrapper(),
     );
@@ -96,7 +94,7 @@ describe("SignageChannels", () => {
 
   it("labels each edition option with its edition type", async () => {
     await renderLocation(
-      <SignageChannels authHeaders={authHeaders} />,
+      <SignageChannels />,
       "/admin?signageChannel=channel-a",
       createTestQueryClientWrapper(),
     );
@@ -112,7 +110,7 @@ describe("SignageChannels", () => {
 
   it("follows browser history between channels", async () => {
     const router = await renderLocation(
-      <SignageChannels authHeaders={authHeaders} />,
+      <SignageChannels />,
       "/admin?signageChannel=channel-a",
       createTestQueryClientWrapper(),
     );

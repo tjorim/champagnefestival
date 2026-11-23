@@ -54,10 +54,6 @@ import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "../shared/LedgerModal";
 import "./analyticsDashboard.css";
 import { editionDisplayName } from "@/lib/editions/editionName";
 
-interface AnalyticsDashboardProps {
-  authHeaders: () => Record<string, string>;
-}
-
 const CHART_HEIGHT = 260;
 
 // Spring transition for bar height/position and tooltip movement as the
@@ -107,7 +103,7 @@ function editionLabel(edition: EditionAttendanceStats): string {
   return editionDisplayName(edition);
 }
 
-export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
+export default function AnalyticsDashboard() {
   const locale = getLocale();
   const [showTable, setShowTable] = useState(false);
   const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
@@ -122,21 +118,18 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
     "checkedIn",
   ]);
 
-  const handleExportLedger = useCallback(
-    async (editionId: string) => {
-      setLedgerExportError("");
-      setExportingEditionId(editionId);
-      try {
-        await downloadPaymentTransactionsCsv(authHeaders, { editionId });
-      } catch (err) {
-        devError("Failed to export payment ledger", err);
-        setLedgerExportError(apiErrorMessage(err, m.admin_analytics_export_ledger_error()));
-      } finally {
-        setExportingEditionId(null);
-      }
-    },
-    [authHeaders],
-  );
+  const handleExportLedger = useCallback(async (editionId: string) => {
+    setLedgerExportError("");
+    setExportingEditionId(editionId);
+    try {
+      await downloadPaymentTransactionsCsv({ editionId });
+    } catch (err) {
+      devError("Failed to export payment ledger", err);
+      setLedgerExportError(apiErrorMessage(err, m.admin_analytics_export_ledger_error()));
+    } finally {
+      setExportingEditionId(null);
+    }
+  }, []);
 
   const handleExportChart = useCallback(
     async (format: "svg" | "png") => {
@@ -184,7 +177,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
       page: ledgerPage,
     }),
     queryFn: () =>
-      fetchPaymentTransactionsLedger(authHeaders, {
+      fetchPaymentTransactionsLedger({
         editionId: ledgerEdition!.id,
         sort: ledgerBackendSort,
         sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
@@ -198,7 +191,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.editionStats,
-    queryFn: () => fetchEditionStats(authHeaders),
+    queryFn: () => fetchEditionStats(),
     staleTime: 60 * 1000,
   });
 

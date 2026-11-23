@@ -1,6 +1,6 @@
 import { orderAnswersBody, type OrderAnswer } from "@/lib/editions/orderQuestions";
 import { m } from "@/paraglide/messages";
-import { apiErrorFromResponse } from "@/lib/api/apiErrors";
+import { adminRequest } from "@/lib/api/adminApi";
 import type { Event } from "@/api-types";
 import type { Registration } from "@/types/registration";
 import type {
@@ -55,16 +55,8 @@ function isPersonRegistrationRecord(value: unknown): value is RegistrationOut {
   );
 }
 
-export async function fetchRegistrableEvents(
-  authHeaders: () => Record<string, string>,
-): Promise<EditionEvent[]> {
-  const response = await fetch("/api/events?registration_required=true", {
-    headers: authHeaders(),
-  });
-  if (!response.ok) {
-    if (response.status === 404) throw new Error(m.admin_content_edition_no_events());
-    throw new Error(`Failed to load registrable events (${response.status})`);
-  }
+export async function fetchRegistrableEvents(): Promise<EditionEvent[]> {
+  const response = await adminRequest("/api/events?registration_required=true", {});
 
   const data = (await response.json()) as Event[];
   // A malformed response is an error, not "no registrable events".
@@ -74,14 +66,12 @@ export async function fetchRegistrableEvents(
 
 export async function fetchAdminPersonOptions(
   query: string,
-  authHeaders: () => Record<string, string>,
+
   signal?: AbortSignal,
 ): Promise<PersonOption[]> {
-  const response = await fetch(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
-    headers: authHeaders(),
+  const response = await adminRequest(`/api/people?q=${encodeURIComponent(query)}&active=true`, {
     signal,
   });
-  if (!response.ok) throw new Error("Failed to load people");
   // GET /api/people answers with a {items, total, limit, page} envelope (see
   // backend/app/routers/people.py). A bare array or any other shape is rejected
   // instead of being read as "no matches".
@@ -97,34 +87,32 @@ export async function fetchAdminPersonOptions(
  * returned person straight away, so a failed booking afterwards is retried
  * against that person instead of creating a second one.
  */
-export async function createAdminPerson(
-  payload: CreatePersonPayload,
-  authHeaders: () => Record<string, string>,
-): Promise<PersonOption> {
-  const res = await fetch("/api/people", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      name: payload.name,
-      email: payload.email || null,
-      phone: payload.phone,
-      preferred_language: payload.preferredLanguage,
-    }),
-  });
-  if (!res.ok) throw await apiErrorFromResponse(res, m.admin_people_error_create());
+export async function createAdminPerson(payload: CreatePersonPayload): Promise<PersonOption> {
+  const res = await adminRequest(
+    "/api/people",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: payload.name,
+        email: payload.email || null,
+        phone: payload.phone,
+        preferred_language: payload.preferredLanguage,
+      }),
+    },
+    m.admin_people_error_create(),
+  );
   return (await res.json()) as PersonOut;
 }
 
 export async function fetchAdminPersonRegistrations(
   personId: string,
-  authHeaders: () => Record<string, string>,
+
   signal?: AbortSignal,
 ): Promise<PersonRegistration[]> {
-  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/registrations`, {
+  const response = await adminRequest(`/api/people/${encodeURIComponent(personId)}/registrations`, {
     signal,
-    headers: authHeaders(),
   });
-  if (!response.ok) throw new Error(`Failed to load registrations: ${response.status}`);
 
   const raw: unknown = await response.json();
   if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord))
@@ -137,41 +125,43 @@ export type { PersonPaymentSummary } from "@/api-types";
 
 export async function fetchPersonPaymentSummary(
   personId: string,
-  authHeaders: () => Record<string, string>,
+
   signal?: AbortSignal,
 ): Promise<PersonPaymentSummary> {
-  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/payment-summary`, {
-    signal,
-    headers: authHeaders(),
-  });
-  if (!response.ok) throw new Error(`Failed to load payment summary: ${response.status}`);
+  const response = await adminRequest(
+    `/api/people/${encodeURIComponent(personId)}/payment-summary`,
+    {
+      signal,
+    },
+  );
 
   return (await response.json()) as PersonPaymentSummary;
 }
 
 export async function createAdminRegistration(
   payload: CreateRegistrationPayload,
-  authHeaders: () => Record<string, string>,
 ): Promise<Registration> {
-  const res = await fetch("/api/registrations/admin", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders() },
-    body: JSON.stringify({
-      person_id: payload.personId,
-      event_id: payload.eventId,
-      guest_count: payload.guestCount,
-      order_items: (payload.orderItems ?? []).map((item) => ({
-        product_id: item.productId,
-        quantity: item.quantity,
-      })),
-      notes: payload.notes,
-      ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
-      status: "confirmed",
-      ...(payload.idempotencyKey ? { idempotency_key: payload.idempotencyKey } : {}),
-    }),
-  });
-
-  if (!res.ok) throw await apiErrorFromResponse(res, m.admin_error_create_registration());
+  const res = await adminRequest(
+    "/api/registrations/admin",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        person_id: payload.personId,
+        event_id: payload.eventId,
+        guest_count: payload.guestCount,
+        order_items: (payload.orderItems ?? []).map((item) => ({
+          product_id: item.productId,
+          quantity: item.quantity,
+        })),
+        notes: payload.notes,
+        ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
+        status: "confirmed",
+        ...(payload.idempotencyKey ? { idempotency_key: payload.idempotencyKey } : {}),
+      }),
+    },
+    m.admin_error_create_registration(),
+  );
 
   const data = await res.json();
   return data as RegistrationOut;

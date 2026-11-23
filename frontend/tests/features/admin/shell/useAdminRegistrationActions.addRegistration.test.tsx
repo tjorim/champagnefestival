@@ -11,7 +11,6 @@ function renderActions() {
   const view = renderHook(
     () =>
       useAdminRegistrationActions({
-        authHeaders: () => ({}),
         queryClient,
         registrationsQueryKey,
         setDetailRegistration: vi.fn(),

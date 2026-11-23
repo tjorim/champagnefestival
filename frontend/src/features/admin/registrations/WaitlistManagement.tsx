@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import ConfirmModal from "@/components/ConfirmModal";
 import { createAppColumnHelper } from "../shared/useAdminTable";
 import { m } from "@/paraglide/messages";
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { ApiError } from "@/lib/api/apiErrors";
 import {
   fetchQueuePage,
@@ -44,13 +41,13 @@ const scopeCount = (scope: WaitlistScope, status: QueueStatus) =>
       ? scope.total - scope.outstanding
       : scope.total;
 
-function useWaitlistScopes(authHeaders: () => Record<string, string>) {
+function useWaitlistScopes() {
   return useQuery({
     queryKey: queryKeys.admin.waitlistScopes,
     queryFn: async ({ signal }) => {
-      const body = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").WaitlistScopes>(
+      const body = await fetchJsonOrThrow<import("@/api-types").WaitlistScopes>(
         "/api/waitlist/scopes",
-        { headers: authHeaders(), signal },
+        { signal },
         m.admin_error_load_waitlist(),
       );
       return {
@@ -73,11 +70,7 @@ function useWaitlistScopes(authHeaders: () => Record<string, string>) {
   });
 }
 
-export default function WaitlistManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function WaitlistManagement() {
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState("");
   const [deleting, setDeleting] = useState<WaitlistEntry | null>(null);
@@ -86,65 +79,62 @@ export default function WaitlistManagement({
     [queryClient],
   );
 
-  const useDataSource = useCallback(
-    function useDataSource(state: AdminTableState) {
-      const status = queueStatus(state);
-      const query = queueSearchParams(state, {
-        event_id: state.filters.event,
-        product_id: state.filters.product,
-      });
-      const page = useQuery({
-        queryKey: queryKeys.admin.waitlistEntriesPage(query),
-        queryFn: ({ signal }) =>
-          fetchQueuePage<WaitlistEntry>(
-            "/api/waitlist",
-            query,
-            authHeaders,
-            signal,
-            m.admin_error_load_waitlist(),
-          ),
-        placeholderData: keepPreviousData,
-      });
-      const scopes = useWaitlistScopes(authHeaders);
-      const filters: AdminTableFilter[] = [
-        {
-          id: "status",
-          label: m.admin_status_label(),
-          defaultValue: "unhandled",
-          options: [
-            { value: "unhandled", label: m.admin_waitlist_status_unhandled() },
-            { value: "handled", label: m.admin_waitlist_handled() },
-            { value: "all", label: m.admin_filter_all() },
-          ],
-        },
-        {
-          id: "event",
-          label: m.admin_waitlist_filter_event(),
-          options: (scopes.data?.events ?? []).map((scope) => ({
+  const useDataSource = useCallback(function useDataSource(state: AdminTableState) {
+    const status = queueStatus(state);
+    const query = queueSearchParams(state, {
+      event_id: state.filters.event,
+      product_id: state.filters.product,
+    });
+    const page = useQuery({
+      queryKey: queryKeys.admin.waitlistEntriesPage(query),
+      queryFn: ({ signal }) =>
+        fetchQueuePage<WaitlistEntry>(
+          "/api/waitlist",
+          query,
+
+          signal,
+          m.admin_error_load_waitlist(),
+        ),
+      placeholderData: keepPreviousData,
+    });
+    const scopes = useWaitlistScopes();
+    const filters: AdminTableFilter[] = [
+      {
+        id: "status",
+        label: m.admin_status_label(),
+        defaultValue: "unhandled",
+        options: [
+          { value: "unhandled", label: m.admin_waitlist_status_unhandled() },
+          { value: "handled", label: m.admin_waitlist_handled() },
+          { value: "all", label: m.admin_filter_all() },
+        ],
+      },
+      {
+        id: "event",
+        label: m.admin_waitlist_filter_event(),
+        options: (scopes.data?.events ?? []).map((scope) => ({
+          value: scope.id,
+          label: `${scope.label} (${scopeCount(scope, status)})`,
+        })),
+      },
+      {
+        id: "product",
+        label: m.admin_waitlist_filter_product(),
+        options: (scopes.data?.products ?? [])
+          .filter(
+            (scope) =>
+              !state.filters.event ||
+              scope.eventId === state.filters.event ||
+              scope.id === state.filters.product,
+          )
+          .map((scope) => ({
             value: scope.id,
             label: `${scope.label} (${scopeCount(scope, status)})`,
           })),
-        },
-        {
-          id: "product",
-          label: m.admin_waitlist_filter_product(),
-          options: (scopes.data?.products ?? [])
-            .filter(
-              (scope) =>
-                !state.filters.event ||
-                scope.eventId === state.filters.event ||
-                scope.id === state.filters.product,
-            )
-            .map((scope) => ({
-              value: scope.id,
-              label: `${scope.label} (${scopeCount(scope, status)})`,
-            })),
-        },
-      ];
-      return { ...page, filters };
-    },
-    [authHeaders],
-  );
+      },
+    ];
+    return { ...page, filters };
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -205,9 +195,9 @@ export default function WaitlistManagement({
                   label={m.admin_waitlist_mark_handled()}
                   failure={m.admin_waitlist_mark_failed({ name: entry.name })}
                   run={() =>
-                    fetchJsonOrThrowWithUnauthorized(
+                    fetchJsonOrThrow(
                       `/api/waitlist/${entry.id}/handled`,
-                      { method: "PUT", headers: authHeaders() },
+                      { method: "PUT" },
                       m.admin_error_handle_waitlist_entry(),
                     )
                   }
@@ -225,7 +215,7 @@ export default function WaitlistManagement({
         },
       }),
     ],
-    [authHeaders, refresh],
+    [refresh],
   );
 
   return (
@@ -297,9 +287,9 @@ export default function WaitlistManagement({
             onHide={() => setDeleting(null)}
             onConfirm={async () => {
               try {
-                await fetchVoidOrThrowWithUnauthorized(
+                await fetchVoidOrThrow(
                   `/api/waitlist/${deleting.id}`,
-                  { method: "DELETE", headers: authHeaders() },
+                  { method: "DELETE" },
                   m.admin_error_delete_waitlist_entry(),
                 );
               } catch (error) {

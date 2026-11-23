@@ -1,5 +1,5 @@
 import type { VapidPublicKeyOut, PushSubscriptionOut } from "@/api-types";
-import { fetchVoidOrThrowWithUnauthorized } from "./adminApi";
+import { fetchVoidOrThrow } from "./adminApi";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "./apiErrors";
 
@@ -47,15 +47,12 @@ export async function unsubscribeFromPush(endpoint: string): Promise<void> {
   if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());
 }
 
-export async function sendTestPush(
-  subscriptionId: string,
-  authHeaders: Record<string, string>,
-): Promise<void> {
-  await fetchVoidOrThrowWithUnauthorized(
+export async function sendTestPush(subscriptionId: string): Promise<void> {
+  await fetchVoidOrThrow(
     "/api/push/test",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subscription_id: subscriptionId }),
     },
     m.push_error_generic(),

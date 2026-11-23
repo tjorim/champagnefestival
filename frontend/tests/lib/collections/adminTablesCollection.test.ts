@@ -21,9 +21,6 @@ import type { LiveEnvelope } from "@/lib/api/liveStream";
 import { createTable } from "@/lib/api/adminFetch";
 import { createTestQueryClient } from "../../utils/queryClient";
 
-const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
-const authHeaders = () => TEST_AUTH_HEADERS;
-
 const cleanups: Array<() => void> = [];
 
 afterEach(() => {
@@ -32,7 +29,7 @@ afterEach(() => {
 
 async function createLoadedCollection() {
   const queryClient = createTestQueryClient();
-  const collection = createAdminTablesCollection({ queryClient, authHeaders, enabled: true });
+  const collection = createAdminTablesCollection({ queryClient, enabled: true });
   cleanups.push(() => queryClient.clear());
   await collection.preload();
   return { collection, queryClient };
@@ -148,7 +145,7 @@ describe("admin tables collection", () => {
   it("creates a table through the API and upserts the server's row", async () => {
     const { collection } = await createLoadedCollection();
 
-    const created = await createTable(authHeaders, {
+    const created = await createTable({
       name: "T9",
       layout_id: "layout-01",
       table_type_id: "tt-01",
@@ -266,7 +263,7 @@ describe("admin tables writes after an API call", () => {
   it("stores a created table through the API", async () => {
     const { collection } = await createLoadedCollection();
 
-    await addAdminTable(collection, authHeaders, {
+    await addAdminTable(collection, {
       name: "T9",
       layout_id: "layout-01",
       table_type_id: "tt-01",
@@ -302,7 +299,7 @@ describe("admin tables writes after an API call", () => {
       }),
     );
 
-    const add = addAdminTable(collection, authHeaders, {
+    const add = addAdminTable(collection, {
       name: "Late",
       layout_id: "layout-01",
       table_type_id: "tt-01",
@@ -337,7 +334,6 @@ describe("admin tables writes after an API call", () => {
         action: "deleted",
         scope: { edition_id: null, event_id: null, registration_id: null, table_id: "table-02" },
       }),
-      authHeaders,
     );
     release();
 
@@ -431,7 +427,7 @@ describe("admin tables live events", () => {
       ),
     );
 
-    await patchAdminTableLiveEvent(seatingEnvelope(), authHeaders);
+    await patchAdminTableLiveEvent(seatingEnvelope());
 
     expect(collection.get("table-01")?.name).toBe("Renamed elsewhere");
     expect(collection.size).toBe(seedTables.length);
@@ -443,7 +439,7 @@ describe("admin tables live events", () => {
     await collection.utils.writeDelete("table-01");
 
     await expect(
-      patchAdminTableLiveEvent(seatingEnvelope({ action: "deleted" }), authHeaders),
+      patchAdminTableLiveEvent(seatingEnvelope({ action: "deleted" })),
     ).resolves.toBeUndefined();
   });
 
@@ -461,7 +457,7 @@ describe("admin tables live events", () => {
       }),
     );
 
-    await patchAdminTableLiveEvent(seatingEnvelope({ action: "deleted" }), authHeaders);
+    await patchAdminTableLiveEvent(seatingEnvelope({ action: "deleted" }));
 
     expect(collection.has("table-01")).toBe(false);
     expect(fetched).toBe(false);
@@ -492,7 +488,7 @@ describe("admin tables live events", () => {
     const newest = seatingEnvelope();
     const stale = seatingEnvelope({ ts: new Date(Date.parse(newest.ts) - 5000).toISOString() });
 
-    await patchAdminTableLiveEvent(newest, authHeaders);
+    await patchAdminTableLiveEvent(newest);
     server.use(
       http.get("/api/tables/:id", () =>
         jsonResponse<import("@/api-types").TableOut>({
@@ -512,7 +508,7 @@ describe("admin tables live events", () => {
         }),
       ),
     );
-    await patchAdminTableLiveEvent(stale, authHeaders);
+    await patchAdminTableLiveEvent(stale);
 
     expect(collection.get("table-01")?.name).toBe("Newest");
   });
@@ -545,7 +541,7 @@ describe("admin tables live events", () => {
       }),
     );
 
-    const patch = patchAdminTableLiveEvent(seatingEnvelope(), authHeaders);
+    const patch = patchAdminTableLiveEvent(seatingEnvelope());
     await resetAdminTablesCollection(collection);
     expect(collection.size).toBe(0);
 
@@ -583,7 +579,7 @@ describe("admin tables live events", () => {
       }),
     );
 
-    const patch = patchAdminTableLiveEvent(seatingEnvelope(), authHeaders);
+    const patch = patchAdminTableLiveEvent(seatingEnvelope());
     unregister();
     respond();
     await patch;
@@ -592,7 +588,7 @@ describe("admin tables live events", () => {
   });
 
   it("rejects events that cannot be applied incrementally", async () => {
-    await expect(patchAdminTableLiveEvent(seatingEnvelope(), authHeaders)).rejects.toThrow(
+    await expect(patchAdminTableLiveEvent(seatingEnvelope())).rejects.toThrow(
       "cannot be applied incrementally",
     );
   });

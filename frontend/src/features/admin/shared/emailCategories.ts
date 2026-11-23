@@ -1,5 +1,5 @@
 import type { EmailCategoryOut, EmailConsentOut } from "@/api-types";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { m } from "@/paraglide/messages";
 
 /** An admin-managed email category (#1408), as the admin API returns it. */
@@ -19,18 +19,18 @@ export const emailConsentKeys = {
 
 export function emailRequest<T>(
   path: string,
-  authHeaders: () => Record<string, string>,
+
   fallback: string,
   signal?: AbortSignal,
   body?: unknown,
   method = "GET",
 ) {
-  return fetchJsonOrThrowWithUnauthorized<T>(
+  return fetchJsonOrThrow<T>(
     path,
     {
       method,
       signal,
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
     fallback,

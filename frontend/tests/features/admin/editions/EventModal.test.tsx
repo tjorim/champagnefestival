@@ -14,8 +14,6 @@ import type { Event } from "@/api-types";
 
 import { noEventTranslations } from "../../../utils/eventFixtures";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const edition = {
   id: "march-2027",
   year: 2027,
@@ -51,7 +49,7 @@ function mount(initial: Event | null, onSave = vi.fn(), selectedEdition = editio
         show
         edition={selectedEdition}
         initial={initial}
-        authHeaders={authHeaders}
+
         onSave={onSave}
         onHide={vi.fn()}
       />

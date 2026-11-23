@@ -30,13 +30,12 @@ import {
   replaceAdminAreasForLayout,
   type AdminVenueCollections,
 } from "../venue/adminVenueCollections";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { devError } from "@/lib/devLog";
 import { getAreaSizePx, getCanvasSizePx } from "@/lib/venue/layoutUtils";
 import { toTableRecord } from "@/lib/collections/tableOccupancy";
 
 interface UseAdminVenueActionsOptions {
-  authHeaders: () => Record<string, string>;
   tablesCollection: AdminTablesCollection;
   venueCollections: AdminVenueCollections;
 }
@@ -49,7 +48,6 @@ interface UseAdminVenueActionsOptions {
  * earlier session never lands in the next one (see `adminVenueCollections.ts`).
  */
 export function useAdminVenueActions({
-  authHeaders,
   tablesCollection,
   venueCollections,
 }: UseAdminVenueActionsOptions) {
@@ -70,18 +68,18 @@ export function useAdminVenueActions({
     updateRoomMutation,
     updateTableTypeMutation,
     updateVenueMutation,
-  } = useVenueMutations({ authHeaders, tablesCollection, venueCollections });
+  } = useVenueMutations({ tablesCollection, venueCollections });
   const { areas, layouts, rooms, tableTypes, venues } = venueCollections;
 
   const handleAddTable = useCallback(
     async (name: string, layoutId: string, tableTypeId: string) => {
-      await addAdminTable(tablesCollection, authHeaders, {
+      await addAdminTable(tablesCollection, {
         name,
         layout_id: layoutId,
         table_type_id: tableTypeId,
       });
     },
-    [authHeaders, tablesCollection],
+    [tablesCollection],
   );
 
   // Optimistic update through the collection's write handler: the row changes
@@ -252,11 +250,11 @@ export function useAdminVenueActions({
       if (copyFromLayoutId) {
         const shouldCopyTables = copyOptions?.tables ?? true;
         const shouldCopyAreas = copyOptions?.areas ?? true;
-        const copied = await fetchJsonOrThrowWithUnauthorized<Layout>(
+        const copied = await fetchJsonOrThrow<Layout>(
           `/api/layouts/${copyFromLayoutId}/copy`,
           {
             method: "POST",
-            headers: authHeaders(),
+
             body: JSON.stringify({
               room_id: roomId,
               event_id: eventId,
@@ -279,7 +277,7 @@ export function useAdminVenueActions({
       const d = await createLayoutMutation.mutateAsync({ roomId, eventId, label });
       await applyAdminVenueRowCreated(layouts, d, isCurrent);
     },
-    [authHeaders, createLayoutMutation, layouts, tablesCollection, venueCollections],
+    [createLayoutMutation, layouts, tablesCollection, venueCollections],
   );
 
   const handleDeleteLayout = useCallback(

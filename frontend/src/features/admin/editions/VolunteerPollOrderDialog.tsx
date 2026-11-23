@@ -26,7 +26,7 @@ interface VolunteerPollOrderDialogProps {
   editionId: string;
   volunteer: PollOrders["volunteers"][number];
   questions: PollOrders["questions"];
-  authHeaders: () => Record<string, string>;
+
   onSaved: () => void;
   onHide: () => void;
 }
@@ -36,7 +36,7 @@ export default function VolunteerPollOrderDialog({
   editionId,
   volunteer,
   questions,
-  authHeaders,
+
   onSaved,
   onHide,
 }: VolunteerPollOrderDialogProps) {
@@ -69,16 +69,11 @@ export default function VolunteerPollOrderDialog({
 
   const saveMutation = useMutation({
     mutationFn: () =>
-      setVolunteerPollOrder(
-        editionId,
-        volunteer.volunteer_id,
-        {
-          ...answerPayload(),
-          note,
-          confirmClosed: anyClosed,
-        },
-        authHeaders,
-      ),
+      setVolunteerPollOrder(editionId, volunteer.volunteer_id, {
+        ...answerPayload(),
+        note,
+        confirmClosed: anyClosed,
+      }),
     retry: false,
   });
 

@@ -8,8 +8,6 @@ import { seedOrganizations } from "@/mocks/data/organizations";
 import { getLocale } from "@/paraglide/runtime";
 import { createTestQueryClient } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 afterEach(() => window.history.replaceState(null, "", "/"));
 
 describe("Dashboard lists", () => {
@@ -17,11 +15,7 @@ describe("Dashboard lists", () => {
     const organization = seedOrganizations[0]!;
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <ContentSection
-          sectionKey="organizations"
-          title="Organisations"
-          authHeaders={authHeaders}
-        />
+        <ContentSection sectionKey="organizations" title="Organisations" />
       </QueryClientProvider>,
     );
 
@@ -39,7 +33,7 @@ describe("Dashboard lists", () => {
         <EditionCard
           edition={edition}
           venues={[edition.venue]}
-          authHeaders={authHeaders}
+
           onDeleted={vi.fn()}
           onUpdated={vi.fn()}
         />

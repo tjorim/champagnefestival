@@ -198,6 +198,31 @@ ceilings. No dependencies were added. The authenticated
 lazy-section tests check demand loading, navigation while loading, and recovery
 after a failed download.
 
+## Admin data access (#1659)
+
+Use TanStack DB collections for the complete working sets shared across
+operational views: venues, rooms, table types, layouts, tables, areas,
+organisations and registrations for the active edition. Use the collection
+lifecycle for live row updates, session fencing and the saved rows restored at
+warm start. Derive table occupancy from the tables and registrations collections.
+
+Use TanStack Query for everything else, including paginated registration
+and people lists, historical event bookings, counts, edition data and content.
+On writes, reconcile the owning collection where applicable and invalidate the
+affected Query keys. The sidebar Refresh action and session recovery invalidate
+active reads through Query. Adding a mutation does not require a dashboard-wide
+reload.
+
+Send authenticated admin requests through `adminRequest` in
+`frontend/src/lib/api/adminApi.ts`, or its JSON, array, void and download helpers.
+The client reads the current OIDC token for each request and handles transport and
+HTTP failures. Session recovery renews once and refreshes reads. Writes are
+never replayed by session recovery.
+
+Register each destination in `adminSections.tsx` so the section component,
+sidebar, access rule and page title share the same definition. Section hooks
+consume the workspace's collections and own their mutations.
+
 ## Specialised renderers and verification
 
 Floor plans, scanners, QR output, Leaflet, charts and theme artwork keep

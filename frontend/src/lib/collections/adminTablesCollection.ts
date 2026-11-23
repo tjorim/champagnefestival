@@ -17,11 +17,9 @@ import {
   type TableCreateInput,
 } from "../api/adminFetch";
 
-type AuthHeadersProvider = () => Record<string, string>;
-
 interface CreateAdminTablesCollectionOptions {
   queryClient: QueryClient;
-  authHeaders: AuthHeadersProvider;
+
   enabled: boolean;
   syncMode?: AdminCollectionSyncMode;
 }
@@ -39,13 +37,13 @@ interface CreateAdminTablesCollectionOptions {
  */
 export function createAdminTablesCollection({
   queryClient,
-  authHeaders,
+
   enabled,
   syncMode,
 }: CreateAdminTablesCollectionOptions) {
   return createAdminCollection<FloorTableRecord>({
     queryKey: queryKeys.admin.tables,
-    queryFn: () => fetchTables(authHeaders),
+    queryFn: () => fetchTables(),
     queryClient,
     enabled,
     syncMode,
@@ -53,14 +51,14 @@ export function createAdminTablesCollection({
     onUpdate: async ({ transaction, collection }) => {
       await persistThenRefetch(collection, async () => {
         for (const mutation of transaction.mutations) {
-          await updateTable(authHeaders, String(mutation.key), mutation.changes);
+          await updateTable(String(mutation.key), mutation.changes);
         }
       });
     },
     onDelete: async ({ transaction, collection }) => {
       await persistThenRefetch(collection, async () => {
         for (const mutation of transaction.mutations) {
-          await deleteTable(authHeaders, String(mutation.key));
+          await deleteTable(String(mutation.key));
         }
       });
     },
@@ -76,11 +74,11 @@ export type AdminTablesCollection = ReturnType<typeof createAdminTablesCollectio
  */
 export async function addAdminTable(
   collection: AdminTablesCollection,
-  authHeaders: AuthHeadersProvider,
+
   input: TableCreateInput,
 ): Promise<void> {
   const isCurrent = captureAdminTablesFence();
-  const table = await createTable(authHeaders, input);
+  const table = await createTable(input);
   if (!isCurrent()) return;
   await collection.utils.writeUpsert(table);
 }
@@ -163,10 +161,7 @@ export function canPatchAdminTableLiveEvent(envelope: LiveEnvelope): boolean {
   );
 }
 
-export async function patchAdminTableLiveEvent(
-  envelope: LiveEnvelope,
-  authHeaders: AuthHeadersProvider,
-): Promise<void> {
+export async function patchAdminTableLiveEvent(envelope: LiveEnvelope): Promise<void> {
   if (!canPatchAdminTableLiveEvent(envelope)) {
     throw new Error("Live event cannot be applied incrementally.");
   }
@@ -183,7 +178,7 @@ export async function patchAdminTableLiveEvent(
     return;
   }
 
-  const table = await fetchTable(tableId, authHeaders);
+  const table = await fetchTable(tableId);
 
   // Sign-out or a collection swap happened while the row was in flight.
   if (!isCurrent()) return;

@@ -20,28 +20,24 @@ vi.mock("@/paraglide/messages", () => ({
 // GET /api/organizations requires a Bearer token recognized by the mock server
 // (see `validAdminTokens` in src/mocks/handlers/admin.ts) — an empty headers
 // object would 401 and never surface the seeded organizations.
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 function renderContentManagement(captureOrganizationsFence?: () => () => boolean) {
   const queryClient = createTestQueryClient();
   const onOrganizationSaved = vi.fn();
   const onOrganizationDeleted = vi.fn();
-  const onEditionMutated = vi.fn();
 
   const { container } = render(
     <QueryClientProvider client={queryClient}>
       <ContentManagement
-        authHeaders={authHeaders}
         venues={[]}
         onOrganizationSaved={onOrganizationSaved}
         onOrganizationDeleted={onOrganizationDeleted}
         captureOrganizationsFence={captureOrganizationsFence}
-        onEditionMutated={onEditionMutated}
       />
     </QueryClientProvider>,
   );
 
-  return { container, onOrganizationSaved, onOrganizationDeleted, onEditionMutated };
+  return { container, onOrganizationSaved, onOrganizationDeleted };
 }
 
 describe("ContentManagement", () => {

@@ -49,7 +49,7 @@ function renderRegistrationList({
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         onAddRegistration={vi.fn()}
-        authHeaders={() => ({})}
+
         activeEdition={mockActiveEdition}
         applyActiveEditionFilterRequest={0}
         sectionError={sectionError}

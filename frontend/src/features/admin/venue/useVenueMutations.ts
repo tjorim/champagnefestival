@@ -11,10 +11,7 @@ import type {
   VenueOut,
   VenueUpdate,
 } from "@/api-types";
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import {
   refetchAdminTables,
   type AdminTablesCollection,
@@ -29,13 +26,11 @@ import { saveLayoutRevision, restoreLayoutRevision } from "@/lib/api/adminFetch"
 import { m } from "@/paraglide/messages";
 
 interface UseVenueMutationsOptions {
-  authHeaders: () => Record<string, string>;
   tablesCollection: AdminTablesCollection;
   venueCollections: AdminVenueCollections;
 }
 
 export function useVenueMutations({
-  authHeaders,
   tablesCollection,
   venueCollections,
 }: UseVenueMutationsOptions) {
@@ -82,11 +77,11 @@ export function useVenueMutations({
       lat: number | null;
       lng: number | null;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<VenueOut>(
+      fetchJsonOrThrow<VenueOut>(
         "/api/venues",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({ name, address, city, postal_code: postalCode, country, lat, lng }),
         },
         m.admin_error_add_venue(),
@@ -97,11 +92,11 @@ export function useVenueMutations({
 
   const updateVenueMutation = useMutation({
     mutationFn: ({ venueId, ...data }: { venueId: string } & VenueUpdate) =>
-      fetchJsonOrThrowWithUnauthorized<VenueOut>(
+      fetchJsonOrThrow<VenueOut>(
         `/api/venues/${venueId}`,
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify(data),
         },
         data.active === true
@@ -116,9 +111,9 @@ export function useVenueMutations({
 
   const deleteVenueMutation = useMutation({
     mutationFn: (venueId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `/api/venues/${venueId}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_delete_venue(),
       ),
     ...refetchAfter(["venues", "rooms", "layouts", "areas"], true),
@@ -139,11 +134,11 @@ export function useVenueMutations({
       lengthM: number;
       color: string;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<RoomOut>(
+      fetchJsonOrThrow<RoomOut>(
         "/api/rooms",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             venue_id: venueId,
             name,
@@ -160,11 +155,11 @@ export function useVenueMutations({
 
   const updateRoomMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: RoomUpdate }) =>
-      fetchJsonOrThrowWithUnauthorized<RoomOut>(
+      fetchJsonOrThrow<RoomOut>(
         `/api/rooms/${id}`,
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             ...(data.venue_id !== undefined && { venue_id: data.venue_id }),
             ...(data.name !== undefined && { name: data.name }),
@@ -182,22 +177,18 @@ export function useVenueMutations({
 
   const deleteRoomMutation = useMutation({
     mutationFn: (roomId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
-        `/api/rooms/${roomId}`,
-        { method: "DELETE", headers: authHeaders() },
-        m.admin_error_delete_room(),
-      ),
+      fetchVoidOrThrow(`/api/rooms/${roomId}`, { method: "DELETE" }, m.admin_error_delete_room()),
     ...refetchAfter(["rooms"]),
     retry: false,
   });
 
   const createLayoutMutation = useMutation({
     mutationFn: ({ roomId, eventId, label }: { roomId: string; eventId: string; label?: string }) =>
-      fetchJsonOrThrowWithUnauthorized<LayoutOut>(
+      fetchJsonOrThrow<LayoutOut>(
         "/api/layouts",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             room_id: roomId,
             event_id: eventId,
@@ -212,9 +203,9 @@ export function useVenueMutations({
 
   const deleteLayoutMutation = useMutation({
     mutationFn: (layoutId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `/api/layouts/${layoutId}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_delete_layout(),
       ),
     ...refetchAfter(["layouts", "areas"], true),
@@ -233,7 +224,7 @@ export function useVenueMutations({
       layoutId: string;
       label: string;
       changeNote?: string;
-    }) => saveLayoutRevision(authHeaders, layoutId, label, changeNote),
+    }) => saveLayoutRevision(layoutId, label, changeNote),
     retry: false,
   });
 
@@ -246,7 +237,7 @@ export function useVenueMutations({
       layoutId: string;
       revisionNumber: number;
       resolveAllocations?: boolean;
-    }) => restoreLayoutRevision(authHeaders, layoutId, revisionNumber, resolveAllocations),
+    }) => restoreLayoutRevision(layoutId, revisionNumber, resolveAllocations),
     ...refetchAfter(["layouts", "areas"], true),
     retry: false,
   });
@@ -273,11 +264,11 @@ export function useVenueMutations({
       y?: number;
       rotation?: number;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<AreaOut>(
+      fetchJsonOrThrow<AreaOut>(
         "/api/areas",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             label,
             icon,
@@ -298,9 +289,9 @@ export function useVenueMutations({
 
   const assignAreaMutation = useMutation({
     mutationFn: ({ areaId, body }: { areaId: string; body: AreaUpdate }) =>
-      fetchJsonOrThrowWithUnauthorized<AreaOut>(
+      fetchJsonOrThrow<AreaOut>(
         `/api/areas/${areaId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
+        { method: "PUT", body: JSON.stringify(body) },
         m.admin_error_assign_area(),
       ),
     ...refetchAfter(["areas"]),
@@ -309,22 +300,18 @@ export function useVenueMutations({
 
   const deleteAreaMutation = useMutation({
     mutationFn: (areaId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
-        `/api/areas/${areaId}`,
-        { method: "DELETE", headers: authHeaders() },
-        m.admin_error_delete_area(),
-      ),
+      fetchVoidOrThrow(`/api/areas/${areaId}`, { method: "DELETE" }, m.admin_error_delete_area()),
     ...refetchAfter(["areas"]),
     retry: false,
   });
 
   const createTableTypeMutation = useMutation({
     mutationFn: (data: TableTypeCreate) =>
-      fetchJsonOrThrowWithUnauthorized<TableTypeOut>(
+      fetchJsonOrThrow<TableTypeOut>(
         "/api/table-types",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             name: data.name,
             venue_id: data.venue_id,
@@ -343,11 +330,11 @@ export function useVenueMutations({
 
   const updateTableTypeMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: TableTypeUpdate }) =>
-      fetchJsonOrThrowWithUnauthorized<TableTypeOut>(
+      fetchJsonOrThrow<TableTypeOut>(
         `/api/table-types/${id}`,
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify({
             ...(data.name !== undefined && { name: data.name }),
             ...(data.venue_id !== undefined && { venue_id: data.venue_id }),
@@ -371,9 +358,9 @@ export function useVenueMutations({
 
   const deleteTableTypeMutation = useMutation({
     mutationFn: (typeId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `/api/table-types/${typeId}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_delete_table_type(),
       ),
     ...refetchAfter(["tableTypes"]),

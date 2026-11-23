@@ -12,7 +12,7 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   parseOrderQuestions,
@@ -27,21 +27,15 @@ const LANGUAGES = [
   { code: "en", label: m.admin_language_en },
 ] as const;
 
-function Configuration({
-  eventId,
-  authHeaders,
-}: {
-  eventId: string;
-  authHeaders: () => Record<string, string>;
-}) {
+function Configuration({ eventId }: { eventId: string }) {
   const [draft, setDraft] = useState<OrderQuestion[] | null>(null);
   const [saved, setSaved] = useState(false);
   const query = useQuery({
     queryKey: ["event-order-questions", eventId],
     queryFn: async () => {
-      const event = await fetchJsonOrThrowWithUnauthorized<import("@/api-types").EventOut>(
+      const event = await fetchJsonOrThrow<import("@/api-types").EventOut>(
         `/api/events/${encodeURIComponent(eventId)}`,
-        { headers: authHeaders() },
+        {},
         m.admin_content_error_load(),
       );
       return parseOrderQuestions(event.order_questions);
@@ -50,11 +44,11 @@ function Configuration({
   const questions = draft ?? query.data ?? [];
   const save = useMutation({
     mutationFn: () =>
-      fetchJsonOrThrowWithUnauthorized<OrderQuestion[]>(
+      fetchJsonOrThrow<OrderQuestion[]>(
         `/api/events/${encodeURIComponent(eventId)}/order-questions`,
         {
           method: "PUT",
-          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ questions }),
         },
         m.admin_content_error_save(),
@@ -245,10 +239,7 @@ function Configuration({
     </fieldset>
   );
 }
-export default function OrderQuestionsEditor(props: {
-  eventId: string;
-  authHeaders: () => Record<string, string>;
-}) {
+export default function OrderQuestionsEditor(props: { eventId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <section className="border-t border-input pt-4 mt-4">

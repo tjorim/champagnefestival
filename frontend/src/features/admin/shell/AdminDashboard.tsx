@@ -1,91 +1,37 @@
+import { AdminWorkspaceContext } from "./AdminWorkspace";
+import { adminSectionKeys, getAdminSection } from "./adminSections";
 import { formatNumber } from "@/lib/format/numberUtils";
 import { getLocale } from "@/paraglide/runtime";
-import { formatDateTime, formatDateRange } from "@/lib/format/dateUtils";
+import { formatDateTime } from "@/lib/format/dateUtils";
 import { useSearch } from "@tanstack/react-router";
-import { adminSections, useLocationChoice } from "@/hooks/useLocationChoice";
+import { useLocationChoice } from "@/hooks/useLocationChoice";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/lib/collections/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
-import { usePersonDuplicates } from "../people/PersonDuplicates";
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/app/providers/AuthContext";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/lib/api/apiErrors";
 import "./admin.css";
-import RegistrationList from "../registrations/RegistrationList";
-import { fetchRegistration } from "@/lib/api/adminFetch";
-import { readAuditRegistrationTarget } from "../shared/auditRecordLink";
 import {
   summarizeGuestCheckIns,
   useVolunteerCheckInStats,
 } from "../registrations/useRegistrationListQuery";
-import RegistrationDetail from "../registrations/RegistrationDetail";
-import type { OrganizationOut } from "@/api-types";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import StaffTasks from "@/components/StaffTasks";
-import AdminSidebar, { adminSidebarGroupOf } from "./AdminSidebar";
+import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
-import type { Registration, RegistrationStatus } from "@/types/registration";
-import { activeEditionQueryKey, useActiveEdition } from "@/hooks/useActiveEdition";
+import type { Registration } from "@/types/registration";
+import { useActiveEdition } from "@/hooks/useActiveEdition";
 import { useAdminDashboardData } from "./useAdminDashboardData";
-import { useAdminPeopleActions } from "./useAdminPeopleActions";
 import { useAdminQueries } from "./useAdminQueries";
-import { useAdminRegistrationActions } from "./useAdminRegistrationActions";
 import { useAdminSessionRecovery } from "./useAdminSessionRecovery";
-import { useConfirmDialog } from "@/hooks/useConfirmDialog";
-import { useAdminVenueActions } from "./useAdminVenueActions";
-import {
-  applyAdminOrganizationDeleted,
-  applyAdminOrganizationSaved,
-  captureAdminOrganizationsFence,
-  refetchAdminOrganizations,
-} from "@/lib/collections/adminOrganizationsCollection";
-import { queryKeys } from "@/lib/query/queryKeys";
-import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { devError } from "@/lib/devLog";
 import { recordSignOutReason } from "./signOutReason";
-import { Card, CardContent } from "@/components/ui/card";
 import AdminSectionPane from "./AdminSectionPane";
 import { editionDisplayNameWithType } from "@/lib/editions/editionName";
-
-// Keep secondary tools out of the initial registrations download.
-const OrganizationChangeReview = React.lazy(() => import("../editions/OrganizationChangeReview"));
-const LayoutEditor = React.lazy(() => import("../venue/LayoutEditor"));
-const VenueManagement = React.lazy(() => import("../venue/VenueManagement"));
-const CategoryManagement = React.lazy(() => import("../content/CategoryManagement"));
-const EmailCategoryManagement = React.lazy(() => import("../content/EmailCategoryManagement"));
-const FaqManagement = React.lazy(() => import("../content/FaqManagement"));
-const AnnouncementsSection = React.lazy(() => import("../content/AnnouncementsSection"));
-const SignageSection = React.lazy(() => import("@/features/signage/SignageSection"));
-const PolicyManagement = React.lazy(() => import("../content/PolicyManagement"));
-const SettingsManagement = React.lazy(() => import("../content/SettingsManagement"));
-const ContactMessagesManagement = React.lazy(() => import("../content/ContactMessagesManagement"));
-const ScratchpadManagement = React.lazy(() => import("../content/ScratchpadManagement"));
-const WaitlistManagement = React.lazy(() => import("../registrations/WaitlistManagement"));
-const PeopleSection = React.lazy(() => import("../people/PeopleSection"));
-const AnalyticsDashboard = React.lazy(() => import("../insights/AnalyticsDashboard"));
-const AuditLogViewer = React.lazy(() => import("../insights/AuditLogViewer"));
-const PushOptIn = React.lazy(() => import("@/components/PushOptIn"));
-const ContentSection = React.lazy(() =>
-  import("../editions/ContentManagement").then((module) => ({ default: module.ContentSection })),
-);
-const EditionsSection = React.lazy(() =>
-  import("../editions/ContentManagement").then((module) => ({ default: module.EditionsSection })),
-);
-
-/** Sections that are about the running edition; the active-edition strip is shown on these only. */
-const ACTIVE_EDITION_SECTIONS: ReadonlySet<string> = new Set([
-  "registrations",
-  "waitlist",
-  "scratchpad",
-  "editions",
-  "floor-plans",
-  "analytics",
-]);
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -106,71 +52,44 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const canManageAdminSections = auth.hasRole("admin");
   const [globalError, setGlobalError] = useState("");
   const [registrationError, setRegistrationError] = useState("");
-  const [filterValue, setFilter] = useLocationChoice(
-    "registrationStatus",
-    ["all", "pending", "confirmed", "cancelled"],
-    "all",
-  );
-  const filter = filterValue as "all" | RegistrationStatus;
   const [applyActiveEditionFilterRequest, setApplyActiveEditionFilterRequest] = useState(0);
   /** Full registration (with checkInToken) shown in the detail modal */
   const [detailRegistration, setDetailRegistration] = useState<Registration | null>(null);
 
   // Sidebar navigation state
   const locationSearch = useSearch({ strict: false }) as Record<string, unknown>;
-  const [activeKey, setActiveKey] = useLocationChoice("section", adminSections, "home");
+  const [activeKey, setActiveKey] = useLocationChoice("section", adminSectionKeys, "home");
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
   // instead of resetting `activeKey` itself in an effect, which loses one
   // render to a blank content pane before it takes effect.
   const effectiveActiveKey =
-    canManageAdminSections || activeKey === "home" ? activeKey : "registrations";
+    canManageAdminSections || getAdminSection(activeKey).staff ? activeKey : "registrations";
+  const section = getAdminSection(effectiveActiveKey);
+  const Section = section.component;
 
   // `expandedGroups` is the only source of truth for what is open, so a group holding the
   // active section can still be collapsed. Navigating to a section expands its group, adjusted
   // during render (comparing against the previous key) rather than in an effect.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    const group = adminSidebarGroupOf(effectiveActiveKey);
+    const group = section.group;
     return new Set(group ? [group] : []);
   });
   const [expandedForKey, setExpandedForKey] = useState(effectiveActiveKey);
   if (expandedForKey !== effectiveActiveKey) {
     setExpandedForKey(effectiveActiveKey);
-    const group = adminSidebarGroupOf(effectiveActiveKey);
+    const group = section.group;
     if (group && !expandedGroups.has(group)) setExpandedGroups(new Set(expandedGroups).add(group));
   }
 
   useEffect(() => {
     if (!visible || !isAuthenticated) return;
-    const labels: Record<string, string> = {
-      home: m.workspace_title(),
-      registrations: m.admin_registrations_tab(),
-      waitlist: m.admin_waitlist_section(),
-      scratchpad: m.admin_scratchpad_section(),
-      organizations: m.admin_content_organizations_section(),
-      editions: m.admin_content_editions_section(),
-      "floor-plans": m.admin_floor_plans_tab(),
-      venues: m.admin_venues_rooms_tab(),
-      people: m.admin_people_tab(),
-      analytics: m.admin_analytics_tab(),
-      "audit-log": m.admin_audit_log_tab(),
-      "event-categories": m.admin_event_categories_section(),
-      "product-categories": m.admin_product_categories_section(),
-      "email-categories": m.admin_email_categories_section(),
-      faq: m.admin_content_faq_section(),
-      "signage-channels": m.signage_channels_heading(),
-      announcements: m.admin_announcements_section(),
-      policies: m.admin_policies_section(),
-      settings: m.admin_content_settings_section(),
-      "contact-details": m.admin_contact_details_section(),
-      "contact-messages": m.admin_contact_messages_section(),
-    };
-    const label = labels[effectiveActiveKey];
+    const label = section.label();
     if (label) document.title = `${label} — ${m.admin_title()}`;
     if (!window.location.hash.startsWith("#audit-")) {
       document.getElementById("admin-content")?.focus({ preventScroll: true });
     }
-  }, [effectiveActiveKey, visible, isAuthenticated]);
+  }, [section, visible, isAuthenticated]);
 
   const toggleGroup = useCallback((group: string) => {
     setExpandedGroups((prev) => {
@@ -181,94 +100,38 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     });
   }, []);
 
-  const authHeaders = useCallback(
-    (): Record<string, string> => ({
-      "Content-Type": "application/json",
-      ...(auth.getAccessToken() ? { Authorization: `Bearer ${auth.getAccessToken()}` } : {}),
-    }),
-    [auth],
-  );
-
-  useEffect(() => {
-    if (
-      !visible ||
-      !isAuthenticated ||
-      !canManageAdminSections ||
-      effectiveActiveKey !== "registrations"
-    )
-      return;
-    const id = readAuditRegistrationTarget();
-    if (!id) return;
-    let current = true;
-    void fetchRegistration(id, authHeaders).then(
-      (registration) => {
-        if (current) setDetailRegistration(registration);
-      },
-      (error: unknown) => {
-        if (current) setRegistrationError(apiErrorMessage(error, m.admin_error_load_data()));
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, [visible, isAuthenticated, canManageAdminSections, effectiveActiveKey, authHeaders]);
-
-  const {
-    registrationsQuery,
-    registrationsCollection,
-    registrationCountsQuery,
-    tablesQuery,
-    tablesCollection,
-    venuesQuery,
-    roomsQuery,
-    tableTypesQuery,
-    layoutsQuery,
-    organizationsQuery,
-    organizationsCollection,
-    areasQuery,
-    peopleCountsQuery,
-    isAnyPending,
-    isAnyFetching,
-    registrationsQueryKey,
-    venueCollections,
-    loadData: loadDataBase,
-  } = useAdminQueries({
+  const queries = useAdminQueries({
     editionId: activeEdition.id,
     activeEditionLoaded,
     visible,
     isAuthenticated,
     canManageAdminSections,
-    authHeaders,
+    accountId: auth.accountId,
   });
-
-  const loadData = useCallback(async () => {
-    setGlobalError("");
-    await loadDataBase();
-  }, [loadDataBase]);
-
-  const registrations = useMemo(() => registrationsQuery.data ?? [], [registrationsQuery.data]);
-  const tables = tablesQuery.data ?? [];
-  const venues = venuesQuery.data ?? [];
-  const rooms = roomsQuery.data ?? [];
-  const tableTypes = tableTypesQuery.data ?? [];
-  const layouts = layoutsQuery.data ?? [];
-  const organizations = organizationsQuery.data ?? [];
-  const areas = areasQuery.data ?? [];
-  const duplicatesQuery = usePersonDuplicates(
-    detailRegistration?.person ?? null,
-    authHeaders,
-    visible && isAuthenticated && canManageAdminSections,
-  );
-  const emailDuplicates = duplicatesQuery.data?.items ?? [];
   const {
-    activeDayIndex,
-    activeEditionDateKeys,
-    eventsToday,
-    isActiveEditionDay,
-    layoutDayOptions,
-  } = useAdminDashboardData(activeEdition);
+    registrationsQuery,
+    registrationCountsQuery,
+    tablesQuery,
+    venuesQuery,
+    roomsQuery,
+    tableTypesQuery,
+    layoutsQuery,
+    organizationsQuery,
+    areasQuery,
+    peopleCountsQuery,
+    isAnyPending,
+    isAnyFetching,
+    refreshDashboard,
+  } = queries;
+
+  const refresh = useCallback(async () => {
+    setGlobalError("");
+    await refreshDashboard();
+  }, [refreshDashboard]);
+
+  const { activeDayIndex, activeEditionDateKeys, eventsToday, isActiveEditionDay } =
+    useAdminDashboardData(activeEdition);
   const volunteerStats = useVolunteerCheckInStats(
-    authHeaders,
     visible && isAuthenticated && !canManageAdminSections,
   );
   const editionEvents = canManageAdminSections
@@ -277,119 +140,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         activeEdition.events.some(({ id }) => id === event.event_id),
       );
 
-  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
-  const confirmOverCapacity = useCallback(
-    () =>
-      confirm({
-        title: m.admin_table_over_capacity_title(),
-        body: m.admin_table_over_capacity_confirm(),
-        confirmLabel: m.admin_action_confirm(),
-        variant: "warning",
-        icon: "exclamation-triangle",
-        errorFallback: m.admin_error_assign_table(),
-      }),
-    [confirm],
-  );
-
-  const {
-    handleCreateMember,
-    handleCreatePerson,
-    handleCreateVolunteer,
-    handleDeactivateMember,
-    handleDeletePerson,
-    handleDeactivateVolunteer,
-    handleReactivateMember,
-    handleReactivateVolunteer,
-    handleMergePeople,
-    handleUpdateMember,
-    handleUpdatePerson,
-    handleUpdateVolunteer,
-  } = useAdminPeopleActions({
-    detailRegistration,
-    authHeaders,
-    organizationsCollection,
-    registrationsCollection,
-    queryClient,
-    registrationsQueryKey,
-    setDetailRegistration,
-  });
-
-  const {
-    handleAddRegistration,
-    handleAddTransaction,
-    handleAssignTable,
-    handleSaveAllocations,
-    handleSaveBooking,
-    handleCheckIn,
-    handleIssueStrap,
-    handleToggleDelivered,
-    handleRecordPayment,
-    handleUpdateStatus,
-    handleViewDetail,
-  } = useAdminRegistrationActions({
-    authHeaders,
-    queryClient,
-    registrationsQueryKey,
-    setDetailRegistration,
-    setRegistrationError,
-    confirmOverCapacity,
-  });
-
-  const {
-    handleAddArea,
-    handleAddLayout,
-    handleAddRoom,
-    handleAddTable,
-    handleAddTableType,
-    handleAddVenue,
-    handleUpdateVenue,
-    handleArchiveRoom,
-    handleArchiveTableType,
-    handleArchiveVenue,
-    handleAssignAreaToItem,
-    handleChangeTableType,
-    handleDeleteArea,
-    handleDeleteLayout,
-    handleDeleteRoom,
-    handleDeleteTable,
-    handleDeleteTableType,
-    handleDeleteVenue,
-    handleMoveArea,
-    handleMoveTable,
-    handleResizeArea,
-    handleRestoreRevision,
-    handleRestoreRoom,
-    handleRestoreTableType,
-    handleRestoreVenue,
-    handleRotateArea,
-    handleRotateTable,
-    handleSaveRevision,
-    handleUpdateAreaLabel,
-    handleUpdateRoom,
-    handleUpdateTable,
-    handleUpdateTableType,
-  } = useAdminVenueActions({ authHeaders, tablesCollection, venueCollections });
-
   const handleLogout = useCallback(() => {
     setDetailRegistration(null);
     auth.logout();
   }, [auth]);
-
-  // A saved or deleted organization is written into the collection from the
-  // server's response, unless the session ended while the request was in flight.
-  const handleOrganizationSaved = useCallback(
-    (item: OrganizationOut, isCurrent: () => boolean) => {
-      void applyAdminOrganizationSaved(organizationsCollection, item, isCurrent);
-    },
-    [organizationsCollection],
-  );
-
-  const handleOrganizationDeleted = useCallback(
-    (id: number, isCurrent: () => boolean) => {
-      void applyAdminOrganizationDeleted(organizationsCollection, id, isCurrent);
-    },
-    [organizationsCollection],
-  );
 
   // A stable array so the recovery hook's effect only re-runs when one of the
   // underlying query errors actually changes, not on every render.
@@ -430,7 +184,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const { isRenewingSession, loadError } = useAdminSessionRecovery({
     errors: dashboardQueryErrors,
     renewSession,
-    loadData,
+    refresh,
     onSignOut: handleSessionExpired,
   });
 
@@ -501,44 +255,55 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
         /* ---- Login (OIDC redirect) ---- */
         <AdminLoginForm />
       ) : (
-        /* ---- Authenticated: sidebar layout ---- */
-        <SidebarProvider belowHeader className="admin-layout">
-          <AdminSidebar
-            activeKey={effectiveActiveKey}
-            setActiveKey={setActiveKey}
-            expandedGroups={expandedGroups}
-            toggleGroup={toggleGroup}
-            navRef={navRef}
-            handleNavKeyDown={handleNavKeyDown}
-            registrationCount={registrationCountsQuery.data?.all ?? 0}
-            peopleCount={peopleCountsQuery.data?.total ?? 0}
-            isAnyFetching={isAnyFetching}
-            onLoadData={loadData}
-            onLogout={handleLogout}
-            accountLabel={auth.accountLabel}
-            isSigningOut={auth.isSigningOut}
-            canManageAdminSections={canManageAdminSections}
-            lastSynced={
-              cacheStatus.lastSynced ? formatDateTime(cacheStatus.lastSynced, getLocale()) : null
-            }
-          />
+        <AdminWorkspaceContext.Provider
+          value={{
+            queries,
+            activeEdition,
+            activeEditionLoaded,
+            canManageAdminSections,
+            applyActiveEditionFilterRequest,
+            detailRegistration,
+            setDetailRegistration,
+            registrationError,
+            setRegistrationError,
+          }}
+        >
+          {/* Authenticated sidebar layout */}
+          <SidebarProvider belowHeader className="admin-layout">
+            <AdminSidebar
+              activeKey={effectiveActiveKey}
+              setActiveKey={setActiveKey}
+              expandedGroups={expandedGroups}
+              toggleGroup={toggleGroup}
+              navRef={navRef}
+              handleNavKeyDown={handleNavKeyDown}
+              registrationCount={registrationCountsQuery.data?.all ?? 0}
+              peopleCount={peopleCountsQuery.data?.total ?? 0}
+              isAnyFetching={isAnyFetching}
+              onRefresh={refresh}
+              onLogout={handleLogout}
+              accountLabel={auth.accountLabel}
+              isSigningOut={auth.isSigningOut}
+              canManageAdminSections={canManageAdminSections}
+              lastSynced={
+                cacheStatus.lastSynced ? formatDateTime(cacheStatus.lastSynced, getLocale()) : null
+              }
+            />
 
-          {/* Main content */}
-          <div className="admin-main" id="admin-content" tabIndex={-1}>
-            <div className="mb-3 flex items-center gap-3 site-lg:hidden">
-              <SidebarTrigger className="size-11 border border-border bg-sidebar" />
-              <span className="text-sm text-foreground">{m.admin_toggle_navigation()}</span>
-            </div>
-            <AdminCacheStatus />
-            {locationSearch.section !== undefined &&
-              (locationSearch.section !== activeKey || effectiveActiveKey !== activeKey) && (
-                <Alert variant="info" className="mb-4">
-                  {m.navigation_destination_unavailable()}
-                </Alert>
-              )}
-            {activeEdition.id !== "" &&
-              activeEdition.year > 0 &&
-              ACTIVE_EDITION_SECTIONS.has(effectiveActiveKey) && (
+            {/* Main content */}
+            <div className="admin-main" id="admin-content" tabIndex={-1}>
+              <div className="mb-3 flex items-center gap-3 site-lg:hidden">
+                <SidebarTrigger className="size-11 border border-border bg-sidebar" />
+                <span className="text-sm text-foreground">{m.admin_toggle_navigation()}</span>
+              </div>
+              <AdminCacheStatus />
+              {locationSearch.section !== undefined &&
+                (locationSearch.section !== activeKey || effectiveActiveKey !== activeKey) && (
+                  <Alert variant="info" className="mb-4">
+                    {m.navigation_destination_unavailable()}
+                  </Alert>
+                )}
+              {activeEdition.id !== "" && activeEdition.year > 0 && section.activeEdition && (
                 <button
                   type="button"
                   className="admin-active-edition-strip text-left mb-4"
@@ -580,277 +345,31 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   )}
                 </button>
               )}
-            {isRenewingSession && (
-              // Renewal is quick but not instant; without this the dashboard just
-              // sits there, which reads as a hang rather than as recovery.
-              <Alert variant="info" className="mb-6 flex items-center gap-2">
-                <Spinner size="sm" aria-hidden="true" />
-                {m.admin_session_renewing()}
-              </Alert>
-            )}
-            {globalError && (
-              <Alert variant="danger" className="mb-6" onClose={() => setGlobalError("")}>
-                {globalError}
-              </Alert>
-            )}
+              {isRenewingSession && (
+                // Renewal is quick but not instant; without this the dashboard just
+                // sits there, which reads as a hang rather than as recovery.
+                <Alert variant="info" className="mb-6 flex items-center gap-2">
+                  <Spinner size="sm" aria-hidden="true" />
+                  {m.admin_session_renewing()}
+                </Alert>
+              )}
+              {globalError && (
+                <Alert variant="danger" className="mb-6" onClose={() => setGlobalError("")}>
+                  {globalError}
+                </Alert>
+              )}
 
-            {isAnyPending && !cacheStatus.warmStart && effectiveActiveKey !== "home" ? (
-              <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
-            ) : (
-              <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
-                {effectiveActiveKey === "home" && (
-                  <StaffTasks
-                    expanded
-                    pendingBookings={{
-                      count: registrationCountsQuery.data?.pending,
-                      loading: registrationCountsQuery.isPending,
-                      error: registrationCountsQuery.isError,
-                      retry: () => void registrationCountsQuery.refetch(),
-                    }}
-                    editionId={activeEdition.id || undefined}
-                    editionLabel={
-                      activeEdition.id
-                        ? `${editionDisplayNameWithType(activeEdition)} · ${formatDateRange(activeEdition.dates, getLocale())}`
-                        : undefined
-                    }
-                  />
-                )}
-                {effectiveActiveKey === "registrations" && (
-                  <RegistrationList
-                    registrations={registrations}
-                    tables={tables}
-                    organizations={organizations}
-                    filter={filter}
-                    onFilterChange={setFilter}
-                    onUpdateStatus={handleUpdateStatus}
-                    onRecordPayment={handleRecordPayment}
-                    onAssignTable={handleAssignTable}
-                    onViewDetail={handleViewDetail}
-                    onCheckIn={handleCheckIn}
-                    onIssueStrap={handleIssueStrap}
-                    onAddRegistration={handleAddRegistration}
-                    authHeaders={authHeaders}
-                    activeEdition={activeEdition}
-                    activeEditionLoaded={activeEditionLoaded}
-                    canManageAdminSections={canManageAdminSections}
-                    countedPendingQueue={locationSearch.workQueue === "pending"}
-                    applyActiveEditionFilterRequest={applyActiveEditionFilterRequest}
-                    sectionError={registrationError}
-                    onClearSectionError={() => setRegistrationError("")}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "waitlist" && (
-                  <WaitlistManagement authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "scratchpad" && (
-                  <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
-                )}
-                {canManageAdminSections && activeKey === "organizations" && (
-                  <Card tone="secondary" className="mb-4">
-                    <CardContent>
-                      <OrganizationChangeReview
-                        authHeaders={authHeaders}
-                        onDecided={() => {
-                          void refetchAdminOrganizations(
-                            organizationsCollection,
-                            captureAdminOrganizationsFence(),
-                          );
-                          void queryClient.invalidateQueries({
-                            queryKey: queryKeys.admin.contentManagement.section("organizations"),
-                          });
-                        }}
-                      />
-                      <ContentSection
-                        sectionKey="organizations"
-                        title={m.admin_content_organizations_section()}
-                        authHeaders={authHeaders}
-                        onItemSaved={handleOrganizationSaved}
-                        onItemDeleted={handleOrganizationDeleted}
-                        captureFence={captureAdminOrganizationsFence}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-                {canManageAdminSections && activeKey === "editions" && (
-                  <Card tone="secondary" className="mb-4">
-                    <CardContent>
-                      <EditionsSection
-                        authHeaders={authHeaders}
-                        venues={venues}
-                        onEditionMutated={() => {
-                          void loadData();
-                          void invalidateAdmin(queryClient, [
-                            activeEditionQueryKey,
-                            queryKeys.admin.activeEdition,
-                            queryKeys.admin.activeEditionEvents,
-                          ]);
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-                {canManageAdminSections && activeKey === "floor-plans" && (
-                  <LayoutEditor
-                    dayOptions={layoutDayOptions}
-                    tables={tables}
-                    tableTypes={tableTypes}
-                    layouts={layouts}
-                    registrations={registrations}
-                    rooms={rooms}
-                    organizations={organizations}
-                    areas={areas}
-                    authHeaders={authHeaders}
-                    onAddTable={handleAddTable}
-                    onMoveTable={handleMoveTable}
-                    onDeleteTable={handleDeleteTable}
-                    onRotateTable={handleRotateTable}
-                    onAddLayout={handleAddLayout}
-                    onDeleteLayout={handleDeleteLayout}
-                    onAddArea={handleAddArea}
-                    onMoveArea={handleMoveArea}
-                    onDeleteArea={handleDeleteArea}
-                    onRotateArea={handleRotateArea}
-                    onAssignAreaToItem={handleAssignAreaToItem}
-                    onUpdateAreaLabel={handleUpdateAreaLabel}
-                    onChangeTableType={handleChangeTableType}
-                    onUpdateTable={handleUpdateTable}
-                    onResizeArea={handleResizeArea}
-                    onSaveAllocations={handleSaveAllocations}
-                    onSaveRevision={handleSaveRevision}
-                    onRestoreRevision={handleRestoreRevision}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "venues" && (
-                  <VenueManagement
-                    venues={venues}
-                    rooms={rooms}
-                    tableTypes={tableTypes}
-                    tables={tables}
-                    layouts={layouts}
-                    onAdd={handleAddVenue}
-                    onUpdate={handleUpdateVenue}
-                    onArchive={handleArchiveVenue}
-                    onRestore={handleRestoreVenue}
-                    onDelete={handleDeleteVenue}
-                    onAddRoom={handleAddRoom}
-                    onUpdateRoom={handleUpdateRoom}
-                    onArchiveRoom={handleArchiveRoom}
-                    onRestoreRoom={handleRestoreRoom}
-                    onDeleteRoom={handleDeleteRoom}
-                    onAddTableType={handleAddTableType}
-                    onUpdateTableType={handleUpdateTableType}
-                    onArchiveTableType={handleArchiveTableType}
-                    onRestoreTableType={handleRestoreTableType}
-                    onDeleteTableType={handleDeleteTableType}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "people" && (
-                  <PeopleSection
-                    authHeaders={authHeaders}
-                    counts={{
-                      all: peopleCountsQuery.data?.total ?? 0,
-                      members: peopleCountsQuery.data?.by_role.member ?? 0,
-                      volunteers: peopleCountsQuery.data?.by_role.volunteer ?? 0,
-                    }}
-                    people={{
-                      onMerge: handleMergePeople,
-                      onCreate: handleCreatePerson,
-                      onUpdate: handleUpdatePerson,
-                      onDelete: handleDeletePerson,
-                    }}
-                    members={{
-                      onCreate: handleCreateMember,
-                      onUpdate: handleUpdateMember,
-                      onDeactivate: handleDeactivateMember,
-                      onReactivate: handleReactivateMember,
-                    }}
-                    volunteers={{
-                      onCreate: handleCreateVolunteer,
-                      onUpdate: handleUpdateVolunteer,
-                      onDeactivate: handleDeactivateVolunteer,
-                      onReactivate: handleReactivateVolunteer,
-                    }}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "analytics" && (
-                  <AnalyticsDashboard authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "audit-log" && (
-                  <AuditLogViewer authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "event-categories" && (
-                  <CategoryManagement kind="event" authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "product-categories" && (
-                  <CategoryManagement kind="product" authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "email-categories" && (
-                  <EmailCategoryManagement authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "faq" && (
-                  <FaqManagement authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "signage-channels" && (
-                  <SignageSection authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "announcements" && (
-                  <AnnouncementsSection authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "policies" && (
-                  <PolicyManagement authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "settings" && (
-                  <div className="flex flex-col gap-4">
-                    <SettingsManagement authHeaders={authHeaders} section="maintenance" />
-                    <PushOptIn authHeaders={authHeaders} />
-                  </div>
-                )}
-                {canManageAdminSections && activeKey === "contact-details" && (
-                  <SettingsManagement authHeaders={authHeaders} section="contact" />
-                )}
-                {canManageAdminSections && activeKey === "contact-messages" && (
-                  <ContactMessagesManagement authHeaders={authHeaders} />
-                )}
-              </AdminSectionPane>
-            )}
-          </div>
-        </SidebarProvider>
+              {isAnyPending && !cacheStatus.warmStart && effectiveActiveKey !== "home" ? (
+                <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
+              ) : (
+                <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
+                  <Section />
+                </AdminSectionPane>
+              )}
+            </div>
+          </SidebarProvider>
+        </AdminWorkspaceContext.Provider>
       )}
-
-      {/* Registration detail modal */}
-      {detailRegistration && (
-        <RegistrationDetail
-          registration={detailRegistration}
-          registrations={registrations}
-          authHeaders={authHeaders}
-          baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
-          emailDuplicates={emailDuplicates}
-          tables={tables.filter((t) =>
-            layouts.some((l) => l.id === t.layout_id && l.event_id === detailRegistration.event_id),
-          )}
-          onSaveBooking={handleSaveBooking}
-          onAddTransaction={handleAddTransaction}
-          onClose={() => {
-            setDetailRegistration(null);
-            setRegistrationError("");
-          }}
-          onToggleDelivered={handleToggleDelivered}
-          onCheckIn={handleCheckIn}
-          onIssueStrap={handleIssueStrap}
-          actionError={registrationError}
-          onClearActionError={() => setRegistrationError("")}
-          onMergeDuplicate={async (canonicalId, duplicateId) => {
-            try {
-              await handleMergePeople(canonicalId, duplicateId);
-              setDetailRegistration(null);
-            } catch (err) {
-              devError("Failed to merge people", err);
-              setRegistrationError(apiErrorMessage(err, m.admin_people_merge_error()));
-            }
-          }}
-        />
-      )}
-      {confirmDialog}
     </section>
   );
 }

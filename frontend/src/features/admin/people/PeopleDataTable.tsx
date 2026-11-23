@@ -86,7 +86,7 @@ export function PersonName({ person, role }: { person: Person; role?: string }) 
 
 interface Props {
   id: "people" | "members" | "volunteers";
-  authHeaders: () => Record<string, string>;
+
   columns: ColumnDef<AdminTableFeatures, Person, any>[];
   onOpen: (person: Person) => void;
   primaryAction: ReactNode;
@@ -95,7 +95,7 @@ interface Props {
 
 export function PeopleDataTable({
   id,
-  authHeaders,
+
   columns,
   onOpen,
   primaryAction,
@@ -105,14 +105,15 @@ export function PeopleDataTable({
   const useDataSource = useCallback(
     function useDataSource(state: AdminTableState) {
       const params = peopleEndpointParams(state, role);
-      const query = usePeopleListQuery(params, authHeaders);
-      const activeCounts = usePeopleCountsQuery(
-        { q: params.q, role: params.role, reward_due: params.reward_due },
-        authHeaders,
-      );
+      const query = usePeopleListQuery(params);
+      const activeCounts = usePeopleCountsQuery({
+        q: params.q,
+        role: params.role,
+        reward_due: params.reward_due,
+      });
       const roleCounts = usePeopleCountsQuery(
         { q: params.q, active: params.active },
-        authHeaders,
+
         !role,
       );
       return {
@@ -160,7 +161,7 @@ export function PeopleDataTable({
         ],
       };
     },
-    [authHeaders, role],
+    [role],
   );
   return (
     <AdminDataTable
@@ -202,7 +203,7 @@ export function PeopleDataTable({
               // Full matching emails are fetched only for this explicit user action.
               for (let offset = 0; offset < total; offset += params.limit) {
                 if (!current()) return;
-                const page = await fetchPeoplePage(authHeaders, params, signal);
+                const page = await fetchPeoplePage(params, signal);
                 if (!current()) return;
                 total = page.total;
                 for (const person of page.items) if (person.email) emails.add(person.email);
@@ -222,7 +223,7 @@ export function PeopleDataTable({
         }
         await downloadFileOrThrow(
           `/api/${role === "volunteer" ? "volunteers" : "people"}/export?${params}`,
-          { headers: authHeaders() },
+          {},
           m.admin_error_load_data(),
           `${id}.csv`,
         );

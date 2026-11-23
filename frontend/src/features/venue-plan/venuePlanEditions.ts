@@ -25,10 +25,9 @@ function editionChoice(
  */
 export async function fetchVenuePlanEditionChoices(
   isAdmin: boolean,
-  authHeaders: () => Record<string, string>,
 ): Promise<VenuePlanEditionChoice[]> {
   if (isAdmin) {
-    return (await fetchEditions(authHeaders)).map(editionChoice);
+    return (await fetchEditions()).map(editionChoice);
   }
   const response = await fetch("/api/editions/upcoming");
   if (!response.ok) throw new ApiError(m.venue_plan_editions_error(), { status: response.status });

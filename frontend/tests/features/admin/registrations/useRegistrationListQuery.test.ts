@@ -46,7 +46,7 @@ it("requests all historical facets and attendance in one stats read", async () =
   );
 
   const { Wrapper } = createTestQueryClientHarness();
-  const view = renderHook(() => useRegistrationCountsQuery("active", "2026-10-07", () => ({})), {
+  const view = renderHook(() => useRegistrationCountsQuery("active", "2026-10-07"), {
     wrapper: Wrapper,
   });
 

@@ -10,11 +10,6 @@ import {
 } from "@/lib/collections/adminOrganizationsCollection";
 import { createTestQueryClientHarness } from "../../../utils/queryClient";
 
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: "Bearer ".concat("mock-access-token"),
-});
-
 const VENUE_GROUP_QUERY_KEYS = [
   ["admin", "venues"],
   ["admin", "rooms"],
@@ -33,7 +28,6 @@ describe("venue group and organizations collections and sign-out", () => {
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
-          authHeaders,
         }),
       { wrapper: Wrapper, initialProps: { isAuthenticated: true } },
     );
@@ -71,10 +65,8 @@ describe("venue group and organizations collections and sign-out", () => {
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
-          authHeaders,
         });
         const actions = useAdminVenueActions({
-          authHeaders,
           tablesCollection: queries.tablesCollection,
           venueCollections: queries.venueCollections,
         });
@@ -122,7 +114,6 @@ describe("venue group and organizations collections and sign-out", () => {
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
-          authHeaders,
         }),
       { wrapper: Wrapper, initialProps: { isAuthenticated: true } },
     );

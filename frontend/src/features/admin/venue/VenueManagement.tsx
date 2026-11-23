@@ -1,3 +1,5 @@
+import { useAdminWorkspace } from "../shell/AdminWorkspace";
+import { useAdminVenueActions } from "../shell/useAdminVenueActions";
 import {
   auditRecordId,
   focusAuditRecord,
@@ -151,7 +153,7 @@ const emptyTableTypeForm: {
   active: true,
 };
 
-export default function VenueManagement({
+export function VenueManagementView({
   venues,
   rooms,
   tableTypes,
@@ -1500,5 +1502,35 @@ export default function VenueManagement({
         />
       )}
     </Card>
+  );
+}
+
+export default function VenueManagement() {
+  const { queries } = useAdminWorkspace();
+  const { tablesCollection, venueCollections } = queries;
+  const actions = useAdminVenueActions({ tablesCollection, venueCollections });
+  return (
+    <VenueManagementView
+      venues={queries.venuesQuery.data ?? []}
+      rooms={queries.roomsQuery.data ?? []}
+      tableTypes={queries.tableTypesQuery.data ?? []}
+      tables={queries.tablesQuery.data ?? []}
+      layouts={queries.layoutsQuery.data ?? []}
+      onAdd={actions.handleAddVenue}
+      onUpdate={actions.handleUpdateVenue}
+      onArchive={actions.handleArchiveVenue}
+      onRestore={actions.handleRestoreVenue}
+      onDelete={actions.handleDeleteVenue}
+      onAddRoom={actions.handleAddRoom}
+      onUpdateRoom={actions.handleUpdateRoom}
+      onArchiveRoom={actions.handleArchiveRoom}
+      onRestoreRoom={actions.handleRestoreRoom}
+      onDeleteRoom={actions.handleDeleteRoom}
+      onAddTableType={actions.handleAddTableType}
+      onUpdateTableType={actions.handleUpdateTableType}
+      onArchiveTableType={actions.handleArchiveTableType}
+      onRestoreTableType={actions.handleRestoreTableType}
+      onDeleteTableType={actions.handleDeleteTableType}
+    />
   );
 }

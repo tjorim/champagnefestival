@@ -37,10 +37,7 @@ const deleteFallback = {
   volunteers: "admin_volunteers_error_deactivate",
   people: "admin_error_delete_person",
 } as const;
-const authHeaders = () => ({
-  "Content-Type": "application/json",
-  Authorization: "Bearer mock-access-token",
-});
+
 const person = (index: number) =>
   makePerson({
     id: `p${index}`,
@@ -99,14 +96,14 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
   const queryClient = createTestQueryClient();
   const component = () =>
     kind === "people" ? (
-      <PeopleManagement {...{ authHeaders, onCreate, onUpdate, onDelete, onMerge }} />
+      <PeopleManagement {...{ onCreate, onUpdate, onDelete, onMerge }} />
     ) : kind === "members" ? (
       <MembersManagement
-        {...{ authHeaders, onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
+        {...{ onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
       />
     ) : (
       <VolunteersManagement
-        {...{ authHeaders, onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
+        {...{ onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
       />
     );
   const root = createRootRoute({ component, validateSearch: (search) => search });

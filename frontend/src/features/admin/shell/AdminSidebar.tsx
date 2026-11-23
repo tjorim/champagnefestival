@@ -1,35 +1,17 @@
 import { getLocale } from "@/paraglide/runtime";
 import { formatNumber } from "@/lib/format/numberUtils";
 import {
-  BuildingIcon,
-  CalendarCheckIcon,
   CalendarDaysIcon,
-  CalendarIcon,
-  ChartColumnIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   CircleCheckIcon,
-  CircleQuestionMarkIcon,
-  Grid3x3Icon,
-  HourglassIcon,
   LayersIcon,
   LogOutIcon,
-  MailCheckIcon,
-  MailIcon,
   MapPinIcon,
-  MegaphoneIcon,
-  NotebookTextIcon,
-  PackageIcon,
-  PhoneIcon,
-  RotateCcwClockIcon,
   RotateCwIcon,
-  ShieldIcon,
-  SlidersHorizontalIcon,
-  StoreIcon,
-  TagsIcon,
-  UsersIcon,
   WrenchIcon,
 } from "lucide-react";
+import { adminSectionKeys, adminSections, type AdminSectionGroup } from "./adminSections";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
@@ -50,27 +32,14 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 
-/** Sections under each collapsible sidebar group. */
-export const ADMIN_SIDEBAR_GROUPS = {
-  events: ["editions", "organizations", "event-categories", "product-categories"],
-  content: [
-    "faq",
-    "email-categories",
-    "announcements",
-    "signage-channels",
-    "policies",
-    "contact-details",
-  ],
-  venue: ["venues", "floor-plans"],
-  system: ["settings", "audit-log"],
-} as const;
-
-/** The group a section lives in, so the dashboard can expand it when the section becomes active. */
-export function adminSidebarGroupOf(section: string): string | undefined {
-  return Object.entries(ADMIN_SIDEBAR_GROUPS).find(([, keys]) =>
-    (keys as readonly string[]).includes(section),
-  )?.[0];
-}
+const groups = {
+  events: { icon: CalendarDaysIcon, label: m.admin_events_group },
+  content: { icon: LayersIcon, label: m.admin_content_tab },
+  venue: { icon: MapPinIcon, label: m.admin_venue_group },
+  system: { icon: WrenchIcon, label: m.admin_system_group },
+} satisfies Record<AdminSectionGroup, { icon: LucideIcon; label: () => string }>;
+const groupSections = (group: AdminSectionGroup) =>
+  adminSectionKeys.filter((key) => adminSections[key].group === group);
 
 interface SidebarItemProps {
   itemKey: string;
@@ -170,7 +139,7 @@ export interface AdminSidebarProps {
   registrationCount: number;
   peopleCount: number;
   isAnyFetching: boolean;
-  onLoadData: () => void;
+  onRefresh: () => void;
   onLogout: () => void;
   accountLabel: string | null;
   isSigningOut: boolean;
@@ -189,7 +158,7 @@ export default function AdminSidebar({
   registrationCount,
   peopleCount,
   isAnyFetching,
-  onLoadData,
+  onRefresh,
   onLogout,
   accountLabel,
   isSigningOut,
@@ -212,182 +181,51 @@ export default function AdminSidebar({
         <SidebarContent className="p-2">
           <nav aria-label={m.admin_title()} ref={navRef} onKeyDown={handleNavKeyDown}>
             <SidebarMenu>
-              <SidebarItem
-                itemKey="home"
-                icon={NotebookTextIcon}
-                label={m.workspace_title()}
-                {...itemProps}
-              />
-              <SidebarItem
-                itemKey="registrations"
-                icon={CalendarCheckIcon}
-                label={m.admin_registrations_tab()}
-                count={registrationCount}
-                {...itemProps}
-              />
-
-              {canManageAdminSections && (
-                <>
-                  <SidebarItem
-                    itemKey="waitlist"
-                    icon={HourglassIcon}
-                    label={m.admin_waitlist_section()}
-                    {...itemProps}
-                  />
-
-                  <SidebarItem
-                    itemKey="contact-messages"
-                    icon={MailIcon}
-                    label={m.admin_contact_messages_section()}
-                    {...itemProps}
-                  />
-
-                  <SidebarItem
-                    itemKey="scratchpad"
-                    icon={NotebookTextIcon}
-                    label={m.admin_scratchpad_section()}
-                    {...itemProps}
-                  />
+              {adminSectionKeys.map((key) => {
+                const section = adminSections[key];
+                if (!canManageAdminSections && !section.staff) return null;
+                if (!section.group) {
+                  return (
+                    <SidebarItem
+                      key={key}
+                      itemKey={key}
+                      icon={section.icon}
+                      label={section.label()}
+                      count={
+                        key === "registrations"
+                          ? registrationCount
+                          : key === "people"
+                            ? peopleCount
+                            : undefined
+                      }
+                      {...itemProps}
+                    />
+                  );
+                }
+                const keys = groupSections(section.group);
+                if (key !== keys[0]) return null;
+                const group = groups[section.group];
+                return (
                   <SidebarGroup
-                    groupKey="events"
-                    icon={CalendarDaysIcon}
-                    label={m.admin_events_group()}
-                    itemKeys={ADMIN_SIDEBAR_GROUPS.events}
+                    key={section.group}
+                    groupKey={section.group}
+                    icon={group.icon}
+                    label={group.label()}
+                    itemKeys={keys}
                     {...groupProps}
                   >
-                    <SidebarItem
-                      itemKey="editions"
-                      icon={CalendarIcon}
-                      label={m.admin_content_editions_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="organizations"
-                      icon={StoreIcon}
-                      label={m.admin_content_organizations_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="event-categories"
-                      icon={TagsIcon}
-                      label={m.admin_event_categories_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="product-categories"
-                      icon={PackageIcon}
-                      label={m.admin_product_categories_section()}
-                      {...itemProps}
-                    />
+                    {keys.map((itemKey) => (
+                      <SidebarItem
+                        key={itemKey}
+                        itemKey={itemKey}
+                        icon={adminSections[itemKey].icon}
+                        label={adminSections[itemKey].label()}
+                        {...itemProps}
+                      />
+                    ))}
                   </SidebarGroup>
-
-                  <SidebarGroup
-                    groupKey="content"
-                    icon={LayersIcon}
-                    label={m.admin_content_tab()}
-                    itemKeys={ADMIN_SIDEBAR_GROUPS.content}
-                    {...groupProps}
-                  >
-                    <SidebarItem
-                      itemKey="faq"
-                      icon={CircleQuestionMarkIcon}
-                      label={m.admin_content_faq_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="email-categories"
-                      icon={MailCheckIcon}
-                      label={m.admin_email_categories_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="signage-channels"
-                      icon={LayersIcon}
-                      label={m.signage_channels_heading()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="announcements"
-                      icon={MegaphoneIcon}
-                      label={m.admin_announcements_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="policies"
-                      icon={ShieldIcon}
-                      label={m.admin_policies_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="contact-details"
-                      icon={PhoneIcon}
-                      label={m.admin_contact_details_section()}
-                      {...itemProps}
-                    />
-                  </SidebarGroup>
-
-                  <SidebarGroup
-                    groupKey="venue"
-                    icon={MapPinIcon}
-                    label={m.admin_venue_group()}
-                    itemKeys={ADMIN_SIDEBAR_GROUPS.venue}
-                    {...groupProps}
-                  >
-                    <SidebarItem
-                      itemKey="venues"
-                      icon={BuildingIcon}
-                      label={m.admin_venues_rooms_tab()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="floor-plans"
-                      icon={Grid3x3Icon}
-                      label={m.admin_floor_plans_tab()}
-                      {...itemProps}
-                    />
-                  </SidebarGroup>
-
-                  <SidebarItem
-                    itemKey="people"
-                    icon={UsersIcon}
-                    label={m.admin_people_tab()}
-                    count={peopleCount}
-                    {...itemProps}
-                  />
-                </>
-              )}
-
-              {canManageAdminSections && (
-                <>
-                  <SidebarItem
-                    itemKey="analytics"
-                    icon={ChartColumnIcon}
-                    label={m.admin_analytics_tab()}
-                    {...itemProps}
-                  />
-
-                  <SidebarGroup
-                    groupKey="system"
-                    icon={WrenchIcon}
-                    label={m.admin_system_group()}
-                    itemKeys={ADMIN_SIDEBAR_GROUPS.system}
-                    {...groupProps}
-                  >
-                    <SidebarItem
-                      itemKey="settings"
-                      icon={SlidersHorizontalIcon}
-                      label={m.admin_content_settings_section()}
-                      {...itemProps}
-                    />
-                    <SidebarItem
-                      itemKey="audit-log"
-                      icon={RotateCcwClockIcon}
-                      label={m.admin_audit_log_tab()}
-                      {...itemProps}
-                    />
-                  </SidebarGroup>
-                </>
-              )}
+                );
+              })}
             </SidebarMenu>
           </nav>
         </SidebarContent>
@@ -414,7 +252,7 @@ export default function AdminSidebar({
             <Button
               variant="outline"
               size="sm"
-              onClick={onLoadData}
+              onClick={onRefresh}
               disabled={isAnyFetching}
               title={m.admin_refresh()}
               aria-label={m.admin_refresh()}

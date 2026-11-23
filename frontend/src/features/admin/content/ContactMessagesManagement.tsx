@@ -7,7 +7,7 @@ import { Icon } from "@/components/Icon";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { createAppColumnHelper } from "../shared/useAdminTable";
 import { m } from "@/paraglide/messages";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { fetchQueuePage, queueSearchParams, queueStatus } from "../shared/adminQueue";
 import type { AdminTableState } from "../shared/adminTableState";
 import { queryKeys } from "@/lib/query/queryKeys";
@@ -31,11 +31,7 @@ const contactMessageFilters = (): AdminTableFilter[] => [
   },
 ];
 
-export default function ContactMessagesManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function ContactMessagesManagement() {
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState("");
   const refresh = useCallback(
@@ -43,25 +39,22 @@ export default function ContactMessagesManagement({
     [queryClient],
   );
 
-  const useDataSource = useCallback(
-    function useDataSource(state: AdminTableState) {
-      const query = queueSearchParams(state);
-      const page = useQuery({
-        queryKey: queryKeys.admin.contactMessagesPage(query),
-        queryFn: ({ signal }) =>
-          fetchQueuePage<ContactMessage>(
-            "/api/contact",
-            query,
-            authHeaders,
-            signal,
-            m.admin_error_load_contact_messages(),
-          ),
-        placeholderData: keepPreviousData,
-      });
-      return { ...page, filters: contactMessageFilters() };
-    },
-    [authHeaders],
-  );
+  const useDataSource = useCallback(function useDataSource(state: AdminTableState) {
+    const query = queueSearchParams(state);
+    const page = useQuery({
+      queryKey: queryKeys.admin.contactMessagesPage(query),
+      queryFn: ({ signal }) =>
+        fetchQueuePage<ContactMessage>(
+          "/api/contact",
+          query,
+
+          signal,
+          m.admin_error_load_contact_messages(),
+        ),
+      placeholderData: keepPreviousData,
+    });
+    return { ...page, filters: contactMessageFilters() };
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -102,9 +95,9 @@ export default function ContactMessagesManagement({
               label={m.admin_contact_message_mark_handled()}
               failure={m.admin_contact_message_mark_failed({ name: message.name })}
               run={() =>
-                fetchJsonOrThrowWithUnauthorized(
+                fetchJsonOrThrow(
                   `/api/contact/${message.id}/handled`,
-                  { method: "PUT", headers: authHeaders() },
+                  { method: "PUT" },
                   m.admin_error_handle_contact_message(),
                 )
               }
@@ -117,7 +110,7 @@ export default function ContactMessagesManagement({
         },
       }),
     ],
-    [authHeaders, refresh],
+    [refresh],
   );
 
   return (

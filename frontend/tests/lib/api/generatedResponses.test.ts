@@ -12,7 +12,6 @@ import {
   saveContentSectionItem,
 } from "@/lib/api/adminContentApi";
 
-const headers = () => ({ Authorization: "Bearer mock-access-token" });
 const question: PollQuestionOut = {
   id: "question",
   edition_id: "edition",
@@ -46,8 +45,8 @@ describe("generated content responses", () => {
         jsonResponse<import("@/api-types").OrganizationOut[]>(organizations),
       ),
     );
-    expect(await fetchContentSectionItems("organizations", headers)).toEqual(organizations);
-    expect(await fetchEditionModalOrganizations(headers)).toEqual(organizations);
+    expect(await fetchContentSectionItems("organizations")).toEqual(organizations);
+    expect(await fetchEditionModalOrganizations()).toEqual(organizations);
   });
 
   it("sends the same organization write and preserves its response metadata", async () => {
@@ -59,9 +58,7 @@ describe("generated content responses", () => {
         return jsonResponse<import("@/api-types").OrganizationOut>(organization);
       }),
     );
-    expect(await saveContentSectionItem("organizations", organization, headers)).toEqual(
-      organization,
-    );
+    expect(await saveContentSectionItem("organizations", organization)).toEqual(organization);
     expect(sent).toEqual({
       name: organization.name,
       image: organization.image,
@@ -101,7 +98,7 @@ describe("generated content responses", () => {
         jsonResponse<import("@/api-types").PollOrdersOut>(orders),
       ),
     );
-    expect(await fetchPollQuestions("edition", headers)).toEqual([question]);
-    expect(await fetchPollOrders("edition", "nl", headers)).toEqual(orders);
+    expect(await fetchPollQuestions("edition")).toEqual([question]);
+    expect(await fetchPollOrders("edition", "nl")).toEqual(orders);
   });
 });

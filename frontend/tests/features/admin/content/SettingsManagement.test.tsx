@@ -29,16 +29,15 @@ describe("SettingsManagement", () => {
       ),
     );
 
-    const maintenance = render(
-      <SettingsManagement authHeaders={() => ({})} section="maintenance" />,
-      { wrapper: createTestQueryClientWrapper() },
-    );
+    const maintenance = render(<SettingsManagement section="maintenance" />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
     expect(await screen.findByRole("switch", { name: "Maintenance mode" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Public email address")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save contact details" })).not.toBeInTheDocument();
     maintenance.unmount();
 
-    render(<SettingsManagement authHeaders={() => ({})} section="contact" />, {
+    render(<SettingsManagement section="contact" />, {
       wrapper: createTestQueryClientWrapper(),
     });
     expect(await screen.findByLabelText("Public email address")).toBeInTheDocument();
@@ -58,7 +57,7 @@ describe("SettingsManagement", () => {
         return jsonResponse<import("@/api-types").AppSettingsOut>(current);
       }),
     );
-    render(<SettingsManagement authHeaders={() => ({})} section="maintenance" />, {
+    render(<SettingsManagement section="maintenance" />, {
       wrapper: createTestQueryClientWrapper(),
     });
 
@@ -101,7 +100,7 @@ describe("SettingsManagement", () => {
       }),
     );
 
-    render(<SettingsManagement authHeaders={() => ({ Authorization: "Bearer test" })} />, {
+    render(<SettingsManagement />, {
       wrapper: createTestQueryClientWrapper(),
     });
 
@@ -127,7 +126,7 @@ describe("SettingsManagement", () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     queryClient.setDefaultOptions({ queries: { staleTime: Infinity, retry: false } });
     queryClient.setQueryData(queryKeys.admin.settings, initialSettings);
-    render(<SettingsManagement authHeaders={() => ({})} />, { wrapper: Wrapper });
+    render(<SettingsManagement />, { wrapper: Wrapper });
     const email = screen.getByLabelText("Public email address");
     fireEvent.change(email, { target: { value: "draft@example.com" } });
     await act(async () => {
@@ -153,7 +152,7 @@ describe("SettingsManagement", () => {
         return jsonResponse<import("@/api-types").AppSettingsOut>(stored);
       }),
     );
-    render(<SettingsManagement authHeaders={() => ({})} />, { wrapper: Wrapper });
+    render(<SettingsManagement />, { wrapper: Wrapper });
     const email = await screen.findByLabelText("Public email address");
     await act(async () => {
       queryClient.setQueryData(queryKeys.admin.settings, {
@@ -194,7 +193,7 @@ describe("SettingsManagement", () => {
         return jsonResponse<import("@/api-types").AppSettingsOut>(stored);
       }),
     );
-    render(<SettingsManagement authHeaders={() => ({})} />, { wrapper: Wrapper });
+    render(<SettingsManagement />, { wrapper: Wrapper });
     const email = await screen.findByLabelText("Public email address");
     fireEvent.change(email, { target: { value: "submitted@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Save contact details" }));

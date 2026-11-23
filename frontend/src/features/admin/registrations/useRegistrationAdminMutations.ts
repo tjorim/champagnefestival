@@ -1,19 +1,18 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { PaymentTransactionCreate, PaymentTransactionOut, RegistrationOut } from "@/api-types";
 import { ApiError } from "@/lib/api/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { queryKeys } from "@/lib/query/queryKeys";
 
 interface UseRegistrationAdminMutationsOptions {
   queryClient: QueryClient;
-  authHeaders: () => Record<string, string>;
+
   registrationsQueryKey: QueryKey;
 }
 
 export function useRegistrationAdminMutations({
   queryClient,
-  authHeaders,
 }: UseRegistrationAdminMutationsOptions) {
   const updateRegistration = ({
     id,
@@ -24,9 +23,9 @@ export function useRegistrationAdminMutations({
     payload: Record<string, unknown>;
     fallbackMessage: string;
   }) =>
-    fetchJsonOrThrowWithUnauthorized<RegistrationOut>(
+    fetchJsonOrThrow<RegistrationOut>(
       `/api/registrations/${id}`,
-      { method: "PUT", headers: authHeaders(), body: JSON.stringify(payload) },
+      { method: "PUT", body: JSON.stringify(payload) },
       fallbackMessage,
     );
   const invalidateRegistrations = () => {
@@ -62,9 +61,9 @@ export function useRegistrationAdminMutations({
       payload: PaymentTransactionCreate;
       fallbackMessage: string;
     }) =>
-      fetchJsonOrThrowWithUnauthorized<PaymentTransactionOut>(
+      fetchJsonOrThrow<PaymentTransactionOut>(
         `/api/registrations/${registrationId}/transactions`,
-        { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) },
+        { method: "POST", body: JSON.stringify(payload) },
         fallbackMessage,
       ),
     onSettled: (_data, _error, variables) => {

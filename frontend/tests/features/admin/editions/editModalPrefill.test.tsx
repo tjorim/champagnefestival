@@ -34,8 +34,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 // The mocked messages echo their key and arguments.
 const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
 const TITLE_FR = 'admin_event_title_label({"language":"admin_language_fr"})';
@@ -139,7 +137,7 @@ describe("admin edit modals prefill from the record being edited", () => {
         show
         edition={edition}
         initial={existingEvent}
-        authHeaders={authHeaders}
+
         onSave={vi.fn()}
         onHide={vi.fn()}
       />,
@@ -163,7 +161,7 @@ describe("admin edit modals prefill from the record being edited", () => {
         show: true,
         edition,
         initial: existingEvent,
-        authHeaders,
+
         onSave: vi.fn(),
         onHide: vi.fn(),
       };
@@ -190,7 +188,7 @@ describe("admin edit modals prefill from the record being edited", () => {
       show: true,
       edition,
       initial: existingEvent,
-      authHeaders,
+
       onSave: vi.fn(),
       onHide: vi.fn(),
     };
@@ -222,7 +220,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={edition}
           venues={venues}
-          authHeaders={authHeaders}
+
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -249,7 +247,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={null}
           venues={[]}
-          authHeaders={authHeaders}
+
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -266,7 +264,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={null}
           venues={venues}
-          authHeaders={authHeaders}
+
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -284,7 +282,7 @@ describe("admin edit modals prefill from the record being edited", () => {
         <ItemModal
           show
           initial={existingItem}
-          authHeaders={authHeaders}
+
           onSave={vi.fn()}
           onHide={vi.fn()}
         />,

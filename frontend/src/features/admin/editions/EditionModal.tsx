@@ -60,7 +60,7 @@ interface EditionModalProps {
   show: boolean;
   initial: Edition | null;
   venues: Venue[];
-  authHeaders: () => Record<string, string>;
+
   onSaved: (edition: Edition) => void;
   onHide: () => void;
 }
@@ -147,7 +147,7 @@ export default function EditionModal({
   show,
   initial,
   venues,
-  authHeaders,
+
   onSaved,
   onHide,
 }: EditionModalProps) {
@@ -259,7 +259,7 @@ export default function EditionModal({
 
   const organizationsQuery = useQuery({
     queryKey: editionModalOrganizationsQueryKey,
-    queryFn: () => fetchEditionModalOrganizations(authHeaders),
+    queryFn: () => fetchEditionModalOrganizations(),
     enabled: show,
     staleTime: 60 * 1000,
     retry: false,
@@ -276,7 +276,7 @@ export default function EditionModal({
       organizations: number[];
       sponsorTiers: Record<number, SponsorTier>;
       coOrganizerOrganizationId: number | null;
-    }) => saveEdition(payload, authHeaders, record?.id),
+    }) => saveEdition(payload, record?.id),
     retry: false,
   });
 

@@ -8,7 +8,6 @@ import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 import { setLocale } from "@/paraglide/runtime";
 
-const authHeaders = () => ({ Authorization: "Bearer test" });
 describe("event order question configuration", () => {
   it("loads on demand and saves a translated question with a stable retry identity", async () => {
     setLocale("en", { reload: false });
@@ -52,7 +51,7 @@ describe("event order question configuration", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<OrderQuestionsEditor eventId="event" authHeaders={authHeaders} />, {
+    render(<OrderQuestionsEditor eventId="event" />, {
       wrapper: createTestQueryClientWrapper(),
     });
     await user.click(screen.getByRole("button", { name: "Order questions" }));

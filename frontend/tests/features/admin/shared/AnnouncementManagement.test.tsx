@@ -7,8 +7,6 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const announcement: import("@/api-types").AnnouncementOut = {
   published_at: null,
   published_by: null,
@@ -45,7 +43,7 @@ afterEach(() => {
 
 describe("AnnouncementManagement", () => {
   it("shows the Dutch text of an announcement without translations", async () => {
-    render(<AnnouncementManagement authHeaders={authHeaders} />, {
+    render(<AnnouncementManagement />, {
       wrapper: createTestQueryClientWrapper(),
     });
 
@@ -63,7 +61,7 @@ describe("AnnouncementManagement", () => {
         });
       }),
     );
-    render(<AnnouncementManagement authHeaders={authHeaders} />, {
+    render(<AnnouncementManagement />, {
       wrapper: createTestQueryClientWrapper(),
     });
     await screen.findByText("Deuren open om zes");

@@ -45,7 +45,7 @@ import { fetchAdminPersonOptions, type PersonOption } from "../shared/adminRegis
 interface ItemModalProps {
   show: boolean;
   initial: ItemDraft | null; // null = new item
-  authHeaders: () => Record<string, string>;
+
   saving?: boolean;
   onSave: (item: ItemDraft) => void;
   onHide: () => void;
@@ -54,7 +54,7 @@ interface ItemModalProps {
 export default function ItemModal({
   show,
   initial,
-  authHeaders,
+
   saving,
   onSave,
   onHide,
@@ -147,7 +147,7 @@ export default function ItemModal({
 
   const personOptionsQuery = useQuery({
     queryKey: queryKeys.admin.itemModalPeople(debouncedPersonQuery),
-    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
@@ -286,7 +286,7 @@ export default function ItemModal({
                 key={initial.id}
                 admin
                 url={`/api/organizations/${initial.id}/logo`}
-                headers={authHeaders}
+
                 onSaved={(result) => {
                   if ("image" in result && result.image) form.setFieldValue("image", result.image);
                   const isCurrent = captureAdminOrganizationsFence();
@@ -406,7 +406,7 @@ export default function ItemModal({
                         <OrganizationTranslationSuggestion
                           key={`${show}-${initial?.id ?? "new"}-${language}`}
                           url="/api/organizations/translation"
-                          headers={authHeaders}
+
                           source="nl"
                           target={language}
                           text={values.description_nl}

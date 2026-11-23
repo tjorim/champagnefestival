@@ -1,3 +1,4 @@
+import { getStoredAccessToken } from "@/config/oidc";
 import { m } from "@/paraglide/messages";
 import { ApiError, apiErrorFromResponse, apiErrorMessage, hasApiErrorCode } from "./apiErrors";
 
@@ -13,14 +14,29 @@ function throwAuthError(response: Response): void {
   }
 }
 
-export async function requestApi(url: string, options: RequestInit): Promise<Response> {
+export async function adminRequest(
+  url: string,
+  options: RequestInit = {},
+  fallbackMessage: string = m.admin_api_request_failed(),
+): Promise<Response> {
+  const headers = new Headers(options.headers);
+  const token = url.startsWith("/api/") ? getStoredAccessToken() : null;
+  if (token && !headers.has("Authorization")) headers.set("Authorization", "Bearer ".concat(token));
+  if (typeof options.body === "string" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  let response: Response;
   try {
-    return await fetch(url, options);
+    response = await fetch(url, { ...options, headers: Object.fromEntries(headers) });
   } catch (error) {
-    // A request the caller cancelled (navigation, a newer query) is not a network failure.
-    if (!options.signal?.aborted) console.error("Admin API network request failed", { url, error });
+    if (options.signal?.aborted) throw error;
+    console.error("Admin API network request failed", { url, error });
     throw new ApiError(m.admin_error_network(), { status: 0, code: "network_error" });
   }
+  throwAuthError(response);
+  if (!response.ok) throw await extractError(response, fallbackMessage);
+  return response;
 }
 
 async function extractError(response: Response, fallbackMessage: string): Promise<ApiError> {
@@ -41,12 +57,7 @@ export async function fetchJsonOrThrow<T>(
   options: RequestInit,
   fallbackMessage: string,
 ): Promise<T> {
-  const response = await requestApi(url, options);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
-
-  return (await response.json()) as T;
+  return (await adminRequest(url, options, fallbackMessage)).json();
 }
 
 export async function fetchVoidOrThrow(
@@ -54,10 +65,7 @@ export async function fetchVoidOrThrow(
   options: RequestInit,
   fallbackMessage: string,
 ): Promise<void> {
-  const response = await requestApi(url, options);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
+  await adminRequest(url, options, fallbackMessage);
 }
 
 export async function fetchArrayOrThrow<T>(
@@ -65,45 +73,8 @@ export async function fetchArrayOrThrow<T>(
   options: RequestInit,
   fallbackMessage: string,
 ): Promise<T[]> {
-  const response = await requestApi(url, options);
-  throwAuthError(response);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
-
-  const payload: T[] = await response.json();
+  const payload = await fetchJsonOrThrow<T[]>(url, options, fallbackMessage);
   return Array.isArray(payload) ? payload : [];
-}
-
-export async function fetchJsonOrThrowWithUnauthorized<T>(
-  url: string,
-  options: RequestInit,
-  fallbackMessage: string,
-): Promise<T> {
-  const response = await requestApi(url, options);
-  throwAuthError(response);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
-
-  return (await response.json()) as T;
-}
-
-export async function fetchVoidOrThrowWithUnauthorized(
-  url: string,
-  options: RequestInit,
-  fallbackMessage: string,
-): Promise<void> {
-  const response = await requestApi(url, options);
-  throwAuthError(response);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
-}
-
-export async function fetchStatus(url: string, options: RequestInit): Promise<number> {
-  const response = await requestApi(url, options);
-  return response.status;
 }
 
 /** Fetch a CSV (or other file) response and trigger a browser download. */
@@ -113,11 +84,7 @@ export async function downloadFileOrThrow(
   fallbackMessage: string,
   fallbackFilename: string,
 ): Promise<void> {
-  const response = await requestApi(url, options);
-  throwAuthError(response);
-  if (!response.ok) {
-    throw await extractError(response, fallbackMessage);
-  }
+  const response = await adminRequest(url, options, fallbackMessage);
 
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const filenameMatch = /filename="?([^";]+)"?/.exec(disposition);
@@ -137,16 +104,15 @@ export async function downloadFileOrThrow(
 /** Signage writes are explicit and never automatically retried (docs/retry-safety.md). */
 export function signageRequest<T>(
   path: string,
-  headers: Record<string, string>,
   method = "GET",
   body?: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  return fetchJsonOrThrowWithUnauthorized<T>(
+  return fetchJsonOrThrow<T>(
     `/api/signage/${path}`,
     {
       method,
-      headers: { ...headers, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     },

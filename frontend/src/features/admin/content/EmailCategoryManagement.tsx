@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PencilIcon, TrashIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import { emailConsentErrorMessage } from "@/lib/api/emailConsentErrors";
-import { fetchVoidOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchVoidOrThrow } from "@/lib/api/adminApi";
 import {
   emailConsentKeys,
   emailRequest,
@@ -83,12 +83,12 @@ function toWrite(category: EmailCategory): EmailCategoryWrite {
 function CategoryEditor({
   value,
   nextSortOrder,
-  authHeaders,
+
   onClose,
 }: {
   value: EmailCategory | null;
   nextSortOrder: number;
-  authHeaders: () => Record<string, string>;
+
   onClose: () => void;
 }) {
   const client = useQueryClient();
@@ -113,7 +113,7 @@ function CategoryEditor({
     try {
       await emailRequest(
         value ? `/api/email-categories/${encodeURIComponent(value.key)}` : "/api/email-categories",
-        authHeaders,
+
         m.email_category_save_error(),
         undefined,
         // Blank translations are sent as null, which clears them on update.
@@ -236,18 +236,14 @@ function CategoryEditor({
   );
 }
 
-export default function EmailCategoryManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function EmailCategoryManagement() {
   const client = useQueryClient();
   const categories = useQuery({
     queryKey: emailConsentKeys.categories,
     queryFn: ({ signal }) =>
       emailRequest<EmailCategory[]>(
         "/api/email-categories",
-        authHeaders,
+
         m.email_category_load_error(),
         signal,
       ),
@@ -267,9 +263,9 @@ export default function EmailCategoryManagement({
     if (!confirmed) return;
     setRowError("");
     try {
-      await fetchVoidOrThrowWithUnauthorized(
+      await fetchVoidOrThrow(
         `/api/email-categories/${encodeURIComponent(category.key)}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.email_category_delete_error(),
       );
       await client.invalidateQueries({ queryKey: emailConsentKeys.categories });
@@ -365,7 +361,7 @@ export default function EmailCategoryManagement({
         <CategoryEditor
           value={editing}
           nextSortOrder={(list.at(-1)?.sort_order ?? 0) + 10}
-          authHeaders={authHeaders}
+
           onClose={() => setEditing(undefined)}
         />
       )}

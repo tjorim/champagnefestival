@@ -7,7 +7,7 @@ import type { ItemDraft } from "@/types/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
-import { apiErrorFromResponse } from "./apiErrors";
+import { adminRequest } from "./adminApi";
 import type { DietaryTag } from "../editions/dietaryTags";
 import { type PollQuestionKind } from "../editions/pollKinds";
 import type { Event, Product } from "@/api-types";
@@ -17,38 +17,10 @@ function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
 }
 
-/**
- * Safe fetch wrapper that handles network errors and non-ok responses
- * with user-friendly error messages.
- */
-async function safeFetch(
-  url: string,
-  options?: RequestInit,
-  operation?: string,
-): Promise<Response> {
-  try {
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, operation ?? m.admin_api_request_failed());
-    }
-
-    return response;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(operation ?? "Network error occurred");
-  }
-}
-
-export async function fetchContentSectionItems(
-  sectionKey: string,
-  authHeaders: () => Record<string, string>,
-): Promise<OrganizationOut[]> {
-  const response = await safeFetch(
+export async function fetchContentSectionItems(sectionKey: string): Promise<OrganizationOut[]> {
+  const response = await adminRequest(
     `/api/${sectionKey}`,
-    { headers: authHeaders() },
+    {},
     m.admin_api_load_section({ section: sectionKey }),
   );
   const data: OrganizationOut[] = await response.json();
@@ -58,7 +30,6 @@ export async function fetchContentSectionItems(
 export async function saveContentSectionItem(
   sectionKey: string,
   draft: ItemDraft,
-  authHeaders: () => Record<string, string>,
 ): Promise<OrganizationOut> {
   const isNew = draft.id <= 0;
   const payload = {
@@ -74,20 +45,20 @@ export async function saveContentSectionItem(
   };
 
   const response = isNew
-    ? await safeFetch(
+    ? await adminRequest(
         `/api/${sectionKey}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         },
         m.admin_api_save_section({ section: sectionKey }),
       )
-    : await safeFetch(
+    : await adminRequest(
         `/api/${sectionKey}/${draft.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         },
         m.admin_api_update_section({ section: sectionKey }),
@@ -100,13 +71,12 @@ export async function updateContentSectionItemActive(
   sectionKey: string,
   id: number,
   active: boolean,
-  authHeaders: () => Record<string, string>,
 ): Promise<OrganizationOut> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/${sectionKey}/${id}`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active }),
     },
     m.admin_api_update_section_status({ section: sectionKey }),
@@ -115,23 +85,19 @@ export async function updateContentSectionItemActive(
   return response.json();
 }
 
-export async function deleteContentSectionItem(
-  sectionKey: string,
-  id: number,
-  authHeaders: () => Record<string, string>,
-): Promise<number> {
-  await safeFetch(
+export async function deleteContentSectionItem(sectionKey: string, id: number): Promise<number> {
+  await adminRequest(
     `/api/${sectionKey}/${id}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_api_delete_section({ section: sectionKey }),
   );
   return id;
 }
 
-export async function fetchEditions(authHeaders: () => Record<string, string>): Promise<Edition[]> {
-  const response = await safeFetch(
+export async function fetchEditions(): Promise<Edition[]> {
+  const response = await adminRequest(
     "/api/editions?include_inactive=true",
-    { headers: authHeaders() },
+    {},
     m.admin_api_load_editions(),
   );
 
@@ -139,14 +105,8 @@ export async function fetchEditions(authHeaders: () => Record<string, string>): 
   return Array.isArray(data) ? data : [];
 }
 
-export async function fetchEditionModalOrganizations(
-  authHeaders: () => Record<string, string>,
-): Promise<OrganizationOut[]> {
-  const response = await safeFetch(
-    "/api/organizations",
-    { headers: authHeaders() },
-    m.admin_api_load_organizations(),
-  );
+export async function fetchEditionModalOrganizations(): Promise<OrganizationOut[]> {
+  const response = await adminRequest("/api/organizations", {}, m.admin_api_load_organizations());
 
   const data: OrganizationOut[] = await response.json();
   return Array.isArray(data) ? data : [];
@@ -170,15 +130,15 @@ export async function saveEdition(
      */
     coOrganizerOrganizationId?: number | null;
   },
-  authHeaders: () => Record<string, string>,
+
   initialId?: string,
 ): Promise<Edition> {
   const isEdit = Boolean(initialId);
-  const response = await safeFetch(
+  const response = await adminRequest(
     isEdit ? `/api/editions/${initialId}` : "/api/editions",
     {
       method: isEdit ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...(isEdit ? {} : { id: payload.id }),
         year: payload.year,
@@ -203,13 +163,10 @@ export async function saveEdition(
   return (await response.json()) as Edition;
 }
 
-export async function fetchEditionEvents(
-  editionId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<Event[]> {
-  const response = await safeFetch(
+export async function fetchEditionEvents(editionId: string): Promise<Event[]> {
+  const response = await adminRequest(
     `/api/events?edition_id=${encodeURIComponent(editionId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_content_error_load(),
   );
   const data = (await response.json()) as Event[];
@@ -241,19 +198,16 @@ export function eventTextBody(formData: EventFormData) {
   };
 }
 
-export async function saveEditionEvent(
-  payload: {
-    editionId: string;
-    editingEventId?: string;
-    formData: EventFormData;
-  },
-  authHeaders: () => Record<string, string>,
-): Promise<Event> {
-  const response = await safeFetch(
+export async function saveEditionEvent(payload: {
+  editionId: string;
+  editingEventId?: string;
+  formData: EventFormData;
+}): Promise<Event> {
+  const response = await adminRequest(
     payload.editingEventId ? `/api/events/${payload.editingEventId}` : "/api/events",
     {
       method: payload.editingEventId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         edition_id: payload.editionId,
         ...eventTextBody(payload.formData),
@@ -281,24 +235,14 @@ export async function saveEditionEvent(
   return (await response.json()) as Event;
 }
 
-export async function deleteEditionEvent(
-  eventId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<void> {
-  await safeFetch(
-    `/api/events/${eventId}`,
-    { method: "DELETE", headers: authHeaders() },
-    m.admin_content_error_save(),
-  );
+export async function deleteEditionEvent(eventId: string): Promise<void> {
+  await adminRequest(`/api/events/${eventId}`, { method: "DELETE" }, m.admin_content_error_save());
 }
 
-export async function fetchEventProducts(
-  eventId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<Product[]> {
-  const response = await safeFetch(
+export async function fetchEventProducts(eventId: string): Promise<Product[]> {
+  const response = await adminRequest(
     `/api/products?event_id=${encodeURIComponent(eventId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_content_error_load(),
   );
   const data = (await response.json()) as Product[];
@@ -355,30 +299,24 @@ function productWriteBody(
       : {}),
   };
 }
-export async function previewEventProduct(
-  payload: ProductWrite,
-  authHeaders: () => Record<string, string>,
-): Promise<ProductChangePreview> {
-  const response = await safeFetch(
+export async function previewEventProduct(payload: ProductWrite): Promise<ProductChangePreview> {
+  const response = await adminRequest(
     `/api/products/${payload.id}/preview`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(productWriteBody(payload)),
     },
     m.admin_content_error_save(),
   );
   return response.json();
 }
-export async function saveEventProduct(
-  payload: ProductWrite,
-  authHeaders: () => Record<string, string>,
-): Promise<Product> {
-  const response = await safeFetch(
+export async function saveEventProduct(payload: ProductWrite): Promise<Product> {
+  const response = await adminRequest(
     payload.id ? `/api/products/${payload.id}` : "/api/products",
     {
       method: payload.id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(productWriteBody(payload)),
     },
     m.admin_content_error_save(),
@@ -386,24 +324,18 @@ export async function saveEventProduct(
   return (await response.json()) as Product;
 }
 
-export async function deleteEventProduct(
-  productId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<void> {
-  await safeFetch(
+export async function deleteEventProduct(productId: string): Promise<void> {
+  await adminRequest(
     `/api/products/${productId}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_content_error_save(),
   );
 }
 
-export async function deleteEditionById(
-  editionId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<string> {
-  await safeFetch(
+export async function deleteEditionById(editionId: string): Promise<string> {
+  await adminRequest(
     `/api/editions/${editionId}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_content_error_save(),
   );
   return editionId;
@@ -420,13 +352,12 @@ export async function uploadEditionArtwork(
   editionId: string,
   slot: EditionArtworkSlot,
   file: File,
-  authHeaders: () => Record<string, string>,
 ): Promise<Edition> {
   const body = new FormData();
   body.append("file", file);
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/editions/${encodeURIComponent(editionId)}/artwork/${slot}`,
-    { method: "POST", headers: authHeaders(), body },
+    { method: "POST", body },
     m.admin_edition_artwork_error(),
   );
   return (await response.json()) as Edition;
@@ -436,11 +367,10 @@ export async function uploadEditionArtwork(
 export async function clearEditionArtwork(
   editionId: string,
   slot: EditionArtworkSlot,
-  authHeaders: () => Record<string, string>,
 ): Promise<Edition> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/editions/${encodeURIComponent(editionId)}/artwork/${slot}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_edition_artwork_error(),
   );
   return (await response.json()) as Edition;
@@ -502,21 +432,18 @@ function pollQuestionBody(write: PollQuestionWrite): PollQuestionUpdate {
   };
 }
 
-function jsonRequest(method: string, body: unknown, authHeaders: () => Record<string, string>) {
+function jsonRequest(method: string, body: unknown) {
   return {
     method,
-    headers: { ...JSON_HEADERS, ...authHeaders() },
+    headers: { ...JSON_HEADERS },
     body: JSON.stringify(body),
   };
 }
 
-export async function fetchPollQuestions(
-  editionId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<PollQuestion[]> {
-  const response = await safeFetch(
+export async function fetchPollQuestions(editionId: string): Promise<PollQuestion[]> {
+  const response = await adminRequest(
     `/api/poll-questions?edition_id=${encodeURIComponent(editionId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_content_error_load(),
   );
   const data: PollQuestion[] = await response.json();
@@ -525,15 +452,14 @@ export async function fetchPollQuestions(
 
 export async function createPollQuestion(
   payload: { editionId: string; kind: PollQuestionKind } & PollQuestionWrite,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollQuestion> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     "/api/poll-questions",
-    jsonRequest(
-      "POST",
-      { edition_id: payload.editionId, kind: payload.kind, ...pollQuestionBody(payload) },
-      authHeaders,
-    ),
+    jsonRequest("POST", {
+      edition_id: payload.editionId,
+      kind: payload.kind,
+      ...pollQuestionBody(payload),
+    }),
     m.admin_content_error_save(),
   );
   return response.json();
@@ -542,11 +468,10 @@ export async function createPollQuestion(
 export async function updatePollQuestion(
   questionId: string,
   write: PollQuestionWrite,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollQuestion> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/poll-questions/${questionId}`,
-    jsonRequest("PUT", pollQuestionBody(write), authHeaders),
+    jsonRequest("PUT", pollQuestionBody(write)),
     m.admin_content_error_save(),
   );
   return response.json();
@@ -556,11 +481,10 @@ export async function updatePollQuestion(
 export async function setPollQuestionClosing(
   questionId: string,
   closesAt: string | null,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollQuestion> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/poll-questions/${questionId}`,
-    jsonRequest("PUT", { closes_at: closesAt }, authHeaders),
+    jsonRequest("PUT", { closes_at: closesAt }),
     m.admin_content_error_save(),
   );
   return response.json();
@@ -569,13 +493,13 @@ export async function setPollQuestionClosing(
 /** Delete a question; `confirmAnswers` is required when volunteers already answered it. */
 export async function deletePollQuestion(
   questionId: string,
-  authHeaders: () => Record<string, string>,
+
   confirmAnswers = false,
   notify = true,
 ): Promise<void> {
-  await safeFetch(
+  await adminRequest(
     `/api/poll-questions/${questionId}?notify=${notify}${confirmAnswers ? "&confirm_answers=true" : ""}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_content_error_save(),
   );
 }
@@ -583,11 +507,10 @@ export async function deletePollQuestion(
 export async function reorderPollQuestions(
   editionId: string,
   orderedIds: string[],
-  authHeaders: () => Record<string, string>,
 ): Promise<PollQuestion[]> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     "/api/poll-questions/reorder",
-    jsonRequest("POST", { edition_id: editionId, ordered_ids: orderedIds }, authHeaders),
+    jsonRequest("POST", { edition_id: editionId, ordered_ids: orderedIds }),
     m.admin_content_error_save(),
   );
   const data: PollQuestion[] = await response.json();
@@ -598,15 +521,10 @@ export async function reorderPollQuestions(
 export async function copyPollQuestions(
   fromEditionId: string,
   toEditionId: string,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollQuestion[]> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     "/api/poll-questions/copy",
-    jsonRequest(
-      "POST",
-      { from_edition_id: fromEditionId, to_edition_id: toEditionId },
-      authHeaders,
-    ),
+    jsonRequest("POST", { from_edition_id: fromEditionId, to_edition_id: toEditionId }),
     m.admin_content_error_save(),
   );
   const data: PollQuestion[] = await response.json();
@@ -615,15 +533,10 @@ export async function copyPollQuestions(
 
 export async function createPollOption(
   payload: { questionId: string } & PollOptionWrite,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     "/api/poll-options",
-    jsonRequest(
-      "POST",
-      { question_id: payload.questionId, ...pollOptionBody(payload) },
-      authHeaders,
-    ),
+    jsonRequest("POST", { question_id: payload.questionId, ...pollOptionBody(payload) }),
     m.admin_content_error_save(),
   );
   return response.json();
@@ -632,11 +545,10 @@ export async function createPollOption(
 export async function updatePollOption(
   optionId: string,
   write: PollOptionWrite,
-  authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     `/api/poll-options/${optionId}`,
-    jsonRequest("PUT", pollOptionBody(write), authHeaders),
+    jsonRequest("PUT", pollOptionBody(write)),
     m.admin_content_error_save(),
   );
   return response.json();
@@ -645,13 +557,13 @@ export async function updatePollOption(
 /** Delete an option; `confirmSelections` is required when volunteers already picked it. */
 export async function deletePollOption(
   optionId: string,
-  authHeaders: () => Record<string, string>,
+
   confirmSelections = false,
   notify = true,
 ): Promise<void> {
-  await safeFetch(
+  await adminRequest(
     `/api/poll-options/${optionId}?notify=${notify}${confirmSelections ? "&confirm_selections=true" : ""}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_content_error_save(),
   );
 }
@@ -659,11 +571,10 @@ export async function deletePollOption(
 export async function reorderPollOptions(
   questionId: string,
   orderedIds: string[],
-  authHeaders: () => Record<string, string>,
 ): Promise<PollOption[]> {
-  const response = await safeFetch(
+  const response = await adminRequest(
     "/api/poll-options/reorder",
-    jsonRequest("POST", { question_id: questionId, ordered_ids: orderedIds }, authHeaders),
+    jsonRequest("POST", { question_id: questionId, ordered_ids: orderedIds }),
     m.admin_content_error_save(),
   );
   const data: PollOption[] = await response.json();
@@ -696,64 +607,49 @@ export async function setVolunteerPollOrder(
     note: string;
     confirmClosed: boolean;
   },
-  authHeaders: () => Record<string, string>,
 ): Promise<void> {
-  await safeFetch(
+  await adminRequest(
     `/api/poll-questions/orders/${encodeURIComponent(volunteerId)}?edition_id=${encodeURIComponent(editionId)}`,
-    jsonRequest(
-      "PUT",
-      {
-        selections: Object.entries(payload.quantities)
-          .filter(([, quantity]) => quantity > 0)
-          .map(([option_id, quantity]) => ({ option_id, quantity })),
-        attendance: Object.entries(payload.attendance)
-          .filter(([, answer]) => answer.attending !== null)
-          .map(([question_id, answer]) => ({
-            question_id,
-            attending: answer.attending,
-            people: answer.attending ? answer.people : 0,
-          })),
-        choices: Object.entries(payload.choices).map(([question_id, option_id]) => ({
+    jsonRequest("PUT", {
+      selections: Object.entries(payload.quantities)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([option_id, quantity]) => ({ option_id, quantity })),
+      attendance: Object.entries(payload.attendance)
+        .filter(([, answer]) => answer.attending !== null)
+        .map(([question_id, answer]) => ({
           question_id,
-          option_id,
+          attending: answer.attending,
+          people: answer.attending ? answer.people : 0,
         })),
-        texts: Object.entries(payload.texts)
-          .filter(([, text]) => text.trim())
-          .map(([question_id, text]) => ({ question_id, text: text.trim() })),
-        ratings: Object.entries(payload.ratings).map(([question_id, rating]) => ({
-          question_id,
-          rating,
-        })),
-        note: payload.note.trim(),
-        confirm_closed: payload.confirmClosed,
-      },
-      authHeaders,
-    ),
+      choices: Object.entries(payload.choices).map(([question_id, option_id]) => ({
+        question_id,
+        option_id,
+      })),
+      texts: Object.entries(payload.texts)
+        .filter(([, text]) => text.trim())
+        .map(([question_id, text]) => ({ question_id, text: text.trim() })),
+      ratings: Object.entries(payload.ratings).map(([question_id, rating]) => ({
+        question_id,
+        rating,
+      })),
+      note: payload.note.trim(),
+      confirm_closed: payload.confirmClosed,
+    }),
     m.admin_content_error_save(),
   );
 }
 
-export async function fetchPollOrders(
-  editionId: string,
-  locale: string,
-  authHeaders: () => Record<string, string>,
-): Promise<PollOrders> {
-  const response = await safeFetch(
+export async function fetchPollOrders(editionId: string, locale: string): Promise<PollOrders> {
+  const response = await adminRequest(
     `/api/poll-questions/orders?edition_id=${encodeURIComponent(editionId)}&locale=${encodeURIComponent(locale)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_content_error_load(),
   );
   return response.json();
 }
 
-export async function fetchVolunteerPollEvents(
-  authHeaders: () => Record<string, string>,
-): Promise<Event[]> {
-  const response = await safeFetch(
-    "/api/events",
-    { headers: authHeaders() },
-    m.admin_content_error_load(),
-  );
+export async function fetchVolunteerPollEvents(): Promise<Event[]> {
+  const response = await adminRequest("/api/events", {}, m.admin_content_error_load());
   const events = (await response.json()) as Event[];
   return events.filter((event) => event.volunteers_only);
 }
