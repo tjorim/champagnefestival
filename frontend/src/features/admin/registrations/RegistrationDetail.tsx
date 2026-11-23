@@ -555,9 +555,9 @@ export default function RegistrationDetail({
                   href={checkInUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-subtle text-sm break-words"
+                  className="text-highlight text-sm underline"
                 >
-                  {checkInUrl}
+                  {m.admin_open_check_in_link()}
                 </a>
               </div>
             </div>

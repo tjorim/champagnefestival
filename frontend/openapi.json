@@ -2866,6 +2866,37 @@
         ]
       }
     },
+    "/api/audit/actions": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List Audit Actions",
+        "description": "Distinct actions recorded across the entire audit trail.",
+        "operationId": "list_audit_actions_api_audit_actions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response List Audit Actions Api Audit Actions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/members": {
       "post": {
         "tags": [
@@ -15735,6 +15766,21 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Details"
+          },
+          "resource_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Name"
+          },
+          "resource_exists": {
+            "type": "boolean",
+            "title": "Resource Exists"
           }
         },
         "type": "object",
@@ -15749,7 +15795,9 @@
           "resource_type",
           "resource_id",
           "request_id",
-          "details"
+          "details",
+          "resource_name",
+          "resource_exists"
         ],
         "title": "AuditEntryOut"
       },
@@ -27291,6 +27339,13 @@
             ],
             "title": "Table Id"
           },
+          "table_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Table Names"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -27382,6 +27437,7 @@
           "order_items",
           "notes",
           "table_id",
+          "table_names",
           "status",
           "payment_status",
           "amount_due",

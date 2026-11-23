@@ -62,6 +62,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { FloorTable } from "@/api-types";
@@ -70,7 +71,7 @@ import { useAppTable, createAppColumnHelper } from "../shared/useAdminTable";
 import { exportToCsv } from "../shared/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "../shared/ColumnVisibilityDropdown";
-import { loadColVis, saveColVis } from "../shared/columnVisibility";
+import { hideColumnUntilUsed, loadColVis, saveColVis } from "../shared/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchRegistration,
@@ -189,7 +190,7 @@ function isStandaloneRegistration(registration: Registration) {
 }
 
 const columnHelper = createAppColumnHelper<Registration>();
-const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityState = { event: false, table: false };
+const DEFAULT_COLUMN_VISIBILITY: ColumnVisibilityState = { event: false };
 
 export default function RegistrationList({
   registrations,
@@ -447,7 +448,19 @@ export default function RegistrationList({
     return occupied;
   }, [registrations]);
   const pageRegistrations = useMemo(
-    () => (pageQuery.data?.registrations ?? []).map((r) => registrationsById.get(r.id) ?? r),
+    () =>
+      (pageQuery.data?.registrations ?? []).map((row) => {
+        const live = registrationsById.get(row.id);
+        if (!live || live.table_names) return live ?? row;
+        // Detail and mutation responses omit the list-only names. Preserve names
+        // from the page when they still describe the same ordered allocations.
+        const sameTables =
+          live.allocations.length === row.allocations.length &&
+          live.allocations.every(
+            (allocation, index) => allocation.table_id === row.allocations[index]?.table_id,
+          );
+        return sameTables ? { ...live, table_names: row.table_names } : live;
+      }),
     [pageQuery.data, registrationsById],
   );
 
@@ -726,7 +739,9 @@ export default function RegistrationList({
             const isStandalone = isStandaloneRegistration(reg);
             return (reg.allocations?.length ?? 0) > 1 ? (
               <span>
-                {reg.allocations?.length} {m.admin_tables_tab()}
+                {reg.table_names?.length
+                  ? new Intl.ListFormat(getLocale()).format(reg.table_names)
+                  : m.admin_assigned_table_unavailable()}
               </span>
             ) : isStandalone && !(reg.booked_table_quantity ?? 0) ? (
               <span className="text-subtle text-sm">—</span>
@@ -739,6 +754,14 @@ export default function RegistrationList({
                 aria-label={m.admin_action_assign_table()}
               >
                 <AdminOption value="">{m.admin_unassigned()}</AdminOption>
+                {reg.table_id &&
+                  !tables.some(
+                    (table) => table.id === reg.table_id && table.event_id === reg.event_id,
+                  ) && (
+                    <AdminOption value={reg.table_id} disabled>
+                      {reg.table_names?.[0] || m.admin_assigned_table_unavailable()}
+                    </AdminOption>
+                  )}
                 {tables
                   .filter((t) => t.event_id === reg.event_id)
                   .map((t) => {
@@ -906,7 +929,19 @@ export default function RegistrationList({
     clearSelection();
   }, [onFilterChange, clearSelection]);
 
-  const effectiveColumnVisibility = { ...DEFAULT_COLUMN_VISIBILITY, ...columnVisibility };
+  // Historical bookings can have assignments even when the active floor plan has no tables.
+  // An explicit choice in the Columns menu always wins.
+  const hasTables =
+    tables.length > 0 || pageRegistrations.some((registration) => Boolean(registration.table_id));
+  const effectiveColumnVisibility = useMemo<ColumnVisibilityState>(
+    () =>
+      hideColumnUntilUsed(
+        { ...DEFAULT_COLUMN_VISIBILITY, ...columnVisibility },
+        "table",
+        hasTables,
+      ),
+    [columnVisibility, hasTables],
+  );
   const table = useAppTable(
     {
       data: pageRegistrations,

@@ -8,7 +8,7 @@ import { fetchAllRegistrationPages, fetchAllRegistrations } from "@/lib/api/admi
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
 function registrationPayload(id: string) {
-  return { ...seedRegistrations[0]!, id };
+  return { ...seedRegistrations[0]!, id, table_names: ["T1"] };
 }
 
 /** Serves `total` registrations through the real envelope, one requested page at a time. */

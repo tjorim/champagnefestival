@@ -19,4 +19,6 @@ export type AuditEntryOut = {
   resource_id: string;
   request_id: string | null;
   details: AuditEntryOutDetails;
+  resource_name: string | null;
+  resource_exists: boolean;
 };

@@ -8,6 +8,7 @@ import { jsonResponse } from "@/mocks/response";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { http } from "msw/http";
 import AuditLogViewer from "@/features/admin/insights/AuditLogViewer";
 import { server } from "@/mocks/server";
@@ -31,6 +32,7 @@ function captureAuditQueries() {
       seen.push(new URL(request.url).searchParams);
       return jsonResponse<import("@/api-types").AuditEntryOut[]>([]);
     }),
+    http.get("/api/audit/actions", () => jsonResponse<string[]>(["person_merged"])),
     http.get("/api/audit/resource-types", () => jsonResponse<string[]>(["person", "edition"])),
   );
   return seen;
@@ -64,9 +66,11 @@ describe("AuditLogViewer filters", () => {
     renderViewer();
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));
 
-    fireEvent.change(screen.getByLabelText("admin_audit_filter_action"), {
-      target: { value: "person_merged" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "admin_audit_filter_action" }));
+    await user.click(
+      await screen.findByRole("option", { name: "admin_audit_action_person_merged" }),
+    );
 
     await waitFor(() => {
       expect(seen.some((params) => params.get("action") === "person_merged")).toBe(true);

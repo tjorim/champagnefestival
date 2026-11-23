@@ -481,7 +481,13 @@ export const adminHandlers = [
     const limit = Number(url.searchParams.get("limit") ?? filtered.length) || filtered.length;
     const page = Number(url.searchParams.get("page") ?? 1) || 1;
     const start = (page - 1) * limit;
-    const items = filtered.slice(start, start + limit);
+    const items = filtered.slice(start, start + limit).map((registration) => ({
+      ...registration,
+      table_names: (registration.allocations ?? []).flatMap((allocation) => {
+        const table = tables.find((item) => item.id === allocation.table_id);
+        return table ? [table.name] : [];
+      }),
+    }));
     return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
       items,
       total: filtered.length,
@@ -2058,10 +2064,22 @@ export const adminHandlers = [
     ({ request }) => requireAuth(request) ?? jsonResponse<string[]>(["event", "registration"]),
   ),
   http.get(
-    "/api/audit",
+    "/api/audit/actions",
     ({ request }) =>
-      requireAuth(request) ?? jsonResponse<import("@/api-types").AuditEntryOut[]>(seedAuditEntries),
+      requireAuth(request) ??
+      jsonResponse<string[]>([...new Set(seedAuditEntries.map((entry) => entry.action))]),
   ),
+  http.get("/api/audit", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const { searchParams } = new URL(request.url);
+    const entries = seedAuditEntries.filter((entry) =>
+      (["action", "actor", "resource_type", "resource_id"] as const).every(
+        (field) => !searchParams.has(field) || entry[field] === searchParams.get(field),
+      ),
+    );
+    return jsonResponse<import("@/api-types").AuditEntryOut[]>(entries);
+  }),
   http.post("/api/push/test", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

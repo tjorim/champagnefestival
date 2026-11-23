@@ -59,7 +59,7 @@ describe("admin registrations pilot collection", () => {
       http.get("/api/registrations", ({ request }) => {
         expect(new URL(request.url).searchParams.get("edition_id")).toBe("march-2026");
         return jsonResponse<import("@/api-types").RegistrationListEnvelope>({
-          items: [seedRegistrations[0]!],
+          items: [{ ...seedRegistrations[0]!, table_names: ["T1"] }],
           total: 1,
           page: 1,
           limit: 1000,

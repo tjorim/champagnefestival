@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadColVis, saveColVis } from "@/features/admin/shared/columnVisibility";
+import {
+  loadColVis,
+  saveColVis,
+  hideColumnUntilUsed,
+} from "@/features/admin/shared/columnVisibility";
 
 describe("columnVisibility utils", () => {
   const KEY = "test-col-vis";
@@ -161,5 +165,23 @@ describe("columnVisibility utils", () => {
       expect(loadColVis("key-one")).toEqual({ col1: true });
       expect(loadColVis("key-two")).toEqual({ col2: false });
     });
+  });
+});
+
+describe("hideColumnUntilUsed", () => {
+  it("hides an empty column by default", () => {
+    expect(hideColumnUntilUsed({ name: true }, "table", false)).toEqual({
+      name: true,
+      table: false,
+    });
+  });
+
+  it("shows the column once it has content", () => {
+    expect(hideColumnUntilUsed({}, "table", true)).toEqual({});
+  });
+
+  it("never overrides a saved choice", () => {
+    expect(hideColumnUntilUsed({ table: true }, "table", false)).toEqual({ table: true });
+    expect(hideColumnUntilUsed({ table: false }, "table", true)).toEqual({ table: false });
   });
 });

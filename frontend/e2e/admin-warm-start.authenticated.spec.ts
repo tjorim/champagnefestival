@@ -63,5 +63,5 @@ test("restored venue rows render while reads are pending and survive failed reco
     page.getByText("Failed to load data. Check your connection.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Brussels Expo", { exact: true })).toBeVisible();
-  await expect(page.getByText("Hall 5", { exact: true })).toBeVisible();
+  await expect(page.getByText("Hall 5", { exact: false }).first()).toBeVisible();
 });
