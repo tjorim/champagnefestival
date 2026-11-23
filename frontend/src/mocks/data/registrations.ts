@@ -1,6 +1,10 @@
 /** Seed data for registrations. */
 
-import type { PersonSummaryOut, RegistrationOutWithToken } from "@/api-types";
+import type {
+  PaymentTransactionOut,
+  PersonSummaryOut,
+  RegistrationOutWithToken,
+} from "@/api-types";
 import { eventOut, orderItemOut, registrationOut } from "./builders";
 
 function person(id: string, name: string, email: string, phone: string): PersonSummaryOut {
@@ -43,6 +47,25 @@ const tastingDayTwo = eventOut({
   registrations_open_from: "2026-01-01T00:00:00Z",
 });
 
+const seedPayments = [
+  { registrationId: "reg-01", amount: "50.00" },
+  { registrationId: "reg-04", amount: "10.00" },
+];
+
+export const seedTransactions: PaymentTransactionOut[] = seedPayments.map(
+  ({ registrationId, amount }) => ({
+    id: `mock-payment-${registrationId}`,
+    registration_id: registrationId,
+    amount,
+    effective_date: "2026-03-06",
+    recorded_at: "2026-03-06T18:00:00Z",
+    recorded_by: "mock-admin",
+    reference: null,
+    note: null,
+    reversed_transaction_id: null,
+  }),
+);
+
 export const seedRegistrations: RegistrationOutWithToken[] = [
   registrationOut({
     id: "reg-01",
@@ -64,7 +87,6 @@ export const seedRegistrations: RegistrationOutWithToken[] = [
     table_id: "table-01",
     allocations: [{ table_id: "table-01", guest_count: 1, exclusive: false }],
     status: "confirmed",
-    payment_status: "paid",
     check_in_token: "mock-token-reg-01",
     created_at: "2026-01-10T14:00:00Z",
     updated_at: "2026-01-10T14:00:00Z",
@@ -89,7 +111,6 @@ export const seedRegistrations: RegistrationOutWithToken[] = [
     table_id: "table-01",
     allocations: [{ table_id: "table-01", guest_count: 1, exclusive: false }],
     status: "confirmed",
-    payment_status: "unpaid",
     checked_in: true,
     checked_in_at: "2026-03-07T10:15:00Z",
     strap_issued: true,
@@ -117,7 +138,6 @@ export const seedRegistrations: RegistrationOutWithToken[] = [
     table_id: "table-02",
     allocations: [{ table_id: "table-02", guest_count: 1, exclusive: false }],
     status: "confirmed",
-    payment_status: "partial",
     check_in_token: "mock-token-reg-04",
     created_at: "2026-02-03T11:00:00Z",
     updated_at: "2026-02-03T11:00:00Z",
@@ -142,12 +162,26 @@ export const seedRegistrations: RegistrationOutWithToken[] = [
     table_id: "table-03",
     allocations: [{ table_id: "table-03", guest_count: 1, exclusive: false }],
     status: "pending",
-    payment_status: "unpaid",
     check_in_token: "mock-token-reg-03",
     created_at: "2026-02-01T16:00:00Z",
     updated_at: "2026-02-01T16:00:00Z",
   }),
-];
+].map((registration) => {
+  const due = registration.order_items.reduce(
+    (sum, item) => sum + (item.quantity - item.included_quantity) * item.price,
+    0,
+  );
+  const paid = seedTransactions
+    .filter((entry) => entry.registration_id === registration.id)
+    .reduce((sum, entry) => sum + Number(entry.amount), 0);
+  return {
+    ...registration,
+    amount_due: due.toFixed(2),
+    amount_paid: paid.toFixed(2),
+    payment_status: paid >= due ? "paid" : paid > 0 ? "partial" : "unpaid",
+    refund_due: Math.max(0, paid - due).toFixed(2),
+  };
+});
 
 /** Shared mutable store — used by both public and admin handlers. */
 export const sharedStore = {
@@ -176,7 +210,6 @@ export const registrationScenarios = {
         return {
           ...registration,
           status: "confirmed",
-          payment_status: "paid",
           updated_at: "2026-03-08T10:30:00Z",
         };
       }

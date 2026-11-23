@@ -18,7 +18,6 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/api-types";
-import { toAmount } from "../shared/money";
 import type { OrderAnswer } from "@/lib/editions/orderQuestions";
 import type { Product } from "@/api-types";
 import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
@@ -28,6 +27,7 @@ import { fetchPaymentTransactions } from "@/lib/api/adminFetch";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { transactionAmountLabel } from "../shared/paymentTransactionLabels";
 import { m } from "@/paraglide/messages";
+import { toAmount } from "../shared/money";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 function invalidProductQuantity(quantity: number): boolean {
@@ -183,14 +183,15 @@ export default function BookingEditor({
     enabled: showLedger,
   });
 
-  const amountDue = products.length
-    ? products.reduce(
-        (sum, product) =>
-          sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? Number(product.price)),
-        0,
-      )
-    : toAmount(registration.amount_due);
-  const amountPaid = toAmount(registration.amount_paid);
+  const orderChanged =
+    guestCount !== registration.guest_count ||
+    products.some(({ id }) => (quantities[id] ?? 0) !== (purchased[id] ?? 0));
+  const projectedTotal = products.reduce(
+    (sum, product) =>
+      sum + (quantities[product.id] ?? 0) * (bookedPrices[product.id] ?? Number(product.price)),
+    0,
+  );
+  const projectedRefund = toAmount(registration.amount_paid) - projectedTotal;
   const calculatedTableQuantity = products.reduce(
     (sum, product) => (product.unit === "table" ? sum + (quantities[product.id] ?? 0) : sum),
     0,
@@ -290,22 +291,18 @@ export default function BookingEditor({
               )}
             </form.Field>
           </AdminField>
-          <div className="site-sm:w-4/12 text-sm self-end">
-            <div>
-              {m.admin_booking_total()}: €{amountDue.toFixed(2)}
-            </div>
-            <div>
-              {m.admin_inventory_paid()}: €{amountPaid.toFixed(2)}
-            </div>
-            <div>
-              {m.admin_inventory_refund()}: €{Math.max(0, amountPaid - amountDue).toFixed(2)}
-            </div>
-            {amountPaid < amountDue && (
+          {orderChanged && products.length > 0 && (
+            <div className="site-sm:w-4/12 text-sm self-end">
               <div>
-                {m.admin_booking_balance()}: €{(amountDue - amountPaid).toFixed(2)}
+                {m.admin_booking_total()}: €{projectedTotal.toFixed(2)}
               </div>
-            )}
-          </div>
+              {projectedRefund > 0 && (
+                <div>
+                  {m.admin_booking_projected_refund()}: €{projectedRefund.toFixed(2)}
+                </div>
+              )}
+            </div>
+          )}
           {products.map((product) => (
             <AdminField className="site-sm:w-6/12" key={product.id}>
               <AdminLabel>

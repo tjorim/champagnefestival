@@ -49,6 +49,7 @@ from app.schemas import (
     RegistrationVolunteerAssignment,
 )
 from app.schemas.openapi_responses import binary_response
+from app.schemas.registrations import RegistrationDashboardStats, RegistrationEventStats
 from app.services import email_consent_service, events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
 from app.services.email_service import send_email_consent_confirmation
@@ -239,6 +240,57 @@ async def admin_create_registration(
 ) -> RegistrationOut:
     return await registrations_service.admin_create_registration(
         db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
+
+
+@router.get("/stats", response_model=RegistrationDashboardStats, dependencies=[Depends(require_admin)])
+async def get_registration_dashboard_stats(
+    db: AsyncSession = Depends(get_db),
+    edition_id: str | None = Query(default=None),
+    event_date: date | None = Query(default=None),
+) -> RegistrationDashboardStats:
+    """Count booking facets and attendance together from one database snapshot."""
+    attending = Registration.status != "cancelled"
+    stmt = (
+        select(
+            Event.id,
+            Event.title,
+            Event.edition_id,
+            Event.date,
+            Edition.edition_type,
+            func.count().label("bookings"),
+            func.count().filter(Registration.status == "pending").label("pending"),
+            func.count().filter(Registration.status == "confirmed").label("confirmed"),
+            func.coalesce(func.sum(Registration.guest_count).filter(attending), 0).label("guests"),
+            func.coalesce(
+                func.sum(Registration.guest_count).filter(attending, Registration.checked_in.is_(True)), 0
+            ).label("checked_in"),
+        )
+        .select_from(Registration)
+        .join(Registration.event)
+        .outerjoin(Event.edition)
+        .group_by(Event.id, Event.title, Event.edition_id, Event.date, Edition.edition_type)
+    )
+    rows = (await db.execute(stmt)).all()
+    return RegistrationDashboardStats(
+        all=sum(row.bookings for row in rows),
+        pending=sum(row.pending for row in rows),
+        confirmed=sum(row.confirmed for row in rows),
+        festival=sum(row.bookings for row in rows if row.edition_type == "festival"),
+        standalone=sum(row.bookings for row in rows if row.edition_type not in (None, "festival")),
+        active=sum(row.bookings for row in rows if edition_id is not None and row.edition_id == edition_id),
+        today=sum(row.bookings for row in rows if row.date == event_date),
+        events=[
+            RegistrationEventStats(
+                event_id=row.id,
+                event_title=row.title,
+                edition_id=row.edition_id,
+                total=row.guests,
+                checked_in=row.checked_in,
+            )
+            for row in rows
+            if row.guests
+        ],
     )
 
 
