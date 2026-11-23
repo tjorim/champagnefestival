@@ -12,6 +12,7 @@ import {
 import { PersonDirectoryMatches } from "./PersonDirectoryMatches";
 import { SaveIcon, UserPlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
 import { Icon } from "@/components/Icon";
 import { useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -52,55 +53,11 @@ export interface PersonFormData {
   notes: string;
 }
 
-const KNOWN_ROLES = ["member", "volunteer", "visitor", "admin"] as const;
-type KnownRole = (typeof KNOWN_ROLES)[number];
+const DIRECTORY_ROLES = ["member", "volunteer"] as const;
+type DirectoryRole = (typeof DIRECTORY_ROLES)[number];
 
-/** Maps localized or variant spellings to canonical role keys */
-const ROLE_ALIASES: Record<string, KnownRole> = {
-  // member
-  member: "member",
-  lid: "member",
-  membre: "member",
-  // volunteer
-  volunteer: "volunteer",
-  vrijwilliger: "volunteer",
-  benevole: "volunteer",
-  bénévole: "volunteer",
-  // visitor
-  visitor: "visitor",
-  bezoeker: "visitor",
-  visiteur: "visitor",
-  // admin
-  admin: "admin",
-  beheerder: "admin",
-  administrateur: "admin",
-};
-
-function canonicalizeRole(raw: string): string {
-  const key = raw.trim().toLowerCase();
-  return ROLE_ALIASES[key] ?? key;
-}
-
-function roleLabel(role: string): string {
-  switch (role) {
-    case "member":
-      return m.admin_role_member();
-    case "volunteer":
-      return m.admin_role_volunteer();
-    case "visitor":
-      return m.admin_role_visitor();
-    case "admin":
-      return m.admin_role_admin();
-    default:
-      return role;
-  }
-}
-
-function parseRoles(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((r) => canonicalizeRole(r))
-    .filter(Boolean);
+function roleLabel(role: DirectoryRole): string {
+  return role === "member" ? m.admin_role_member() : m.admin_role_volunteer();
 }
 
 export default function PersonFormModal({
@@ -133,7 +90,7 @@ export default function PersonFormModal({
             phone: record.phone ?? "",
             preferred_language: record.preferred_language ?? null,
             address: record.address ?? "",
-            rolesInput: (record.roles ?? []).join(", "),
+            roles: DIRECTORY_ROLES.filter((role) => record.roles?.includes(role)),
             notes: record.notes ?? "",
           }
         : {
@@ -142,7 +99,7 @@ export default function PersonFormModal({
             phone: "",
             preferred_language: null,
             address: "",
-            rolesInput: "",
+            roles: [] as DirectoryRole[],
             notes: "",
           },
     [record],
@@ -160,7 +117,7 @@ export default function PersonFormModal({
           phone: value.phone.trim(),
           preferred_language: value.preferred_language,
           address: value.address.trim(),
-          roles: parseRoles(value.rolesInput),
+          roles: value.roles,
           notes: value.notes.trim(),
         });
         onHide();
@@ -200,14 +157,15 @@ export default function PersonFormModal({
     busy: isSubmitting,
     onDismiss: onHide,
   });
-  const rolesInput = useSelector(form.atom, (s) => s.values.rolesInput) ?? "";
-  const currentRoles = parseRoles(rolesInput);
+  const currentRoles = useSelector(form.atom, (s) => s.values.roles);
 
-  function toggleRole(role: string) {
-    const next = currentRoles.includes(role)
-      ? currentRoles.filter((r) => r !== role)
-      : [...currentRoles, role];
-    form.setFieldValue("rolesInput", next.join(", "));
+  function toggleRole(role: DirectoryRole, pressed: boolean) {
+    form.setFieldValue(
+      "roles",
+      DIRECTORY_ROLES.filter((option) =>
+        option === role ? pressed : currentRoles.includes(option),
+      ),
+    );
   }
 
   return (
@@ -395,34 +353,23 @@ export default function PersonFormModal({
               )}
             </form.Field>
             <p className="text-sm text-subtle mb-4">{m.workspace_role_help()}</p>
-            <AdminField className="mb-4" controlId="person-roles">
-              <AdminLabel className={ADMIN_LABEL_CLASS}>{m.admin_people_roles_label()}</AdminLabel>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {KNOWN_ROLES.map((role) => (
-                  <Button
+            <fieldset className="mb-4">
+              <legend className={ADMIN_LABEL_CLASS}>{m.admin_people_roles_label()}</legend>
+              <div className="flex flex-wrap gap-2">
+                {DIRECTORY_ROLES.map((role) => (
+                  <Toggle
                     key={role}
                     size="sm"
-                    variant={currentRoles.includes(role) ? "warning" : "outline"}
-                    onClick={() => toggleRole(role)}
+                    variant="outline"
+                    pressed={currentRoles.includes(role)}
+                    onPressedChange={(pressed) => toggleRole(role, pressed)}
                     type="button"
                   >
                     {roleLabel(role)}
-                  </Button>
+                  </Toggle>
                 ))}
               </div>
-              <form.Field name="rolesInput">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    className={ADMIN_CONTROL_CLASS}
-                    placeholder={m.admin_people_roles_placeholder()}
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
+            </fieldset>
 
             <AdminField
               className="mb-4"

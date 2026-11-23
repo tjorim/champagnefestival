@@ -17,7 +17,6 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ids import make_id
-from app.db.queries import roles_contains
 from app.models import EditionPollOption, EditionPollQuestion, Person, Registration, VolunteerMealNote
 from app.schemas import (
     AdminPollOrderIn,
@@ -409,7 +408,7 @@ async def _orders(
             select(Person)
             .where(
                 Person.anonymised.is_(False),
-                or_(roles_contains("volunteer") & role_active("volunteer"), Person.id.in_(sorted(answers))),
+                or_(role_active("volunteer"), Person.id.in_(sorted(answers))),
             )
             .order_by(func.lower(Person.name), Person.id)
         )

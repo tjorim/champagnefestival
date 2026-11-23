@@ -5,6 +5,7 @@ import pytest
 from app.main import app
 from app.models import Person, User
 from app.services.visitor_session import get_current_user_with_claims
+from tests.helpers import role_periods
 
 
 @pytest.mark.anyio
@@ -14,7 +15,7 @@ from app.services.visitor_session import get_current_user_with_claims
         (["member"], {}, False, "active"),
         (["member"], {"member": "2026-01-01"}, False, "inactive"),
         (["member"], {}, True, "inactive"),
-        (["volunteer", "admin"], {}, False, "inactive"),
+        (["volunteer"], {}, False, "inactive"),
     ],
 )
 async def test_membership_uses_active_directory_state(me_client, db_session, roles, retired, anonymised, expected):
@@ -26,8 +27,7 @@ async def test_membership_uses_active_directory_state(me_client, db_session, rol
                 id="membership-person",
                 name="Member",
                 email=" Member@Example.com ",
-                roles=roles,
-                retired_roles=retired,
+                role_periods=role_periods(roles, retired),
                 anonymised=anonymised,
             ),
         ]
@@ -56,7 +56,12 @@ async def test_membership_uses_active_directory_state(me_client, db_session, rol
 async def test_membership_never_borrows_stored_email_for_oidc(me_client, db_session, claims, expected):
     user = User(id="membership-user", oidc_subject="membership-sub", verified_email="member@example.com")
     db_session.add_all(
-        [user, Person(id="membership-person", name="Member", email="member@example.com", roles=["member"])]
+        [
+            user,
+            Person(
+                id="membership-person", name="Member", email="member@example.com", role_periods=role_periods(["member"])
+            ),
+        ]
     )
     await db_session.commit()
     app.dependency_overrides[get_current_user_with_claims] = lambda: (user, claims)

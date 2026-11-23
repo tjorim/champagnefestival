@@ -52,6 +52,8 @@ const API_ERROR_MESSAGES: Record<string, () => string> = {
   volunteer_required: m.api_error_volunteer_required,
   member_sign_in_required: m.member_sign_in_prompt,
   membership_required: m.membership_required,
+  invalid_directory_role: m.api_error_invalid_directory_role,
+  invalid_role_start: m.api_error_invalid_role_start,
   member_email_in_use: m.api_error_member_email_in_use,
   order_question_in_use: m.api_error_order_question_in_use,
   order_question_unavailable: m.api_error_order_question_unavailable,

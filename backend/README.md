@@ -1216,6 +1216,35 @@ with unknown roles are revoked, disabled, and assigned the volunteer role.
 Downgrading removes the checks. It does not undo data repairs.
 
 
+### Person role periods (#1649)
+
+`person_role_periods` stores Member and Volunteer periods, with a nullable start
+for unknown dates and a nullable end for an active role. Retirement closes a
+period and keeps the person in the role directory. Removing a role closes the
+period and marks it removed, preserving the history while excluding that role
+from lists and counts. Anonymisation excludes the person from active lists.
+REST and MCP still return `roles`, `retired_roles` and `role_history` from the
+periods. Staff access comes from the identity provider.
+
+A unique index on the open membership's trigger-maintained contact key protects
+case-insensitive, trimmed addresses for non-anonymised members. The triggers
+release the key on retirement, removal, anonymisation or deletion and refresh
+it when the address changes. The parent record remains the source of the
+address.
+
+Revision `015` prefers usable role history and falls back to the legacy
+role and retirement values. It maps Dutch and French aliases for both roles,
+ignores unsupported values (including Visitor and Admin), and keeps an unknown
+start when a date cannot be recovered. An invalid fallback retirement date
+uses the migration day. If normalisation exposes a duplicate active member
+email, the previously indexed member takes priority, followed
+by the oldest record and then the person ID. Other memberships with that email
+are closed on the migration day or their recorded start, whichever is later.
+
+Take a database backup before upgrading. Downgrading to `014` reconstructs the
+canonical JSON fields. Recovering discarded values, original spellings or
+pre-normalisation conflicts requires restoring the pre-upgrade backup.
+
 ### Booking order lines (#1650)
 
 Migration `014` moves orders to `registration_order_lines`. Each line keeps its

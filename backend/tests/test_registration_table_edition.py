@@ -62,7 +62,7 @@ async def _registration_for(client, edition_id: str) -> str:
     assert r.status_code == 200, r.text
     event_id = r.json()[0]["id"]
 
-    r = await client.post("/api/people", json={"name": "Collector", "roles": ["visitor"]}, headers=ADMIN_HEADERS)
+    r = await client.post("/api/people", json={"name": "Collector"}, headers=ADMIN_HEADERS)
     person_id = r.json()["id"]
 
     r = await client.post(

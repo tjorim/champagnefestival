@@ -10,7 +10,7 @@ import { editionOut, eventOut, venueOut } from "@/mocks/data/builders";
  * empty, and saving wrote the blank values over the record.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/features/admin/editions/EditionModal";
@@ -321,7 +321,15 @@ describe("admin edit modals prefill from the record being edited", () => {
       expect(screen.getByLabelText(/registration_name/)).toHaveValue("Alice Dupont");
     });
     expect(screen.getByLabelText("registration_email")).toHaveValue("alice@example.com");
-    expect(screen.getByLabelText("admin_people_roles_label")).toHaveValue("member");
+    const roles = screen.getByRole("group", { name: "admin_people_roles_label" });
+    expect(
+      within(roles).getByRole("button", { name: "admin_role_member", pressed: true }),
+    ).toBeVisible();
+    expect(
+      within(roles).getByRole("button", { name: "admin_role_volunteer", pressed: false }),
+    ).toBeVisible();
+    expect(within(roles).getAllByRole("button")).toHaveLength(2);
+    expect(within(roles).queryByRole("textbox")).toBeNull();
   });
 
   it("VolunteerFormModal keeps the volunteer's values", async () => {

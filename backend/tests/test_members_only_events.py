@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models import Person, Registration
+from app.services.role_history import retire_role
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
 from tests.routers.test_visitor_sessions import _capture_sent_token
 from tests.routers.test_waitlist import SUBMISSION_ID, _create_sold_out_product
@@ -22,7 +23,7 @@ async def test_member_gate(client, db_session, monkeypatch, state):
     ).json()
     stored = await db_session.get(Person, person["id"])
     if state == "retired":
-        stored.retired_roles = {"member": "2026-10-24"}
+        retire_role(stored, "member")
     if state == "anonymised":
         stored.anonymised = True
     await db_session.commit()

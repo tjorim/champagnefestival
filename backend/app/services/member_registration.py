@@ -1,13 +1,12 @@
 """Verified visitor membership gate shared by public booking and waitlist writes."""
 
 from fastapi import Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.queries import roles_contains
 from app.models import Person, User
 from app.services.errors import ApiHTTPException
-from app.services.people_listing import role_active
+from app.services.member_email import current_member_id_by_email
 from app.services.visitor_session import COOKIE_NAME, resolve_session
 
 
@@ -22,14 +21,7 @@ async def verified_member(db: AsyncSession, user: User | None) -> tuple[Person, 
         raise ApiHTTPException(401, "member_sign_in_required", "Sign in with a verified visitor session.")
     email = (user.verified_email or "").strip().lower() if user else ""
     person = (
-        await db.scalar(
-            select(Person).where(
-                roles_contains("member"),
-                role_active("member"),
-                func.lower(func.trim(Person.email)) == email,
-                Person.anonymised.is_(False),
-            )
-        )
+        await db.scalar(select(Person).where(Person.id == current_member_id_by_email(email).scalar_subquery()))
         if email
         else None
     )

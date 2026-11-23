@@ -9,7 +9,7 @@ import pytest
 from app.mcp.admin import poll as mcp_poll
 from app.models import Edition, Person, Venue
 from app.schemas import PollAttendanceItem, PollSelectionItem
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, role_periods
 
 
 async def _create_edition(db_session, *, edition_id: str = "edition-1") -> str:
@@ -166,7 +166,7 @@ async def test_confirmed_deletes(db_session):
     dinner = await mcp_poll.create_poll_question(
         factory, "admin-1", edition_id=edition_id, kind="yes_no", title_nl="Eten?"
     )
-    db_session.add(Person(id="per-1", name="Sofie", roles=["volunteer"]))
+    db_session.add(Person(id="per-1", name="Sofie", role_periods=role_periods(["volunteer"])))
     await db_session.flush()
     db_session.add(VolunteerPollSelection(volunteer_id="per-1", option_id=option["id"], quantity=2))
     db_session.add(VolunteerPollAnswer(volunteer_id="per-1", question_id=dinner["id"], attending=True, people=2))
@@ -195,8 +195,8 @@ async def test_admin_enters_answers_also_for_closed_questions(db_session):
     dinner = await mcp_poll.create_poll_question(
         factory, "admin-1", edition_id=edition_id, kind="yes_no", title_nl="Eten?"
     )
-    db_session.add(Person(id="per-1", name="Sofie", roles=["volunteer"]))
-    db_session.add(Person(id="per-2", name="Visitor", roles=[]))
+    db_session.add(Person(id="per-1", name="Sofie", role_periods=role_periods(["volunteer"])))
+    db_session.add(Person(id="per-2", name="Visitor", role_periods=role_periods([])))
     await db_session.commit()
     pick = [PollSelectionItem(option_id=soup["id"], quantity=2)]
     attending = [PollAttendanceItem(question_id=dinner["id"], attending=True, people=3)]
@@ -249,7 +249,7 @@ async def test_all_new_kinds_can_be_created_and_answered_through_mcp(db_session)
     option = await mcp_poll.create_poll_option(
         factory, "admin", question_id=questions["single_choice"]["id"], label_nl="Keuze"
     )
-    db_session.add(Person(id="new-volunteer", name="Volunteer", roles=["volunteer"]))
+    db_session.add(Person(id="new-volunteer", name="Volunteer", role_periods=role_periods(["volunteer"])))
     await db_session.commit()
     row = await mcp_poll.set_volunteer_poll_order(
         factory,

@@ -898,10 +898,11 @@ check/retry succeeds and the journal is removed.
   members; a repeated create with that email returns `409 member_email_in_use`, rather than
   claiming an existing member is the result of this request. Empty-email creates can duplicate.
 - Member/person updates and member reactivation validate the resulting current membership.
-  The database partial unique index also covers concurrent writes, with the same stable conflict
-  code. Exemption flag/note updates are absolute assignments; replay converges on the same values
-  but can add audit entries. Reactivation remains a no-op when already active. Clients do not
-  automatically retry these operations.
+  The database unique index on open member periods also covers concurrent writes, with the same stable
+  conflict code. Role updates, retirement, reactivation and merge lock the affected people on PostgreSQL
+  before reading the periods they will change. Each role has at most one open period. Replaying an
+  exemption flag or note update assigns the same values and can add audit entries. Reactivation
+  remains a no-op when already active. Clients do not automatically retry these operations.
 - People merge checks the surviving email and combined role state, excluding the duplicate being
   deleted; the duplicate releases its email inside the same transaction before adoption. Conflicts
   roll back everything. A successful replay still returns 404 for the removed duplicate; merge has

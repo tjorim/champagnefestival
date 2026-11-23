@@ -122,7 +122,7 @@ translations, account unification, poll orders, ...) stay at the top. Sibling-te
 Rules: every JSON route declares a response model; routers do not touch the database directly; code used by one domain
 stays in that domain's modules. Dependencies point downwards: `routers` and `mcp` -> `services` -> `schemas`, `models` ->
 `core`, `db`. `core`, `db`, `models` and `schemas` do not import `routers` or `mcp`. The known upward edges are
-`core/ratelimit.py` (reads the rate-limit table through `models`), `db/queries.py` (the `Person.roles` filter),
+`core/ratelimit.py` (reads the rate-limit table through `models`), `db/queries.py` (the `PersonRolePeriod` filters),
 `db/sqlite_compat.py` (imports `services/live` and `services/public_render_cache`: the SQLite stand-in for
 LISTEN/NOTIFY), `schemas/composer.py` (imports `services/composer_content.py`, the composer's locale and push-payload
 validation) and `schemas/` (the poll limits from `models`); `models/orders.py` imports two schemas under `TYPE_CHECKING`

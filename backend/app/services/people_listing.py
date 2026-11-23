@@ -12,14 +12,15 @@ from __future__ import annotations
 
 from calendar import monthrange
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
-from sqlalchemy import Text, and_, cast, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.core.dependencies import SortDirection
+from app.core.vocabularies import DirectoryRole
 from app.db.queries import roles_contains
-from app.models import Edition, Event, Person, Registration, StampCard, StampCardReward
+from app.models import Edition, Event, Person, PersonRolePeriod, Registration, StampCard, StampCardReward
 from app.services.operational_search import person_search_order_by, person_search_predicate
 
 PersonSortKey = Literal["name", "email", "created", "updated", "registration_count", "last_attended"]
@@ -91,20 +92,23 @@ def person_search_filter(q: str) -> Any:
         Person.national_register_number.ilike(like, escape="\\"),
         Person.eid_document_number.ilike(like, escape="\\"),
         Person.notes.ilike(like, escape="\\"),
-        cast(Person.roles, Text).ilike(like, escape="\\"),
+        *(roles_contains(role) for role in get_args(DirectoryRole) if q.lower() in role),
     )
 
 
-def role_retired(role: str, column: Any = None) -> Any:
-    """True when *role* is a key of the person's ``retired_roles`` (``column`` for subqueries)."""
-    column = Person.retired_roles if column is None else column
-    return func.json_extract_path_text(column, role.strip().lower()).is_not(None)
-
-
-def role_active(role: str, *, anonymised_column: Any = None, retired_column: Any = None) -> Any:
-    """Active in *role*: the person is not anonymised and has not retired the role."""
-    anonymised_column = Person.anonymised if anonymised_column is None else anonymised_column
-    return and_(anonymised_column.is_(False), ~role_retired(role, retired_column))
+def role_active(role: str, *, person_id: Any = Person.id, anonymised_column: Any = Person.anonymised):
+    """An open period is active unless the person has been anonymised."""
+    return and_(
+        anonymised_column.is_(False),
+        select(PersonRolePeriod.position)
+        .where(
+            PersonRolePeriod.person_id == person_id,
+            PersonRolePeriod.role == role.strip().lower(),
+            PersonRolePeriod.ended_on.is_(None),
+        )
+        .correlate_except(PersonRolePeriod)
+        .exists(),
+    )
 
 
 def filtered_people_stmt(

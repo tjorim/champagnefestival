@@ -16,6 +16,7 @@ import app.routers.public_pages as public_pages_module
 from app.core.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
 from app.db import sqlite_compat
 from app.db.base import Base
+from app.db.member_email_index import POSTGRES_MEMBER_EMAIL_STATEMENTS, SQLITE_MEMBER_EMAIL_STATEMENTS
 from app.db.operational_search import (
     OPERATIONAL_SEARCH_SCHEMA_STATEMENTS,
     OPERATIONAL_SEARCH_SQLITE_STATEMENTS,
@@ -100,6 +101,8 @@ async def engine():
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+        for statement in SQLITE_MEMBER_EMAIL_STATEMENTS if IS_SQLITE else POSTGRES_MEMBER_EMAIL_STATEMENTS:
+            await conn.execute(text(statement))
         if IS_SQLITE:
             for statement in OPERATIONAL_SEARCH_SQLITE_STATEMENTS:
                 await conn.execute(text(statement))

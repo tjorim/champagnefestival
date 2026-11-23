@@ -34,6 +34,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Store directory membership and volunteering in indexed role periods, migrate legacy aliases, and limit the person editor to those two roles (#1649).
 - Store booked order lines in indexed rows, including booked prices, units and delivery counts (#1650).
 - Share public booking creation and QR, volunteer and admin check-in through registration services. Derive attendance from the check-in timestamp (#1663).
 - Share fixed vocabularies across API schemas and database checks and normalise legacy values before enforcing the new checks (#1652).

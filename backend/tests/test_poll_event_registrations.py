@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.models import Person, Registration, VolunteerPollAnswer
 from app.schemas import VolunteerPollAnswerIn
 from app.services.poll_questions_service import answer_poll_question
+from app.services.role_history import retire_role
 from tests.helpers import _create_event, _post_registration, requires_postgres
 from tests.poll_helpers import Volunteers, create_question
 
@@ -140,7 +141,7 @@ async def test_link_validation_and_public_registration_gate(client, volunteer_cl
 @pytest.mark.anyio
 async def test_retired_volunteer_cannot_create_booking(client, volunteer_client_as, db_session):
     _, question, volunteers, person = await setup(client, volunteer_client_as, db_session)
-    person.retired_roles = {"volunteer": "2026-10-24"}
+    retire_role(person, "volunteer")
     await db_session.commit()
     response = await answer(volunteers, question, True)
     assert response.status_code == 403

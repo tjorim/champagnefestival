@@ -42,6 +42,7 @@ class VideoExportProfile(StrEnum):
     SLIDESHOW_V1 = "signage-slideshow-v1"
 
 
+DirectoryRole = Literal["member", "volunteer"]
 IntegrationRole = Literal["admin", "volunteer"]
 ConsentSource = Literal["self_service", "registration_form", "unknown"]
 ConsentRevocationSource = Literal["self_service", "admin", "merged", "unsubscribe_link", "unknown"]

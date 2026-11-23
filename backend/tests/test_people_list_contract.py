@@ -18,7 +18,7 @@ import pytest
 from app.core.dependencies import DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT
 from app.models import Person
 from app.services.operational_search import normalize_text
-from tests.helpers import ADMIN_HEADERS
+from tests.helpers import ADMIN_HEADERS, role_periods
 
 # Single-word names and equal-length e-mail local parts keep Python's ordinal
 # comparison identical to the database collation, whatever it is.
@@ -40,7 +40,7 @@ async def _seed(db_session, count: int = 24) -> list[Person]:
             id=f"per_{i:03d}",
             name=_NAMES[i % len(_NAMES)],
             email=_EMAILS[i % len(_EMAILS)] if i % 3 == 0 else f"member{i:03d}@x.io",
-            roles=["volunteer"] if i % 3 == 0 else ["member"],
+            role_periods=role_periods(["volunteer"] if i % 3 == 0 else ["member"]),
             anonymised=i % 4 == 0,
             created_at=_STAMPS[i % len(_STAMPS)],
             updated_at=_STAMPS[(i * 2) % len(_STAMPS)],
@@ -251,11 +251,11 @@ async def test_volunteers_and_people_share_one_q_semantics(client, db_session):
     name/address/NISS/eID subset volunteers used to search."""
     db_session.add_all(
         [
-            Person(id="per_a", name="Aaa", roles=["volunteer"], notes="Zymurgy Club"),
-            Person(id="per_b", name="Bbb", roles=["volunteer"], notes="knows the zymurgy basics"),
-            Person(id="per_c", name="Ccc", roles=["volunteer"], phone="+32 400 11 22 33"),
-            Person(id="per_d", name="Ddd", roles=["member"], notes="Zymurgy Club"),
-            Person(id="per_e", name="Eee", roles=["volunteer"]),
+            Person(id="per_a", name="Aaa", role_periods=role_periods(["volunteer"]), notes="Zymurgy Club"),
+            Person(id="per_b", name="Bbb", role_periods=role_periods(["volunteer"]), notes="knows the zymurgy basics"),
+            Person(id="per_c", name="Ccc", role_periods=role_periods(["volunteer"]), phone="+32 400 11 22 33"),
+            Person(id="per_d", name="Ddd", role_periods=role_periods(["member"]), notes="Zymurgy Club"),
+            Person(id="per_e", name="Eee", role_periods=role_periods(["volunteer"])),
         ]
     )
     await db_session.commit()
@@ -291,9 +291,16 @@ async def test_mcp_member_and_volunteer_lists_share_the_people_q_semantics(clien
 
     db_session.add_all(
         [
-            Person(id="per_m1", name="Mia", roles=["member"], national_register_number="91010112345"),
-            Person(id="per_m2", name="Max", roles=["member"], eid_document_number="BEX999"),
-            Person(id="per_v1", name="Vic", roles=["volunteer"], national_register_number="91010112399"),
+            Person(
+                id="per_m1", name="Mia", role_periods=role_periods(["member"]), national_register_number="91010112345"
+            ),
+            Person(id="per_m2", name="Max", role_periods=role_periods(["member"]), eid_document_number="BEX999"),
+            Person(
+                id="per_v1",
+                name="Vic",
+                role_periods=role_periods(["volunteer"]),
+                national_register_number="91010112399",
+            ),
         ]
     )
     await db_session.commit()

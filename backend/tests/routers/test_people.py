@@ -28,7 +28,7 @@ async def test_people_crud_roles_and_filters(client):
         "email": "anne@example.com",
         "phone": "+32470111222",
         "address": "Kapelstraat 8, Bredene",
-        "roles": ["Chairwoman", "Volunteer", "Member"],
+        "roles": ["Volunteer", "Member"],
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
         "visits_per_month": 1,
@@ -38,7 +38,7 @@ async def test_people_crud_roles_and_filters(client):
     r = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     person = r.json()
-    assert person["roles"] == ["chairwoman", "member", "volunteer"]
+    assert person["roles"] == ["member", "volunteer"]
 
     person_id = person["id"]
 
@@ -50,18 +50,22 @@ async def test_people_crud_roles_and_filters(client):
     assert r.status_code == 200
     assert len(r.json()["items"]) == 0
 
+    rejected = await client.put(f"/api/people/{person_id}", json={"roles": ["Treasurer"]}, headers=ADMIN_HEADERS)
+    assert rejected.status_code == 422
+    assert rejected.json()["code"] == "invalid_directory_role"
+
     r = await client.put(
         f"/api/people/{person_id}",
-        json={"roles": ["Treasurer", "Festival-Visitor"]},
+        json={"roles": ["MEMBER"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
-    assert r.json()["roles"] == ["festival-visitor", "treasurer"]
+    assert r.json()["roles"] == ["member"]
     assert r.json()["anonymised"] is False
 
     r = await client.get(
         "/api/people",
-        params={"role": "treasurer", "active": "true"},
+        params={"role": "member", "active": "true"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -635,7 +639,7 @@ async def test_members_crud(client):
         "email": "lieve@example.com",
         "phone": "+32475555111",
         "address": "Spuiplein 1, Bredene",
-        "roles": ["festival-visitor"],
+        "roles": [],
         "notes": "Prefers capsule exchange events.",
     }
 
@@ -655,7 +659,7 @@ async def test_members_crud(client):
 
     r = await client.put(
         f"/api/members/{person_id}",
-        json={"roles": ["treasurer"]},
+        json={"roles": ["volunteer"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
