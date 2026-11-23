@@ -35,7 +35,7 @@ from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
-from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
+from app.services.role_history import lock_role_people, reactivate_role, retire_role, set_role_start, sync_roles
 from app.services.serializers import person_to_out
 
 
@@ -212,6 +212,7 @@ async def create_volunteer(
 async def apply_volunteer_update(
     db: AsyncSession, volunteer: Person, body: VolunteerUpdate, *, actor: str, request_id: str | None = None
 ) -> VolunteerOut:
+    await lock_role_people(db, volunteer, required_role="volunteer")
     volunteer_id = volunteer.id
 
     nrr_in_set = "national_register_number" in body.model_fields_set
@@ -282,6 +283,7 @@ async def deactivate_volunteer(
     needs ("who was covered on which day"). Volunteering resumes with ``reactivate_volunteer`` and
     a new help period. Calling it again changes nothing and writes no second audit entry.
     """
+    await lock_role_people(db, volunteer, required_role="volunteer")
     volunteer_id = volunteer.id
     closed_ids = (
         (
@@ -317,6 +319,7 @@ async def reactivate_volunteer(
 
     Help periods are not reopened; add a new period for the next stretch. A repeat is a no-op.
     """
+    await lock_role_people(db, volunteer, required_role="volunteer")
     volunteer_id = volunteer.id
     if reactivate_role(volunteer, "volunteer"):
         await write_audit_entry(

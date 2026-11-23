@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.vocabularies import Locale
+from app.core.vocabularies import DirectoryRole, Locale
 from app.db.base import Base
-from app.db.dialect_functions import trim_spaces
 from app.models.base import _utcnow
 from app.models.vocabulary import vocabulary_check
 
@@ -69,16 +68,37 @@ class Person(Base):
     """Trigger-maintained lower-case email for authorized operational lookup."""
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
-    roles: Mapped[list[str]] = mapped_column(JSON, default=list)
-    retired_roles: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
-    """Roles the person has stepped back from, as ``{role: ISO retirement date}``. A retired role
-    stays in ``roles`` (with every registration and help period) but the person no longer counts
-    as an active member or volunteer; ``anonymised`` is the separate, person-wide marker.
-    Derived from ``role_history`` and written only by ``app.services.role_history``."""
-    role_history: Mapped[dict[str, list[dict[str, str | None]]]] = mapped_column(JSON, default=dict)
-    """When each role was held: ``{role: [{"started_on", "ended_on"}, ...]}`` (ISO days, oldest
-    first; no ``ended_on`` means in progress, a null ``started_on`` means unknown). See
-    ``app.services.role_history``."""
+    role_periods: Mapped[list[PersonRolePeriod]] = relationship(
+        lazy="selectin", order_by="PersonRolePeriod.position", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+    @property
+    def latest_role_periods(self) -> dict[str, PersonRolePeriod]:
+        return {period.role: period for period in self.role_periods}
+
+    @property
+    def roles(self) -> list[str]:
+        return sorted(role for role, period in self.latest_role_periods.items() if not period.removed)
+
+    @property
+    def retired_roles(self) -> dict[str, str]:
+        return {
+            role: period.ended_on.isoformat()
+            for role, period in self.latest_role_periods.items()
+            if not period.removed and period.ended_on is not None
+        }
+
+    @property
+    def role_history(self) -> dict[str, list[dict[str, str | None]]]:
+        history: dict[str, list[dict[str, str | None]]] = {}
+        for period in self.role_periods:
+            history.setdefault(period.role, []).append(
+                {
+                    "started_on": period.started_on.isoformat() if period.started_on else None,
+                    "ended_on": period.ended_on.isoformat() if period.ended_on else None,
+                }
+            )
+        return history
 
     inactivity_exempt: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     inactivity_exempt_note: Mapped[str] = mapped_column(Text, default="", server_default="")
@@ -118,14 +138,32 @@ class Person(Base):
     registrations: Mapped[list[Registration]] = relationship(back_populates="person")
 
 
-Index(
-    "uq_people_current_member_email",
-    func.lower(trim_spaces(Person.email)),
-    unique=True,
-    postgresql_where=text(
-        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND retired_roles ->> 'member' IS NULL AND trim(email) <> ''"
-    ),
-    sqlite_where=text(
-        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND json_extract(retired_roles, '$.member') IS NULL AND trim(email) <> ''"
-    ),
-)
+class PersonRolePeriod(Base):
+    __tablename__ = "person_role_periods"
+    __table_args__ = (
+        vocabulary_check("ck_person_role_periods_role", "role", DirectoryRole),
+        CheckConstraint("NOT removed OR ended_on IS NOT NULL", name="ck_person_role_periods_removed"),
+        Index("ix_person_role_periods_role_person", "role", "person_id"),
+        Index(
+            "uq_person_role_periods_open",
+            "person_id",
+            "role",
+            unique=True,
+            postgresql_where=text("ended_on IS NULL"),
+            sqlite_where=text("ended_on IS NULL"),
+        ),
+    )
+
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    role: Mapped[str] = mapped_column(String(20), primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    started_on: Mapped[date | None] = mapped_column(Date)
+    ended_on: Mapped[date | None] = mapped_column(Date)
+    removed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    """An explicit removal from the directory, as distinct from retirement."""
+
+    member_email: Mapped[str | None] = mapped_column(String(320))
+    """Trigger-maintained index key for open, non-anonymised memberships with an email."""
+
+
+Index("uq_people_current_member_email", func.lower(PersonRolePeriod.member_email), unique=True)

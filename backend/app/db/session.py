@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import settings
 from app.db import sqlite_compat
 from app.db.base import Base
+from app.db.member_email_index import POSTGRES_MEMBER_EMAIL_STATEMENTS, SQLITE_MEMBER_EMAIL_STATEMENTS
 from app.db.operational_search import (
     OPERATIONAL_SEARCH_SCHEMA_STATEMENTS,
     OPERATIONAL_SEARCH_SQLITE_STATEMENTS,
@@ -68,6 +69,8 @@ async def create_tables() -> None:
         sqlite_compat.prepare_metadata(Base.metadata)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        for statement in SQLITE_MEMBER_EMAIL_STATEMENTS if sqlite else POSTGRES_MEMBER_EMAIL_STATEMENTS:
+            await conn.execute(text(statement))
         if sqlite:
             # The search triggers have a SQLite twin; the trigram indexes and the append-only payment
             # ledger triggers are PostgreSQL features.

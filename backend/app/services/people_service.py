@@ -48,20 +48,10 @@ from app.services.member_email import (
     ensure_member_email,
     flush_member_changes,
 )
-from app.services.role_history import sync_roles
+from app.services.role_history import lock_role_people, merge_roles, normalise_roles, sync_roles
 from app.services.serializers import person_to_out
 
 logger = logging.getLogger(__name__)
-
-
-def normalise_roles(roles: list[str]) -> list[str]:
-    normalised: set[str] = set()
-    for role in roles:
-        if not role or not role.strip():
-            continue
-        r = role.strip().lower()
-        normalised.add(r)
-    return sorted(normalised)
 
 
 def normalise_optional_identity(value: str | None) -> str | None:
@@ -207,6 +197,15 @@ async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> PersonOut:
     reject_member_fields(body)
+    roles = normalise_roles(body.roles) if body.roles is not None else None
+    if roles is not None:
+        await lock_role_people(db, person)
+        releasing_member = "member" in person.roles and "member" not in roles
+        sync_roles(person, roles)
+        if releasing_member and "email" in body.model_fields_set:
+            # Release the indexed address before changing the parent email.
+            await flush_member_changes(db)
+
     for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
@@ -222,18 +221,16 @@ async def apply_person_update(
     nrr = normalise_optional_identity(body.national_register_number) if nrr_in_set else None
     eid = normalise_optional_identity(body.eid_document_number) if eid_in_set else None
 
-    if nrr_in_set and nrr is not None:
-        await ensure_unique_identity_fields(db, national_register_number=nrr, exclude_id=person.id)
-    if eid_in_set and eid is not None:
-        await ensure_unique_identity_fields(db, eid_document_number=eid, exclude_id=person.id)
+    with db.no_autoflush:
+        if nrr_in_set and nrr is not None:
+            await ensure_unique_identity_fields(db, national_register_number=nrr, exclude_id=person.id)
+        if eid_in_set and eid is not None:
+            await ensure_unique_identity_fields(db, eid_document_number=eid, exclude_id=person.id)
 
     if nrr_in_set:
         person.national_register_number = nrr
     if eid_in_set:
         person.eid_document_number = eid
-
-    if body.roles is not None:
-        sync_roles(person, normalise_roles(body.roles))
 
     await ensure_member_email(db, person)
     await write_audit_entry(
@@ -358,6 +355,7 @@ async def merge_people(
       if both carry conflicting values a 409 is raised.
     - The duplicate person record is deleted.
     """
+    await lock_role_people(db, canonical, duplicate)
     duplicate_id = duplicate.id
 
     # Guard unique identity fields before making any changes.
@@ -406,25 +404,7 @@ async def merge_people(
         canonical.inactivity_exempt = True
         canonical.inactivity_exempt_note = duplicate.inactivity_exempt_note
 
-    # Merge roles (union).
-    original_roles = set(canonical.roles)
-    gained = set(duplicate.roles) - original_roles
-    canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
-    # A role gained from the duplicate brings its history along.
-    canonical.role_history = {
-        **{role: list(stretches) for role, stretches in (duplicate.role_history or {}).items() if role in gained},
-        **(canonical.role_history or {}),
-    }
-    # A merged role stays retired only if no side still held it actively.
-    canonical.retired_roles = {
-        role: day
-        for role, day in (canonical.retired_roles or {}).items()
-        if role not in duplicate.roles or role in (duplicate.retired_roles or {})
-    } | {
-        role: day
-        for role, day in (duplicate.retired_roles or {}).items()
-        if role not in original_roles or role in (canonical.retired_roles or {})
-    }
+    merge_roles(canonical, duplicate)
 
     await ensure_member_email(db, canonical, exclude_ids=(duplicate.id,))
     # Release the duplicate email before an adopted active membership is flushed.

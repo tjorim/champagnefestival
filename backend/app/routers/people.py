@@ -8,16 +8,16 @@ create/update/delete/merge transitions — lives in
 from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select, true
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
 from app.core.auth import get_actor_id, require_admin
 from app.core.dependencies import ListQuery, get_request_id
-from app.db.dialect_functions import json_array_elements_text
+from app.db.queries import directory_role_period
 from app.db.session import get_db
-from app.models import Event, Person, Registration
+from app.models import Event, Person, PersonRolePeriod, Registration
 from app.schemas import (
     EmailConsentOut,
     PeopleCountsOut,
@@ -144,21 +144,20 @@ async def people_counts(
     """Counts within the full intersection of q, role and active filters."""
     matching = filtered_people_stmt(q=q, role=role, active=active, reward_due_filter=reward_due_filter).subquery()
     active_expr = (
-        role_active(role, anonymised_column=matching.c.anonymised, retired_column=matching.c.retired_roles)
+        role_active(role, person_id=matching.c.id, anonymised_column=matching.c.anonymised)
         if role
         else matching.c.anonymised.is_(False)
     )
     total, active_count = (
         await db.execute(select(func.count(), func.count().filter(active_expr)).select_from(matching))
     ).one()
-    role_values = json_array_elements_text(matching.c.roles).table_valued("value").alias("role_value")
-    expanded = (
-        select(matching.c.id, func.lower(role_values.c.value).label("role"))
-        .select_from(matching.join(role_values, true()))
-        .subquery()
-    )
     roles = (
-        await db.execute(select(expanded.c.role, func.count(func.distinct(expanded.c.id))).group_by(expanded.c.role))
+        await db.execute(
+            select(PersonRolePeriod.role, func.count())
+            .join(matching, PersonRolePeriod.person_id == matching.c.id)
+            .where(directory_role_period())
+            .group_by(PersonRolePeriod.role)
+        )
     ).all()
     return PeopleCountsOut(total=total, active=active_count, inactive=total - active_count, by_role=dict(roles))
 

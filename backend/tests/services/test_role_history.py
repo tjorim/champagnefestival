@@ -7,11 +7,12 @@ from fastapi import HTTPException
 
 from app.models import Person
 from app.services import role_history as rh
+from tests.helpers import role_periods
 from tests.routers.test_people import ADMIN_HEADERS
 
 
-def _person(**kwargs) -> Person:
-    return Person(id="per_test", name="Test", roles=[], retired_roles={}, role_history={}, **kwargs)
+def _person(*roles: str) -> Person:
+    return Person(id="per_test", name="Test", role_periods=role_periods(list(roles)))
 
 
 TODAY = date.today().isoformat()
@@ -28,7 +29,6 @@ def test_granting_a_role_opens_a_stretch_and_is_idempotent():
 def test_retiring_closes_the_stretch_and_reactivating_opens_a_new_one():
     person = _person()
     rh.grant_role(person, "volunteer", started_on=date(2024, 3, 21))
-    person.roles = ["volunteer"]
 
     assert rh.retire_role(person, "volunteer") is True
     assert person.retired_roles == {"volunteer": TODAY}
@@ -45,8 +45,7 @@ def test_retiring_closes_the_stretch_and_reactivating_opens_a_new_one():
 
 
 def test_a_legacy_role_without_history_retires_with_an_unknown_start():
-    person = _person()
-    person.roles = ["member"]
+    person = _person("member")
     assert rh.role_since(person, "member") is None
     assert rh.retire_role(person, "member") is True
     assert person.role_history["member"] == [{"started_on": None, "ended_on": TODAY}]
@@ -66,8 +65,7 @@ def test_removing_a_role_closes_its_stretch_and_forgets_the_retirement():
 
 
 def test_set_role_start_edits_the_latest_stretch_and_rejects_a_start_after_its_end():
-    person = _person()
-    person.roles = ["member"]
+    person = _person("member")
     rh.set_role_start(person, "member", date(2023, 1, 1))
     assert rh.role_since(person, "member") == "2023-01-01"
     rh.retire_role(person, "member")

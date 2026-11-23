@@ -4,11 +4,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.queries import roles_contains
 from app.db.session import violated_constraint_name
-from app.models import Person
+from app.models import Person, PersonRolePeriod
 from app.services.errors import ApiHTTPException
-from app.services.people_listing import role_active
 
 
 def email_conflict() -> ApiHTTPException:
@@ -25,6 +23,10 @@ def check_email_integrity(exc: IntegrityError) -> None:
         raise email_conflict() from exc
 
 
+def current_member_id_by_email(email: str):
+    return select(PersonRolePeriod.person_id).where(func.lower(PersonRolePeriod.member_email) == email)
+
+
 async def ensure_member_email(db: AsyncSession, person: Person, *, exclude_ids: tuple[str, ...] = ()) -> None:
     if "member" not in (person.roles or []) or person.anonymised or "member" in (person.retired_roles or {}):
         return
@@ -34,14 +36,7 @@ async def ensure_member_email(db: AsyncSession, person: Person, *, exclude_ids: 
     # Updates are already staged on the object; never flush them before validating.
     with db.no_autoflush:
         conflict = await db.scalar(
-            select(Person.id)
-            .where(
-                roles_contains("member"),
-                role_active("member"),
-                func.lower(func.trim(Person.email)) == email,
-                Person.id.not_in((person.id, *exclude_ids)),
-            )
-            .limit(1)
+            current_member_id_by_email(email).where(PersonRolePeriod.person_id.not_in((person.id, *exclude_ids)))
         )
     if conflict is not None:
         await db.rollback()

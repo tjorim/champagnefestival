@@ -1,133 +1,126 @@
-"""When a person held a role: one list of stretches per role.
-
-``Person.roles`` says which roles a person holds; ``Person.role_history`` records *when*, as
-``{role: [{"started_on": day | None, "ended_on": day | None}, ...]}`` (ISO days, oldest first).
-A stretch with no ``ended_on`` is the one in progress; a ``started_on`` of ``None`` means the
-start is unknown (the role predates the history). ``Person.retired_roles`` is the quick index of
-roles whose latest stretch has ended (``{role: day it ended}``); this module is the only writer,
-so the two never drift apart.
-
-A role with no history at all is active with an unknown start, which is how every role that
-existed before the history was introduced reads.
-
-All writers assign fresh dicts/lists: the JSON columns are not mutation-tracked.
-"""
-
-from __future__ import annotations
+"""Mutations of the ordered role periods behind directory membership."""
 
 from datetime import date
+from typing import get_args
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Person
-
-Stretch = dict[str, str | None]
-
-
-def _today() -> str:
-    return date.today().isoformat()
-
-
-def _history(person: Person, role: str) -> list[Stretch]:
-    return [dict(stretch) for stretch in (person.role_history or {}).get(role, [])]
+from app.core.vocabularies import DirectoryRole
+from app.models import Person, PersonRolePeriod
+from app.models.base import _utcnow
+from app.services.errors import ApiHTTPException
 
 
-def _store(person: Person, role: str, stretches: list[Stretch]) -> None:
-    person.role_history = {**(person.role_history or {}), role: stretches}
+async def lock_role_people(db: AsyncSession, *people: Person, required_role: str | None = None) -> None:
+    """Lock the parent rows before editing periods, then reload the ordered history."""
+    ids = {person.id for person in people}
+    locked = (
+        await db.scalars(
+            select(Person)
+            .where(Person.id.in_(ids))
+            .order_by(Person.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).all()
+    if len(locked) != len(ids) or (required_role and required_role not in locked[0].roles):
+        raise HTTPException(status_code=404, detail=f"{(required_role or 'person').capitalize()} not found.")
 
 
-def _set_retired(person: Person, role: str, day: str | None) -> None:
-    retired = {r: d for r, d in (person.retired_roles or {}).items() if r != role}
-    if day is not None:
-        retired[role] = day
-    person.retired_roles = retired
+def normalise_roles(roles: list[str]) -> list[str]:
+    normalised = {role.strip().lower() for role in roles if role.strip()}
+    if normalised.difference(get_args(DirectoryRole)):
+        raise ApiHTTPException(
+            status_code=422, code="invalid_directory_role", detail="Choose member or volunteer roles."
+        )
+    return sorted(normalised)
+
+
+def _append(
+    person: Person, role: str, started_on: date | None, *, ended_on: date | None = None, removed: bool = False
+) -> None:
+    latest = person.latest_role_periods.get(role)
+    person.role_periods.append(
+        PersonRolePeriod(
+            role=role,
+            position=latest.position + 1 if latest else 0,
+            started_on=started_on,
+            ended_on=ended_on,
+            removed=removed,
+        )
+    )
+    person.updated_at = _utcnow()
 
 
 def is_retired(person: Person, role: str) -> bool:
-    return role in (person.retired_roles or {})
-
-
-def _open_index(stretches: list[Stretch]) -> int | None:
-    for index in range(len(stretches) - 1, -1, -1):
-        if stretches[index].get("ended_on") is None:
-            return index
-    return None
+    return role in person.retired_roles
 
 
 def grant_role(person: Person, role: str, *, started_on: date | None = None) -> None:
-    """The person has just been given *role*: open a stretch (a no-op while one is open)."""
-    stretches = _history(person, role)
-    if _open_index(stretches) is None:
-        stretches.append({"started_on": (started_on or date.today()).isoformat(), "ended_on": None})
-        _store(person, role, stretches)
-    _set_retired(person, role, None)
+    """Open a period if the role is not currently active."""
+    latest = person.latest_role_periods.get(role)
+    if latest is None or latest.ended_on is not None:
+        _append(person, role, started_on or date.today())
 
 
 def drop_role(person: Person, role: str) -> None:
-    """*role* has been taken away: close the stretch in progress; the history stays."""
-    stretches = _history(person, role)
-    index = _open_index(stretches)
-    if index is not None:
-        stretches[index]["ended_on"] = _today()
-        _store(person, role, stretches)
-    _set_retired(person, role, None)
+    """Remove the directory role and retain its history."""
+    latest = person.latest_role_periods[role]
+    latest.ended_on = latest.ended_on or date.today()
+    latest.removed = True
+    person.updated_at = _utcnow()
 
 
 def sync_roles(person: Person, roles: list[str]) -> None:
-    """Assign ``person.roles``, opening a stretch for each added role and closing each removed one."""
-    previous = set(person.roles or [])
-    person.roles = list(roles)
-    for role in sorted(set(roles) - previous):
-        grant_role(person, role)
-    for role in sorted(previous - set(roles)):
+    previous = set(person.roles)
+    requested = set(roles)
+    for role in sorted(previous - requested):
         drop_role(person, role)
+    for role in sorted(requested - previous):
+        grant_role(person, role)
 
 
 def retire_role(person: Person, role: str) -> bool:
-    """Step back from *role*: close the stretch in progress. ``False`` if it was already retired."""
     if is_retired(person, role):
         return False
-    today = _today()
-    stretches = _history(person, role)
-    index = _open_index(stretches)
-    if index is None:
-        stretches.append({"started_on": None, "ended_on": today})
-    else:
-        stretches[index]["ended_on"] = today
-    _store(person, role, stretches)
-    _set_retired(person, role, today)
+    person.latest_role_periods[role].ended_on = date.today()
+    person.updated_at = _utcnow()
     return True
 
 
 def reactivate_role(person: Person, role: str) -> bool:
-    """Undo ``retire_role``: open a new stretch today. ``False`` if the role was not retired."""
     if not is_retired(person, role):
         return False
-    stretches = _history(person, role)
-    stretches.append({"started_on": _today(), "ended_on": None})
-    _store(person, role, stretches)
-    _set_retired(person, role, None)
+    grant_role(person, role)
     return True
 
 
 def set_role_start(person: Person, role: str, day: date) -> None:
-    """Record when the current (or, if retired, the latest) stretch of *role* started."""
-    stretches = _history(person, role)
-    if not stretches:
-        _store(person, role, [{"started_on": day.isoformat(), "ended_on": None}])
-        return
-    latest = stretches[-1]
-    ended = latest.get("ended_on")
-    if ended is not None and day.isoformat() > ended:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"The {role} role ended on {ended}; it cannot start after that.",
+    latest = person.latest_role_periods[role]
+    if latest.ended_on is not None and day > latest.ended_on:
+        raise ApiHTTPException(
+            status_code=422,
+            code="invalid_role_start",
+            detail=f"The {role} role ended on {latest.ended_on}; it cannot start after that.",
         )
-    latest["started_on"] = day.isoformat()
-    _store(person, role, stretches)
+    latest.started_on = day
+    person.updated_at = _utcnow()
 
 
 def role_since(person: Person, role: str) -> str | None:
-    """Start day of the current (or latest) stretch of *role*, if known."""
-    stretches = (person.role_history or {}).get(role, [])
-    return stretches[-1].get("started_on") if stretches else None
+    latest = person.latest_role_periods.get(role)
+    return latest.started_on.isoformat() if latest and latest.started_on else None
+
+
+def merge_roles(canonical: Person, duplicate: Person) -> None:
+    """Keep the canonical history for shared roles and adopt previously unheld roles."""
+    held = set(canonical.roles)
+    for role in duplicate.roles:
+        if role not in held:
+            for period in duplicate.role_periods:
+                if period.role == role:
+                    _append(canonical, role, period.started_on, ended_on=period.ended_on, removed=period.removed)
+        elif is_retired(canonical, role) and not is_retired(duplicate, role):
+            _append(canonical, role, duplicate.latest_role_periods[role].started_on)

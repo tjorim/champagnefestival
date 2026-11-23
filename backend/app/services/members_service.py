@@ -30,8 +30,15 @@ from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
-from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
-from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
+from app.services.people_service import normalise_optional_identity, parse_phone
+from app.services.role_history import (
+    lock_role_people,
+    normalise_roles,
+    reactivate_role,
+    retire_role,
+    set_role_start,
+    sync_roles,
+)
 from app.services.serializers import person_to_out
 
 
@@ -140,6 +147,8 @@ async def create_member(
 async def apply_member_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> PersonOut:
+    roles = normalise_roles(body.roles) if body.roles is not None else None
+    await lock_role_people(db, person, required_role="member")
     for field in (
         "name",
         "address",
@@ -165,19 +174,20 @@ async def apply_member_update(
     nrr = normalise_optional_identity(body.national_register_number) if nrr_in_set else None
     eid = normalise_optional_identity(body.eid_document_number) if eid_in_set else None
 
-    if nrr_in_set and nrr is not None:
-        await ensure_unique_fields(db, national_register_number=nrr, exclude_id=person.id)
-    if eid_in_set and eid is not None:
-        await ensure_unique_fields(db, eid_document_number=eid, exclude_id=person.id)
+    with db.no_autoflush:
+        if nrr_in_set and nrr is not None:
+            await ensure_unique_fields(db, national_register_number=nrr, exclude_id=person.id)
+        if eid_in_set and eid is not None:
+            await ensure_unique_fields(db, eid_document_number=eid, exclude_id=person.id)
 
     if nrr_in_set:
         person.national_register_number = nrr
     if eid_in_set:
         person.eid_document_number = eid
 
-    if body.roles is not None:
+    if roles is not None:
         # The member role cannot be taken away through the member endpoints.
-        sync_roles(person, sorted({*normalise_roles(body.roles), "member"}))
+        sync_roles(person, sorted({*roles, "member"}))
     ensure_member_role(person)
     if body.member_since is not None:
         set_role_start(person, "member", body.member_since)
@@ -217,6 +227,7 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
     registrations is the separate ``people_service.delete_person``. Calling it again changes
     nothing and writes no second audit entry.
     """
+    await lock_role_people(db, person, required_role="member")
     person_id = person.id
     if retire_role(person, "member"):
         await write_audit_entry(
@@ -234,6 +245,7 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
 
 async def reactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
     """Undo ``deactivate_member``: the person counts as an active member again. A repeat is a no-op."""
+    await lock_role_people(db, person, required_role="member")
     person_id = person.id
     if reactivate_role(person, "member"):
         await ensure_member_email(db, person)

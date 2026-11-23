@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,7 +16,6 @@ from app.core.auth import get_current_claims
 from app.core.ratelimit import get_client_ip
 from app.core.translations import Language
 from app.db.dialect_functions import dialect_insert
-from app.db.queries import roles_contains
 from app.db.session import get_db
 from app.models import ContactMessage, Event, Person, Registration, User
 from app.schemas import (
@@ -35,13 +34,13 @@ from app.schemas import (
 from app.services import email_consent_service
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
+from app.services.member_email import current_member_id_by_email
 from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
     authenticate_pebble_token,
     revoke_pebble_token,
     rotate_pebble_token,
 )
-from app.services.people_listing import role_active
 from app.services.serializers import registration_to_guest_out
 from app.services.users_service import (
     claim_unowned_registrations_for_email,
@@ -98,16 +97,7 @@ async def get_my_membership(
     email = verified_email_for_caller(user, claims)
     if not email:
         return MembershipSummary(state="unavailable")
-    member_id = await db.scalar(
-        select(Person.id)
-        .where(
-            roles_contains("member"),
-            role_active("member"),
-            func.lower(func.trim(Person.email)) == email,
-            Person.anonymised.is_(False),
-        )
-        .limit(1)
-    )
+    member_id = await db.scalar(current_member_id_by_email(email))
     return MembershipSummary(state="active" if member_id else "inactive")
 
 

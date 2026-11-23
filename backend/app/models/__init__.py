@@ -21,7 +21,7 @@ from app.models.organizations import Organization, OrganizationChange
 from app.models.outbox import DeliveryAttempt, OutboxJob
 from app.models.payments import PaymentTransaction
 from app.models.pebble import PebbleAccessToken
-from app.models.people import Person
+from app.models.people import Person, PersonRolePeriod
 from app.models.policies import Policy, PolicyVersion
 from app.models.poll import (
     MAX_POLL_PEOPLE,
@@ -82,6 +82,7 @@ __all__ = [
     "PaymentTransaction",
     "PebbleAccessToken",
     "Person",
+    "PersonRolePeriod",
     "Policy",
     "PolicyVersion",
     "PollDeletionNotification",

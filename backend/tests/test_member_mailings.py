@@ -477,13 +477,14 @@ def test_signing_key_must_be_long_enough():
 async def _earn_reward(client, db_session, *, consent: bool = True, language: str | None = None) -> tuple[str, str]:
     """Earn a stamp-card reward for a member; returns (person id, reward id)."""
     from app.models import Person
+    from app.services.role_history import sync_roles
     from tests.helpers import _post_registration
     from tests.routers.test_stamp_cards import check, setup_card
 
     _, event, first = await setup_card(client)
     second = (await _post_registration(client, event=event)).json()
     person = await db_session.get(Person, first["person_id"])
-    person.roles = ["member"]
+    sync_roles(person, ["member"])
     person.email = "reward@example.org"
     person.preferred_language = language
     await db_session.commit()

@@ -3,13 +3,27 @@
 from __future__ import annotations
 
 import os
-from datetime import time
+from datetime import date, time
 from typing import Any
 
 import pytest
 
+from app.models import PersonRolePeriod
+
 #: True when the suite runs on the SQLite default; see ``backend/conftest.py``.
 IS_SQLITE = os.environ["TEST_DATABASE_URL"].startswith("sqlite")
+
+
+def role_periods(roles: list[str], retired: dict[str, str] | None = None) -> list[PersonRolePeriod]:
+    return [
+        PersonRolePeriod(
+            role=role,
+            position=0,
+            removed=False,
+            ended_on=date.fromisoformat(retired[role]) if retired and role in retired else None,
+        )
+        for role in roles
+    ]
 
 
 def requires_postgres(reason: str) -> Any:

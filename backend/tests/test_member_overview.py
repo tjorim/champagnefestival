@@ -9,7 +9,7 @@ from app.mcp.admin import members as mcp_members
 from app.models import Edition, Event, Person, Registration, Venue
 from app.schemas import PersonOut
 from app.services.people_listing import inactivity_cutoff
-from tests.helpers import ADMIN_HEADERS, mcp_session_factory, requires_postgres
+from tests.helpers import ADMIN_HEADERS, mcp_session_factory, requires_postgres, role_periods
 
 
 async def member(client, email=None, **fields):
@@ -50,6 +50,25 @@ async def test_email_uniqueness_all_transitions(client):
     await member(client)
 
 
+async def test_person_update_can_release_membership_and_adopt_an_in_use_address(client):
+    current = await member(client, "current@example.com")
+    other = await member(client, "other@example.com")
+    response = await client.put(
+        f"/api/people/{other['id']}",
+        headers=ADMIN_HEADERS,
+        json={"roles": [], "email": current["email"]},
+    )
+    assert response.status_code == 200, response.text
+    person = response.json()
+    assert person["roles"] == []
+    assert person["retired_roles"] == {}
+    assert person["role_history"]["member"][-1]["ended_on"] is not None
+
+    counts = await client.get("/api/people/counts", headers=ADMIN_HEADERS, params={"role": "member"})
+    assert counts.json()["by_role"] == {"member": 1}
+    assert (await member(client, "other@example.com"))["id"] != other["id"]
+
+
 async def test_merge_checks_result_and_releases_duplicate(client):
     current = await member(client, "used@example.com")
     retired = await member(client, "retired@example.com")
@@ -81,8 +100,8 @@ async def test_merge_rejects_third_party_email_conflict(client):
 async def test_database_enforces_email_invariant(db_session):
     db_session.add_all(
         [
-            Person(id="a", name="A", email="A@example.com", roles=["member"]),
-            Person(id="b", name="B", email="a@example.com", roles=["member"]),
+            Person(id="a", name="A", email="A@example.com", role_periods=role_periods(["member"])),
+            Person(id="b", name="B", email="a@example.com", role_periods=role_periods(["member"])),
         ]
     )
     with pytest.raises(IntegrityError):
@@ -156,7 +175,10 @@ async def test_last_attended_sort_filter_highlight(client, db_session):
             category="general",
         )
     )
-    people = [Person(id=f"p{i}", name=f"Person {i}", roles=["member"], inactivity_exempt=i == 3) for i in range(5)]
+    people = [
+        Person(id=f"p{i}", name=f"Person {i}", role_periods=role_periods(["member"]), inactivity_exempt=i == 3)
+        for i in range(5)
+    ]
     db_session.add_all(people)
     await db_session.flush()
     for i, event in enumerate(["e0", "e1", "e2", "e0"]):

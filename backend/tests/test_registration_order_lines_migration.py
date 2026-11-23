@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from alembic import command
-from app.models import Edition, Event, Person, Product, Registration, Venue
+from app.models import Edition, Event, Product, Registration, Venue
 from tests.helpers import requires_postgres
 
 pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
@@ -37,7 +37,12 @@ def test_relational_order_lines_round_trip(monkeypatch):
         command.upgrade(config, "013")
         with database.begin() as connection:
             connection.execute(insert(Venue).values(id="venue", name="Venue"))
-            connection.execute(insert(Person).values(id="person", name="Person"))
+            connection.execute(
+                text("""
+                INSERT INTO people (id, name, retired_roles, role_history, anonymised)
+                VALUES ('person', 'Person', '{}', '{}', false)
+            """)
+            )
             connection.execute(insert(Edition).values(id="edition", year=2026, month="october", venue_id="venue"))
             connection.execute(
                 insert(Event).values(

@@ -4,12 +4,13 @@ from collections.abc import Sequence
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import Text, cast
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlalchemy.orm.interfaces import ORMOption
 
 from app.db.base import Base
-from app.models import Person
+from app.models import Person, PersonRolePeriod
 
 
 async def get_or_404[T: Base](
@@ -31,14 +32,30 @@ async def get_or_404[T: Base](
     return obj
 
 
-def roles_contains(role: str) -> Any:
-    """Return a SQLAlchemy filter expression that matches Person.roles JSON arrays
-    containing *role* as an exact element (case-insensitive).
+def directory_role_period():
+    """SQL predicate matching the latest, unremoved period of each directory role."""
+    newer = aliased(PersonRolePeriod)
+    return and_(
+        PersonRolePeriod.removed.is_(False),
+        ~select(newer.position)
+        .where(
+            newer.person_id == PersonRolePeriod.person_id,
+            newer.role == PersonRolePeriod.role,
+            newer.position > PersonRolePeriod.position,
+        )
+        .correlate(PersonRolePeriod)
+        .exists(),
+    )
 
-    Casts the JSON column to Text so the LIKE works on PostgreSQL.
-    We match the quoted token so that a role like "member" never accidentally
-    matches "non-member".
-    """
-    role_norm = role.strip().lower()
-    role_escaped = role_norm.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-    return cast(Person.roles, Text).ilike(f'%"{role_escaped}"%', escape="\\")
+
+def roles_contains(role: str):
+    return (
+        select(PersonRolePeriod.position)
+        .where(
+            PersonRolePeriod.person_id == Person.id,
+            PersonRolePeriod.role == role.strip().lower(),
+            directory_role_period(),
+        )
+        .correlate(Person)
+        .exists()
+    )

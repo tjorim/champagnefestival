@@ -19,6 +19,7 @@ from tests.helpers import (
     _post_registration,
     _registration_body,
     requires_postgres,
+    role_periods,
 )
 
 # ---------------------------------------------------------------------------
@@ -693,7 +694,7 @@ async def test_admin_assigns_registration_to_a_linked_volunteer(client, db_sessi
     volunteer = Person(
         id="per-assign-volunteer",
         name="Assign Volunteer",
-        roles=["volunteer"],
+        role_periods=role_periods(["volunteer"]),
         oidc_subject="assign-volunteer-sub",
     )
     db_session.add(volunteer)
@@ -731,7 +732,7 @@ async def test_admin_assign_conflicts_when_already_owned(client, db_session):
     volunteer = Person(
         id="per-assign-conflict",
         name="Assign Conflict",
-        roles=["volunteer"],
+        role_periods=role_periods(["volunteer"]),
         oidc_subject="assign-conflict-sub",
     )
     db_session.add(volunteer)
@@ -758,7 +759,7 @@ async def test_admin_assign_is_idempotent_for_a_repeated_same_target_call(client
     volunteer = Person(
         id="per-assign-retry",
         name="Assign Retry",
-        roles=["volunteer"],
+        role_periods=role_periods(["volunteer"]),
         oidc_subject="assign-retry-sub",
     )
     db_session.add(volunteer)
@@ -798,8 +799,18 @@ async def test_concurrent_assign_to_different_volunteers_yields_exactly_one_winn
     serialize them so only one commits and the other 409s."""
     created = await _post_registration(client)
     registration_id = created.json()["id"]
-    volunteer_a = Person(id="per-assign-race-a", name="Race A", roles=["volunteer"], oidc_subject="assign-race-a-sub")
-    volunteer_b = Person(id="per-assign-race-b", name="Race B", roles=["volunteer"], oidc_subject="assign-race-b-sub")
+    volunteer_a = Person(
+        id="per-assign-race-a",
+        name="Race A",
+        role_periods=role_periods(["volunteer"]),
+        oidc_subject="assign-race-a-sub",
+    )
+    volunteer_b = Person(
+        id="per-assign-race-b",
+        name="Race B",
+        role_periods=role_periods(["volunteer"]),
+        oidc_subject="assign-race-b-sub",
+    )
     db_session.add_all([volunteer_a, volunteer_b])
     await db_session.commit()
     factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -834,7 +845,9 @@ async def test_concurrent_assign_to_different_volunteers_yields_exactly_one_winn
 async def test_admin_assign_requires_the_volunteer_to_be_linked_first(client, db_session):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
-    unlinked_volunteer = Person(id="per-unlinked-volunteer", name="Unlinked Volunteer", roles=["volunteer"])
+    unlinked_volunteer = Person(
+        id="per-unlinked-volunteer", name="Unlinked Volunteer", role_periods=role_periods(["volunteer"])
+    )
     db_session.add(unlinked_volunteer)
     await db_session.commit()
 
@@ -853,7 +866,7 @@ async def test_admin_assign_requires_the_volunteer_to_be_linked_first(client, db
 async def test_admin_assign_rejects_a_non_volunteer_person(client, db_session):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
-    member = Person(id="per-not-a-volunteer", name="Just A Member", roles=["member"])
+    member = Person(id="per-not-a-volunteer", name="Just A Member", role_periods=role_periods(["member"]))
     db_session.add(member)
     await db_session.commit()
 
