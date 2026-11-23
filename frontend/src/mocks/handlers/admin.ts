@@ -786,7 +786,7 @@ export const adminHandlers = [
     const authError = requireAuth(request);
     if (authError) return authError;
     const base = {
-      edition_type: "festival",
+      edition_type: "festival" as const,
       start_date: null,
       total_paid: "0",
       total_due: "0",
@@ -800,7 +800,7 @@ export const adminHandlers = [
         ...base,
         edition_id: "edition-2024",
         year: 2024,
-        month: "March",
+        month: "march",
         events_count: 4,
         total_registrations: 62,
         total_guests: 140,
@@ -810,7 +810,7 @@ export const adminHandlers = [
         ...base,
         edition_id: "edition-2025",
         year: 2025,
-        month: "March",
+        month: "march",
         events_count: 5,
         total_registrations: 88,
         total_guests: 190,
@@ -820,7 +820,7 @@ export const adminHandlers = [
         ...base,
         edition_id: "edition-2026",
         year: 2026,
-        month: "March",
+        month: "march",
         events_count: 5,
         total_registrations: 12,
         total_guests: 0,
@@ -1231,7 +1231,7 @@ export const adminHandlers = [
       image: String(body.image ?? ""),
       website: String(body.website ?? ""),
       active: body.active !== false,
-      type: String(body.type ?? "vendor"),
+      type: body.type === "producer" || body.type === "sponsor" ? body.type : "vendor",
       contact_person_id: (body.contact_person_id as string | null) ?? null,
       contact_person: null,
       created_at: now(),
@@ -1276,7 +1276,7 @@ export const adminHandlers = [
   http.post("/api/editions", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    const body = (await request.json()) as Record<string, unknown>;
+    const body = (await request.json()) as Partial<import("@/api-types").EditionCreate>;
     const newEdition: SeedEdition = {
       organizations: [],
       co_organizer: null,
@@ -1285,12 +1285,9 @@ export const adminHandlers = [
       share_image: null,
       id: uid(),
       year: Number(body.year ?? new Date().getFullYear()),
-      month: String(body.month ?? "march"),
-      edition_type:
-        body.edition_type === "bourse" || body.edition_type === "capsule_exchange"
-          ? body.edition_type
-          : "festival",
-      dates: Array.isArray(body.dates) ? (body.dates as string[]) : [],
+      month: body.month ?? "march",
+      edition_type: body.edition_type ?? "festival",
+      dates: [],
       venue: venues.find((v) => v.id === body.venue_id) ?? venueOut(),
       events: [],
       producers: [],

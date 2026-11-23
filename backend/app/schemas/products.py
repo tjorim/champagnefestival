@@ -8,6 +8,7 @@ from typing import Literal, Self
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
+from app.core.vocabularies import ProductUnit
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.orders import OrderItemOut
 from app.schemas.types import (
@@ -64,7 +65,7 @@ class ProductTextFields(RequestModel):
 
 
 class ProductCreate(ProductTextFields):
-    unit: Literal["item", "table", "person"] = "item"
+    unit: ProductUnit = "item"
     stock: StockQuantity | None = None
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: ResourceId
@@ -94,7 +95,7 @@ class ProductCreate(ProductTextFields):
 
 
 class ProductUpdate(ProductTextFields):
-    unit: Literal["item", "table", "person"] | None = None
+    unit: ProductUnit | None = None
     stock: StockQuantity | None = None
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     update_existing_contents: bool = False
@@ -115,7 +116,7 @@ class ProductUpdate(ProductTextFields):
 
 
 class ProductOut(ResponseModel):
-    unit: Literal["item", "table", "person"] = "item"
+    unit: ProductUnit = "item"
     stock: int | None = None
     reserved_quantity: int = 0
     available_quantity: int | None = None
@@ -166,7 +167,7 @@ class ProductPublicOut(ResponseModel):
     description_en: str | None = None
     price: Decimal
     category: str
-    unit: Literal["item", "table", "person"] = "item"
+    unit: ProductUnit = "item"
     required: bool
     purchasable: bool
     available_quantity: int | None = None

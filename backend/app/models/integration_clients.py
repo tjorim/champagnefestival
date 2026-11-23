@@ -7,8 +7,10 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import IntegrationRole
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class IntegrationClient(Base):
@@ -22,6 +24,7 @@ class IntegrationClient(Base):
     """
 
     __tablename__ = "integration_clients"
+    __table_args__ = (vocabulary_check("ck_integration_clients_allowed_role", "allowed_role", IntegrationRole),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)

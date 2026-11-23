@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ids import make_id
+from app.core.vocabularies import ConsentSource
 from app.models import EmailCategory, EmailConsent, EmailConsentConfirmation, Person
 from app.schemas import EmailConsentOut, EmailPreferenceOut, EmailPreferencesOut
 from app.services.audit_service import write_audit_entry
@@ -111,7 +112,7 @@ async def preferences(db: AsyncSession, email: str | None, *, locale: str | None
     return EmailPreferencesOut(email=normalise_email(email) or None, categories=categories)
 
 
-def _new_consent(person: Person, category: EmailCategory, source: str) -> EmailConsent:
+def _new_consent(person: Person, category: EmailCategory, source: ConsentSource) -> EmailConsent:
     return EmailConsent(
         id=make_id("ecn"),
         person_id=person.id,
@@ -121,7 +122,7 @@ def _new_consent(person: Person, category: EmailCategory, source: str) -> EmailC
     )
 
 
-def _grant(db: AsyncSession, person: Person, category: EmailCategory, source: str) -> EmailConsent:
+def _grant(db: AsyncSession, person: Person, category: EmailCategory, source: ConsentSource) -> EmailConsent:
     consent = _new_consent(person, category, source)
     db.add(consent)
     return consent

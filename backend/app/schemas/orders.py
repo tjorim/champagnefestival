@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Self
+from typing import Any, Self
 
 from pydantic import ConfigDict, Field, model_validator
 
+from app.core.vocabularies import OrderQuestionKind
 from app.schemas.base import RequestModel, ResponseModel
 from app.schemas.poll import PollOptionLabels, PollQuestionTexts
 from app.schemas.types import NonEmptyText, NonNegativeQuantity, OrderQuantity, PositiveQuantity, ResourceId, Text500
@@ -73,9 +74,6 @@ class OrderItemRequest(RequestModel):
 
     product_id: NonEmptyText
     quantity: OrderQuantity
-
-
-OrderQuestionKind = Literal["single_choice", "free_text", "rating"]
 
 
 class OrderOptionWrite(PollOptionLabels):

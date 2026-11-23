@@ -11,6 +11,6 @@ export type PolicyPublicOutLocale = typeof PolicyPublicOutLocale[keyof typeof Po
 
 export const PolicyPublicOutLocale = {
   nl: 'nl',
-  en: 'en',
   fr: 'fr',
+  en: 'en',
 } as const;

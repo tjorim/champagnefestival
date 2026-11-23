@@ -7,7 +7,6 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Literal
 
 import httpx
 from fastapi import HTTPException
@@ -15,10 +14,11 @@ from pydantic import Field
 
 from app.core.config import settings
 from app.core.ratelimit import check_rate_limit
+from app.core.vocabularies import Locale
 from app.schemas import RequestModel, ResponseModel
 from app.schemas.types import NonEmptyText600
 
-Language = Literal["nl", "fr", "en"]
+Language = Locale
 logger = logging.getLogger(__name__)
 
 

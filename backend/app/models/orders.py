@@ -15,8 +15,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.vocabularies import OrderQuestionKind
 from app.db.base import Base
 from app.models.base import _optional_dutch_check
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.schemas import OrderAnswerOut, OrderQuestionOut
@@ -27,7 +29,7 @@ class EventOrderQuestion(Base):
 
     __tablename__ = "event_order_questions"
     __table_args__ = (
-        CheckConstraint("kind IN ('single_choice', 'free_text', 'rating')", name="ck_order_question_kind"),
+        vocabulary_check("ck_order_question_kind", "kind", OrderQuestionKind),
         CheckConstraint("length(trim(title_nl)) > 0", name="ck_order_question_title"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_order_question_description"),
         UniqueConstraint("id", "kind", name="uq_order_question_kind"),

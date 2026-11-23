@@ -3,7 +3,7 @@
 ``poll_questions_service`` handles everything a question has in common (texts, order, closing, copying, the
 audit trail, who answered what). Each kind is a ``PollKind`` here that knows how its answers are stored, counted,
 validated and shown, so the service never branches on the kind. To add a kind: subclass ``PollKind``, register
-it in ``KINDS``, and extend ``POLL_QUESTION_KINDS`` (and its check constraint) and ``PollQuestionKind``.
+it in ``KINDS``, and extend ``PollQuestionKind`` in the shared vocabularies.
 
 An answer is one value per volunteer and question: a ``{option_id: quantity}`` mapping for ``meals``, an
 ``(attending, people)`` tuple for ``yes_no``, or one option ID, text or rating for the scalar kinds. A question a volunteer did not answer has no entry.

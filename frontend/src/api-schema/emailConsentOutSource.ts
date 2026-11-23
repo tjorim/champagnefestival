@@ -6,11 +6,11 @@
  * OpenAPI spec version: snapshot
  */
 
-export type OrganizationCreateType = typeof OrganizationCreateType[keyof typeof OrganizationCreateType];
+export type EmailConsentOutSource = typeof EmailConsentOutSource[keyof typeof EmailConsentOutSource];
 
 
-export const OrganizationCreateType = {
-  producer: 'producer',
-  sponsor: 'sponsor',
-  vendor: 'vendor',
+export const EmailConsentOutSource = {
+  self_service: 'self_service',
+  registration_form: 'registration_form',
+  unknown: 'unknown',
 } as const;

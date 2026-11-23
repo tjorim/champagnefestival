@@ -7,8 +7,10 @@ from datetime import datetime
 from sqlalchemy import JSON, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.vocabularies import Locale
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 
 class PushSubscription(Base):
@@ -24,6 +26,7 @@ class PushSubscription(Base):
     """
 
     __tablename__ = "push_subscriptions"
+    __table_args__ = (vocabulary_check("ck_push_subscriptions_locale", "locale", Locale),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     endpoint: Mapped[str] = mapped_column(String(600), unique=True, index=True)

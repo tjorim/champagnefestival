@@ -19,10 +19,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.translations import resolve_text
+from app.core.vocabularies import PollQuestionKind
 from app.db.base import Base
 from app.models.base import _optional_dutch_check, _utcnow
+from app.models.vocabulary import vocabulary_check
 
-POLL_QUESTION_KINDS = ("yes_no", "meals", "single_choice", "free_text", "rating")
 """Attendance, meal quantities, one configured choice, free text and fixed 1–5 ratings."""
 
 
@@ -43,10 +44,7 @@ class EditionPollQuestion(Base):
     __tablename__ = "edition_poll_questions"
     __table_args__ = (
         CheckConstraint("event_id IS NULL OR kind = 'yes_no'", name="ck_poll_event_attendance"),
-        CheckConstraint(
-            "kind IN (" + ", ".join(f"'{kind}'" for kind in POLL_QUESTION_KINDS) + ")",
-            name="ck_edition_poll_questions_kind",
-        ),
+        vocabulary_check("ck_edition_poll_questions_kind", "kind", PollQuestionKind),
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_edition_poll_questions_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_edition_poll_questions_description_nl"),
     )

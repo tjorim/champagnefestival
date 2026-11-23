@@ -23,8 +23,10 @@ from sqlalchemy import (
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.vocabularies import PaymentStatus, RegistrationStatus
 from app.db.base import Base
 from app.models.base import _utcnow
+from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.events import Event
@@ -55,8 +57,8 @@ class Registration(Base):
     __table_args__ = (
         Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),
         UniqueConstraint("poll_question_id", "person_id", name="uq_registration_poll_person"),
-        CheckConstraint("status IN ('pending', 'confirmed', 'cancelled')", name="ck_registrations_status"),
-        CheckConstraint("payment_status IN ('unpaid', 'partial', 'paid')", name="ck_registrations_payment_status"),
+        vocabulary_check("ck_registrations_status", "status", RegistrationStatus),
+        vocabulary_check("ck_registrations_payment_status", "payment_status", PaymentStatus),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

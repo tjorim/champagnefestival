@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { OrganizationType } from './organizationType';
 
 export type ManagedOrganizationOut = {
   description_nl: string | null;
@@ -13,7 +14,7 @@ export type ManagedOrganizationOut = {
   image: string;
   id: number;
   name: string;
-  type: string;
+  type: OrganizationType;
   website: string;
   active: boolean;
 };

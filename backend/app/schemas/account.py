@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import EmailStr, Field, field_validator
 
+from app.core.vocabularies import Locale
 from app.schemas.base import RequestModel, ResponseModel
 
 
@@ -15,11 +16,11 @@ class PebbleAccessTokenOut(ResponseModel):
 
 
 class CommunicationPreferenceOut(ResponseModel):
-    preferred_language: Literal["nl", "fr", "en"] | None
+    preferred_language: Locale | None
 
 
 class CommunicationPreferenceUpdate(RequestModel):
-    preferred_language: Literal["nl", "fr", "en"]
+    preferred_language: Locale
 
 
 class RegistrationLookupRequest(RequestModel):
