@@ -3,11 +3,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   AdminCheck,
   AdminField,
-  AdminInput,
   AdminLabel,
   AdminOption,
   AdminSelect,
-  AdminTextarea,
 } from "@/components/admin/AdminFields";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,12 +18,7 @@ import {
   type OrderQuestion,
 } from "@/lib/editions/orderQuestions";
 import { POLL_KIND_HAS_OPTIONS, pollKindLabel } from "@/lib/editions/pollKinds";
-
-const LANGUAGES = [
-  { code: "nl", label: m.admin_language_nl },
-  { code: "fr", label: m.admin_language_fr },
-  { code: "en", label: m.admin_language_en },
-] as const;
+import { OptionLabelInputs, QuestionTextInputs } from "./QuestionEditorFields";
 
 function Configuration({ eventId }: { eventId: string }) {
   const [draft, setDraft] = useState<OrderQuestion[] | null>(null);
@@ -91,55 +84,39 @@ function Configuration({ eventId }: { eventId: string }) {
               ))}
             </AdminSelect>
           </AdminField>
-          {LANGUAGES.map(({ code, label }) => (
-            <div key={code} className="flex flex-wrap gap-2 mt-2">
-              <AdminField controlId={`order-title-${q.id}-${code}`} className="grow basis-40">
-                <AdminLabel>{m.admin_poll_question_title_in({ language: label() })}</AdminLabel>
-                <AdminInput
-                  value={q[`title_${code}`] ?? ""}
-                  maxLength={200}
-                  onChange={(e) => patch(q.id, { [`title_${code}`]: e.target.value || null })}
-                />
-              </AdminField>
-              <AdminField controlId={`order-description-${q.id}-${code}`} className="grow basis-40">
-                <AdminLabel>
-                  {m.admin_poll_question_description_in({ language: label() })}
-                </AdminLabel>
-                <AdminTextarea
-                  rows={2}
-                  maxLength={500}
-                  value={q[`description_${code}`] ?? ""}
-                  onChange={(e) => patch(q.id, { [`description_${code}`]: e.target.value || null })}
-                />
-              </AdminField>
-            </div>
-          ))}
+          <QuestionTextInputs
+            idPrefix={`order-question-${q.id}`}
+            title={{ nl: q.title_nl, fr: q.title_fr ?? "", en: q.title_en ?? "" }}
+            description={{
+              nl: q.description_nl ?? "",
+              fr: q.description_fr ?? "",
+              en: q.description_en ?? "",
+            }}
+            onChange={(field, code, value) =>
+              patch(q.id, { [`${field}_${code}`]: value || null } as Partial<OrderQuestion>)
+            }
+          />
           {POLL_KIND_HAS_OPTIONS[q.kind] && (
             <div className="mt-4">
               {q.options.map((option) => (
                 <div key={option.id} className="flex flex-wrap gap-2 items-end mb-2">
-                  {LANGUAGES.map(({ code, label }) => (
-                    <AdminField
-                      key={code}
-                      controlId={`order-option-${option.id}-${code}`}
-                      className="grow basis-40"
-                    >
-                      <AdminLabel>{m.admin_poll_label_in({ language: label() })}</AdminLabel>
-                      <AdminInput
-                        maxLength={200}
-                        value={option[`label_${code}`] ?? ""}
-                        onChange={(e) =>
-                          patch(q.id, {
-                            options: q.options.map((o) =>
-                              o.id === option.id
-                                ? { ...o, [`label_${code}`]: e.target.value || null }
-                                : o,
-                            ),
-                          })
-                        }
-                      />
-                    </AdminField>
-                  ))}
+                  <div className="grow">
+                    <OptionLabelInputs
+                      idPrefix={`order-option-${option.id}`}
+                      labels={{
+                        nl: option.label_nl,
+                        fr: option.label_fr ?? "",
+                        en: option.label_en ?? "",
+                      }}
+                      onChange={(code, value) =>
+                        patch(q.id, {
+                          options: q.options.map((o) =>
+                            o.id === option.id ? { ...o, [`label_${code}`]: value || null } : o,
+                          ),
+                        })
+                      }
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="outline-danger"

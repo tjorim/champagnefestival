@@ -30,12 +30,7 @@ import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { pollCountsSummary, pollKindLabel, POLL_KIND_HAS_OPTIONS } from "@/lib/editions/pollKinds";
 import { iso, localDate } from "../shared/AnnouncementManagement";
 import PollOptionsEditor from "./PollOptionsEditor";
-
-const TEXT_FIELDS = [
-  { language: m.admin_language_nl, title: "titleNl", description: "descriptionNl" },
-  { language: m.admin_language_fr, title: "titleFr", description: "descriptionFr" },
-  { language: m.admin_language_en, title: "titleEn", description: "descriptionEn" },
-] as const;
+import { QuestionTextInputs } from "./QuestionEditorFields";
 
 function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
   return {
@@ -49,7 +44,7 @@ function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
   };
 }
 
-/** The title and description inputs of a question, one pair per language (Dutch required). */
+/** The title and description inputs of a poll question, adapted to the shared language-keyed inputs. */
 export function QuestionTextFields({
   idPrefix,
   value,
@@ -60,36 +55,17 @@ export function QuestionTextFields({
   onChange: (next: PollQuestionWrite) => void;
 }) {
   return (
-    <div className="grow flex flex-col gap-2">
-      {TEXT_FIELDS.map(({ language, title, description }) => (
-        <div key={title} className="flex gap-2 flex-wrap">
-          <AdminField controlId={`${idPrefix}-${title}`} className="grow basis-60">
-            <AdminLabel className="text-sm text-subtle mb-1">
-              {m.admin_poll_question_title_in({ language: language() })}
-            </AdminLabel>
-            <AdminInput
-              size="sm"
-              className={ADMIN_CONTROL_CLASS}
-              value={value[title]}
-              maxLength={200}
-              onChange={(event) => onChange({ ...value, [title]: event.target.value })}
-            />
-          </AdminField>
-          <AdminField controlId={`${idPrefix}-${description}`} className="grow basis-60">
-            <AdminLabel className="text-sm text-subtle mb-1">
-              {m.admin_poll_question_description_in({ language: language() })}
-            </AdminLabel>
-            <AdminInput
-              size="sm"
-              className={ADMIN_CONTROL_CLASS}
-              value={value[description]}
-              maxLength={500}
-              onChange={(event) => onChange({ ...value, [description]: event.target.value })}
-            />
-          </AdminField>
-        </div>
-      ))}
-    </div>
+    <QuestionTextInputs
+      idPrefix={idPrefix}
+      title={{ nl: value.titleNl, fr: value.titleFr, en: value.titleEn }}
+      description={{ nl: value.descriptionNl, fr: value.descriptionFr, en: value.descriptionEn }}
+      onChange={(field, code, text) =>
+        onChange({
+          ...value,
+          [`${field}${code === "nl" ? "Nl" : code === "fr" ? "Fr" : "En"}`]: text,
+        })
+      }
+    />
   );
 }
 

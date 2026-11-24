@@ -36,7 +36,7 @@ class EditionPollQuestion(Base):
     """One question put to the volunteers of an edition.
 
     ``yes_no`` asks whether they join something and with how many people
-    (`VolunteerPollAnswer`); ``meals`` offers `EditionPollOption`s of which they pick a quantity each
+    (`VolunteerPollAnswer`, as do ``single_choice``, ``free_text`` and ``rating``); ``meals`` offers `EditionPollOption`s of which they pick a quantity each
     (`VolunteerPollSelection`). Every question has its own translated title (Dutch required), an
     optional description, a place in the list and an optional closing time after which volunteers can
     no longer change their answer.
@@ -45,6 +45,7 @@ class EditionPollQuestion(Base):
     __tablename__ = "edition_poll_questions"
     __table_args__ = (
         CheckConstraint("event_id IS NULL OR kind = 'yes_no'", name="ck_poll_event_attendance"),
+        UniqueConstraint("id", "kind", name="uq_poll_question_kind"),
         vocabulary_check("ck_edition_poll_questions_kind", "kind", PollQuestionKind),
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_edition_poll_questions_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_edition_poll_questions_description_nl"),
@@ -147,70 +148,51 @@ class VolunteerPollSelection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+_ANSWER_VALUE_CHECK = (
+    f"(kind = 'yes_no' AND attending IS NOT NULL AND people IS NOT NULL"
+    f" AND ((attending AND people BETWEEN 1 AND {MAX_POLL_PEOPLE}) OR (NOT attending AND people = 0))"
+    " AND option_id IS NULL AND text IS NULL AND rating IS NULL)"
+    " OR (kind = 'single_choice' AND option_id IS NOT NULL AND text IS NULL AND rating IS NULL"
+    " AND attending IS NULL AND people IS NULL)"
+    " OR (kind = 'free_text' AND text IS NOT NULL AND length(trim(text)) BETWEEN 1 AND 500 AND option_id IS NULL"
+    " AND rating IS NULL AND attending IS NULL AND people IS NULL)"
+    " OR (kind = 'rating' AND rating IS NOT NULL AND rating BETWEEN 1 AND 5 AND option_id IS NULL AND text IS NULL"
+    " AND attending IS NULL AND people IS NULL)"
+)
+
+
 class VolunteerPollAnswer(Base):
-    """A volunteer's answer to a ``yes_no`` `EditionPollQuestion`: whether they join and, when they do,
-    with how many people (themselves included). No row means not answered yet."""
+    """A volunteer's answer to a ``yes_no``, ``single_choice``, ``free_text`` or ``rating`` `EditionPollQuestion`.
+
+    One discriminated table, like `RegistrationOrderAnswer`: ``kind`` (kept equal to the question's kind by the
+    composite foreign key) says which of ``attending``/``people``, ``option_id``, ``text`` or ``rating`` is set,
+    and ``ck_volunteer_poll_answers_value`` allows exactly that one. For ``yes_no``, ``people`` counts everybody
+    the "yes" stands for (the volunteer included) and is ``0`` for a "no". ``meals`` questions keep a quantity per
+    option in `VolunteerPollSelection` instead. No row means not answered yet.
+    """
 
     __tablename__ = "volunteer_poll_answers"
     __table_args__ = (
-        CheckConstraint(
-            f"(attending AND people BETWEEN 1 AND {MAX_POLL_PEOPLE}) OR (NOT attending AND people = 0)",
-            name="ck_volunteer_poll_answers_people",
+        ForeignKeyConstraint(
+            ["question_id", "kind"], ["edition_poll_questions.id", "edition_poll_questions.kind"], ondelete="CASCADE"
         ),
-    )
-
-    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
-    question_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
-    )
-    attending: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    people: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
-
-
-class VolunteerPollChoice(Base):
-    """One typed answer per volunteer and question; absence means unanswered."""
-
-    __tablename__ = "volunteer_poll_choices"
-    __table_args__ = (
         ForeignKeyConstraint(
             ["option_id", "question_id"],
             ["edition_poll_options.id", "edition_poll_options.question_id"],
             ondelete="CASCADE",
         ),
+        CheckConstraint(_ANSWER_VALUE_CHECK, name="ck_volunteer_poll_answers_value"),
     )
 
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
-    question_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
-    )
-    option_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-
-
-class VolunteerPollText(Base):
-    """One typed answer per volunteer and question; absence means unanswered."""
-
-    __tablename__ = "volunteer_poll_texts"
-    __table_args__ = (CheckConstraint("length(trim(text)) BETWEEN 1 AND 500", name="ck_poll_texts_value"),)
-
-    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
-    question_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
-    )
-    text: Mapped[str] = mapped_column(String(500), nullable=False)
-
-
-class VolunteerPollRating(Base):
-    """One typed answer per volunteer and question; absence means unanswered."""
-
-    __tablename__ = "volunteer_poll_ratings"
-    __table_args__ = (CheckConstraint("rating BETWEEN 1 AND 5", name="ck_poll_ratings_value"),)
-
-    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
-    question_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
-    )
-    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    question_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    attending: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    people: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    option_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    text: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class VolunteerMealNote(Base):

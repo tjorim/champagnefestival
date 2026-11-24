@@ -3,13 +3,7 @@ import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
-import {
-  ADMIN_CONTROL_CLASS,
-  AdminCheck,
-  AdminField,
-  AdminInput,
-  AdminLabel,
-} from "@/components/admin/AdminFields";
+import { AdminCheck } from "@/components/admin/AdminFields";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -30,14 +24,9 @@ import {
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { dietaryTagLabel } from "@/lib/editions/dietaryTags";
 import { POLL_KIND_HAS_DIETARY_TAGS } from "@/lib/editions/pollKinds";
+import { OptionLabelInputs } from "./QuestionEditorFields";
 
 const EMPTY_WRITE: PollOptionWrite = { labelNl: "", labelFr: "", labelEn: "", dietaryTags: [] };
-
-const LABEL_FIELDS = [
-  { field: "labelNl", language: m.admin_language_nl },
-  { field: "labelFr", language: m.admin_language_fr },
-  { field: "labelEn", language: m.admin_language_en },
-] as const;
 
 function toWrite(option: PollOption): PollOptionWrite {
   return {
@@ -62,22 +51,16 @@ function OptionFields({
 }) {
   return (
     <div className="grow flex flex-col gap-2">
-      <div className="flex gap-2 flex-wrap">
-        {LABEL_FIELDS.map(({ field, language }) => (
-          <AdminField key={field} controlId={`${idPrefix}-${field}`} className="grow basis-40">
-            <AdminLabel className="text-sm text-subtle mb-1">
-              {m.admin_poll_label_in({ language: language() })}
-            </AdminLabel>
-            <AdminInput
-              size="sm"
-              className={ADMIN_CONTROL_CLASS}
-              value={value[field]}
-              maxLength={200}
-              onChange={(event) => onChange({ ...value, [field]: event.target.value })}
-            />
-          </AdminField>
-        ))}
-      </div>
+      <OptionLabelInputs
+        idPrefix={idPrefix}
+        labels={{ nl: value.labelNl, fr: value.labelFr, en: value.labelEn }}
+        onChange={(code, text) =>
+          onChange({
+            ...value,
+            [code === "nl" ? "labelNl" : code === "fr" ? "labelFr" : "labelEn"]: text,
+          })
+        }
+      />
       {dietary && (
         <fieldset className="flex gap-4 flex-wrap items-center border-0 p-0 m-0">
           <legend className="text-sm text-subtle">{m.admin_poll_dietary_label()}</legend>

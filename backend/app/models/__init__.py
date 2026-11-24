@@ -31,10 +31,7 @@ from app.models.poll import (
     PollDeletionNotification,
     VolunteerMealNote,
     VolunteerPollAnswer,
-    VolunteerPollChoice,
-    VolunteerPollRating,
     VolunteerPollSelection,
-    VolunteerPollText,
 )
 from app.models.products import Product
 from app.models.push import PushSubscription
@@ -112,9 +109,6 @@ __all__ = [
     "VolunteerMealNote",
     "VolunteerPeriod",
     "VolunteerPollAnswer",
-    "VolunteerPollChoice",
-    "VolunteerPollRating",
     "VolunteerPollSelection",
-    "VolunteerPollText",
     "WaitlistEntry",
 ]

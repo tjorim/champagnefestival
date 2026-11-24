@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ids import make_id
 from app.db.queries import get_or_404
-from app.models import EditionPollOption, VolunteerPollChoice, VolunteerPollSelection
+from app.models import EditionPollOption, VolunteerPollAnswer, VolunteerPollSelection
 from app.schemas import (
     DietaryTag,
     PollOptionCreate,
@@ -66,8 +66,8 @@ async def list_poll_options(
     """Options in display order with what volunteers asked for in total (what to order from the caterer)."""
     choice_count = (
         select(func.count())
-        .select_from(VolunteerPollChoice)
-        .where(VolunteerPollChoice.option_id == EditionPollOption.id)
+        .select_from(VolunteerPollAnswer)
+        .where(VolunteerPollAnswer.option_id == EditionPollOption.id)
         .correlate(EditionPollOption)
         .scalar_subquery()
     )
@@ -199,7 +199,7 @@ async def delete_poll_option(
     picks.extend(
         (volunteer_id, 1)
         for volunteer_id in (
-            await db.execute(select(VolunteerPollChoice.volunteer_id).where(VolunteerPollChoice.option_id == option_id))
+            await db.execute(select(VolunteerPollAnswer.volunteer_id).where(VolunteerPollAnswer.option_id == option_id))
         ).scalars()
     )
     if picks:
@@ -221,7 +221,7 @@ async def delete_poll_option(
     # ON DELETE CASCADE on volunteer_poll_selections.option_id would do this
     # anyway; deleting explicitly keeps the audit trail's ordering obvious.
     await db.execute(delete(VolunteerPollSelection).where(VolunteerPollSelection.option_id == option_id))
-    await db.execute(delete(VolunteerPollChoice).where(VolunteerPollChoice.option_id == option_id))
+    await db.execute(delete(VolunteerPollAnswer).where(VolunteerPollAnswer.option_id == option_id))
     await db.delete(option)
     await write_audit_entry(
         db,

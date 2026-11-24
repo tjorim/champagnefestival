@@ -736,12 +736,28 @@ Migration `009` widens the kind constraint and stores the new answers in `volunt
 `volunteer_poll_texts` and `volunteer_poll_ratings`, each keyed by volunteer/question with cascading
 foreign keys. A composite option/question foreign key prevents a choice from using another question's
 option; database checks enforce nonblank text and the 1–5 scale. Free-text content is excluded from audit
-details. Downgrading to `008` drops all typed poll answers and question definitions; export answers before rolling back.
+details. Downgrading to `008` drops all typed poll answers and question definitions; export answers before rolling back. Migration `019` later moved these answers into one table ([below](#volunteer-poll-answer-storage-1662)).
 
 Migration `009` turns the earlier option-only poll into this model: each edition that has options gets one
 "Maaltijden" meals question holding them (closing time and all), and its downgrade drops the questions and
 the yes/no answers. The poll was never released before `009`, so the API of the intermediate option-only
 shape (`/api/poll-options/settings|orders|copy`, `/api/me/volunteer/poll-options|poll-selections`) no longer exists.
+
+### Volunteer poll answer storage (#1662)
+
+Migration `019` replaced `volunteer_poll_choices`, `volunteer_poll_texts` and `volunteer_poll_ratings` with the
+one discriminated table the visitor order answers already use. `volunteer_poll_answers` is keyed by volunteer and
+question and carries `kind` plus the value columns `attending`/`people` (yes/no), `option_id`, `text` and `rating`.
+`ck_volunteer_poll_answers_value` allows exactly the columns of the row's kind (same style as
+`ck_order_answer_value`), a composite foreign key keeps `kind` equal to the question's kind
+(`uq_poll_question_kind` on `edition_poll_questions(id, kind)`), and a second one keeps `option_id` inside its
+question. `volunteer_poll_selections` stays for `meals`, which is a quantity per option. Each `PollKind` in
+`app/services/poll_kinds.py` filters on `kind`, so the REST, MCP and CSV shapes did not change.
+
+The backfill copies only rows the new table can hold (matching question kind, option inside its question,
+non-blank text of at most 500 characters, rating 1–5). A row that could not exist before (an attendance row on a
+question of another kind, a typed row on a question of another kind) is dropped instead of failing the upgrade.
+`downgrade` recreates the four tables and moves every row back, so the round trip loses nothing.
 
 ### Organization manager self-service (#1192)
 

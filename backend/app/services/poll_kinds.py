@@ -7,6 +7,10 @@ it in ``KINDS``, and extend ``PollQuestionKind`` in the shared vocabularies.
 
 An answer is one value per volunteer and question: a ``{option_id: quantity}`` mapping for ``meals``, an
 ``(attending, people)`` tuple for ``yes_no``, or one option ID, text or rating for the scalar kinds. A question a volunteer did not answer has no entry.
+
+Storage: every kind except ``meals`` keeps one row per volunteer and question in ``volunteer_poll_answers``, a
+discriminated table shaped like the visitor ``registration_order_answers`` (``kind`` plus the one value column the
+kind uses, under a CHECK). ``meals`` keeps a quantity per option in ``volunteer_poll_selections``.
 """
 
 from __future__ import annotations
@@ -22,10 +26,7 @@ from app.models import (
     EditionPollOption,
     EditionPollQuestion,
     VolunteerPollAnswer,
-    VolunteerPollChoice,
-    VolunteerPollRating,
     VolunteerPollSelection,
-    VolunteerPollText,
 )
 from app.schemas import AdminPollOrderIn, PollAttendanceItem, VolunteerPollAnswerIn
 from app.services.errors import ApiHTTPException
@@ -242,7 +243,7 @@ class YesNoKind(PollKind):
                 func.coalesce(func.sum(VolunteerPollAnswer.people), 0),
             )
             .join(EditionPollQuestion, EditionPollQuestion.id == VolunteerPollAnswer.question_id)
-            .where(EditionPollQuestion.edition_id == edition_id)
+            .where(EditionPollQuestion.edition_id == edition_id, VolunteerPollAnswer.kind == self.name)
             .group_by(VolunteerPollAnswer.question_id)
         )
         return {
@@ -250,7 +251,7 @@ class YesNoKind(PollKind):
                 "answered_count": int(answered),
                 "yes_count": int(yes),
                 "no_count": int(answered) - int(yes),
-                "people_total": int(people),
+                "people_total": int(people or 0),
             }
             for question_id, answered, yes, people in rows.all()
         }
@@ -266,7 +267,7 @@ class YesNoKind(PollKind):
                 VolunteerPollAnswer.people,
             )
             .join(EditionPollQuestion, EditionPollQuestion.id == VolunteerPollAnswer.question_id)
-            .where(EditionPollQuestion.edition_id == edition_id)
+            .where(EditionPollQuestion.edition_id == edition_id, VolunteerPollAnswer.kind == self.name)
         )
         if volunteer_ids is not None:
             stmt = stmt.where(VolunteerPollAnswer.volunteer_id.in_(volunteer_ids))
@@ -287,7 +288,11 @@ class YesNoKind(PollKind):
             attending, people = answer
             db.add(
                 VolunteerPollAnswer(
-                    volunteer_id=volunteer_id, question_id=question.id, attending=attending, people=people
+                    volunteer_id=volunteer_id,
+                    question_id=question.id,
+                    kind=self.name,
+                    attending=attending,
+                    people=people,
                 )
             )
 
@@ -347,7 +352,6 @@ class YesNoKind(PollKind):
 class ScalarKind(PollKind):
     """Shared persistence for answers with one typed value per question."""
 
-    model: ClassVar[Any]
     field: ClassVar[str]
     collection: ClassVar[str]
 
@@ -355,17 +359,19 @@ class ScalarKind(PollKind):
         return int(
             (
                 await db.execute(
-                    select(func.count()).select_from(self.model).where(self.model.question_id == question.id)
+                    select(func.count())
+                    .select_from(VolunteerPollAnswer)
+                    .where(VolunteerPollAnswer.question_id == question.id)
                 )
             ).scalar_one()
         )
 
     async def stats(self, db: AsyncSession, edition_id: str) -> dict[str, dict[str, int]]:
         rows = await db.execute(
-            select(self.model.question_id, func.count())
-            .join(EditionPollQuestion, EditionPollQuestion.id == self.model.question_id)
-            .where(EditionPollQuestion.edition_id == edition_id)
-            .group_by(self.model.question_id)
+            select(VolunteerPollAnswer.question_id, func.count())
+            .join(EditionPollQuestion, EditionPollQuestion.id == VolunteerPollAnswer.question_id)
+            .where(EditionPollQuestion.edition_id == edition_id, VolunteerPollAnswer.kind == self.name)
+            .group_by(VolunteerPollAnswer.question_id)
         )
         return {qid: {"answered_count": int(count)} for qid, count in rows.all()}
 
@@ -373,12 +379,12 @@ class ScalarKind(PollKind):
         self, db: AsyncSession, edition_id: str, volunteer_ids: list[str] | None
     ) -> dict[str, dict[str, Answer]]:
         stmt = (
-            select(self.model)
-            .join(EditionPollQuestion, EditionPollQuestion.id == self.model.question_id)
-            .where(EditionPollQuestion.edition_id == edition_id)
+            select(VolunteerPollAnswer)
+            .join(EditionPollQuestion, EditionPollQuestion.id == VolunteerPollAnswer.question_id)
+            .where(EditionPollQuestion.edition_id == edition_id, VolunteerPollAnswer.kind == self.name)
         )
         if volunteer_ids is not None:
-            stmt = stmt.where(self.model.volunteer_id.in_(volunteer_ids))
+            stmt = stmt.where(VolunteerPollAnswer.volunteer_id.in_(volunteer_ids))
         answers: dict[str, dict[str, Answer]] = {}
         for row in (await db.execute(stmt)).scalars():
             answers.setdefault(row.volunteer_id, {})[row.question_id] = getattr(row, self.field)
@@ -388,13 +394,19 @@ class ScalarKind(PollKind):
         self, db: AsyncSession, volunteer_id: str, question: EditionPollQuestion, answer: Answer | None
     ) -> None:
         await db.execute(
-            delete(self.model).where(self.model.volunteer_id == volunteer_id, self.model.question_id == question.id)
+            delete(VolunteerPollAnswer).where(
+                VolunteerPollAnswer.volunteer_id == volunteer_id, VolunteerPollAnswer.question_id == question.id
+            )
         )
         if answer is not None:
-            db.add(self.model(volunteer_id=volunteer_id, question_id=question.id, **{self.field: answer}))
+            db.add(
+                VolunteerPollAnswer(
+                    volunteer_id=volunteer_id, question_id=question.id, kind=self.name, **{self.field: answer}
+                )
+            )
 
     async def delete_question_data(self, db: AsyncSession, question: EditionPollQuestion) -> None:
-        await db.execute(delete(self.model).where(self.model.question_id == question.id))
+        await db.execute(delete(VolunteerPollAnswer).where(VolunteerPollAnswer.question_id == question.id))
         if self.has_options:
             await db.execute(delete(EditionPollOption).where(EditionPollOption.question_id == question.id))
 
@@ -444,7 +456,6 @@ class ScalarKind(PollKind):
 
 class SingleChoiceKind(ScalarKind):
     name = "single_choice"
-    model = VolunteerPollChoice
     field = "option_id"
     collection = "choices"
     has_options = True
@@ -452,7 +463,6 @@ class SingleChoiceKind(ScalarKind):
 
 class FreeTextKind(ScalarKind):
     name = "free_text"
-    model = VolunteerPollText
     field = "text"
     collection = "texts"
 
@@ -462,7 +472,6 @@ class FreeTextKind(ScalarKind):
 
 class RatingKind(ScalarKind):
     name = "rating"
-    model = VolunteerPollRating
     field = "rating"
     collection = "ratings"
 

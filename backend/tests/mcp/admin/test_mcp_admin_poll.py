@@ -169,7 +169,9 @@ async def test_confirmed_deletes(db_session):
     db_session.add(Person(id="per-1", name="Sofie", role_periods=role_periods(["volunteer"])))
     await db_session.flush()
     db_session.add(VolunteerPollSelection(volunteer_id="per-1", option_id=option["id"], quantity=2))
-    db_session.add(VolunteerPollAnswer(volunteer_id="per-1", question_id=dinner["id"], attending=True, people=2))
+    db_session.add(
+        VolunteerPollAnswer(volunteer_id="per-1", question_id=dinner["id"], kind="yes_no", attending=True, people=2)
+    )
     await db_session.commit()
 
     with pytest.raises(ValueError, match="confirm"):
