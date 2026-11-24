@@ -58,8 +58,8 @@ Static frontend (Vite build / CDN / VPS)
 `app/` has `main.py` (app assembly) and one folder per layer: `routers/` (HTTP), `services/` (business logic, incl.
 `services/live/` and the outbox worker), `schemas/` (Pydantic, one module per domain), `models/` (SQLAlchemy, one module
 per domain), `core/` (settings, auth, limits, observability), `db/` (engine, session, SQLite compatibility), `mcp/` (the
-MCP server and tools) and `middleware/`. `python -m app.worker`, `python -m app.maintenance` and
-`python -m app.mcp_server` stay as thin entry points. The full tree, the dependency rules and the removal notes are in
+MCP server and tools) and `middleware/`. `python -m app.services.worker`, `python -m app.services.maintenance` and
+`python -m app.mcp.server` start the worker, the housekeeping command and the stdio MCP server. The full tree and the dependency rules are in
 [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md#backend-backendapp).
 
 ---

@@ -1,4 +1,4 @@
-"""Standalone durable outbox worker: ``uv run python -m app.worker``."""
+"""Standalone durable outbox worker: ``uv run python -m app.services.worker``."""
 
 from __future__ import annotations
 

@@ -55,4 +55,4 @@ FROM runtime AS worker
 HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=3 \
     CMD python -c "import pathlib, sys, time; p = pathlib.Path('/tmp/worker-heartbeat'); sys.exit(0 if p.exists() and time.time() - p.stat().st_mtime < 600 else 1)"
 
-CMD ["python", "-m", "app.worker"]
+CMD ["python", "-m", "app.services.worker"]

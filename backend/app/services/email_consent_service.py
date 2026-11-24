@@ -402,7 +402,7 @@ async def drop_pending_confirmations(db: AsyncSession, person_id: str) -> None:
 
 
 async def cleanup_expired_confirmations(db: AsyncSession) -> int:
-    """Delete confirmation requests past their deadline; run daily by ``python -m app.maintenance housekeeping``."""
+    """Delete confirmation requests past their deadline; run daily by ``python -m app.services.maintenance housekeeping``."""
     deleted = (
         await db.scalars(
             delete(EmailConsentConfirmation)

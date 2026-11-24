@@ -14690,7 +14690,7 @@
     "/api/mcp/capabilities": {
       "get": {
         "summary": "Mcp Capabilities",
-        "description": "Public capabilities manifest for the MCP server (issue #807).\n\nReports whether the MCP server is mounted and, when it is, the live\nregistered tool set with each tool's required role tier — generated\ndirectly from the local provider so it can never drift from what's\nactually registered (see ``app.mcp_server.get_mcp_capabilities``).",
+        "description": "Public capabilities manifest for the MCP server (issue #807).\n\nReports whether the MCP server is mounted and, when it is, the live\nregistered tool set with each tool's required role tier — generated\ndirectly from the local provider so it can never drift from what's\nactually registered (see ``app.mcp.capabilities.get_mcp_capabilities``).",
         "operationId": "mcp_capabilities_api_mcp_capabilities_get",
         "responses": {
           "200": {
