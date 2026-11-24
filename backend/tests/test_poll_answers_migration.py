@@ -93,7 +93,12 @@ def test_answers_move_into_one_table_and_back(monkeypatch):
                     "('cleo', 'q-choice', 4)"
                 )
             )
-            connection.execute(text("INSERT INTO volunteer_poll_selections VALUES ('anna', 'soup', 2, now())"))
+            connection.execute(
+                text(
+                    "INSERT INTO volunteer_poll_selections (volunteer_id, option_id, quantity, created_at) "
+                    "VALUES ('anna', 'soup', 2, now())"
+                )
+            )
 
         command.upgrade(config, "019")
 
