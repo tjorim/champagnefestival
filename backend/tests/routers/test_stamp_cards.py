@@ -7,8 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Registration, Stamp, StampCard, StampCardReward
+from app.services.check_in_service import check_in_registration
 from app.services.live import live_bus
-from app.services.registrations_service import check_in_registration
 from tests.helpers import _create_event, _post_registration, requires_postgres
 from tests.services.test_live_broadcasts import _get_event
 
@@ -296,17 +296,17 @@ async def test_manual_volunteer_missing_type_rolls_back(client):
 @pytest.mark.anyio
 @pytest.mark.parametrize("source", ["qr", "volunteer", "admin"])
 async def test_check_in_entry_points_share_transactional_side_effects(client, db_session, source, monkeypatch):
-    import app.services.registrations_service as registrations_service
+    import app.services.check_in_service as check_in_service
 
     check_in_notifications: list[str] = []
-    notify = registrations_service.notify_live_event
+    notify = check_in_service.notify_live_event
 
     async def counting_notify(db, event):
         if event.topic == "check_in":
             check_in_notifications.append(event.scope.registration_id)
         return await notify(db, event)
 
-    monkeypatch.setattr(registrations_service, "notify_live_event", counting_notify)
+    monkeypatch.setattr(check_in_service, "notify_live_event", counting_notify)
     _, event, booking = await setup_card(client, boxes=1)
     registration_id = booking["id"]
     admin_url = f"/api/registrations/{registration_id}"

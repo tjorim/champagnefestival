@@ -95,7 +95,7 @@ class LayoutRevision(Base):
 
     Follows the ``PolicyVersion`` numbering pattern: ``revision_number``
     increases per ``layout_id`` under a row lock on the parent ``Layout``
-    (see ``app.services.layouts_service.save_layout_revision``), and a row
+    (see ``app.services.layout_revisions_service.save_layout_revision``), and a row
     here is never mutated or deleted once written — restoring an old
     revision applies its snapshot back onto the live ``Layout``/``Table``/
     ``Area`` rows rather than resurrecting this row. ``snapshot`` captures

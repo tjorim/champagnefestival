@@ -329,9 +329,10 @@ uv run pytest tests/mcp/admin/test_mcp_admin_venues.py tests/mcp/admin/test_mcp_
 ### Adding new tools
 
 **Read-only tools:**
-1. Add a method to `ChampagneFestivalMcpBackend` in `backend/app/mcp/server.py`.
-2. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
-3. Add unit tests in `backend/tests/mcp/test_mcp_server.py`.
+1. Add a method to the mixin of its domain in `backend/app/mcp/tools/` (`public.py` or `event_day.py`; they extend
+   `ChampagneFestivalMcpBackend` in `backend/app/mcp/server.py`).
+2. Register it with `register_tool(backend.your_new_method)` in `create_mcp_server()`.
+3. Add unit tests in `backend/tests/mcp/test_mcp_public_tools.py` or `test_mcp_event_day_tools.py`.
 
 **Admin write tools:**
 1. Add the implementation to the relevant module under `backend/app/mcp/admin/` (or a new
@@ -339,10 +340,10 @@ uv run pytest tests/mcp/admin/test_mcp_admin_venues.py tests/mcp/admin/test_mcp_
    (via `validate_with_schema`) and private helper functions rather than re-deriving their
    validation/business logic — see `backend/app/mcp/admin/__init__.py` for the module-wide
    conventions and `venues.py` for a worked example.
-2. Add a thin `ChampagneFestivalMcpBackend` method in `backend/app/mcp/server.py` that
-   calls `self._require_admin()` (or leaves it out, for a REST endpoint with no auth
+2. Add a thin method to the matching domain mixin in `backend/app/mcp/tools/` (for example
+   `venue.py`) that calls `self._require_admin()` (or leaves it out, for a REST endpoint with no auth
    dependency, like `get_settings`) and delegates to it with `self._actor()`.
-3. Register it with `mcp.tool(backend.your_new_method)` in `create_mcp_server()`.
+3. Register it with `register_tool(backend.your_new_method)` in `create_mcp_server()` (`backend/app/mcp/server.py`).
 4. Add tests in `backend/tests/test_mcp_admin_<module>.py` against a real database, and a
    role-gating/delegation spot-check in `backend/tests/mcp/test_mcp_server.py`'s
    `TestAdminToolWiring`.

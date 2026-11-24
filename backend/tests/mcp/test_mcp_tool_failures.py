@@ -25,6 +25,7 @@ from sqlalchemy import func, select
 import app.mcp.server as mcp_module
 from app.mcp.middleware import CorrelatedToolError, ToolFailureMiddleware, without_body_validation_payload
 from app.mcp.server import ALWAYS_VISIBLE_TOOLS, ChampagneFestivalMcpBackend, create_mcp_server
+from app.mcp.tools import base as mcp_base_module
 from app.mcp.utils import MCPToolError
 from app.models import AuditEntry
 from tests.helpers import mcp_session_factory
@@ -381,7 +382,7 @@ class TestProxyBehaviour:
         mcp.tool(backend.create_venue)
         admin = SimpleNamespace(claims={"sub": "admin-1", "realm_access": {"roles": ["admin"]}})
 
-        with patch.object(mcp_module, "get_access_token", return_value=admin):
+        with patch.object(mcp_base_module, "get_access_token", return_value=admin):
             await mcp.call_tool("create_venue", {"name": "Direct Venue"})
             await mcp.call_tool("call_tool", {"name": "create_venue", "arguments": {"name": "Proxied Venue"}})
 

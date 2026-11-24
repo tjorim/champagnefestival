@@ -12,7 +12,7 @@ from typing import Any
 
 from app.mcp.utils import MCPToolError, dump_response, validate_with_schema
 from app.schemas import LayoutBulkCreate, LayoutCopyCreate, LayoutCreate, LayoutRevisionSaveRequest
-from app.services import layouts_service
+from app.services import layout_revisions_service, layouts_service
 from app.services.errors import ServiceError
 
 
@@ -124,7 +124,7 @@ async def save_layout_revision(
     async with session_factory() as db:
         try:
             return (
-                await layouts_service.save_layout_revision(db, actor=actor, layout_id=layout_id, body=body)
+                await layout_revisions_service.save_layout_revision(db, actor=actor, layout_id=layout_id, body=body)
             ).model_dump(exclude_unset=True)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
@@ -136,7 +136,7 @@ async def list_layout_revisions(session_factory: Any, layout_id: str) -> dict:
             return {
                 "revisions": [
                     item.model_dump(exclude_unset=True)
-                    for item in await layouts_service.list_layout_revisions(db, layout_id)
+                    for item in await layout_revisions_service.list_layout_revisions(db, layout_id)
                 ]
             }
         except ServiceError as exc:
@@ -146,7 +146,7 @@ async def list_layout_revisions(session_factory: Any, layout_id: str) -> dict:
 async def get_layout_revision(session_factory: Any, layout_id: str, revision_number: int) -> dict:
     async with session_factory() as db:
         try:
-            return (await layouts_service.get_layout_revision(db, layout_id, revision_number)).model_dump(
+            return (await layout_revisions_service.get_layout_revision(db, layout_id, revision_number)).model_dump(
                 exclude_unset=True
             )
         except ServiceError as exc:
@@ -156,9 +156,9 @@ async def get_layout_revision(session_factory: Any, layout_id: str, revision_num
 async def compare_layout_revisions(session_factory: Any, layout_id: str, from_ref: str, to_ref: str) -> dict:
     async with session_factory() as db:
         try:
-            return (await layouts_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)).model_dump(
-                exclude_unset=True
-            )
+            return (
+                await layout_revisions_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
+            ).model_dump(exclude_unset=True)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
@@ -166,7 +166,7 @@ async def compare_layout_revisions(session_factory: Any, layout_id: str, from_re
 async def preview_layout_restore(session_factory: Any, layout_id: str, revision_number: int) -> dict:
     async with session_factory() as db:
         try:
-            return (await layouts_service.preview_layout_restore(db, layout_id, revision_number)).model_dump(
+            return (await layout_revisions_service.preview_layout_restore(db, layout_id, revision_number)).model_dump(
                 exclude_unset=True
             )
         except ServiceError as exc:
@@ -184,7 +184,7 @@ async def restore_layout_revision(
     async with session_factory() as db:
         try:
             return dump_response(
-                await layouts_service.restore_layout_revision(
+                await layout_revisions_service.restore_layout_revision(
                     db,
                     actor=actor,
                     layout_id=layout_id,

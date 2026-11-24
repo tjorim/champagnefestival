@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Layout, RegistrationAllocation, Room, Venue
 from app.schemas import LayoutRevisionSaveRequest
-from app.services import layouts_service
+from app.services import layout_revisions_service
 from tests.helpers import (
     ADMIN_HEADERS,
     ROOM_PAYLOAD,
@@ -800,7 +800,7 @@ async def test_concurrent_revision_saves_do_not_reuse_a_revision_number(engine):
 
     async def attempt(label: str):
         async with sessions() as session:
-            return await layouts_service.save_layout_revision(
+            return await layout_revisions_service.save_layout_revision(
                 session,
                 actor="admin",
                 layout_id="lay-rev-race",

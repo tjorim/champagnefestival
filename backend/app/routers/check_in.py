@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.db.session import get_db
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
+from app.services.check_in_service import check_in_guest, lookup_guest_check_in
 from app.services.errors import ApiHTTPException
-from app.services.registrations_service import check_in_guest, lookup_guest_check_in
 
 router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
