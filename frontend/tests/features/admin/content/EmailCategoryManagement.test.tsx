@@ -7,8 +7,6 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 function category(key: string, nl: string, roles: string[], automatic = false) {
   return {
     created_at: "2026-01-01T00:00:00Z",
@@ -29,7 +27,7 @@ function category(key: string, nl: string, roles: string[], automatic = false) {
 }
 
 function mount() {
-  render(<EmailCategoryManagement authHeaders={authHeaders} />, {
+  render(<EmailCategoryManagement />, {
     wrapper: createTestQueryClientWrapper(),
   });
 }

@@ -30,11 +30,11 @@ import ConfirmModal from "@/components/ConfirmModal";
  */
 export default function PersonEmailConsents({
   person,
-  authHeaders,
+
   onClose,
 }: {
   person: { id: string; name: string };
-  authHeaders: () => Record<string, string>;
+
   onClose: () => void;
 }) {
   const client = useQueryClient();
@@ -44,7 +44,7 @@ export default function PersonEmailConsents({
     queryFn: ({ signal }) =>
       emailRequest<EmailConsentRecord[]>(
         `/api/people/${encodeURIComponent(person.id)}/email-consents`,
-        authHeaders,
+
         m.admin_email_consents_error(),
         signal,
       ),
@@ -126,7 +126,7 @@ export default function PersonEmailConsents({
           onConfirm={async () => {
             const updated = await emailRequest<EmailConsentRecord[]>(
               `/api/people/${encodeURIComponent(person.id)}/email-consents/${encodeURIComponent(optOut.category_key)}/opt-out`,
-              authHeaders,
+
               m.admin_email_consents_error(),
               undefined,
               undefined,

@@ -64,7 +64,6 @@ import { AdminAddButton } from "@/components/admin/RowActions";
 const columnHelper = createAppColumnHelper<Person>();
 
 interface PeopleManagementProps {
-  authHeaders: () => Record<string, string>;
   onMerge: (canonicalId: string, duplicateId: string) => Promise<void>;
   onCreate: (data: PersonFormData) => Promise<void>;
   onUpdate: (id: string, data: PersonFormData) => Promise<void>;
@@ -77,7 +76,6 @@ interface MergeState {
 }
 
 export default function PeopleManagement({
-  authHeaders,
   onMerge,
   onCreate,
   onUpdate,
@@ -161,8 +159,7 @@ export default function PeopleManagement({
 
   const personRegistrationsQuery = useQuery({
     queryKey: queryKeys.admin.peopleRegistrations(viewRegistrationsPerson?.id ?? ""),
-    queryFn: ({ signal }) =>
-      fetchAdminPersonRegistrations(viewRegistrationsPerson!.id, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonRegistrations(viewRegistrationsPerson!.id, signal),
     enabled: viewRegistrationsPerson !== null,
     staleTime: 30 * 1000,
     retry: false,
@@ -174,8 +171,7 @@ export default function PeopleManagement({
 
   const personPaymentSummaryQuery = useQuery({
     queryKey: queryKeys.admin.peoplePaymentSummary(viewRegistrationsPerson?.id ?? ""),
-    queryFn: ({ signal }) =>
-      fetchPersonPaymentSummary(viewRegistrationsPerson!.id, authHeaders, signal),
+    queryFn: ({ signal }) => fetchPersonPaymentSummary(viewRegistrationsPerson!.id, signal),
     enabled: viewRegistrationsPerson !== null,
     staleTime: 30 * 1000,
     retry: false,
@@ -196,7 +192,7 @@ export default function PeopleManagement({
       page: ledgerPage,
     }),
     queryFn: () =>
-      fetchPaymentTransactionsLedger(authHeaders, {
+      fetchPaymentTransactionsLedger({
         personId: viewRegistrationsPerson!.id,
         sort: ledgerBackendSort,
         sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
@@ -213,14 +209,14 @@ export default function PeopleManagement({
     setLedgerExportError("");
     setExportingLedger(true);
     try {
-      await downloadPaymentTransactionsCsv(authHeaders, { personId: viewRegistrationsPerson.id });
+      await downloadPaymentTransactionsCsv({ personId: viewRegistrationsPerson.id });
     } catch (err) {
       devError("Failed to export payment ledger", err);
       setLedgerExportError(apiErrorMessage(err, m.admin_people_export_ledger_error()));
     } finally {
       setExportingLedger(false);
     }
-  }, [authHeaders, viewRegistrationsPerson]);
+  }, [viewRegistrationsPerson]);
   const personPaymentTotals = useMemo(() => {
     const nonCancelled = (personRegistrationsQuery.data ?? []).filter(
       (r) => r.status !== "cancelled",
@@ -368,14 +364,13 @@ export default function PeopleManagement({
                     setShowForm(true);
                   }}
                 />
-                <PersonDuplicates person={person} authHeaders={authHeaders} onMerge={openMerge} />
+                <PersonDuplicates person={person} onMerge={openMerge} />
               </RowActions>
             );
           },
         }),
       ]),
     [
-      authHeaders,
       setEditingPerson,
       setShowForm,
       setDeletingPerson,
@@ -392,7 +387,7 @@ export default function PeopleManagement({
       {consentPerson && (
         <PersonEmailConsents
           person={consentPerson}
-          authHeaders={authHeaders}
+
           onClose={() => setConsentPerson(null)}
         />
       )}
@@ -447,7 +442,7 @@ export default function PeopleManagement({
 
           <PeopleDataTable
             id="people"
-            authHeaders={authHeaders}
+
             columns={columns}
             onOpen={(person) => {
               setEditingPerson(person);
@@ -611,7 +606,6 @@ export default function PeopleManagement({
 
       {/* Create / edit person modal */}
       <PersonFormModal
-        authHeaders={authHeaders}
         onReuse={(person) => {
           setEditingPerson(person);
         }}

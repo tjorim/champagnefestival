@@ -32,7 +32,7 @@ function renderAuditLogViewer() {
   const queryClient = createTestQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
-      <AuditLogViewer authHeaders={() => ({})} />
+      <AuditLogViewer />
     </QueryClientProvider>,
   );
 }

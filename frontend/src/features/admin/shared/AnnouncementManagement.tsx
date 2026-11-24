@@ -27,10 +27,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import AdminEditorDialog from "@/components/admin/AdminEditorDialog";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
@@ -91,19 +88,15 @@ function writePayload(item: Draft) {
   };
 }
 
-export default function AnnouncementManagement({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function AnnouncementManagement() {
   const client = useQueryClient();
   const key = queryKeys.admin.announcements;
   const query = useQuery({
     queryKey: key,
     queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<Announcement[]>(
+      fetchJsonOrThrow<Announcement[]>(
         "/api/announcements",
-        { headers: authHeaders(), signal },
+        { signal },
         m.admin_error_load_announcements(),
       ),
   });
@@ -118,11 +111,11 @@ export default function AnnouncementManagement({
   const refresh = useCallback(() => client.invalidateQueries({ queryKey: key }), [client, key]);
   const save = useMutation({
     mutationFn: (payload: Draft) =>
-      fetchJsonOrThrowWithUnauthorized(
+      fetchJsonOrThrow(
         `/api/announcements${editing ? `/${editing}` : ""}`,
         {
           method: editing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...writePayload(payload),
             starts_at: iso(payload.starts_at),
@@ -184,9 +177,9 @@ export default function AnnouncementManagement({
 
   const remove = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `/api/announcements/${id}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_delete_announcement_request(),
       ),
     onSuccess: () => void refresh(),
@@ -209,16 +202,16 @@ export default function AnnouncementManagement({
   );
   const update = useCallback(
     async (item: Announcement, values: Partial<Announcement>) =>
-      fetchJsonOrThrowWithUnauthorized(
+      fetchJsonOrThrow(
         `/api/announcements/${item.id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(writePayload({ ...item, ...values })),
         },
         m.admin_error_update_announcement(),
       ),
-    [authHeaders],
+    [],
   );
   const move = useCallback(
     async (index: number, direction: number) => {
@@ -230,18 +223,18 @@ export default function AnnouncementManagement({
       if (!current || !replacement) return;
       ordered[index] = replacement;
       ordered[target] = current;
-      await fetchJsonOrThrowWithUnauthorized(
+      await fetchJsonOrThrow(
         "/api/announcements/reorder",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ordered_ids: ordered.map((item) => item.id) }),
         },
         m.admin_error_reorder_announcements(),
       );
       await refresh();
     },
-    [items, authHeaders, refresh],
+    [items, refresh],
   );
   const now = useNow();
   type AnnouncementStatus = "disabled" | "scheduled" | "expired" | "active";

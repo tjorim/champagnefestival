@@ -109,14 +109,13 @@ describe("PushOptIn", () => {
     vi.mocked(subscribeToPush).mockResolvedValue({ id: "sub-1", categories: [], event_ids: [] });
     vi.mocked(sendTestPush).mockResolvedValue(undefined);
 
-    const authHeaders = vi.fn().mockReturnValue({ Authorization: "Bearer admin-token" });
     const user = userEvent.setup();
-    render(<PushOptIn authHeaders={authHeaders} />);
+    render(<PushOptIn admin />);
 
     await user.click(screen.getByRole("button", { name: /test/i }));
 
     expect(await screen.findByText(/test notification sent/i)).toBeInTheDocument();
-    expect(sendTestPush).toHaveBeenCalledWith("sub-1", { Authorization: "Bearer admin-token" });
+    expect(sendTestPush).toHaveBeenCalledWith("sub-1");
 
     Reflect.deleteProperty(navigator, "serviceWorker");
   });

@@ -1,27 +1,41 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import ItemModal from "@/features/admin/editions/ItemModal";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
+import type { Organization } from "@/api-types";
 import { createTestQueryClient } from "../../../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({}, { get: (_target, key) => () => String(key) }),
 }));
 
-const existingOrganization = {
+const existingOrganization: Organization = {
   id: 1,
   name: "Maison",
   image: "/logo.svg",
+  website: "",
+  active: true,
+  type: "vendor",
+  contact_person_id: null,
+  contact_person: null,
   description_nl: "Hallo",
   description_fr: "Bonjour",
   description_en: "Hello",
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
 };
 
-function setup(initial: typeof existingOrganization | null = existingOrganization) {
+function setup(initial: Organization | null = existingOrganization) {
   const onSave = vi.fn();
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <ItemModal show initial={initial} authHeaders={() => ({})} onSave={onSave} onHide={vi.fn()} />
+      <OrganizationModal
+        show
+        initial={initial}
+        onSave={onSave}
+        onLogoSaved={vi.fn()}
+        onHide={vi.fn()}
+      />
     </QueryClientProvider>,
   );
   return onSave;
@@ -49,6 +63,7 @@ describe("organization description editor", () => {
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({ image: "/images/organization-placeholder.svg" }),
+        1,
       ),
     );
   });
@@ -66,6 +81,7 @@ describe("organization description editor", () => {
           description_fr: "Bonjour",
           description_en: "Updated",
         }),
+        1,
       ),
     );
   });
@@ -85,6 +101,7 @@ describe("organization description editor", () => {
           description_fr: null,
           description_en: null,
         }),
+        1,
       ),
     );
   });

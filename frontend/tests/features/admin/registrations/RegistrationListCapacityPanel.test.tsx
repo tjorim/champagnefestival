@@ -89,10 +89,8 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
   };
 }
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 function EditionCounter() {
-  const stats = useRegistrationCountsQuery(activeEdition.id, useTodayKey(), authHeaders).data;
+  const stats = useRegistrationCountsQuery(activeEdition.id, useTodayKey()).data;
   if (!stats) return null;
   const total = summarizeGuestCheckIns(
     stats.events.filter((event) => event.edition_id === activeEdition.id),
@@ -122,7 +120,7 @@ function renderRegistrationList(registrations: Registration[], applyEdition = fa
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         onAddRegistration={vi.fn()}
-        authHeaders={authHeaders}
+
         activeEdition={activeEdition}
         applyActiveEditionFilterRequest={applyEdition ? 1 : 0}
       />

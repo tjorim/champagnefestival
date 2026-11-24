@@ -24,7 +24,6 @@ import PersonEmailConsents from "./PersonEmailConsents";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
-  authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
   onDeactivate: (id: string) => Promise<void>;
@@ -40,7 +39,6 @@ function formatPeriod(period: NonNullable<Person["help_periods"]>[number]): stri
 }
 
 export default function VolunteersManagement({
-  authHeaders,
   onCreate,
   onUpdate,
   onDeactivate,
@@ -228,7 +226,7 @@ export default function VolunteersManagement({
       {consentPerson && (
         <PersonEmailConsents
           person={consentPerson}
-          authHeaders={authHeaders}
+
           onClose={() => setConsentPerson(null)}
         />
       )}
@@ -272,7 +270,7 @@ export default function VolunteersManagement({
 
           <PeopleDataTable
             id="volunteers"
-            authHeaders={authHeaders}
+
             columns={columns}
             onOpen={(person) => {
               setEditingVolunteer(person);

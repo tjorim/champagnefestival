@@ -52,7 +52,7 @@ interface LayoutRevisionsModalProps {
   show: boolean;
   onHide: () => void;
   layoutId: string;
-  authHeaders: () => Record<string, string>;
+
   onSaveRevision: (layoutId: string, label: string, changeNote?: string) => Promise<LayoutRevision>;
   onRestoreRevision: (
     layoutId: string,
@@ -179,14 +179,14 @@ function LayoutRevisionsSession({
   show,
   onHide,
   layoutId,
-  authHeaders,
+
   onSaveRevision,
   onRestoreRevision,
 }: LayoutRevisionsModalProps) {
   const sessionId = useId();
   const revisionsQuery = useQuery({
     queryKey: [...queryKeys.admin.layoutRevisions(layoutId), sessionId],
-    queryFn: ({ signal }) => fetchLayoutRevisions(authHeaders, layoutId, signal),
+    queryFn: ({ signal }) => fetchLayoutRevisions(layoutId, signal),
     retry: false,
     gcTime: 0,
     refetchOnWindowFocus: false,
@@ -213,8 +213,7 @@ function LayoutRevisionsSession({
       sessionId,
       revisionGeneration,
     ],
-    queryFn: ({ signal }) =>
-      compareLayoutRevisions(authHeaders, layoutId, compareFrom, compareTo, signal),
+    queryFn: ({ signal }) => compareLayoutRevisions(layoutId, compareFrom, compareTo, signal),
     enabled: revisions.length > 0 && compareFrom !== compareTo,
     retry: false,
     gcTime: 0,
@@ -265,7 +264,7 @@ function LayoutRevisionsSession({
     setRestoreError(null);
     setPreviewLoading(true);
     try {
-      setPreview(await previewLayoutRestore(authHeaders, layoutId, revisionNumber));
+      setPreview(await previewLayoutRestore(layoutId, revisionNumber));
     } catch (error) {
       setPreviewError(apiErrorMessage(error, m.admin_error_preview_layout_restore()));
     } finally {

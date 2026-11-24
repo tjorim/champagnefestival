@@ -12,7 +12,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/features/admin/editions/EditionModal";
 import EventModal from "@/features/admin/editions/EventModal";
-import ItemModal from "@/features/admin/editions/ItemModal";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
 import MemberFormModal from "@/features/admin/people/MemberFormModal";
 import PersonFormModal from "@/features/admin/people/PersonFormModal";
 import RegistrationCreateModal from "@/features/admin/registrations/RegistrationCreateModal";
@@ -29,7 +29,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
 
 const edition = editionOut({
@@ -96,7 +95,7 @@ const cases: Case[] = [
         show={show}
         edition={edition}
         initial={event}
-        authHeaders={authHeaders}
+
         onSave={noop}
         onHide={onHide}
       />
@@ -133,13 +132,13 @@ const cases: Case[] = [
     pristine: "",
   },
   {
-    name: "ItemModal (create)",
+    name: "OrganizationModal (create)",
     modal: (show, onHide) => (
-      <ItemModal
+      <OrganizationModal
         show={show}
         initial={null}
-        authHeaders={authHeaders}
         onSave={noop}
+        onLogoSaved={noop}
         onHide={onHide}
       />
     ),
@@ -154,7 +153,7 @@ const cases: Case[] = [
         show={show}
         initial={edition}
         venues={[]}
-        authHeaders={authHeaders}
+        organizations={[]}
         onSaved={noop}
         onHide={onHide}
       />
@@ -168,7 +167,7 @@ const cases: Case[] = [
     modal: (show, onHide) => (
       <RegistrationCreateModal
         show={show}
-        authHeaders={authHeaders}
+
         onSaved={noop}
         onOpenBooking={noop}
         onHide={onHide}
@@ -269,12 +268,12 @@ describe("dismissal while saving", () => {
     const onHide = vi.fn();
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <ItemModal
+        <OrganizationModal
           show
           initial={null}
-          authHeaders={authHeaders}
           saving
           onSave={noop}
+          onLogoSaved={noop}
           onHide={onHide}
         />
       </QueryClientProvider>,

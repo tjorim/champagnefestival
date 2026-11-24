@@ -30,12 +30,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import {
-  deleteEditionById,
-  deleteEditionEvent,
-  fetchEditionEvents,
-  saveEditionEvent,
-} from "@/lib/api/adminContentApi";
+import { deleteEditionById } from "@/lib/api/editionsApi";
+import { deleteEditionEvent, fetchEditionEvents, saveEditionEvent } from "@/lib/api/eventsApi";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/lib/query/queryKeys";
 import EditionArtwork from "./EditionArtwork";
@@ -44,14 +40,15 @@ import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
 import type { Edition } from "@/api-types";
-import type { Venue } from "@/api-types";
+import type { Organization, Venue } from "@/api-types";
 import type { Event } from "@/api-types";
 import type { EventFormData } from "@/types/event";
 
 interface EditionCardProps {
   edition: Edition;
   venues: Venue[];
-  authHeaders: () => Record<string, string>;
+  organizations: Organization[];
+  organizationsPending?: boolean;
   onDeleted: (id: string) => void;
   onUpdated: (edition: Edition) => void;
   onEventMutation?: () => void;
@@ -71,7 +68,8 @@ function editionTypeBadge(type: Edition["edition_type"]): { label: string; bg: B
 export default function EditionCard({
   edition,
   venues,
-  authHeaders,
+  organizations,
+  organizationsPending,
   onDeleted,
   onUpdated,
   onEventMutation,
@@ -93,14 +91,14 @@ export default function EditionCard({
 
   const eventsQuery = useQuery({
     queryKey: editionEventsQueryKey,
-    queryFn: () => fetchEditionEvents(edition.id, authHeaders),
+    queryFn: () => fetchEditionEvents(edition.id),
     staleTime: Infinity,
     retry: false,
     enabled: open,
   });
 
   const deleteEditionMutation = useMutation({
-    mutationFn: () => deleteEditionById(edition.id, authHeaders),
+    mutationFn: () => deleteEditionById(edition.id),
     retry: false,
   });
   const saveEventMutation = useMutation({
@@ -110,11 +108,11 @@ export default function EditionCard({
     }: {
       formData: EventFormData;
       editingEventId?: string;
-    }) => saveEditionEvent({ editionId: edition.id, editingEventId, formData }, authHeaders),
+    }) => saveEditionEvent({ editionId: edition.id, editingEventId, formData }),
     retry: false,
   });
   const deleteEventMutation = useMutation({
-    mutationFn: (eventId: string) => deleteEditionEvent(eventId, authHeaders),
+    mutationFn: (eventId: string) => deleteEditionEvent(eventId),
     retry: false,
   });
 
@@ -366,14 +364,15 @@ export default function EditionCard({
           )}
 
           {/* After the schedule: events are what organisers edit most, artwork rarely. */}
-          <EditionArtwork edition={edition} authHeaders={authHeaders} onUpdated={onUpdated} />
+          <EditionArtwork edition={edition} onUpdated={onUpdated} />
         </CollapsibleContent>
 
         <EditionModal
           show={editionModalOpen}
           initial={edition}
           venues={venues}
-          authHeaders={authHeaders}
+          organizations={organizations}
+          organizationsPending={organizationsPending}
           onSaved={(updated) => {
             onUpdated(updated);
             setEditionModalOpen(false);
@@ -384,7 +383,7 @@ export default function EditionCard({
           show={eventModalOpen}
           edition={edition}
           initial={editingEvent}
-          authHeaders={authHeaders}
+
           saving={saveEventMutation.isPending}
           onSave={handleEventSaved}
           onHide={() => setEventModalOpen(false)}
@@ -392,7 +391,7 @@ export default function EditionCard({
         <EventProductsModal
           show={productsModalOpen}
           event={productsEvent}
-          authHeaders={authHeaders}
+
           onHide={() => setProductsModalOpen(false)}
           onProductsChanged={() =>
             queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })
@@ -401,7 +400,7 @@ export default function EditionCard({
         <EditionPollModal
           show={pollOptionsModalOpen}
           edition={edition}
-          authHeaders={authHeaders}
+
           onHide={() => setPollOptionsModalOpen(false)}
         />
       </Card>

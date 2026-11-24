@@ -1,3 +1,4 @@
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import OrganizationLogoPreview from "@/components/OrganizationLogoPreview";
 import ResponsiveImage from "@/components/ResponsiveImage";
 import { useAuth } from "@/app/providers/AuthContext";
@@ -7,12 +8,12 @@ import { createAppColumnHelper, useAppTable } from "../shared/useAdminTable";
 import { AdminDataTable } from "../shared/AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { AdminField, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
 import {
-  organizationChangesRequest,
   organizationFieldLabel,
   organizationTextFields,
   type OrganizationChange,
@@ -26,25 +27,22 @@ interface ComparisonRow {
 }
 const columnHelper = createAppColumnHelper<ComparisonRow>();
 
-function Review({
-  change,
-  headers,
-  onDecided,
-}: {
-  change: OrganizationChange;
-  headers: () => Record<string, string>;
-  onDecided: () => void;
-}) {
+function Review({ change, onDecided }: { change: OrganizationChange; onDecided: () => void }) {
   const [reason, setReason] = useState("");
   const mutation = useMutation({
     retry: false,
     mutationFn: async (decision: "accepted" | "rejected") => {
       const isCurrent = captureAdminOrganizationsFence();
-      await organizationChangesRequest(
+      await fetchJsonOrThrow(
         `/api/organizations/changes/${change.id}/decision`,
-        headers(),
-        undefined,
-        { decision, reason: decision === "rejected" ? reason || null : null },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            reason: decision === "rejected" ? reason || null : null,
+          }),
+        },
+        m.manager_error(),
       );
       return isCurrent;
     },
@@ -77,12 +75,7 @@ function Review({
       ) : (
         "—"
       ),
-      proposed: (
-        <OrganizationLogoPreview
-          url={`/api/organizations/changes/${change.id}/logo`}
-          headers={headers}
-        />
-      ),
+      proposed: <OrganizationLogoPreview url={`/api/organizations/changes/${change.id}/logo`} />,
     });
   }
   // Review is a bounded field comparison, not a paged organization list. Reuse
@@ -154,24 +147,18 @@ function Review({
   );
 }
 
-export default function OrganizationChangeReview({
-  authHeaders,
-  onDecided,
-}: {
-  authHeaders: () => Record<string, string>;
-  onDecided: () => void;
-}) {
+export default function OrganizationChangeReview({ onDecided }: { onDecided: () => void }) {
   const instance = useId();
   const { accountId } = useAuth();
   const query = useQuery({
-    queryKey: ["admin", "organization-changes", instance, accountId],
+    queryKey: [...queryKeys.admin.organizationChanges, instance, accountId],
     gcTime: 0,
     retry: false,
     queryFn: ({ signal }) =>
-      organizationChangesRequest<OrganizationChange[]>(
+      fetchJsonOrThrow<OrganizationChange[]>(
         "/api/organizations/changes",
-        authHeaders(),
-        signal,
+        { signal },
+        m.manager_error(),
       ),
   });
   return (
@@ -195,7 +182,7 @@ export default function OrganizationChangeReview({
         <Review
           key={`${accountId}-${change.id}`}
           change={change}
-          headers={authHeaders}
+
           onDecided={() => {
             void query.refetch();
             onDecided();

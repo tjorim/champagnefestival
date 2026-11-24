@@ -19,7 +19,7 @@ afterEach(cleanup);
 
 describe("AnnouncementsSection", () => {
   it("offers the announcements and the composer as tabs of one section", async () => {
-    render(<AnnouncementsSection authHeaders={() => ({ Authorization: "Bearer test" })} />, {
+    render(<AnnouncementsSection />, {
       wrapper: createTestQueryClientWrapper(),
     });
 

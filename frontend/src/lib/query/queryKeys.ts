@@ -77,7 +77,6 @@ export const queryKeys = {
     editionPollQuestions: (editionId: string) =>
       ["admin", "edition-poll-questions", editionId] as const,
     editionPollOrders: (editionId: string) => ["admin", "edition-poll-orders", editionId] as const,
-    editionModalOrganizations: ["admin", "edition-modal", "organizations"] as const,
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
@@ -135,9 +134,9 @@ export const queryKeys = {
     waitlistEntries: ["admin", "waitlist-entries"] as const,
     waitlistEntriesPage: (query: string) => ["admin", "waitlist-entries", "page", query] as const,
     waitlistScopes: ["admin", "waitlist-entries", "scopes"] as const,
-    contentManagement: {
-      section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
-      editions: ["admin", "content-management", "editions"] as const,
-    },
+    /** Every edition, archived ones included (the editions section and the poll copy picker). */
+    editions: ["admin", "editions"] as const,
+    /** Pending organisation change proposals; a prefix of every review panel's own key. */
+    organizationChanges: ["admin", "organization-changes"] as const,
   },
 } as const;

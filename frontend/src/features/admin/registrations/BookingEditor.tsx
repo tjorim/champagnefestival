@@ -41,14 +41,14 @@ function invalidProductQuantity(quantity: number): boolean {
 export default function BookingEditor({
   registration,
   registrations = [],
-  authHeaders,
+
   tables,
   onSave,
   onAddTransaction,
 }: {
   registration: Registration;
   registrations?: Registration[];
-  authHeaders: () => Record<string, string>;
+
   tables: FloorTable[];
   onSave: (id: string, update: BookingUpdate) => Promise<void>;
   onAddTransaction?: (
@@ -181,7 +181,7 @@ export default function BookingEditor({
 
   const ledgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactions(registration.id),
-    queryFn: () => fetchPaymentTransactions(authHeaders, registration.id),
+    queryFn: () => fetchPaymentTransactions(registration.id),
     enabled: showLedger,
   });
 

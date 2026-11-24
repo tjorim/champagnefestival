@@ -23,7 +23,6 @@ function setup(confirmOverCapacity = vi.fn().mockResolvedValue(false)) {
   const hook = renderHook(
     () =>
       useAdminRegistrationActions({
-        authHeaders: () => ({}),
         queryClient,
         registrationsQueryKey,
         setDetailRegistration: vi.fn(),

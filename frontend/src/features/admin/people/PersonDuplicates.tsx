@@ -6,13 +6,12 @@ import { m } from "@/paraglide/messages";
 
 export function usePersonDuplicates(
   person: { id: string; email?: string } | null,
-  authHeaders: () => Record<string, string>,
+
   enabled = true,
 ) {
   const query = useQuery({
     queryKey: ["admin", "people", "by-email", person?.email ?? "", person?.id ?? ""],
-    queryFn: ({ signal }) =>
-      fetchPeopleByEmail(authHeaders, person!.email ?? "", person!.id, signal),
+    queryFn: ({ signal }) => fetchPeopleByEmail(person!.email ?? "", person!.id, signal),
     enabled: enabled && !!person?.email,
     retry: false,
   });
@@ -21,14 +20,14 @@ export function usePersonDuplicates(
 
 export function PersonDuplicates({
   person,
-  authHeaders,
+
   onMerge,
 }: {
   person: Person;
-  authHeaders: () => Record<string, string>;
+
   onMerge: (a: Person, b: Person) => void;
 }) {
-  const query = usePersonDuplicates(person, authHeaders);
+  const query = usePersonDuplicates(person);
   return (
     <div className="space-y-1">
       {query.isError && <p role="alert">{m.admin_error_load_data()}</p>}

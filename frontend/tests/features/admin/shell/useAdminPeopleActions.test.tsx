@@ -26,10 +26,6 @@ function harness() {
   const view = renderHook(
     () =>
       useAdminPeopleActions({
-        authHeaders: () => ({
-          "Content-Type": "application/json",
-          Authorization: "Bearer test-token",
-        }),
         queryClient,
         registrationsQueryKey: ["admin", "registrations"],
         registrationsCollection,

@@ -51,17 +51,10 @@ import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { FaqItemOut } from "@/api-types";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { fetchFaqItemsAdmin } from "@/lib/api/adminFetch";
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { useAppTable, createAppColumnHelper } from "../shared/useAdminTable";
-
-interface FaqManagementProps {
-  authHeaders: () => Record<string, string>;
-}
 
 interface FaqFormState {
   question: LocalizedText;
@@ -104,13 +97,13 @@ function dutchText(item: FaqItemOut) {
   return { question: item.question_nl ?? "", answer: item.answer_nl ?? "" };
 }
 
-export default function FaqManagement({ authHeaders }: FaqManagementProps) {
+export default function FaqManagement() {
   const queryClient = useQueryClient();
   const faqItemsQueryKey = queryKeys.admin.faqItems;
 
   const faqItemsQuery = useQuery({
     queryKey: faqItemsQueryKey,
-    queryFn: () => fetchFaqItemsAdmin(authHeaders),
+    queryFn: () => fetchFaqItemsAdmin(),
   });
   const faqItems = useMemo(() => faqItemsQuery.data ?? [], [faqItemsQuery.data]);
 
@@ -123,11 +116,11 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const saveMutation = useMutation({
     mutationFn: ({ id, data }: { id: string | null; data: Record<string, unknown> }) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
+      fetchJsonOrThrow<import("@/api-types").FaqItemOut>(
         id ? `/api/faq/${id}` : "/api/faq",
         {
           method: id ? "PUT" : "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify(data),
         },
         id ? m.admin_error_update_faq_item() : m.admin_error_add_faq_item(),
@@ -138,11 +131,11 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const reorderMutation = useMutation({
     mutationFn: (orderedIds: string[]) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").FaqItemOut>(
+      fetchJsonOrThrow<import("@/api-types").FaqItemOut>(
         "/api/faq/reorder",
         {
           method: "POST",
-          headers: authHeaders(),
+
           body: JSON.stringify({ ordered_ids: orderedIds }),
         },
         m.admin_error_reorder_faq_items(),
@@ -153,11 +146,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      fetchVoidOrThrowWithUnauthorized(
-        `/api/faq/${id}`,
-        { method: "DELETE", headers: authHeaders() },
-        m.admin_error_delete_faq_item(),
-      ),
+      fetchVoidOrThrow(`/api/faq/${id}`, { method: "DELETE" }, m.admin_error_delete_faq_item()),
     onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
   });

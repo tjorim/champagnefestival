@@ -20,7 +20,6 @@ import {
 } from "@/lib/collections/adminOrganizationsCollection";
 
 interface UseAdminPeopleActionsOptions {
-  authHeaders: () => Record<string, string>;
   organizationsCollection: AdminOrganizationsCollection;
   registrationsCollection: AdminRegistrationsCollection;
   queryClient: QueryClient;
@@ -30,7 +29,6 @@ interface UseAdminPeopleActionsOptions {
 }
 
 export function useAdminPeopleActions({
-  authHeaders,
   organizationsCollection,
   registrationsCollection,
   queryClient,
@@ -52,7 +50,7 @@ export function useAdminPeopleActions({
     reactivateVolunteerMutation,
   } = usePeopleMutations({
     queryClient,
-    authHeaders,
+
     registrationsQueryKey: queryKeys.admin.registrations,
   });
 
@@ -104,7 +102,7 @@ export function useAdminPeopleActions({
           await refetchAdminRegistrations(registrationsCollection);
           const updatedDetail = detailRegistration
             ? (registrationsCollection.get(detailRegistration.id) ??
-              (await fetchRegistration(detailRegistration.id, authHeaders).catch(() => null)))
+              (await fetchRegistration(detailRegistration.id).catch(() => null)))
             : null;
           if (current())
             setDetailRegistration((previous) =>
@@ -113,13 +111,7 @@ export function useAdminPeopleActions({
         }
       }
     },
-    [
-      updateMemberMutation,
-      registrationsCollection,
-      setDetailRegistration,
-      detailRegistration,
-      authHeaders,
-    ],
+    [updateMemberMutation, registrationsCollection, setDetailRegistration, detailRegistration],
   );
 
   const handleDeactivateMember = useCallback(
@@ -153,7 +145,7 @@ export function useAdminPeopleActions({
           await refetchAdminRegistrations(registrationsCollection);
           const updatedDetail = detailRegistration
             ? (registrationsCollection.get(detailRegistration.id) ??
-              (await fetchRegistration(detailRegistration.id, authHeaders).catch(() => null)))
+              (await fetchRegistration(detailRegistration.id).catch(() => null)))
             : null;
           if (current())
             setDetailRegistration((previous) =>
@@ -162,13 +154,7 @@ export function useAdminPeopleActions({
         }
       }
     },
-    [
-      updatePersonMutation,
-      registrationsCollection,
-      setDetailRegistration,
-      detailRegistration,
-      authHeaders,
-    ],
+    [updatePersonMutation, registrationsCollection, setDetailRegistration, detailRegistration],
   );
 
   const handleDeletePerson = useCallback(

@@ -2,35 +2,35 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminSessionRecovery } from "@/features/admin/shell/useAdminSessionRecovery";
 
-const unauthorized = new Error("unauthorized");
+const unauthorized = new Error("session_expired");
 const otherError = new Error("boom");
 
 function setup() {
   const renewSession = vi.fn();
-  const loadData = vi.fn().mockResolvedValue(undefined);
+  const refresh = vi.fn().mockResolvedValue(undefined);
   const onSignOut = vi.fn();
 
   const { result, rerender } = renderHook(
     ({ errors }: { errors: (Error | null)[] }) =>
-      useAdminSessionRecovery({ errors, renewSession, loadData, onSignOut }),
+      useAdminSessionRecovery({ errors, renewSession, refresh, onSignOut }),
     { initialProps: { errors: [null] as (Error | null)[] } },
   );
 
-  return { result, rerender, renewSession, loadData, onSignOut };
+  return { result, rerender, renewSession, refresh, onSignOut };
 }
 
 describe("useAdminSessionRecovery", () => {
   it("does nothing while every watched query is clean", () => {
-    const { result, renewSession, loadData, onSignOut } = setup();
+    const { result, renewSession, refresh, onSignOut } = setup();
 
     expect(result.current).toEqual({ isRenewingSession: false, loadError: null });
     expect(renewSession).not.toHaveBeenCalled();
-    expect(loadData).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
     expect(onSignOut).not.toHaveBeenCalled();
   });
 
   it("renews once on a 401 and refetches instead of signing out immediately", async () => {
-    const { result, rerender, renewSession, loadData, onSignOut } = setup();
+    const { result, rerender, renewSession, refresh, onSignOut } = setup();
     renewSession.mockResolvedValue(true);
 
     rerender({ errors: [unauthorized] });
@@ -39,17 +39,37 @@ describe("useAdminSessionRecovery", () => {
     await waitFor(() => expect(result.current.isRenewingSession).toBe(false));
 
     expect(renewSession).toHaveBeenCalledTimes(1);
-    expect(loadData).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(onSignOut).not.toHaveBeenCalled();
+  });
+
+  it("coalesces auth failures from reads that finish during renewal", async () => {
+    const { rerender, renewSession, refresh, onSignOut } = setup();
+    let finishRenewal: (value: boolean) => void = () => {};
+    renewSession.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        finishRenewal = resolve;
+      }),
+    );
+
+    rerender({ errors: [unauthorized, null] });
+    rerender({ errors: [unauthorized, new Error("session_expired")] });
+    expect(renewSession).toHaveBeenCalledTimes(1);
+    expect(onSignOut).not.toHaveBeenCalled();
+
+    finishRenewal(true);
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    rerender({ errors: [null, null] });
     expect(onSignOut).not.toHaveBeenCalled();
   });
 
   it("signs out when the renewed token is rejected too, without retrying", async () => {
-    const { rerender, renewSession, loadData, onSignOut } = setup();
+    const { rerender, renewSession, refresh, onSignOut } = setup();
     renewSession.mockResolvedValue(true);
 
     // First 401: renews and refetches.
     rerender({ errors: [unauthorized] });
-    await waitFor(() => expect(loadData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
 
     // The refetch comes back 401 again — the refreshed token didn't help.
     rerender({ errors: [unauthorized] });
@@ -70,11 +90,11 @@ describe("useAdminSessionRecovery", () => {
   });
 
   it("re-arms the renewal guard once queries succeed again", async () => {
-    const { rerender, renewSession, loadData, onSignOut } = setup();
+    const { rerender, renewSession, refresh, onSignOut } = setup();
     renewSession.mockResolvedValue(true);
 
     rerender({ errors: [unauthorized] });
-    await waitFor(() => expect(loadData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
 
     // A later, unrelated success clears the guard...
     rerender({ errors: [null] });

@@ -21,10 +21,8 @@ function useAdminTables() {
     visible: true,
     isAuthenticated: true,
     canManageAdminSections: true,
-    authHeaders,
   });
   const actions = useAdminVenueActions({
-    authHeaders,
     tablesCollection: queries.tablesCollection,
     venueCollections: queries.venueCollections,
   });
@@ -80,7 +78,6 @@ describe("admin tables collection in the admin hooks", () => {
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
-          authHeaders,
         }),
       { wrapper: Wrapper, initialProps: { isAuthenticated: true } },
     );
@@ -115,7 +112,7 @@ describe("admin tables collection in the admin hooks", () => {
 
     // Move reg-01 to table-02: only the registrations collection is written.
     await put([{ table_id: "table-02", guest_count: 1, exclusive: false }]);
-    await act(() => patchAdminRegistrationLiveEvent(registrationEvent("reg-01"), authHeaders));
+    await act(() => patchAdminRegistrationLiveEvent(registrationEvent("reg-01")));
     await waitFor(() =>
       expect(occupancy(result.current.queries.tablesQuery.data, "table-02")).toEqual([
         "reg-01",
@@ -126,7 +123,7 @@ describe("admin tables collection in the admin hooks", () => {
 
     // Remove the assignment altogether.
     await put([]);
-    await act(() => patchAdminRegistrationLiveEvent(registrationEvent("reg-01"), authHeaders));
+    await act(() => patchAdminRegistrationLiveEvent(registrationEvent("reg-01")));
     await waitFor(() =>
       expect(occupancy(result.current.queries.tablesQuery.data, "table-02")).toEqual(["reg-04"]),
     );
@@ -181,7 +178,7 @@ describe("admin tables collection in the admin hooks", () => {
     expect(result.current.queries.tablesQuery.data?.some((t) => t.id === "table-01")).toBe(true);
   });
 
-  it("refreshes the tables through loadData", async () => {
+  it("refreshes the tables through refreshDashboard", async () => {
     const { result } = await renderLoaded();
     server.use(
       http.get("/api/tables", () =>
@@ -189,7 +186,7 @@ describe("admin tables collection in the admin hooks", () => {
       ),
     );
 
-    await act(() => result.current.queries.loadData());
+    await act(() => result.current.queries.refreshDashboard());
 
     await waitFor(() => expect(result.current.queries.tablesQuery.data).toHaveLength(1));
   });

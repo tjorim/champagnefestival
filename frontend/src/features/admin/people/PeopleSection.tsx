@@ -8,24 +8,17 @@ import PeopleManagement from "./PeopleManagement";
 import VolunteersManagement from "./VolunteersManagement";
 
 interface PeopleSectionProps {
-  authHeaders: () => Record<string, string>;
   counts: { all: number; members: number; volunteers: number };
-  people: Omit<ComponentProps<typeof PeopleManagement>, "authHeaders">;
-  members: Omit<ComponentProps<typeof MembersManagement>, "authHeaders">;
-  volunteers: Omit<ComponentProps<typeof VolunteersManagement>, "authHeaders">;
+  people: ComponentProps<typeof PeopleManagement>;
+  members: ComponentProps<typeof MembersManagement>;
+  volunteers: ComponentProps<typeof VolunteersManagement>;
 }
 
 /**
  * Everyone the festival knows, as one list with two role-filtered views of it. The tabs carry the
  * counts, so the sidebar needs a single People entry.
  */
-export default function PeopleSection({
-  authHeaders,
-  counts,
-  people,
-  members,
-  volunteers,
-}: PeopleSectionProps) {
+export default function PeopleSection({ counts, people, members, volunteers }: PeopleSectionProps) {
   const [tab, setTab, invalidTab] = useLocationChoice(
     "peopleTab",
     ["all", "members", "volunteers"],
@@ -47,13 +40,13 @@ export default function PeopleSection({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <PeopleManagement authHeaders={authHeaders} {...people} />
+          <PeopleManagement {...people} />
         </TabsContent>
         <TabsContent value="members">
-          <MembersManagement authHeaders={authHeaders} {...members} />
+          <MembersManagement {...members} />
         </TabsContent>
         <TabsContent value="volunteers">
-          <VolunteersManagement authHeaders={authHeaders} {...volunteers} />
+          <VolunteersManagement {...volunteers} />
         </TabsContent>
       </Tabs>
     </>

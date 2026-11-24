@@ -146,6 +146,41 @@ describe("admin cache privacy boundary", () => {
     await flush();
     expect(JSON.stringify(await storage.read())).not.toContain('"old"');
   });
+  it("persists reads that finish while the edition switch removes the old snapshot", async () => {
+    const { client, storage, cache } = setup();
+    await cache.setSession("user");
+    const remove = storage.remove.bind(storage);
+    const key = queryKeys.admin.registrationsEdition("next");
+    vi.spyOn(storage, "remove").mockImplementationOnce(async () => {
+      client.setQueryData(key, [{ id: "booking" }]);
+      await remove();
+    });
+
+    await cache.setEdition("next");
+    await flush();
+    expect(await storage.read()).toMatchObject({
+      editionId: "next",
+      client: { clientState: { queries: [{ queryKey: key }] } },
+    });
+  });
+  it("persists reads that finish while the restart is still restoring", async () => {
+    const { client, storage, cache } = setup();
+    await cache.setSession("user");
+    const key = queryKeys.admin.registrationsEdition("next");
+    const read = storage.read.bind(storage);
+    vi.spyOn(storage, "read").mockImplementationOnce(async () => {
+      // The listener is detached until the restore settles.
+      client.setQueryData(key, [{ id: "booking" }]);
+      return read();
+    });
+
+    await cache.setEdition("next");
+    await flush();
+    expect(await storage.read()).toMatchObject({
+      editionId: "next",
+      client: { clientState: { queries: [{ queryKey: key }] } },
+    });
+  });
   it("fences a restore that resolves after sign-out", async () => {
     const { client, storage, cache } = setup();
     await seed(storage);

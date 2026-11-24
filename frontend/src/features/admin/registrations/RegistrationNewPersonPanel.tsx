@@ -27,7 +27,6 @@ import { queryKeys } from "@/lib/query/queryKeys";
 type Language = "nl" | "fr" | "en" | null;
 
 interface RegistrationNewPersonPanelProps {
-  authHeaders: () => Record<string, string>;
   /** Pre-fills the name with what the organiser already typed into the person search. */
   initialName: string;
   onCreated: (person: PersonOption) => void;
@@ -44,7 +43,6 @@ const digits = (value: string) => value.replace(/\D/g, "");
  * fails afterwards is retried against this person instead of creating another.
  */
 export default function RegistrationNewPersonPanel({
-  authHeaders,
   initialName,
   onCreated,
   onUseExisting,
@@ -73,7 +71,7 @@ export default function RegistrationNewPersonPanel({
 
   const duplicatesQuery = useQuery({
     queryKey: queryKeys.admin.personOptions(lookup),
-    queryFn: ({ signal }) => fetchAdminPersonOptions(lookup, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(lookup, signal),
     enabled: lookup !== "",
     staleTime: 30 * 1000,
     retry: false,
@@ -86,15 +84,12 @@ export default function RegistrationNewPersonPanel({
 
   const createPerson = useMutation({
     mutationFn: () =>
-      createAdminPerson(
-        {
-          name: name.trim(),
-          email: trimmedEmail,
-          phone: phone.trim(),
-          preferredLanguage: language,
-        },
-        authHeaders,
-      ),
+      createAdminPerson({
+        name: name.trim(),
+        email: trimmedEmail,
+        phone: phone.trim(),
+        preferredLanguage: language,
+      }),
     retry: false,
     onError: fieldErrors.capture,
     onSuccess: async (person) => {

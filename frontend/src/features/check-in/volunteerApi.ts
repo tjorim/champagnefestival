@@ -1,6 +1,6 @@
 import type { CheckInGuestOut, CheckInOut, VolunteerRegistrationUpdate } from "@/api-types";
 import { m } from "@/paraglide/messages";
-import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchArrayOrThrow, fetchJsonOrThrow } from "@/lib/api/adminApi";
 import type { CheckInData } from "@/lib/api/publicRegistrationApi";
 
 export async function searchVolunteerRegistrations(
@@ -20,7 +20,7 @@ export async function submitVolunteerCheckIn(
   registrationId: string,
   authHeaders: () => Record<string, string>,
 ): Promise<CheckInOut> {
-  return fetchJsonOrThrowWithUnauthorized<CheckInOut>(
+  return fetchJsonOrThrow<CheckInOut>(
     `/api/volunteer/registrations/${encodeURIComponent(registrationId)}/check-in`,
     {
       method: "POST",
@@ -47,7 +47,7 @@ export async function updateVolunteerRegistration(
     body.strap_issued = payload.strap_issued;
   }
 
-  const registration = await fetchJsonOrThrowWithUnauthorized<CheckInGuestOut>(
+  const registration = await fetchJsonOrThrow<CheckInGuestOut>(
     `/api/volunteer/registrations/${encodeURIComponent(registrationId)}`,
     { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
     m.admin_error_update_registration(),

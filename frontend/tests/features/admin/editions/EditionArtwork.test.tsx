@@ -20,7 +20,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const flyerPath = `/uploads/editions/${"a".repeat(32)}-${"b".repeat(64)}.jpg`;
 
 function apiEdition(extra: Partial<Edition> = {}) {
@@ -42,7 +41,7 @@ function apiEdition(extra: Partial<Edition> = {}) {
 function mount(edition: Edition, onUpdated = vi.fn()) {
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <EditionArtwork edition={edition} authHeaders={authHeaders} onUpdated={onUpdated} />
+      <EditionArtwork edition={edition} onUpdated={onUpdated} />
     </QueryClientProvider>,
   );
   return onUpdated;

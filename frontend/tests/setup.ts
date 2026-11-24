@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { configureAxe, toHaveNoViolations } from "jest-axe";
 import { expect } from "vitest";
 import type { ReactNode } from "react";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 expect.extend(toHaveNoViolations);
 
@@ -13,6 +13,7 @@ configureAxe({
 });
 import { server } from "@/mocks/server";
 import { resetAdminStore } from "@/mocks/handlers/admin";
+import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 
 // Mock react-oidc-context before anything imports it.
 // Tests control auth state via these mocks rather than a real OIDC provider.
@@ -54,10 +55,18 @@ vi.mock("@/app/providers/AuthContext", () => ({
 // data used by the browser dev worker are also used in Vitest.
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 
+beforeEach(() => {
+  localStorage.setItem(
+    OIDC_USER_STORAGE_KEY,
+    JSON.stringify({ access_token: "mock-access-token" }),
+  );
+});
+
 // After each test:
 //  1. Remove any per-test handler overrides added via server.use(…).
 //  2. Reset in-memory data stores so mutations don't bleed between tests.
 afterEach(() => {
+  localStorage.removeItem(OIDC_USER_STORAGE_KEY);
   server.resetHandlers();
   resetAdminStore();
 });

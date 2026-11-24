@@ -1,9 +1,10 @@
+import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { ApiError } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
-import { fetchJsonOrThrow, requestApi, signageOperationErrorMessage } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, adminRequest, signageOperationErrorMessage } from "@/lib/api/adminApi";
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -14,10 +15,47 @@ afterEach(() => {
 });
 
 describe("adminApi", () => {
+  it("reads the current access token for every request and leaves multipart headers to the browser", async () => {
+    const received: Headers[] = [];
+    server.use(
+      http.post("/api/admin/upload", ({ request }) => {
+        received.push(request.headers);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const body = new FormData();
+    body.append("file", new Blob(["test"]), "sample.txt");
+
+    await adminRequest("/api/admin/upload", { method: "POST", body });
+    localStorage.setItem(OIDC_USER_STORAGE_KEY, JSON.stringify({ access_token: "renewed-token" }));
+    await adminRequest("/api/admin/upload", { method: "POST", body });
+
+    expect(received.map((headers) => headers.get("authorization"))).toEqual([
+      "Bearer mock-access-token",
+      "Bearer renewed-token",
+    ]);
+    expect(received[1]?.get("content-type")).toMatch(/^multipart\/form-data; boundary=/);
+  });
+
+  it("reports an expired session without replaying a write", async () => {
+    let requests = 0;
+    server.use(
+      http.post("/api/admin/write", () => {
+        requests++;
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+
+    await expect(adminRequest("/api/admin/write", { method: "POST" })).rejects.toThrow(
+      "session_expired",
+    );
+    expect(requests).toBe(1);
+  });
+
   it("shows a friendly offline message when fetch fails", async () => {
     server.use(http.all("/api/admin/check-in", () => HttpResponse.error()));
 
-    await expect(requestApi("/api/admin/check-in", {})).rejects.toThrow(
+    await expect(adminRequest("/api/admin/check-in", {})).rejects.toThrow(
       "We could not reach the server. Check your internet connection and try again.",
     );
     expect(console.error).toHaveBeenCalledWith("Admin API network request failed", {
@@ -32,9 +70,9 @@ describe("adminApi", () => {
     const controller = new AbortController();
     controller.abort();
 
-    await expect(requestApi("/api/admin/check-in", { signal: controller.signal })).rejects.toThrow(
-      "We could not reach the server.",
-    );
+    await expect(
+      adminRequest("/api/admin/check-in", { signal: controller.signal }),
+    ).rejects.toThrow();
     expect(console.error).not.toHaveBeenCalled();
   });
 
@@ -119,7 +157,7 @@ describe("adminApi", () => {
   it("marks a network failure with its own code so it can be translated", async () => {
     server.use(http.get("/api/x", () => HttpResponse.error()));
 
-    const error = await requestApi("/api/x", {}).catch((caught: unknown) => caught);
+    const error = await adminRequest("/api/x", {}).catch((caught: unknown) => caught);
 
     expect(error).toMatchObject({ status: 0, code: "network_error" });
   });

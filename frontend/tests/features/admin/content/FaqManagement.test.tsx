@@ -7,8 +7,6 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../../../utils/queryClient";
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const item = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -24,7 +22,7 @@ const item = {
 };
 
 function mount() {
-  render(<FaqManagement authHeaders={authHeaders} />, { wrapper: createTestQueryClientWrapper() });
+  render(<FaqManagement />, { wrapper: createTestQueryClientWrapper() });
 }
 
 beforeEach(() => {

@@ -1,3 +1,4 @@
+import { adminRequest } from "@/lib/api/adminApi";
 import type { OrganizationOut, OrganizationChangeOut } from "@/api-types";
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ export default function OrganizationLogoUpload({
   admin = false,
 }: {
   url: string;
-  headers: () => Record<string, string>;
+  headers?: () => Record<string, string>;
   onSaved: (result: OrganizationOut | OrganizationChangeOut) => void;
   admin?: boolean;
 }) {
@@ -27,7 +28,11 @@ export default function OrganizationLogoUpload({
       const body = new FormData();
       if (!file) throw new Error(m.logo_upload_error());
       body.append("file", file);
-      const response = await fetch(url, { method: "POST", headers: headers(), body });
+      const response = await (headers ? fetch : adminRequest)(url, {
+        method: "POST",
+        headers: headers?.(),
+        body,
+      });
       if (!response.ok) throw new Error(m.logo_upload_error());
       return {
         result: (await response.json()) as OrganizationOut | OrganizationChangeOut,

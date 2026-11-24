@@ -43,10 +43,7 @@ import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type { Category } from "@/api-types";
-import {
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
-} from "@/lib/api/adminApi";
+import { fetchJsonOrThrow, fetchVoidOrThrow } from "@/lib/api/adminApi";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
 
@@ -116,13 +113,7 @@ function labelBody(form: CategoryForm) {
   };
 }
 
-export default function CategoryManagement({
-  kind,
-  authHeaders,
-}: {
-  kind: CategoryKind;
-  authHeaders: () => Record<string, string>;
-}) {
+export default function CategoryManagement({ kind }: { kind: CategoryKind }) {
   const config = KINDS[kind];
   const queryClient = useQueryClient();
   const query = useQuery(config.queryOptions);
@@ -137,11 +128,11 @@ export default function CategoryManagement({
 
   const saveMutation = useMutation({
     mutationFn: ({ editing, data }: { editing: string | null; data: CategoryForm }) =>
-      fetchJsonOrThrowWithUnauthorized<import("@/api-types").CategoryOut>(
+      fetchJsonOrThrow<import("@/api-types").CategoryOut>(
         editing ? `${config.path}/${encodeURIComponent(editing)}` : config.path,
         {
           method: editing ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(editing ? labelBody(data) : { key: data.key, ...labelBody(data) }),
         },
         m.admin_error_save_category(),
@@ -152,9 +143,9 @@ export default function CategoryManagement({
 
   const deleteMutation = useMutation({
     mutationFn: (key: string) =>
-      fetchVoidOrThrowWithUnauthorized(
+      fetchVoidOrThrow(
         `${config.path}/${encodeURIComponent(key)}`,
-        { method: "DELETE", headers: authHeaders() },
+        { method: "DELETE" },
         m.admin_error_delete_category(),
       ),
     onSettled: () => void invalidateAdmin(queryClient, [config.queryOptions.queryKey]),

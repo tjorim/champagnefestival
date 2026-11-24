@@ -58,7 +58,7 @@ interface RegistrationDetailProps {
   registration: Registration | null;
   /** Every currently-known registration, used to compute remaining table capacity in the booking editor. */
   registrations?: Registration[];
-  authHeaders: () => Record<string, string>;
+
   /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
@@ -86,7 +86,7 @@ function isSimpleRsvp(registration: Registration) {
 export default function RegistrationDetail({
   registration,
   registrations = [],
-  authHeaders,
+
   baseUrl,
   emailDuplicates = [],
   tables = [],
@@ -366,7 +366,7 @@ export default function RegistrationDetail({
                   key={`${registration.id}:${registration.updated_at}`}
                   registration={registration}
                   registrations={registrations}
-                  authHeaders={authHeaders}
+
                   tables={sortedTables}
                   onSave={onSaveBooking}
                   onAddTransaction={onAddTransaction}

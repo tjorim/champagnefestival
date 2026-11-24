@@ -4,11 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
-import {
-  signageRequest,
-  fetchJsonOrThrowWithUnauthorized,
-  downloadFileOrThrow,
-} from "@/lib/api/adminApi";
+import { signageRequest, fetchJsonOrThrow, downloadFileOrThrow } from "@/lib/api/adminApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
@@ -24,13 +20,7 @@ type CreatedJob = Omit<import("@/api-types").VideoExportCreatedOut, "playlist"> 
 const queryKey = ["admin", "signage", "video-exports"];
 const active = (state: State) => ["preparing", "submitted", "queued", "running"].includes(state);
 
-export default function SignageVideoExports({
-  channels,
-  authHeaders,
-}: {
-  channels: Channel[];
-  authHeaders: () => Record<string, string>;
-}) {
+export default function SignageVideoExports({ channels }: { channels: Channel[] }) {
   const client = useQueryClient();
   const [channelId, setChannelId] = useState("");
   const [phase, setPhase] = useState("");
@@ -44,7 +34,7 @@ export default function SignageVideoExports({
     queryFn: ({ signal }) =>
       signageRequest<import("@/api-types").VideoExportCapabilityOut>(
         "video-exports/capability",
-        authHeaders(),
+
         "GET",
         undefined,
         signal,
@@ -52,8 +42,7 @@ export default function SignageVideoExports({
   });
   const jobs = useQuery({
     queryKey,
-    queryFn: ({ signal }) =>
-      signageRequest<Job[]>("video-exports", authHeaders(), "GET", undefined, signal),
+    queryFn: ({ signal }) => signageRequest<Job[]>("video-exports", "GET", undefined, signal),
     refetchInterval: 3000,
   });
   useEffect(() => () => controller.current?.abort(), []);
@@ -83,12 +72,11 @@ export default function SignageVideoExports({
     setError("");
     setPhase(m.signage_video_preparing());
     try {
-      const job = await fetchJsonOrThrowWithUnauthorized<CreatedJob>(
+      const job = await fetchJsonOrThrow<CreatedJob>(
         "/api/signage/video-exports",
         {
           method: "POST",
           headers: {
-            ...authHeaders(),
             "Content-Type": "application/json",
             "Idempotency-Key": identity.current.key,
           },
@@ -109,11 +97,11 @@ export default function SignageVideoExports({
             if (bytes.length > 8 * 1024 ** 2 || totalBytes > 120 * 1024 ** 2)
               throw new Error("Capture limit");
             setPhase(m.signage_video_uploading({ current: index + 1, total: job.slide_count }));
-            await fetchJsonOrThrowWithUnauthorized(
+            await fetchJsonOrThrow(
               `/api/signage/video-exports/${job.id}/slides/${index}`,
               {
                 method: "PUT",
-                headers: { ...authHeaders(), "Content-Type": "image/png" },
+                headers: { "Content-Type": "image/png" },
                 body: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "image/png" }),
                 signal: abort.signal,
               },
@@ -125,7 +113,7 @@ export default function SignageVideoExports({
         abort.signal.throwIfAborted();
         await signageRequest(
           `video-exports/${job.id}/submit`,
-          authHeaders(),
+
           "POST",
           undefined,
           abort.signal,
@@ -146,7 +134,7 @@ export default function SignageVideoExports({
     if (currentJob.current === id) controller.current?.abort();
     setError("");
     try {
-      await signageRequest(`video-exports/${id}/cancel`, authHeaders(), "POST");
+      await signageRequest(`video-exports/${id}/cancel`, "POST");
       identity.current = null;
       await refresh();
     } catch (failure) {
@@ -214,7 +202,7 @@ export default function SignageVideoExports({
                   onClick={() => {
                     void downloadFileOrThrow(
                       `/api/signage/video-exports/${job.id}/download`,
-                      { headers: authHeaders() },
+                      {},
                       m.signage_video_error(),
                       "signage.mp4",
                     ).catch((failure) =>

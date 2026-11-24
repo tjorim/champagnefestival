@@ -26,14 +26,14 @@ import {
   copyPollQuestions,
   createPollQuestion,
   deletePollQuestion,
-  fetchEditions,
-  fetchVolunteerPollEvents,
   fetchPollOrders,
   fetchPollQuestions,
   reorderPollQuestions,
   type PollQuestion,
   type PollQuestionWrite,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/pollsApi";
+import { fetchEditions } from "@/lib/api/editionsApi";
+import { fetchVolunteerPollEvents } from "@/lib/api/eventsApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   pollKindLabel,
@@ -50,7 +50,7 @@ import { editionDisplayName } from "@/lib/editions/editionName";
 interface EditionPollModalProps {
   show: boolean;
   edition: Edition | null;
-  authHeaders: () => Record<string, string>;
+
   onHide: () => void;
 }
 
@@ -68,7 +68,7 @@ const EMPTY_QUESTION: PollQuestionWrite = {
 export default function EditionPollModal({
   show,
   edition,
-  authHeaders,
+
   onHide,
 }: EditionPollModalProps) {
   const queryClient = useQueryClient();
@@ -87,25 +87,25 @@ export default function EditionPollModal({
 
   const questionsQuery = useQuery({
     queryKey: questionsKey,
-    queryFn: () => fetchPollQuestions(editionId, authHeaders),
+    queryFn: () => fetchPollQuestions(editionId),
     enabled,
     staleTime: 0,
   });
   const ordersQuery = useQuery({
     queryKey: ordersKey,
-    queryFn: () => fetchPollOrders(editionId, getLocale(), authHeaders),
+    queryFn: () => fetchPollOrders(editionId, getLocale()),
     enabled,
     staleTime: 0,
   });
   const editionsQuery = useQuery({
-    queryKey: queryKeys.admin.contentManagement.editions,
-    queryFn: () => fetchEditions(authHeaders),
+    queryKey: queryKeys.admin.editions,
+    queryFn: () => fetchEditions(),
     enabled,
   });
 
   const eventsQuery = useQuery({
     queryKey: queryKeys.admin.pollEventOptions,
-    queryFn: () => fetchVolunteerPollEvents(authHeaders),
+    queryFn: () => fetchVolunteerPollEvents(),
     enabled,
   });
   const events = eventsQuery.data ?? [];
@@ -127,7 +127,7 @@ export default function EditionPollModal({
   }
 
   const createMutation = useMutation({
-    mutationFn: () => createPollQuestion({ editionId, kind, ...draft }, authHeaders),
+    mutationFn: () => createPollQuestion({ editionId, kind, ...draft }),
     retry: false,
     onSuccess: (created) => {
       replaceQuestions([...questions, created]);
@@ -137,11 +137,11 @@ export default function EditionPollModal({
   });
   const deleteMutation = useMutation({
     mutationFn: ({ question, notify }: { question: PollQuestion; notify: boolean }) =>
-      deletePollQuestion(question.id, authHeaders, question.answered_count > 0, notify),
+      deletePollQuestion(question.id, question.answered_count > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
-    mutationFn: (orderedIds: string[]) => reorderPollQuestions(editionId, orderedIds, authHeaders),
+    mutationFn: (orderedIds: string[]) => reorderPollQuestions(editionId, orderedIds),
     retry: false,
     onSuccess: (reordered) => {
       replaceQuestions(reordered);
@@ -149,7 +149,7 @@ export default function EditionPollModal({
     },
   });
   const copyMutation = useMutation({
-    mutationFn: (fromEditionId: string) => copyPollQuestions(fromEditionId, editionId, authHeaders),
+    mutationFn: (fromEditionId: string) => copyPollQuestions(fromEditionId, editionId),
     retry: false,
     onSuccess: (created) => {
       replaceQuestions([...questions, ...created]);
@@ -258,7 +258,7 @@ export default function EditionPollModal({
                 index={index}
                 count={questions.length}
                 busy={busy}
-                authHeaders={authHeaders}
+
                 onChange={(updated) => {
                   replaceQuestions(questions.map((q) => (q.id === updated.id ? updated : q)));
                   refreshOrders();
@@ -378,7 +378,7 @@ export default function EditionPollModal({
             editionId={editionId}
             volunteer={editor}
             questions={orders.questions}
-            authHeaders={authHeaders}
+
             onSaved={() => {
               void queryClient.invalidateQueries({ queryKey: questionsKey });
               refreshOrders();

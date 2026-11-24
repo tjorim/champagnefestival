@@ -10,12 +10,12 @@ import { queryKeys } from "@/lib/query/queryKeys";
 /** Server-owned filtering, ordering and totals; never filter a cached page locally. */
 export function usePeopleListQuery(
   params: PeopleListParams,
-  authHeaders: () => Record<string, string>,
+
   enabled = true,
 ) {
   const query = useQuery({
     queryKey: queryKeys.admin.peopleList(params),
-    queryFn: ({ signal }) => fetchPeoplePage(authHeaders, params, signal),
+    queryFn: ({ signal }) => fetchPeoplePage(params, signal),
     placeholderData: keepPreviousData,
     enabled,
   });
@@ -26,12 +26,12 @@ export function usePeopleListQuery(
 /** Omit a facet's own filter to obtain counts for its alternative tabs. */
 export function usePeopleCountsQuery(
   params: PeopleCountParams,
-  authHeaders: () => Record<string, string>,
+
   enabled = true,
 ) {
   const query = useQuery({
     queryKey: queryKeys.admin.peopleCounts(params),
-    queryFn: ({ signal }) => fetchPeopleCounts(authHeaders, params, signal),
+    queryFn: ({ signal }) => fetchPeopleCounts(params, signal),
     enabled,
   });
   return { ...query, data: enabled ? query.data : undefined };

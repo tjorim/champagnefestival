@@ -52,7 +52,7 @@ import type { Registration } from "@/types/registration";
 import { toAmount } from "../shared/money";
 import { isDraftDirty, useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
-import { apiErrorMessage } from "@/lib/api/apiErrors";
+import { apiErrorMessage, hasApiErrorCode } from "@/lib/api/apiErrors";
 import { queryKeys } from "@/lib/query/queryKeys";
 import {
   draftTotal,
@@ -75,7 +75,7 @@ const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;
 
 interface RegistrationCreateModalProps {
   show: boolean;
-  authHeaders: () => Record<string, string>;
+
   /** Called as soon as the booking exists, so the caller can add it to its cached list. */
   onSaved: (registration: Registration) => void;
   /** Continues into the full booking (payment, seating) for a booking this dialog just created. */
@@ -108,7 +108,7 @@ const paymentStatusLabel = (status: Registration["payment_status"]) =>
 
 export default function RegistrationCreateModal({
   show,
-  authHeaders,
+
   onSaved,
   onOpenBooking,
   onHide,
@@ -160,8 +160,7 @@ export default function RegistrationCreateModal({
   });
 
   const createRegistrationMutation = useMutation({
-    mutationFn: (payload: CreateRegistrationPayload) =>
-      createAdminRegistration(payload, authHeaders),
+    mutationFn: (payload: CreateRegistrationPayload) => createAdminRegistration(payload),
     retry: false,
     onSuccess: async (registration) => {
       setAttempt(null);
@@ -216,7 +215,7 @@ export default function RegistrationCreateModal({
 
   const eventsQuery = useQuery({
     queryKey: adminActiveEditionEventsQueryKey,
-    queryFn: () => fetchRegistrableEvents(authHeaders),
+    queryFn: () => fetchRegistrableEvents(),
     enabled: show,
     staleTime: 60 * 1000,
     retry: false,
@@ -224,14 +223,19 @@ export default function RegistrationCreateModal({
 
   const personOptionsQuery = useQuery({
     queryKey: adminPersonOptionsQueryKey(debouncedPersonQuery),
-    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, authHeaders, signal),
+    queryFn: ({ signal }) => fetchAdminPersonOptions(debouncedPersonQuery, signal),
     enabled: show && debouncedPersonQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
   });
 
   const error = createRegistrationMutation.isError
-    ? apiErrorMessage(createRegistrationMutation.error, m.admin_error_create_registration())
+    ? apiErrorMessage(
+        hasApiErrorCode(createRegistrationMutation.error, "network_error")
+          ? null
+          : createRegistrationMutation.error,
+        m.admin_error_create_registration(),
+      )
     : null;
 
   const events = eventsQuery.data ?? [];
@@ -437,7 +441,6 @@ export default function RegistrationCreateModal({
 
               {addingPerson ? (
                 <RegistrationNewPersonPanel
-                  authHeaders={authHeaders}
                   initialName={personQuery.trim()}
                   onCancel={() => setAddingPerson(false)}
                   onCreated={(person) => {

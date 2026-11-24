@@ -2,7 +2,7 @@ import { selectAdminOption } from "../../../utils/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import VenueManagement from "@/features/admin/venue/VenueManagement";
+import { VenueManagementView as VenueManagement } from "@/features/admin/venue/VenueManagement";
 import { ApiError } from "@/lib/api/apiErrors";
 import type {
   FloorTable,

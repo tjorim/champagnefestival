@@ -13,7 +13,7 @@ describe("useVenueMutations", () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const venueCollections = createAdminVenueCollections({
       queryClient,
-      authHeaders: () => ({}),
+
       enabled: false,
     });
     const refetch = vi.spyOn(venueCollections.layouts.utils, "refetch").mockResolvedValue([]);
@@ -44,13 +44,9 @@ describe("useVenueMutations", () => {
     const { result } = renderHook(
       () =>
         useVenueMutations({
-          authHeaders: () => ({
-            "Content-Type": "application/json",
-            Authorization: "Bearer test-token",
-          }),
           tablesCollection: createAdminTablesCollection({
             queryClient,
-            authHeaders: () => ({}),
+
             enabled: false,
           }),
           venueCollections,
@@ -66,7 +62,7 @@ describe("useVenueMutations", () => {
       });
     });
 
-    expect(seen.authorization).toBe("Bearer test-token");
+    expect(seen.authorization).toBe("Bearer mock-access-token");
     expect(seen.body).toEqual({
       room_id: "room-1",
       event_id: "event-1",

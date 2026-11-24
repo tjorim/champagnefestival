@@ -7,11 +7,7 @@ import { m } from "@/paraglide/messages";
 import SignageChannels from "./SignageChannels";
 import SignageTemplates from "./SignageTemplates";
 
-export default function SignageSection({
-  authHeaders,
-}: {
-  authHeaders: () => Record<string, string>;
-}) {
+export default function SignageSection() {
   const [tab, setTab, invalidTab] = useLocationChoice(
     "signageTab",
     ["channels", "templates"],
@@ -32,10 +28,10 @@ export default function SignageSection({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="channels">
-          <SignageChannels authHeaders={authHeaders} />
+          <SignageChannels />
         </TabsContent>
         <TabsContent value="templates">
-          <SignageTemplates authHeaders={authHeaders} />
+          <SignageTemplates />
         </TabsContent>
       </Tabs>
     </>

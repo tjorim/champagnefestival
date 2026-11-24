@@ -66,7 +66,7 @@ Rules:
 | `signage`                   | the signage player (`/signage/$channel`), the editor, the export and its model        |
 | `admin/shell`               | the `/admin` dashboard, sidebar, login and the hooks that load its data               |
 | `admin/shared`              | admin tables, composers and helpers used by several admin sections                    |
-| `admin/people`, `registrations`, `editions`, `venue`, `content`, `insights` | one admin section each |
+| `admin/people`, `registrations`, `editions`, `organizations`, `venue`, `content`, `insights` | one admin section each |
 
 ## Where does new code go?
 

@@ -101,7 +101,7 @@ for (const config of cases) {
         ),
       );
       const { queryClient, Wrapper } = createTestQueryClientHarness();
-      render(<config.Component authHeaders={() => ({ Authorization: "Bearer test" })} />, {
+      render(<config.Component />, {
         wrapper: Wrapper,
       });
       return queryClient;

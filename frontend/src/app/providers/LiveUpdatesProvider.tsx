@@ -88,20 +88,15 @@ export function LiveUpdatesProvider(): null {
           }
         }
 
-        const authHeaders = () => {
-          const token = getAccessToken();
-          return token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>);
-        };
-
         if (canPatchTable) {
-          void patchAdminTableLiveEvent(envelope, authHeaders).catch(() => {
+          void patchAdminTableLiveEvent(envelope).catch(() => {
             queryClient.invalidateQueries({ queryKey: queryKeys.admin.tables });
           });
         }
 
         if (!canPatchRegistration) return;
 
-        void patchAdminRegistrationLiveEvent(envelope, authHeaders).catch(() => {
+        void patchAdminRegistrationLiveEvent(envelope).catch(() => {
           queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrations });
         });
       },

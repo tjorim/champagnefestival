@@ -21,8 +21,6 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
-
 const event: Event = eventOut({
   id: "event-01",
   edition_id: "edition-01",
@@ -57,7 +55,7 @@ function renderModal(products: import("@/api-types").ProductOut[]) {
   const queryClient = createTestQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <EventProductsModal show event={event} authHeaders={authHeaders} onHide={() => {}} />
+      <EventProductsModal show event={event} onHide={() => {}} />
     </QueryClientProvider>,
   );
 }
@@ -720,7 +718,7 @@ describe("EventProductsModal", () => {
     const queryClient = createTestQueryClient();
     render(
       <QueryClientProvider client={queryClient}>
-        <EventProductsModal show event={event} authHeaders={authHeaders} onHide={() => {}} />
+        <EventProductsModal show event={event} onHide={() => {}} />
       </QueryClientProvider>,
     );
 

@@ -233,24 +233,25 @@ Organizations were the last admin resource served by `useQuery` plus hand-writte
 `setQueryData` patches, and the last cross-collection patch left by the people
 migration. They are now one eager collection on the shared factory
 (`createAdminCollection<Organization, number>`, keyed by the numeric id) in
-`state/adminOrganizationsCollection.ts`, with its own `createAdminCollectionLifecycle`.
+`lib/collections/adminOrganizationsCollection.ts`, with its own `createAdminCollectionLifecycle`.
 
-- **Writes.** The organization forms live in the generic `ContentSection`, which
-  saves, archives, restores, bulk-archives and deletes through its own mutations
-  and then calls `onItemSaved` / `onItemDeleted`. The dashboard handlers write
+- **Writes.** The organization forms live in `OrganizationsManagement` and
+  `OrganizationModal` (`features/admin/organizations/`, #1658), which save, archive,
+  restore, bulk-archive and delete through `useOrganizationActions`. The hook writes
   the server's response into the collection (`applyAdminOrganizationSaved`,
   `applyAdminOrganizationDeleted`); there are no optimistic handlers because the
   forms validate server-side. The response is the whole row and nothing else
-  changes with it, so a save or delete needs no follow-up refetch.
+  changes with it, so a save or delete needs no follow-up refetch. An accepted
+  change proposal and a logo upload refetch the collection instead.
 - **People merge.** `handleMergePeople` repoints `contactPersonId` from the
   duplicate to the survivor with one collection write
   (`applyAdminOrganizationContactsMerged`) and refetches the organizations, instead of
   `setQueryData`. A failed merge may still have committed, so the failure path
   refetches too (the previous `onSettled` invalidation did the same). The
   organizations key is no longer passed to `usePeopleMutations`.
-- **Session fence.** `ContentSection` takes an optional `captureFence` prop and
-  calls it before each write request (save, archive, restore, bulk archive,
-  delete); the fence is handed to `onItemSaved` / `onItemDeleted` as `isCurrent`.
+- **Session fence.** `useOrganizationActions` calls `captureAdminOrganizationsFence()`
+  before each write request (save, archive, restore, bulk archive, delete) and passes
+  it to the collection write as `isCurrent`.
   `captureAdminOrganizationsFence()` moves on sign-out
   (`resetAdminOrganizationsCollection`) and on collection swaps
   (`registerAdminOrganizationsCollection`), so a response that arrives later is
@@ -267,15 +268,15 @@ migration. They are now one eager collection on the shared factory
   `queryClient.refetchQueries` predicate remains. `loadData` refetches the organizations
   through `refetchAdminOrganizations`. The
   dashboard's organizations error comes from the collection's `collectionError` like the
-  others. The `ContentSection` list and `EditionModal`'s organization picker keep
-  their own queries (`contentManagement.section`, `editionModalOrganizations`); they
-  are separate reads of the same endpoint, not a second copy the dashboard patches.
+  others. The organisations list and `EditionModal`'s organization picker read the
+  collection's rows (#1658); the separate `contentManagement.section` and
+  `editionModalOrganizations` queries are gone, so there is one client cache.
 - **No live events.** The stream carries no topic for organizations.
 - Retry-safety decisions are in `docs/retry-safety.md`. Tests:
   `tests/lib/collections/adminOrganizationsCollection.test.ts`,
   `tests/features/admin/shell/useAdminSignOutCache.test.tsx`,
   `tests/features/admin/shell/useAdminPeopleActions.test.tsx`,
-  `tests/features/admin/editions/ContentManagement.test.tsx`.
+  `tests/features/admin/organizations/OrganizationsManagement.test.tsx`.
 
 ## Shared collection factory and remaining resources ([#1166](https://github.com/tjorim/champagnefestival/issues/1166))
 

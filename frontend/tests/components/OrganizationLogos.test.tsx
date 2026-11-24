@@ -7,7 +7,7 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
 import OrganizationLogoPreview from "@/components/OrganizationLogoPreview";
-import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
+import OrganizationChangeReview from "@/features/admin/organizations/OrganizationChangeReview";
 
 function mount(child: React.ReactNode) {
   setLocale("en", { reload: false });
@@ -132,7 +132,7 @@ it("renders current and proposed logos together in the review", async () => {
       () => new HttpResponse("png", { headers: { "Content-Type": "image/png" } }),
     ),
   );
-  mount(<OrganizationChangeReview authHeaders={() => ({})} onDecided={() => {}} />);
+  mount(<OrganizationChangeReview onDecided={() => {}} />);
   await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
   expect(screen.getByAltText("Current")).toHaveAttribute("src", "/images/old.svg");
   expect(screen.getByAltText("Proposed")).toHaveAttribute("src", "blob:proposed");

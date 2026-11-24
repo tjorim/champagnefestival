@@ -142,7 +142,7 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
     <Wrapper>
       <RegistrationDetail
         registration={buildRegistration()}
-        authHeaders={() => ({})}
+
         baseUrl="https://example.com"
         onClose={onClose}
         onToggleDelivered={onToggleDelivered}
@@ -163,7 +163,7 @@ describe("RegistrationDetail", () => {
     render(
       <RegistrationDetail
         registration={null}
-        authHeaders={() => ({})}
+
         baseUrl="https://example.com"
         onClose={vi.fn()}
         onToggleDelivered={vi.fn()}
@@ -512,9 +512,7 @@ describe("RegistrationDetail", () => {
     renderDetail({ onSaveBooking: vi.fn(), onAddTransaction });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_payment_history_show" }));
-    await waitFor(() =>
-      expect(fetchPaymentTransactions).toHaveBeenCalledWith(expect.any(Function), "reg-1"),
-    );
+    await waitFor(() => expect(fetchPaymentTransactions).toHaveBeenCalledWith("reg-1"));
     await waitFor(() =>
       expect(screen.getByText("admin_payment_history_empty")).toBeInTheDocument(),
     );

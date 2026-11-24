@@ -55,7 +55,7 @@ const sentMessage: import("@/api-types").ComposedMessageOut = {
 };
 
 function renderComposer() {
-  return render(<ComposerManagement authHeaders={() => ({ Authorization: "Bearer test" })} />, {
+  return render(<ComposerManagement />, {
     wrapper: createTestQueryClientWrapper(),
   });
 }

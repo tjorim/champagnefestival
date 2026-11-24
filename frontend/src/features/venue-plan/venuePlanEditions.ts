@@ -1,6 +1,6 @@
 import type { EditionPublicOut } from "@/api-types";
 import { SESSION_EXPIRED_ERROR, UNAUTHORIZED_ERROR } from "@/lib/api/adminApi";
-import { fetchEditions } from "@/lib/api/adminContentApi";
+import { fetchEditions } from "@/lib/api/editionsApi";
 import { ApiError } from "@/lib/api/apiErrors";
 import { m } from "@/paraglide/messages";
 import { editionDisplayName } from "@/lib/editions/editionName";
@@ -25,10 +25,9 @@ function editionChoice(
  */
 export async function fetchVenuePlanEditionChoices(
   isAdmin: boolean,
-  authHeaders: () => Record<string, string>,
 ): Promise<VenuePlanEditionChoice[]> {
   if (isAdmin) {
-    return (await fetchEditions(authHeaders)).map(editionChoice);
+    return (await fetchEditions()).map(editionChoice);
   }
   const response = await fetch("/api/editions/upcoming");
   if (!response.ok) throw new ApiError(m.venue_plan_editions_error(), { status: response.status });

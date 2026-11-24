@@ -68,7 +68,7 @@ function renderSidebar(
       registrationCount={2}
       peopleCount={3}
       isAnyFetching={false}
-      onLoadData={vi.fn()}
+      onRefresh={vi.fn()}
       onLogout={vi.fn()}
       accountLabel="ada@example.org"
       isSigningOut={false}
@@ -125,7 +125,7 @@ describe("AdminSidebar", () => {
         registrationCount={0}
         peopleCount={0}
         isAnyFetching={false}
-        onLoadData={vi.fn()}
+        onRefresh={vi.fn()}
         onLogout={vi.fn()}
         accountLabel={null}
         isSigningOut={false}

@@ -3,13 +3,13 @@ import { describe, expect, it } from "vitest";
 import { http } from "msw/http";
 import { server } from "@/mocks/server";
 import { editionOut, eventOut, productOut } from "@/mocks/data/builders";
-import { fetchEditionEvents, fetchEditions, fetchEventProducts } from "@/lib/api/adminContentApi";
+import { fetchEditions } from "@/lib/api/editionsApi";
+import { fetchEditionEvents } from "@/lib/api/eventsApi";
+import { fetchEventProducts } from "@/lib/api/productsApi";
 import { fetchRegistration } from "@/lib/api/adminFetch";
 import { registrationOut } from "@/mocks/data/builders";
 import { fetchActiveEdition } from "@/hooks/useActiveEdition";
 import type { EditionPublicOut, EventPublicOut, ProductPublicOut } from "@/api-types";
-
-const headers = () => ({ Authorization: "Bearer test" });
 
 describe("generated event, product and edition wire shapes", () => {
   it("preserves admin money strings, nulls, stored translations and nested event fields", async () => {
@@ -25,10 +25,10 @@ describe("generated event, product and edition wire shapes", () => {
         jsonResponse<import("@/api-types").RegistrationOutWithToken>(registration),
       ),
     );
-    expect(await fetchEditions(headers)).toEqual([edition]);
-    expect(await fetchEditionEvents(edition.id, headers)).toEqual([event]);
-    expect(await fetchEventProducts(event.id, headers)).toEqual([product]);
-    expect((await fetchRegistration("reg-1", headers)).event).toEqual(event);
+    expect(await fetchEditions()).toEqual([edition]);
+    expect(await fetchEditionEvents(edition.id)).toEqual([event]);
+    expect(await fetchEventProducts(event.id)).toEqual([product]);
+    expect((await fetchRegistration("reg-1")).event).toEqual(event);
   });
 
   it("reads a public event without manufacturing admin inventory or edition fields", async () => {

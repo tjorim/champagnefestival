@@ -20,7 +20,7 @@ function createTestCollection(editionId = "march-2026") {
   const queryClient = createTestQueryClient();
   const collection = createAdminRegistrationsCollection({
     queryClient,
-    authHeaders: () => TEST_AUTH_HEADERS,
+
     enabled: true,
     editionId,
   });
@@ -101,22 +101,19 @@ describe("admin registrations pilot collection", () => {
           }),
         ),
       );
-      await patchAdminRegistrationLiveEvent(
-        {
-          topic: "registration",
-          action: "created",
-          scope: {
-            edition_id: "older",
-            event_id: null,
-            registration_id: "historical",
-            table_id: null,
-          },
-          keys: [["admin", "registrations"]],
-          ts: "2026-10-07T10:00:00Z",
-          id: "historical-event",
+      await patchAdminRegistrationLiveEvent({
+        topic: "registration",
+        action: "created",
+        scope: {
+          edition_id: "older",
+          event_id: null,
+          registration_id: "historical",
+          table_id: null,
         },
-        () => TEST_AUTH_HEADERS,
-      );
+        keys: [["admin", "registrations"]],
+        ts: "2026-10-07T10:00:00Z",
+        id: "historical-event",
+      });
       expect(collection.has("historical")).toBe(false);
       expect(collection.size).toBe(1);
     } finally {
@@ -192,17 +189,14 @@ describe("admin registrations pilot collection", () => {
         body: JSON.stringify({ notes: "Live update note" }),
       });
 
-      await patchAdminRegistrationLiveEvent(
-        {
-          topic: "registration",
-          action: "updated",
-          scope: { edition_id: null, event_id: null, registration_id: "reg-01", table_id: null },
-          keys: [["admin", "registrations"]],
-          ts: "2026-05-28T18:00:00Z",
-          id: "evt-live-update",
-        },
-        () => TEST_AUTH_HEADERS,
-      );
+      await patchAdminRegistrationLiveEvent({
+        topic: "registration",
+        action: "updated",
+        scope: { edition_id: null, event_id: null, registration_id: "reg-01", table_id: null },
+        keys: [["admin", "registrations"]],
+        ts: "2026-05-28T18:00:00Z",
+        id: "evt-live-update",
+      });
 
       expect(collection.get("reg-01")?.notes).toBe("Live update note");
       expect(collection.size).toBe(seedRegistrations.length);
@@ -219,17 +213,14 @@ describe("admin registrations pilot collection", () => {
 
     const unregister = registerAdminRegistrationsCollection(collection);
     try {
-      await patchAdminRegistrationLiveEvent(
-        {
-          topic: "registration",
-          action: "deleted",
-          scope: { edition_id: null, event_id: null, registration_id: "reg-03", table_id: null },
-          keys: [["admin", "registrations"]],
-          ts: "2026-05-28T18:00:00Z",
-          id: "evt-live-delete",
-        },
-        () => TEST_AUTH_HEADERS,
-      );
+      await patchAdminRegistrationLiveEvent({
+        topic: "registration",
+        action: "deleted",
+        scope: { edition_id: null, event_id: null, registration_id: "reg-03", table_id: null },
+        keys: [["admin", "registrations"]],
+        ts: "2026-05-28T18:00:00Z",
+        id: "evt-live-delete",
+      });
 
       expect(collection.has("reg-03")).toBe(false);
     } finally {
@@ -275,17 +266,14 @@ describe("admin registrations pilot collection", () => {
     );
 
     try {
-      const patch = patchAdminRegistrationLiveEvent(
-        {
-          topic: "registration",
-          action: "updated",
-          scope: { edition_id: null, event_id: null, registration_id: "reg-01", table_id: null },
-          keys: [["admin", "registrations"]],
-          ts: "2026-05-28T18:00:00Z",
-          id: "evt-late",
-        },
-        () => TEST_AUTH_HEADERS,
-      );
+      const patch = patchAdminRegistrationLiveEvent({
+        topic: "registration",
+        action: "updated",
+        scope: { edition_id: null, event_id: null, registration_id: "reg-01", table_id: null },
+        keys: [["admin", "registrations"]],
+        ts: "2026-05-28T18:00:00Z",
+        id: "evt-late",
+      });
       await resetAdminRegistrationsCollection(collection);
       expect(collection.size).toBe(0);
 
@@ -308,17 +296,14 @@ describe("admin registrations pilot collection", () => {
 
     try {
       await expect(
-        patchAdminRegistrationLiveEvent(
-          {
-            topic: "registration",
-            action: "deleted",
-            scope: { edition_id: null, event_id: null, registration_id: "reg-03", table_id: null },
-            keys: [["admin", "registrations"]],
-            ts: "2026-05-28T18:00:01Z",
-            id: "evt-gone",
-          },
-          () => TEST_AUTH_HEADERS,
-        ),
+        patchAdminRegistrationLiveEvent({
+          topic: "registration",
+          action: "deleted",
+          scope: { edition_id: null, event_id: null, registration_id: "reg-03", table_id: null },
+          keys: [["admin", "registrations"]],
+          ts: "2026-05-28T18:00:01Z",
+          id: "evt-gone",
+        }),
       ).resolves.toBeUndefined();
     } finally {
       unregister();

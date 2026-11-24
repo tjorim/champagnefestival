@@ -13,13 +13,12 @@ import type {
 import { toAmount } from "../shared/money";
 import type { BookingUpdate, Registration, RegistrationStatus } from "@/types/registration";
 import { useRegistrationAdminMutations } from "../registrations/useRegistrationAdminMutations";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { fetchRegistration } from "@/lib/api/adminFetch";
 import { toLocalDateKey } from "@/lib/format/dateUtils";
 import { devError } from "@/lib/devLog";
 
 interface UseAdminRegistrationActionsOptions {
-  authHeaders: () => Record<string, string>;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
@@ -61,7 +60,6 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
 }
 
 export function useAdminRegistrationActions({
-  authHeaders,
   queryClient,
   registrationsQueryKey,
   setDetailRegistration,
@@ -71,7 +69,7 @@ export function useAdminRegistrationActions({
   const { updateRegistrationMutation, updateEntranceMutation, createPaymentTransactionMutation } =
     useRegistrationAdminMutations({
       queryClient,
-      authHeaders,
+
       registrationsQueryKey,
     });
 
@@ -172,9 +170,9 @@ export function useAdminRegistrationActions({
       // clean return, and a retry after a thrown error reuses a fresh
       // idempotency key, which would record this same payment a second time.
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
+        const data = await fetchJsonOrThrow<RegistrationOutWithToken>(
           `/api/registrations/${registrationId}`,
-          { headers: authHeaders() },
+          {},
           m.admin_error_load_data(),
         );
         const updated = data;
@@ -191,7 +189,6 @@ export function useAdminRegistrationActions({
       return transaction;
     },
     [
-      authHeaders,
       createPaymentTransactionMutation,
       queryClient,
       registrationsQueryKey,
@@ -204,7 +201,7 @@ export function useAdminRegistrationActions({
     async (id: string) => {
       const registration =
         queryClient.getQueryData<Registration[]>(registrationsQueryKey)?.find((r) => r.id === id) ??
-        (await fetchRegistration(id, authHeaders));
+        (await fetchRegistration(id));
       const outstanding = Math.max(
         0,
         toAmount(registration?.amount_due) - toAmount(registration?.amount_paid),
@@ -216,7 +213,7 @@ export function useAdminRegistrationActions({
         idempotency_key: crypto.randomUUID(),
       });
     },
-    [handleAddTransaction, queryClient, registrationsQueryKey, authHeaders],
+    [handleAddTransaction, queryClient, registrationsQueryKey],
   );
 
   const handleSaveAllocations = useCallback(
@@ -303,8 +300,7 @@ export function useAdminRegistrationActions({
       const registration =
         queryClient
           .getQueryData<Registration[]>(registrationsQueryKey)
-          ?.find((r) => r.id === registrationId) ??
-        (await fetchRegistration(registrationId, authHeaders));
+          ?.find((r) => r.id === registrationId) ?? (await fetchRegistration(registrationId));
       if (!registration || (registration.allocations?.length ?? 0) > 1) return;
       try {
         await handleSaveAllocations(
@@ -325,7 +321,7 @@ export function useAdminRegistrationActions({
         /* Shared action feedback already displays the error. */
       }
     },
-    [queryClient, registrationsQueryKey, handleSaveAllocations, authHeaders],
+    [queryClient, registrationsQueryKey, handleSaveAllocations],
   );
 
   const handleAddRegistration = useCallback(
@@ -345,9 +341,9 @@ export function useAdminRegistrationActions({
   const handleViewDetail = useCallback(
     async (registration: Registration) => {
       try {
-        const data = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
+        const data = await fetchJsonOrThrow<RegistrationOutWithToken>(
           `/api/registrations/${registration.id}`,
-          { headers: authHeaders() },
+          {},
           m.admin_error_load_data(),
         );
         setDetailRegistration(data);
@@ -356,7 +352,7 @@ export function useAdminRegistrationActions({
         setDetailRegistration(registration);
       }
     },
-    [authHeaders, setDetailRegistration],
+    [setDetailRegistration],
   );
 
   const handleToggleDelivered = useCallback(

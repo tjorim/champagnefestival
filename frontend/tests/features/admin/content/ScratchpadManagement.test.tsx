@@ -25,13 +25,9 @@ describe("ScratchpadManagement", () => {
       }),
     );
 
-    render(
-      <ScratchpadManagement
-        authHeaders={() => ({ Authorization: "Bearer test" })}
-        editionId="edition-1"
-      />,
-      { wrapper: createTestQueryClientWrapper() },
-    );
+    render(<ScratchpadManagement editionId="edition-1" />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
 
     const textarea = await screen.findByPlaceholderText("Write anything here…");
     expect(textarea).toHaveValue("Fri: bar");
@@ -53,13 +49,9 @@ describe("ScratchpadManagement", () => {
       ),
     );
 
-    render(
-      <ScratchpadManagement
-        authHeaders={() => ({ Authorization: "Bearer test" })}
-        editionId="edition-1"
-      />,
-      { wrapper: createTestQueryClientWrapper() },
-    );
+    render(<ScratchpadManagement editionId="edition-1" />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
 
     const textarea = await screen.findByPlaceholderText("Write anything here…");
     const saveButton = screen.getByRole("button", { name: "Save" });
@@ -87,13 +79,9 @@ describe("ScratchpadManagement", () => {
       ),
     );
 
-    render(
-      <ScratchpadManagement
-        authHeaders={() => ({ Authorization: "Bearer test" })}
-        editionId="edition-1"
-      />,
-      { wrapper: createTestQueryClientWrapper() },
-    );
+    render(<ScratchpadManagement editionId="edition-1" />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
 
     const textarea = await screen.findByPlaceholderText("Write anything here…");
     fireEvent.change(textarea, { target: { value: "a new note" } });
@@ -105,10 +93,7 @@ describe("ScratchpadManagement", () => {
   });
 
   it("shows a no-active-edition message and skips the fetch when editionId is empty", () => {
-    render(
-      <ScratchpadManagement authHeaders={() => ({ Authorization: "Bearer test" })} editionId="" />,
-      { wrapper: createTestQueryClientWrapper() },
-    );
+    render(<ScratchpadManagement editionId="" />, { wrapper: createTestQueryClientWrapper() });
 
     expect(
       screen.getByText(

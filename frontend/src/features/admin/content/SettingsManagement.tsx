@@ -22,22 +22,18 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import { fetchJsonOrThrowWithUnauthorized } from "@/lib/api/adminApi";
+import { fetchJsonOrThrow } from "@/lib/api/adminApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import { invalidateAdmin } from "@/lib/query/queryInvalidation";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 
 interface SettingsManagementProps {
-  authHeaders: () => Record<string, string>;
   section?: "all" | "maintenance" | "contact";
 }
 
 type ApiAppSettings = import("@/api-types").AppSettingsOut;
 
-export default function SettingsManagement({
-  authHeaders,
-  section = "all",
-}: SettingsManagementProps) {
+export default function SettingsManagement({ section = "all" }: SettingsManagementProps) {
   const queryClient = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const settingsQueryKey = queryKeys.admin.settings;
@@ -45,20 +41,16 @@ export default function SettingsManagement({
   const settingsQuery = useQuery({
     queryKey: settingsQueryKey,
     queryFn: () =>
-      fetchJsonOrThrowWithUnauthorized<ApiAppSettings>(
-        "/api/settings",
-        { headers: authHeaders() },
-        m.admin_error_load_settings(),
-      ),
+      fetchJsonOrThrow<ApiAppSettings>("/api/settings", {}, m.admin_error_load_settings()),
   });
 
   const updateMutation = useMutation({
     mutationFn: (updates: Partial<ApiAppSettings>) =>
-      fetchJsonOrThrowWithUnauthorized<ApiAppSettings>(
+      fetchJsonOrThrow<ApiAppSettings>(
         "/api/settings",
         {
           method: "PUT",
-          headers: authHeaders(),
+
           body: JSON.stringify(updates),
         },
         m.admin_error_update_settings(),

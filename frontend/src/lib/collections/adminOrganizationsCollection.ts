@@ -4,15 +4,13 @@ import {
   createAdminCollectionLifecycle,
   type AdminCollectionSyncMode,
 } from "./adminCollectionFactory";
-import type { Organization } from "@/types/admin";
-import { fetchOrganizations } from "../api/adminFetch";
+import type { Organization } from "@/api-types";
+import { fetchOrganizations } from "../api/organizationsApi";
 import { queryKeys } from "../query/queryKeys";
-
-type AuthHeadersProvider = () => Record<string, string>;
 
 interface CreateAdminOrganizationsCollectionOptions {
   queryClient: QueryClient;
-  authHeaders: AuthHeadersProvider;
+
   enabled: boolean;
   syncMode?: AdminCollectionSyncMode;
 }
@@ -21,7 +19,7 @@ interface CreateAdminOrganizationsCollectionOptions {
  * Every organization, keyed by its numeric id.
  *
  * Rows are written from the server's response after the API call succeeds
- * (the content section forms validate server-side, so there are no optimistic
+ * (the organisation forms validate server-side, so there are no optimistic
  * write handlers). The response is the whole row and nothing else changes
  * with it, so a save or delete needs no follow-up refetch; a people merge,
  * which the server applies to rows this collection did not receive, refetches
@@ -29,13 +27,13 @@ interface CreateAdminOrganizationsCollectionOptions {
  */
 export function createAdminOrganizationsCollection({
   queryClient,
-  authHeaders,
+
   enabled,
   syncMode,
 }: CreateAdminOrganizationsCollectionOptions) {
   return createAdminCollection<Organization, number>({
     queryKey: queryKeys.admin.organizations,
-    queryFn: () => fetchOrganizations(authHeaders),
+    queryFn: () => fetchOrganizations(),
     queryClient,
     enabled,
     syncMode,

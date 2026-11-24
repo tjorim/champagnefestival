@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
-import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
+import OrganizationChangeReview from "@/features/admin/organizations/OrganizationChangeReview";
 
 const texts = {
   image: "",
@@ -139,7 +139,7 @@ describe("organization proposals", () => {
         });
       }),
     );
-    mount(<OrganizationChangeReview authHeaders={() => ({})} onDecided={() => {}} />);
+    mount(<OrganizationChangeReview onDecided={() => {}} />);
     fireEvent.change(await screen.findByLabelText("Rejection reason (optional)"), {
       target: { value: "Rejection-only text" },
     });
@@ -214,12 +214,7 @@ describe("organization proposals", () => {
       }),
     );
     const onDecided = vi.fn();
-    mount(
-      <OrganizationChangeReview
-        authHeaders={() => ({ Authorization: "Bearer token" })}
-        onDecided={onDecided}
-      />,
-    );
+    mount(<OrganizationChangeReview onDecided={onDecided} />);
     const table = await screen.findByRole("table");
     expect(within(table).getByText("Current")).toBeInTheDocument();
     expect(within(table).getByText("Proposed")).toBeInTheDocument();
@@ -258,12 +253,7 @@ it("explains a stale review decision and requires refreshing instead of applying
     }),
   );
   const onDecided = vi.fn();
-  mount(
-    <OrganizationChangeReview
-      authHeaders={() => ({ Authorization: "Bearer token" })}
-      onDecided={onDecided}
-    />,
-  );
+  mount(<OrganizationChangeReview onDecided={onDecided} />);
   fireEvent.click(await screen.findByRole("button", { name: "Accept" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "This proposal has changed or has already been reviewed. Refresh the list before deciding.",

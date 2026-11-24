@@ -24,14 +24,13 @@ import type {
   TableType,
   Venue,
 } from "@/api-types";
-import type { Organization } from "@/types/admin";
 import type { Registration } from "@/types/registration";
 import type { VolunteerOut } from "@/api-types";
 import {
   downloadFileOrThrow,
   fetchArrayOrThrow,
-  fetchJsonOrThrowWithUnauthorized,
-  fetchVoidOrThrowWithUnauthorized,
+  fetchJsonOrThrow,
+  fetchVoidOrThrow,
 } from "./adminApi";
 import { m } from "@/paraglide/messages";
 import { toTableRecord } from "../collections/tableOccupancy";
@@ -76,7 +75,6 @@ export interface RegistrationsPageOptions {
  * so the table can paginate server-side instead of holding the full dataset.
  */
 export async function fetchRegistrationsPage(
-  authHeaders: () => Record<string, string>,
   options: RegistrationsPageOptions = {},
 ): Promise<RegistrationsPage> {
   const params = new URLSearchParams();
@@ -95,9 +93,9 @@ export async function fetchRegistrationsPage(
   if (options.limit) params.set("limit", String(options.limit));
   if (options.page) params.set("page", String(options.page));
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListPayload>(
+  const payload = await fetchJsonOrThrow<RegistrationListPayload>(
     `/api/registrations${suffix}`,
-    { headers: authHeaders(), signal: options.signal },
+    { signal: options.signal },
     m.admin_error_load_data(),
   );
   if (
@@ -130,10 +128,9 @@ const REGISTRATIONS_PAGE_SIZE = 1000;
  * unless a row is added mid-read.
  */
 export async function fetchAllRegistrationPages(
-  authHeaders: () => Record<string, string>,
   options: Omit<RegistrationsPageOptions, "limit" | "page"> = {},
 ): Promise<Registration[]> {
-  const first = await fetchRegistrationsPage(authHeaders, {
+  const first = await fetchRegistrationsPage({
     ...options,
     limit: REGISTRATIONS_PAGE_SIZE,
     page: 1,
@@ -141,7 +138,7 @@ export async function fetchAllRegistrationPages(
   const pageCount = Math.ceil(first.total / REGISTRATIONS_PAGE_SIZE);
   const rest = await Promise.all(
     Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
-      fetchRegistrationsPage(authHeaders, {
+      fetchRegistrationsPage({
         ...options,
         limit: REGISTRATIONS_PAGE_SIZE,
         page: index + 2,
@@ -158,44 +155,31 @@ export async function fetchAllRegistrationPages(
 // Operational consumers need one complete edition, while lists remain server-paged.
 // Historical floor plans explicitly load one event through fetchAllRegistrationPages.
 export function fetchAllRegistrations(
-  authHeaders: () => Record<string, string>,
   editionId: string,
   signal?: AbortSignal,
 ): Promise<Registration[]> {
   if (!editionId) return Promise.resolve([]);
-  return fetchAllRegistrationPages(authHeaders, { editionId, signal });
+  return fetchAllRegistrationPages({ editionId, signal });
 }
 
-export async function fetchRegistration(
-  registrationId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<Registration> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationOutWithToken>(
+export async function fetchRegistration(registrationId: string): Promise<Registration> {
+  const payload = await fetchJsonOrThrow<RegistrationOutWithToken>(
     `/api/registrations/${encodeURIComponent(registrationId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
   return payload;
 }
 
-export async function fetchTables(
-  authHeaders: () => Record<string, string>,
-): Promise<FloorTableRecord[]> {
-  const payload = await fetchArrayOrThrow<TableOut>(
-    "/api/tables",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchTables(): Promise<FloorTableRecord[]> {
+  const payload = await fetchArrayOrThrow<TableOut>("/api/tables", {}, m.admin_error_load_data());
   return payload.map(toTableRecord);
 }
 
-export async function fetchTable(
-  tableId: string,
-  authHeaders: () => Record<string, string>,
-): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
+export async function fetchTable(tableId: string): Promise<FloorTableRecord> {
+  const payload = await fetchJsonOrThrow<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
   return toTableRecord(payload);
@@ -203,15 +187,16 @@ export async function fetchTable(
 
 export type TableCreateInput = Pick<TableCreate, "name" | "layout_id" | "table_type_id">;
 
-export async function createTable(
-  authHeaders: () => Record<string, string>,
-  { name, layout_id, table_type_id }: TableCreateInput,
-): Promise<FloorTableRecord> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<TableOut>(
+export async function createTable({
+  name,
+  layout_id,
+  table_type_id,
+}: TableCreateInput): Promise<FloorTableRecord> {
+  const payload = await fetchJsonOrThrow<TableOut>(
     "/api/tables",
     {
       method: "POST",
-      headers: authHeaders(),
+
       body: JSON.stringify({ name, x: 10, y: 10, rotation: 0, layout_id, table_type_id }),
     },
     m.admin_error_add_table(),
@@ -233,29 +218,22 @@ function tableUpdateErrorMessage(changes: TableUpdateChanges): string {
   return m.admin_error_persist_table_position();
 }
 
-export async function updateTable(
-  authHeaders: () => Record<string, string>,
-  tableId: string,
-  changes: TableUpdateChanges,
-): Promise<void> {
-  await fetchJsonOrThrowWithUnauthorized<TableOut>(
+export async function updateTable(tableId: string, changes: TableUpdateChanges): Promise<void> {
+  await fetchJsonOrThrow<TableOut>(
     `/api/tables/${encodeURIComponent(tableId)}`,
     {
       method: "PUT",
-      headers: authHeaders(),
+
       body: JSON.stringify(changes),
     },
     tableUpdateErrorMessage(changes),
   );
 }
 
-export async function deleteTable(
-  authHeaders: () => Record<string, string>,
-  tableId: string,
-): Promise<void> {
-  await fetchVoidOrThrowWithUnauthorized(
+export async function deleteTable(tableId: string): Promise<void> {
+  await fetchVoidOrThrow(
     `/api/tables/${encodeURIComponent(tableId)}`,
-    { method: "DELETE", headers: authHeaders() },
+    { method: "DELETE" },
     m.admin_error_delete_table(),
   );
 }
@@ -275,81 +253,57 @@ function areaUpdateErrorMessage(changes: AreaUpdateChanges): string {
 }
 
 /** One `PUT` carrying only the changed fields (see `docs/retry-safety.md`: not retry safe). */
-export async function updateArea(
-  authHeaders: () => Record<string, string>,
-  areaId: string,
-  changes: AreaUpdateChanges,
-): Promise<void> {
-  await fetchJsonOrThrowWithUnauthorized<AreaOut>(
+export async function updateArea(areaId: string, changes: AreaUpdateChanges): Promise<void> {
+  await fetchJsonOrThrow<AreaOut>(
     `/api/areas/${encodeURIComponent(areaId)}`,
     {
       method: "PUT",
-      headers: authHeaders(),
+
       body: JSON.stringify(changes),
     },
     areaUpdateErrorMessage(changes),
   );
 }
 
-export async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
-  return fetchArrayOrThrow<Venue>(
-    "/api/venues",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchVenues(): Promise<Venue[]> {
+  return fetchArrayOrThrow<Venue>("/api/venues", {}, m.admin_error_load_data());
 }
 
-export async function fetchRooms(authHeaders: () => Record<string, string>): Promise<Room[]> {
-  return fetchArrayOrThrow<Room>(
-    "/api/rooms",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchRooms(): Promise<Room[]> {
+  return fetchArrayOrThrow<Room>("/api/rooms", {}, m.admin_error_load_data());
 }
 
-export async function fetchTableTypes(
-  authHeaders: () => Record<string, string>,
-): Promise<TableType[]> {
-  return fetchArrayOrThrow<TableType>(
-    "/api/table-types",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchTableTypes(): Promise<TableType[]> {
+  return fetchArrayOrThrow<TableType>("/api/table-types", {}, m.admin_error_load_data());
 }
 
-export async function fetchLayouts(authHeaders: () => Record<string, string>): Promise<Layout[]> {
-  return fetchArrayOrThrow<Layout>(
-    "/api/layouts",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchLayouts(): Promise<Layout[]> {
+  return fetchArrayOrThrow<Layout>("/api/layouts", {}, m.admin_error_load_data());
 }
 
 /** List one layout's saved revisions, newest first (#1021). */
 export async function fetchLayoutRevisions(
-  authHeaders: () => Record<string, string>,
   layoutId: string,
   signal?: AbortSignal,
 ): Promise<LayoutRevision[]> {
   return fetchArrayOrThrow<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
-    { headers: authHeaders(), signal },
+    { signal },
     m.admin_error_load_layout_revisions(),
   );
 }
 
 /** Save an immutable, named snapshot of a layout's current tables/areas (#1021). */
 export async function saveLayoutRevision(
-  authHeaders: () => Record<string, string>,
   layoutId: string,
   label: string,
   changeNote?: string,
 ): Promise<LayoutRevision> {
-  return fetchJsonOrThrowWithUnauthorized<LayoutRevision>(
+  return fetchJsonOrThrow<LayoutRevision>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
     {
       method: "POST",
-      headers: authHeaders(),
+
       body: JSON.stringify({
         label,
         ...(changeNote?.trim() ? { change_note: changeNote.trim() } : {}),
@@ -362,16 +316,15 @@ export async function saveLayoutRevision(
 /** Compare two snapshots of one layout — each a revision number or the
  * reserved token "current" — matched by stable table/area id (#1021). */
 export async function compareLayoutRevisions(
-  authHeaders: () => Record<string, string>,
   layoutId: string,
   fromRef: string,
   toRef: string,
   signal?: AbortSignal,
 ): Promise<LayoutRevisionDiff> {
   const params = new URLSearchParams({ from: fromRef, to: toRef });
-  return fetchJsonOrThrowWithUnauthorized<LayoutRevisionDiff>(
+  return fetchJsonOrThrow<LayoutRevisionDiff>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/compare?${params.toString()}`,
-    { headers: authHeaders(), signal },
+    { signal },
     m.admin_error_compare_layout_revisions(),
   );
 }
@@ -379,13 +332,12 @@ export async function compareLayoutRevisions(
 /** Preview what restoring a revision would change, including any live
  * allocations it would delete or move (#1021). */
 export async function previewLayoutRestore(
-  authHeaders: () => Record<string, string>,
   layoutId: string,
   revisionNumber: number,
 ): Promise<LayoutRestorePreview> {
-  return fetchJsonOrThrowWithUnauthorized<LayoutRestorePreview>(
+  return fetchJsonOrThrow<LayoutRestorePreview>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore/preview`,
-    { method: "POST", headers: authHeaders() },
+    { method: "POST" },
     m.admin_error_preview_layout_restore(),
   );
 }
@@ -394,48 +346,30 @@ export async function previewLayoutRestore(
  * (#1021). Requires `resolveAllocations` when the preview reports live
  * allocations the restore would delete or move. */
 export async function restoreLayoutRevision(
-  authHeaders: () => Record<string, string>,
   layoutId: string,
   revisionNumber: number,
   resolveAllocations = false,
 ): Promise<LayoutWithTablesOut> {
-  return fetchJsonOrThrowWithUnauthorized<LayoutWithTablesOut>(
+  return fetchJsonOrThrow<LayoutWithTablesOut>(
     `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore`,
     {
       method: "POST",
-      headers: authHeaders(),
+
       body: JSON.stringify({ resolve_allocations: resolveAllocations }),
     },
     m.admin_error_restore_layout_revision(),
   );
 }
 
-export async function fetchOrganizations(
-  authHeaders: () => Record<string, string>,
-): Promise<Organization[]> {
-  return fetchJsonOrThrowWithUnauthorized<Organization[]>(
-    "/api/organizations",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-}
-
-export async function fetchAreas(authHeaders: () => Record<string, string>): Promise<FloorArea[]> {
-  return fetchArrayOrThrow<FloorArea>(
-    "/api/areas",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchAreas(): Promise<FloorArea[]> {
+  return fetchArrayOrThrow<FloorArea>("/api/areas", {}, m.admin_error_load_data());
 }
 
 /** One volunteer with their help periods (`GET /api/volunteers/{id}`). */
-export async function fetchVolunteer(
-  id: string,
-  authHeaders: () => Record<string, string>,
-): Promise<VolunteerOut> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<VolunteerOut>(
+export async function fetchVolunteer(id: string): Promise<VolunteerOut> {
+  const payload = await fetchJsonOrThrow<VolunteerOut>(
     `/api/volunteers/${encodeURIComponent(id)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
   return payload;
@@ -454,10 +388,7 @@ export interface AuditEntryFilters {
   page?: number;
 }
 
-export async function fetchAuditEntries(
-  authHeaders: () => Record<string, string>,
-  filters: AuditEntryFilters = {},
-): Promise<AuditEntryOut[]> {
+export async function fetchAuditEntries(filters: AuditEntryFilters = {}): Promise<AuditEntryOut[]> {
   const params = new URLSearchParams();
   if (filters.resourceType) params.set("resource_type", filters.resourceType);
   if (filters.resourceId) params.set("resource_id", filters.resourceId);
@@ -468,32 +399,25 @@ export async function fetchAuditEntries(
   params.set("limit", String(filters.limit ?? 50));
   params.set("page", String(filters.page ?? 1));
 
-  return fetchArrayOrThrow(
-    `/api/audit?${params.toString()}`,
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+  return fetchArrayOrThrow(`/api/audit?${params.toString()}`, {}, m.admin_error_load_data());
 }
 
 /** The chronological payment ledger for one booking (#1019) — the accounting
  * source of truth behind its amountPaid/paymentStatus/refundDue fields. */
 export async function fetchPaymentTransactions(
-  authHeaders: () => Record<string, string>,
   registrationId: string,
 ): Promise<PaymentTransaction[]> {
   return fetchArrayOrThrow<PaymentTransaction>(
     `/api/registrations/${encodeURIComponent(registrationId)}/transactions`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
 }
 
-export async function fetchAuditResourceTypes(
-  authHeaders: () => Record<string, string>,
-): Promise<string[]> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<string[]>(
+export async function fetchAuditResourceTypes(): Promise<string[]> {
+  const payload = await fetchJsonOrThrow<string[]>(
     "/api/audit/resource-types",
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload : [];
@@ -503,56 +427,37 @@ export async function fetchAuditResourceTypes(
  * Per-event check-in progress, counted by the backend rather than from whatever
  * registrations the client happens to hold. Optionally scoped to one edition.
  */
-export async function fetchEventCheckInStats(
-  authHeaders: () => Record<string, string>,
-  editionId?: string,
-): Promise<EventCheckInStats[]> {
+export async function fetchEventCheckInStats(editionId?: string): Promise<EventCheckInStats[]> {
   const suffix = editionId ? `?edition_id=${encodeURIComponent(editionId)}` : "";
-  return fetchArrayOrThrow(
-    `/api/events/checkin-stats${suffix}`,
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+  return fetchArrayOrThrow(`/api/events/checkin-stats${suffix}`, {}, m.admin_error_load_data());
 }
 
 export async function fetchRegistrationDashboardStats(
-  authHeaders: () => Record<string, string>,
   editionId: string,
   eventDate: string,
   signal: AbortSignal,
 ): Promise<RegistrationDashboardStats> {
   const params = new URLSearchParams({ event_date: eventDate });
   if (editionId) params.set("edition_id", editionId);
-  return fetchJsonOrThrowWithUnauthorized(
+  return fetchJsonOrThrow(
     `/api/registrations/stats?${params}`,
-    { headers: authHeaders(), signal },
+    { signal },
     m.admin_error_load_data(),
   );
 }
 
-export async function fetchEditionStats(
-  authHeaders: () => Record<string, string>,
-): Promise<EditionAttendanceStats[]> {
-  return fetchArrayOrThrow(
-    "/api/editions/stats",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchEditionStats(): Promise<EditionAttendanceStats[]> {
+  return fetchArrayOrThrow("/api/editions/stats", {}, m.admin_error_load_data());
 }
 
-export async function fetchFaqItemsAdmin(
-  authHeaders: () => Record<string, string>,
-): Promise<FaqItemOut[]> {
-  return fetchArrayOrThrow("/api/faq", { headers: authHeaders() }, m.admin_error_load_data());
+export async function fetchFaqItemsAdmin(): Promise<FaqItemOut[]> {
+  return fetchArrayOrThrow("/api/faq", {}, m.admin_error_load_data());
 }
 
-export async function downloadRegistrationsCsv(
-  authHeaders: () => Record<string, string>,
-  eventId: string,
-): Promise<void> {
+export async function downloadRegistrationsCsv(eventId: string): Promise<void> {
   await downloadFileOrThrow(
     `/api/registrations/export?event_id=${encodeURIComponent(eventId)}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
     "guest-list.csv",
   );
@@ -588,7 +493,6 @@ type LedgerEnvelope = Partial<PaymentTransactionLedgerEnvelope>;
  * server-side paging instead of holding the full filtered set.
  */
 export async function fetchPaymentTransactionsLedger(
-  authHeaders: () => Record<string, string>,
   filters: PaymentTransactionsLedgerFilters,
 ): Promise<PaymentTransactionsLedgerPage> {
   const params = new URLSearchParams();
@@ -598,9 +502,9 @@ export async function fetchPaymentTransactionsLedger(
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   params.set("limit", String(filters.limit ?? LEDGER_PAGE_SIZE));
   params.set("page", String(filters.page ?? 1));
-  const payload = await fetchJsonOrThrowWithUnauthorized<LedgerEnvelope>(
+  const payload = await fetchJsonOrThrow<LedgerEnvelope>(
     `/api/registrations/transactions?${params.toString()}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
   );
   if (
@@ -624,38 +528,26 @@ export async function fetchPaymentTransactionsLedger(
 }
 
 /** Export the payment ledger, filtered by edition and/or person (#1019). */
-export async function downloadPaymentTransactionsCsv(
-  authHeaders: () => Record<string, string>,
-  filters: { editionId?: string; personId?: string },
-): Promise<void> {
+export async function downloadPaymentTransactionsCsv(filters: {
+  editionId?: string;
+  personId?: string;
+}): Promise<void> {
   const params = new URLSearchParams();
   if (filters.editionId) params.set("edition_id", filters.editionId);
   if (filters.personId) params.set("person_id", filters.personId);
   const query = params.toString();
   await downloadFileOrThrow(
     `/api/registrations/transactions/export${query ? `?${query}` : ""}`,
-    { headers: authHeaders() },
+    {},
     m.admin_error_load_data(),
     "payment-transactions.csv",
   );
 }
 
-export async function fetchAuditActions(
-  authHeaders: () => Record<string, string>,
-): Promise<string[]> {
-  return fetchArrayOrThrow(
-    "/api/audit/actions",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchAuditActions(): Promise<string[]> {
+  return fetchArrayOrThrow("/api/audit/actions", {}, m.admin_error_load_data());
 }
 
-export async function fetchAuditActors(
-  authHeaders: () => Record<string, string>,
-): Promise<AuditActorOut[]> {
-  return fetchArrayOrThrow(
-    "/api/audit/actors",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
+export async function fetchAuditActors(): Promise<AuditActorOut[]> {
+  return fetchArrayOrThrow("/api/audit/actors", {}, m.admin_error_load_data());
 }

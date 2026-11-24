@@ -9,10 +9,7 @@ import {
 import { queryKeys } from "@/lib/query/queryKeys";
 
 /** Server-owned membership, order and totals; collections only overlay known rows. */
-export function useRegistrationListQuery(
-  options: RegistrationsPageOptions,
-  authHeaders: () => Record<string, string>,
-) {
+export function useRegistrationListQuery(options: RegistrationsPageOptions) {
   return useQuery({
     queryKey: queryKeys.admin.registrationsPage({
       q: options.query ?? "",
@@ -26,7 +23,7 @@ export function useRegistrationListQuery(
       page: options.page ?? 1,
       pageSize: options.limit ?? 50,
     }),
-    queryFn: ({ signal }) => fetchRegistrationsPage(authHeaders, { ...options, signal }),
+    queryFn: ({ signal }) => fetchRegistrationsPage({ ...options, signal }),
     placeholderData: keepPreviousData,
     staleTime: 15 * 1000,
     retry: false,
@@ -36,25 +33,22 @@ export function useRegistrationListQuery(
 export function useRegistrationCountsQuery(
   editionId: string,
   today: string,
-  authHeaders: () => Record<string, string>,
+
   enabled = true,
 ) {
   return useQuery({
     queryKey: [...queryKeys.admin.registrationCounts, editionId, today],
-    queryFn: ({ signal }) => fetchRegistrationDashboardStats(authHeaders, editionId, today, signal),
+    queryFn: ({ signal }) => fetchRegistrationDashboardStats(editionId, today, signal),
     enabled,
     staleTime: 30 * 1000,
     retry: false,
   });
 }
 
-export function useVolunteerCheckInStats(
-  authHeaders: () => Record<string, string>,
-  enabled: boolean,
-) {
+export function useVolunteerCheckInStats(enabled: boolean) {
   return useQuery({
     queryKey: queryKeys.admin.eventCheckInStats,
-    queryFn: () => fetchEventCheckInStats(authHeaders),
+    queryFn: () => fetchEventCheckInStats(),
     enabled,
     staleTime: 30 * 1000,
     retry: false,
