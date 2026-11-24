@@ -22,7 +22,7 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 // GET /api/organizations requires a Bearer token recognized by the mock server
-// (see `validAdminTokens` in src/mocks/handlers/admin.ts) — an empty headers
+// (see `validAdminTokens` in src/mocks/handlers/admin/auth.ts) — an empty headers
 // object would 401 and never surface the seeded organizations.
 
 function renderOrganizations() {

@@ -5,7 +5,7 @@ and `Area.x`/`Area.y`/`Area.rotation` — the fields that place a table or area 
 floor-plan `Layout`. It is the single source of truth referenced by the model
 docstrings (`backend/app/models/`), the Pydantic schema field descriptions
 (`backend/app/schemas/`), the MCP tool docstrings (`backend/app/mcp/tools/`),
-and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx`).
+and the web admin floor-plan editor (`frontend/src/features/admin/venue/LayoutEditor.tsx` and its `layout/` components).
 
 It does **not** cover `Room.width_m`/`length_m`, `TableType.width_m`/`length_m`, or
 `Area.width_m`/`length_m` — those are real physical measurements in metres (see #835)
@@ -56,7 +56,7 @@ metre position from them without applying this formula first.
 - **Type:** integer degrees, range `[0, 359]` inclusive.
 - **Direction:** clockwise.
 - **Pivot:** the element's own center (CSS `transform: rotate(Ndeg)` around the default
-  `transform-origin: center`), matching `LayoutEditor.tsx`.
+  `transform-origin: center`), matching `venue/layout/DraggableTable.tsx` and `DraggableArea.tsx`.
 
 ## Out-of-bounds handling
 

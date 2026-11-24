@@ -27,6 +27,11 @@ Rules:
 - A folder under `features/` is named after the product domain, in kebab-case. Split one that grows past about 40 files
   into sub-folders by sub-area (`features/admin/` does: `shell`, `shared`, `people`, `registrations`, `editions`,
   `venue`, `content`, `insights`).
+- Keep a source file under about 800 lines. When a screen grows past that, split it along its own seams into a sub-folder
+  next to it, named after the screen (`features/admin/venue/layout/` for `LayoutEditor.tsx`): sub-components for the
+  canvas, inspector and dialogs, a hook for the state and handlers they share, and plain modules for helpers. The screen
+  file keeps its default export, so lazy-section imports and the bundle budgets do not change. Generated files are the
+  only exception.
 - Code used by one feature stays in that feature. Move it to `components/`, `hooks/` or `lib/` only when a second feature
   needs it.
 - Import across folders with the `@/` alias (`@/features/admin/people/PeopleSection`); use relative imports only inside
@@ -77,7 +82,10 @@ Rules:
 - A hook or helper only one feature uses: that feature's folder. Shared: `hooks/` or `lib/<topic>/`.
 - An API call: next to the feature that owns it; calls used by several features go to `lib/api/`.
 - A provider, router change or layout piece: `app/`.
-- MSW handlers and fixtures: `mocks/`. Constants and runtime configuration: `config/`.
+- MSW handlers and fixtures: `mocks/`. The authenticated admin handlers are one module per domain in
+  `mocks/handlers/admin/` (`state.ts` holds the mutable stores, `auth.ts` the token and scenario checks); `index.ts`
+  concatenates them in a fixed order because MSW takes the first match, so a literal route such as `/api/editions/stats`
+  must stay ahead of its `/:id` sibling. Constants and runtime configuration: `config/`.
 - A test: `tests/` at the same path as the file it covers; a test helper: `tests/utils/`.
 
 ## Backend (`backend/app/`)
