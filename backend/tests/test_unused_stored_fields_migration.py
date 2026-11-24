@@ -35,8 +35,10 @@ def test_unused_fields_are_dropped_and_the_downgrade_restores_them(monkeypatch):
         command.upgrade(config, "016")
         with database.begin() as connection:
             connection.execute(insert(Venue).values(id="venue", name="Venue"))
-            for edition_id, year in (("edition", 2026), ("other-edition", 2027)):
-                connection.execute(insert(Edition).values(id=edition_id, year=year, month="october", venue_id="venue"))
+            for edition_id, year, active in (("edition", 2026, True), ("other-edition", 2025, False)):
+                connection.execute(
+                    insert(Edition).values(id=edition_id, year=year, month="october", venue_id="venue", active=active)
+                )
             # An odd legacy value: out-of-range visits that the API would have rejected, and one unset.
             for person_id, visits in (("regular", 3), ("odd", 99999), ("unset", None)):
                 connection.execute(
