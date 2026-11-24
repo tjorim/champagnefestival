@@ -1,4 +1,4 @@
-import { TemplateEditor } from "../SignageTemplates";
+import { TemplateEditor } from "../templates/TemplateEditor";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import {
