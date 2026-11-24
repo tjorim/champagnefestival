@@ -38,6 +38,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Split the largest dashboard files by domain without changing behaviour (#1664): the floor-plan editor, venue management, registration list, event products, people management, signage channels and templates screens, the check-in page and the mock admin handlers now keep their canvas, panels, dialogs, state hooks and per-domain handlers in sub-folders next to them (for example `features/admin/venue/layout/` and `mocks/handlers/admin/`). The screens keep their exports, so lazy sections and bundle budgets are unchanged, and no source file except the generated Paraglide declarations is above 800 lines. The new rule is in `docs/ARCHITECTURE.md`.
+
 - Split the largest backend files by domain without changing behaviour (#1664): the MCP tool methods of `app/mcp/server.py` now live in one mixin per domain under `app/mcp/tools/`, floor-plan layout revisions moved to `layout_revisions_service.py` and check-in to `check_in_service.py`, and the MCP tests were split to match. The registered tools, their schemas and the API are identical.
 
 - Store volunteer poll answers in one table (#1662): migration `019` moves single-choice, free-text and rating answers into `volunteer_poll_answers` next to yes/no, with a `kind` column and a CHECK that exactly the kind's value is set, as `registration_order_answers` does. It drops `volunteer_poll_choices`, `volunteer_poll_texts` and `volunteer_poll_ratings`, copies every existing answer and keeps `volunteer_poll_selections` for meal quantities. The volunteer poll and the order-question dashboard editors now share their title, description and option-label inputs. REST, MCP, CSV and volunteer self-service are unchanged.

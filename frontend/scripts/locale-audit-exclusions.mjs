@@ -21,8 +21,10 @@ export const exclusions = {
     festival: "fixed application brand",
   },
   "features/check-in/CheckInPage.tsx": {
-    "×": "multiplication sign before a quantity",
     Bearer: "HTTP authorization scheme",
+  },
+  "features/check-in/CheckInCard.tsx": {
+    "×": "multiplication sign before a quantity",
   },
   "features/my-account/MyMembership.tsx": {
     Bearer: "HTTP authorization scheme",
@@ -87,7 +89,11 @@ export const exclusions = {
   "features/admin/venue/LayoutEditor.tsx": {
     "(max-width: 1199px), (max-height: 599px)":
       "CSS media query for scrolling the floor-plan inspector into view, not interface copy",
+  },
+  "features/admin/venue/layout/DraggableTable.tsx": {
     "border-color 0.15s, opacity 0.15s": "CSS transition",
+  },
+  "features/admin/venue/layout/DraggableArea.tsx": {
     "border-color 0.15s": "CSS transition",
   },
   "features/admin/people/MemberFormModal.tsx": {
@@ -100,11 +106,11 @@ export const exclusions = {
     Français: "language autonym",
     English: "language autonym",
   },
-  "features/admin/people/PeopleManagement.tsx": {
+  "features/admin/people/management/usePeopleManagement.tsx": {
     "hidden md:table-cell": "CSS class list",
     "hidden lg:table-cell": "CSS class list",
   },
-  "features/admin/registrations/RegistrationList.tsx": {
+  "features/admin/registrations/list/useRegistrationColumns.tsx": {
     "hidden md:table-cell": "CSS class list",
     "hidden lg:table-cell": "CSS class list",
   },

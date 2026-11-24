@@ -13,7 +13,7 @@ import type { LucideIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { AppSuspense } from "@/components/AppSuspense";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -51,6 +51,7 @@ import { dayjs, endOfDay, formatDate, formatDateRange } from "@/lib/format/dateU
 import { generateGoogleMapsUrl } from "@/lib/venue/maps";
 import { editionStandsQueryOptions, type OrganizationStands } from "@/lib/api/standsApi";
 import type { SliderItem } from "@/config/editions";
+import { useBubblesEasterEgg } from "./useBubblesEasterEgg";
 
 const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {
   1: DoorOpenIcon,
@@ -130,80 +131,7 @@ export function HomePage() {
   );
 
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
-  const [showBubbles, setShowBubbles] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem("champagnefestival:bubbles") === "true";
-    } catch {
-      return false;
-    }
-  });
-  const bubbleTapCountRef = useRef(0);
-  const bubbleTapResetRef = useRef<number | null>(null);
-  const bubbleKeyBufferRef = useRef("");
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("champagnefestival:bubbles", String(showBubbles));
-    } catch {
-      // Storage may be unavailable (disabled, sandboxed iframe, quota exceeded); bubble toggle just won't persist.
-    }
-  }, [showBubbles]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLSelectElement ||
-        target?.isContentEditable
-      ) {
-        return;
-      }
-
-      if (event.altKey || event.ctrlKey || event.metaKey) return;
-      if (event.key.length !== 1) return;
-
-      bubbleKeyBufferRef.current = `${bubbleKeyBufferRef.current}${event.key.toLowerCase()}`.slice(
-        -7,
-      );
-
-      if (bubbleKeyBufferRef.current.endsWith("bubbles")) {
-        setShowBubbles((enabled) => !enabled);
-        bubbleKeyBufferRef.current = "";
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (bubbleTapResetRef.current) {
-        window.clearTimeout(bubbleTapResetRef.current);
-      }
-    };
-  }, []);
-
-  const handleBrandClick = useCallback(() => {
-    bubbleTapCountRef.current += 1;
-
-    if (bubbleTapResetRef.current) {
-      window.clearTimeout(bubbleTapResetRef.current);
-    }
-
-    bubbleTapResetRef.current = window.setTimeout(() => {
-      bubbleTapCountRef.current = 0;
-      bubbleTapResetRef.current = null;
-    }, 1400);
-
-    if (bubbleTapCountRef.current >= 5) {
-      setShowBubbles((enabled) => !enabled);
-      bubbleTapCountRef.current = 0;
-    }
-  }, []);
+  const { showBubbles, handleBrandClick } = useBubblesEasterEgg();
 
   const nowTimestamp = useNow();
   const registrableEvents = useMemo(() => {

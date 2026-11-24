@@ -27,7 +27,7 @@ const storageKey = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
 // Matches the backend's _DEV_BYPASS_CLAIMS (backend/app/core/oidc.py) so a
 // real backend started with the same DEV_AUTH_BYPASS_TOKEN also accepts this
 // session's Authorization header, not just the frontend UI. The fallback is
-// this repo's own MSW happy-path token (src/mocks/handlers/admin.ts's
+// this repo's own MSW happy-path token (src/mocks/handlers/admin/auth.ts's
 // validAdminTokens, also used throughout frontend/tests/), so e2e runs
 // (VITE_MSW=true, no real backend) authenticate against the mocks too.
 const bypassToken = process.env.DEV_AUTH_BYPASS_TOKEN ?? "mock-access-token";

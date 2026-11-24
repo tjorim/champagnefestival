@@ -13,7 +13,8 @@ const render = (ui: ReactElement) =>
 import { fetchAllRegistrationPages } from "@/lib/api/adminFetch";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LayoutEditorView as LayoutEditor, getDayLabel } from "@/features/admin/venue/LayoutEditor";
+import { LayoutEditorView as LayoutEditor } from "@/features/admin/venue/LayoutEditor";
+import { getDayLabel } from "@/features/admin/venue/layout/layoutDays";
 import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/api-types";
 import type { Registration } from "@/types/registration";
 

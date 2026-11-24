@@ -111,7 +111,7 @@ Playwright's authenticate-once/storageState pattern:
 
 `auth.setup.ts` seeds the same `oidc.user:<authority>:<client_id>` localStorage
 entry a real login would leave behind. By default it uses this repo's own MSW
-happy-path token (`mock-access-token` — see `src/mocks/handlers/admin.ts`'s
+happy-path token (`mock-access-token` — see `src/mocks/handlers/admin/auth.ts`'s
 `validAdminTokens`), so it authenticates against the mocks with zero setup.
 To instead point at a real running backend, set `DEV_AUTH_BYPASS_TOKEN` to the
 same value before running the setup step _and_ before starting the backend

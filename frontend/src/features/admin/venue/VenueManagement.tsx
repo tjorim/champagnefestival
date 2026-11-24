@@ -1,58 +1,12 @@
 import { useAdminWorkspace } from "../shell/AdminWorkspace";
 import { useAdminVenueActions } from "../shell/useAdminVenueActions";
-import {
-  auditRecordId,
-  focusAuditRecord,
-  isAuditRecordTarget,
-} from "@/features/admin/shared/auditRecordLink";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
-import { AdminAddButton, RowActionButton, RowActions } from "@/components/admin/RowActions";
-import {
-  ADMIN_CONTROL_CLASS,
-  AdminField,
-  AdminLabel,
-  AdminInput,
-  AdminSelect,
-  AdminOption,
-} from "@/components/admin/AdminFields";
-import {
-  ArchiveIcon,
-  CircleIcon,
-  InfoIcon,
-  MapPinIcon,
-  PencilIcon,
-  RotateCcwIcon,
-  SquareIcon,
-  TrashIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AdminAddButton } from "@/components/admin/RowActions";
+import { InfoIcon, MapPinIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-/**
- * VenueManagement — CRUD for venues and the rooms and table types they own.
- *
- * Managers define venues, rooms, and table types here. The LayoutEditor then
- * uses rooms as navigation tabs when organising floor plans, and table types
- * as the picker when placing a table (filtered to the room's own venue).
- */
-
-import { cn } from "@/lib/utils";
-import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { useForm, useSelector } from "@tanstack/react-form";
+import { useCallback, useState } from "react";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
-import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import type {
@@ -67,9 +21,20 @@ import type {
   VenueUpdate,
 } from "@/api-types";
 import ConfirmModal from "@/components/ConfirmModal";
-import { safeRoomColor } from "@/lib/venue/layoutUtils";
+import { VenueFormDialog } from "./management/VenueFormDialog";
+import { RoomFormDialog } from "./management/RoomFormDialog";
+import { TableTypeFormDialog } from "./management/TableTypeFormDialog";
+import { VenueCard, type VenueCardActions } from "./management/VenueCard";
 
-const MapComponent = lazy(() => import("@/components/MapComponent"));
+/**
+ * VenueManagement — CRUD for venues and the rooms and table types they own.
+ *
+ * Managers define venues, rooms, and table types here. The LayoutEditor then
+ * uses rooms as navigation tabs when organising floor plans, and table types
+ * as the picker when placing a table (filtered to the room's own venue).
+ * The venue card and the three add/edit dialogs live in `./management/`; this
+ * module keeps the dialog targets, error state and archive/restore/delete handlers.
+ */
 
 interface VenueManagementProps {
   venues: Venue[];
@@ -107,51 +72,6 @@ interface VenueManagementProps {
   onRestoreTableType: (id: string) => Promise<void>;
   onDeleteTableType: (id: string) => Promise<void>;
 }
-
-const emptyVenueForm = {
-  name: "",
-  address: "",
-  city: "",
-  postalCode: "",
-  country: "",
-  lat: null as number | null,
-  lng: null as number | null,
-};
-
-// widthM/lengthM start blank — a room's real dimensions have no defensible
-// generic default (see #833/#835), so the admin must enter them deliberately
-// rather than accidentally saving a made-up size.
-const emptyRoomForm: {
-  venueId: string;
-  name: string;
-  widthM: number | "";
-  lengthM: number | "";
-  color: string;
-} = { venueId: "", name: "", widthM: "", lengthM: "", color: "#ffc107" };
-
-// venueId starts blank (filled from the venue row the admin clicked "+" on) and
-// widthM/lengthM start blank — a table type belongs to exactly one venue (like a
-// room, see #858) and its real dimensions have no defensible generic default
-// (see #833/#835), so the admin must set both deliberately.
-const emptyTableTypeForm: {
-  venueId: string;
-  name: string;
-  shape: "rectangle" | "round";
-  widthM: number | "";
-  lengthM: number | "";
-  heightType: "low" | "high";
-  capacity: number;
-  active: boolean;
-} = {
-  venueId: "",
-  name: "",
-  shape: "rectangle",
-  widthM: "",
-  lengthM: "",
-  heightType: "low",
-  capacity: 4,
-  active: true,
-};
 
 export function VenueManagementView({
   venues,
@@ -197,77 +117,6 @@ export function VenueManagementView({
     ? (venues.find((v) => v.id === editingVenueId) ?? null)
     : null;
 
-  // Derived rather than a static template: `useForm` re-applies `defaultValues`
-  // on every render, so a template that disagrees with what `form.reset(record)`
-  // stored gets re-applied and blanks the form. See EditionModal for the details.
-  const venueDefaultValues = useMemo(
-    () =>
-      editingVenue
-        ? {
-            name: editingVenue.name,
-            address: editingVenue.address,
-            city: editingVenue.city,
-            postalCode: editingVenue.postal_code,
-            country: editingVenue.country,
-            lat: editingVenue.lat,
-            lng: editingVenue.lng,
-          }
-        : emptyVenueForm,
-    [editingVenue],
-  );
-
-  const venueForm = useForm({
-    defaultValues: venueDefaultValues,
-    onSubmit: async ({ value }) => {
-      if (!venueFormIsValid) return;
-      setAddVenueError(null);
-      try {
-        const data = {
-          name: value.name.trim(),
-          address: value.address.trim(),
-          city: value.city.trim(),
-          postal_code: value.postalCode.trim(),
-          country: value.country.trim(),
-          lat: value.lat,
-          lng: value.lng,
-        };
-        if (editingVenueId) await onUpdate(editingVenueId, data);
-        else
-          await onAdd(
-            data.name,
-            data.address,
-            data.city,
-            data.postal_code,
-            data.country,
-            data.lat,
-            data.lng,
-          );
-        setEditingVenueId(null);
-        setShowVenueModal(false);
-      } catch (err) {
-        setAddVenueError(apiErrorMessage(err, m.admin_error_add_venue()));
-      }
-    },
-  });
-  const venueValues = useSelector(venueForm.atom, (s) => s.values);
-
-  const { lat, lng } = venueValues;
-  const venueCoordinatesAreValid =
-    (lat === null || (lat >= -90 && lat <= 90)) && (lng === null || (lng >= -180 && lng <= 180));
-  const venueFormIsValid = venueValues.name.trim().length > 0 && venueCoordinatesAreValid;
-  const previewCoordinates =
-    venueCoordinatesAreValid && lat !== null && lng !== null ? { lat, lng } : null;
-
-  // Seed the form when the modal opens. Reset during render rather than in an
-  // effect (the "adjusting state when a prop changes" pattern) since this only
-  // needs to react to the show=false->true transition — see VolunteerFormModal
-  // for why the reset value must match `venueDefaultValues`.
-  const [wasVenueModalShown, setWasVenueModalShown] = useState(showVenueModal);
-  if (showVenueModal !== wasVenueModalShown) {
-    setWasVenueModalShown(showVenueModal);
-    if (showVenueModal) venueForm.reset(venueDefaultValues);
-  }
-
   const openAddVenue = () => {
     setEditingVenueId(null);
     setAddVenueError(null);
@@ -278,10 +127,6 @@ export function VenueManagementView({
     setEditingVenueId(venue.id);
     setAddVenueError(null);
     setShowVenueModal(true);
-  };
-
-  const handleSaveVenue = () => {
-    void venueForm.handleSubmit();
   };
 
   const [confirmArchiveVenueId, setConfirmArchiveVenueId] = useState<string | null>(null);
@@ -304,87 +149,6 @@ export function VenueManagementView({
   const [addRoomVenueId, setAddRoomVenueId] = useState<string | null>(null);
   const editingRoom = editingRoomId ? (rooms.find((r) => r.id === editingRoomId) ?? null) : null;
 
-  // Derived rather than a static template — see `venueDefaultValues` above.
-  const roomDefaultValues = useMemo(
-    () =>
-      editingRoom
-        ? {
-            venueId: editingRoom.venue_id,
-            name: editingRoom.name,
-            widthM: editingRoom.width_m,
-            lengthM: editingRoom.length_m,
-            color: editingRoom.color,
-          }
-        : { ...emptyRoomForm, venueId: addRoomVenueId ?? "" },
-    [editingRoom, addRoomVenueId],
-  );
-
-  const roomForm = useForm({
-    defaultValues: roomDefaultValues,
-    onSubmit: async ({ value }) => {
-      if (
-        !isRoomFormValid() ||
-        typeof value.widthM !== "number" ||
-        typeof value.lengthM !== "number"
-      ) {
-        return;
-      }
-      setAddRoomError(null);
-      try {
-        if (editingRoomId) {
-          // Omit widthM/lengthM entirely when they match the room's current (live) values —
-          // the backend clears a room's `dimensionsPlaceholder` flag whenever either field
-          // is present in the update, so sending them unchanged on an unrelated edit (e.g.
-          // renaming or recolouring) would wrongly mark an unverified legacy 20x15 room as
-          // a confirmed, measured one. Compared against the live `editingRoom` record
-          // (rather than a snapshot frozen when the modal opened) so a background refetch
-          // that updates both the form's defaults and this comparison in lockstep can't
-          // make an untouched save look like a dimension change.
-          const dimensionsChanged =
-            editingRoom === null ||
-            editingRoom.width_m !== value.widthM ||
-            editingRoom.length_m !== value.lengthM;
-          await onUpdateRoom(editingRoomId, {
-            venue_id: value.venueId,
-            name: value.name.trim(),
-            ...(dimensionsChanged ? { width_m: value.widthM, length_m: value.lengthM } : {}),
-            color: value.color,
-          });
-        } else {
-          await onAddRoom(
-            value.venueId,
-            value.name.trim(),
-            value.widthM,
-            value.lengthM,
-            value.color,
-          );
-        }
-        setShowRoomModal(false);
-      } catch (err) {
-        setAddRoomError(apiErrorMessage(err, m.admin_content_error_save()));
-      }
-    },
-  });
-  const roomValues = useSelector(roomForm.atom, (s) => s.values);
-
-  const isRoomFormValid = useCallback(
-    () =>
-      Boolean(roomValues.venueId) &&
-      roomValues.name.trim().length > 0 &&
-      typeof roomValues.widthM === "number" &&
-      roomValues.widthM >= 1 &&
-      typeof roomValues.lengthM === "number" &&
-      roomValues.lengthM >= 1,
-    [roomValues],
-  );
-
-  // Seed the form when the modal opens — see the venue modal's equivalent block.
-  const [wasRoomModalShown, setWasRoomModalShown] = useState(showRoomModal);
-  if (showRoomModal !== wasRoomModalShown) {
-    setWasRoomModalShown(showRoomModal);
-    if (showRoomModal) roomForm.reset(roomDefaultValues);
-  }
-
   const openAddRoom = (venueId: string) => {
     setEditingRoomId(null);
     setAddRoomVenueId(venueId);
@@ -396,10 +160,6 @@ export function VenueManagementView({
     setEditingRoomId(room.id);
     setAddRoomError(null);
     setShowRoomModal(true);
-  };
-
-  const handleSaveRoom = () => {
-    void roomForm.handleSubmit();
   };
 
   const handleArchiveRoom = useCallback(
@@ -428,12 +188,6 @@ export function VenueManagementView({
 
   const [confirmDeleteRoomId, setConfirmDeleteRoomId] = useState<string | null>(null);
 
-  const [tableTypeDimensionConfirm, setTableTypeDimensionConfirm] = useState<{
-    tableCount: number;
-    roomCount: number;
-    payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number };
-    editingId: string;
-  } | null>(null);
   const [confirmDeleteTableTypeId, setConfirmDeleteTableTypeId] = useState<string | null>(null);
 
   // The venue a new table type is being added under — a type being edited
@@ -442,120 +196,6 @@ export function VenueManagementView({
   const editingTableType = editingTableTypeId
     ? (tableTypes.find((tt) => tt.id === editingTableTypeId) ?? null)
     : null;
-
-  // Derived rather than a static template — see `venueDefaultValues` above.
-  const tableTypeDefaultValues = useMemo(
-    () =>
-      editingTableType
-        ? {
-            venueId: editingTableType.venue_id,
-            name: editingTableType.name,
-            shape: editingTableType.shape,
-            widthM: editingTableType.width_m,
-            lengthM: editingTableType.length_m,
-            heightType: editingTableType.height_type,
-            capacity: editingTableType.capacity,
-            active: editingTableType.active,
-          }
-        : { ...emptyTableTypeForm, venueId: addTableTypeVenueId ?? "" },
-    [editingTableType, addTableTypeVenueId],
-  );
-
-  const tableTypeForm = useForm({
-    defaultValues: tableTypeDefaultValues,
-    onSubmit: async ({ value }) => {
-      // Every rejected input needs to say why — bailing silently leaves the Save
-      // button looking broken.
-      if (!value.name.trim()) {
-        setAddTableTypeError(m.admin_table_type_name_required());
-        return;
-      }
-      if (!value.venueId) {
-        setAddTableTypeError(m.admin_table_type_venue_required());
-        return;
-      }
-      if (value.capacity < 1 || !Number.isInteger(value.capacity)) {
-        setAddTableTypeError(m.admin_table_type_capacity_min());
-        return;
-      }
-      const { widthM, lengthM } = value;
-      if (
-        typeof widthM !== "number" ||
-        widthM <= 0 ||
-        typeof lengthM !== "number" ||
-        lengthM <= 0
-      ) {
-        setAddTableTypeError(m.admin_table_type_dimensions_positive());
-        return;
-      }
-      const payload = { ...value, widthM, lengthM };
-      // Tables render by joining live against TableType rather than a dimension
-      // snapshot taken at placement time, so a shape/dimension change here silently
-      // redraws every table of this type on every layout that ever placed one —
-      // including past editions (#858). Surface the blast radius and let the admin
-      // back out before that happens; a name/capacity/venue-only edit is unaffected.
-      if (
-        editingTableTypeId &&
-        editingTableType &&
-        (value.shape !== editingTableType.shape ||
-          widthM !== editingTableType.width_m ||
-          lengthM !== editingTableType.length_m)
-      ) {
-        const affectedTableLayoutIds = tables
-          .filter((t) => t.table_type_id === editingTableTypeId)
-          .map((t) => t.layout_id);
-        const affectedRoomIds = new Set(
-          affectedTableLayoutIds
-            .map((layoutId) => layouts.find((l) => l.id === layoutId)?.room_id)
-            .filter((roomId): roomId is string => Boolean(roomId)),
-        );
-        if (affectedTableLayoutIds.length > 0) {
-          setTableTypeDimensionConfirm({
-            tableCount: affectedTableLayoutIds.length,
-            roomCount: affectedRoomIds.size,
-            payload,
-            editingId: editingTableTypeId,
-          });
-          return;
-        }
-      }
-      setAddTableTypeError(null);
-      try {
-        await commitSaveTableType(payload, editingTableTypeId);
-      } catch (err) {
-        setAddTableTypeError(apiErrorMessage(err, m.admin_content_error_save()));
-      }
-    },
-  });
-  const tableTypeValues = useSelector(tableTypeForm.atom, (s) => s.values);
-
-  const commitSaveTableType = async (
-    payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number },
-    editingId: string | null,
-  ) => {
-    const body: TableTypeCreate = {
-      name: payload.name,
-      venue_id: payload.venueId,
-      shape: payload.shape,
-      width_m: payload.widthM,
-      length_m: payload.lengthM,
-      height_type: payload.heightType,
-      capacity: payload.capacity,
-    };
-    if (editingId) {
-      await onUpdateTableType(editingId, body);
-    } else {
-      await onAddTableType(body);
-    }
-    setShowTableTypeModal(false);
-  };
-
-  // Seed the form when the modal opens — see the venue modal's equivalent block.
-  const [wasTableTypeModalShown, setWasTableTypeModalShown] = useState(showTableTypeModal);
-  if (showTableTypeModal !== wasTableTypeModalShown) {
-    setWasTableTypeModalShown(showTableTypeModal);
-    if (showTableTypeModal) tableTypeForm.reset(tableTypeDefaultValues);
-  }
 
   const openAddTableType = (venueId: string) => {
     setEditingTableTypeId(null);
@@ -568,10 +208,6 @@ export function VenueManagementView({
     setEditingTableTypeId(tt.id);
     setAddTableTypeError(null);
     setShowTableTypeModal(true);
-  };
-
-  const handleSaveTableType = () => {
-    void tableTypeForm.handleSubmit();
   };
 
   const handleArchiveTableType = useCallback(
@@ -598,7 +234,22 @@ export function VenueManagementView({
     [onRestoreTableType],
   );
 
-  const number = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 3 });
+  const cardActions: VenueCardActions = {
+    openEditVenue,
+    handleRestoreVenue,
+    setConfirmArchiveVenueId,
+    setConfirmDeleteVenueId,
+    openAddRoom,
+    openEditRoom,
+    handleArchiveRoom,
+    handleRestoreRoom,
+    setConfirmDeleteRoomId,
+    openAddTableType,
+    openEditTableType,
+    handleArchiveTableType,
+    handleRestoreTableType,
+    setConfirmDeleteTableTypeId,
+  };
 
   return (
     <Card tone="secondary">
@@ -631,797 +282,58 @@ export function VenueManagementView({
             {m.admin_no_venues()}
           </AdminEmptyState>
         ) : (
-          venues.map((venue) => {
-            const isArchived = !venue.active;
-            const venueRooms = rooms.filter((r) => r.venue_id === venue.id);
-            const venueTableTypes = tableTypes.filter((tt) => tt.venue_id === venue.id);
-            const showProperties =
-              !isArchived ||
-              venueRooms.some((room) => isAuditRecordTarget("room", room.id)) ||
-              venueTableTypes.some((type) => isAuditRecordTarget("table_type", type.id));
-            const locationLine = [venue.address, venue.city, venue.postal_code, venue.country]
-              .filter(Boolean)
-              .join(", ");
-            return (
-              <Card
-                key={venue.id}
-                id={auditRecordId("venue", venue.id)}
-                tabIndex={-1}
-                ref={focusAuditRecord}
-                tone="secondary"
-                className={cn(isArchived && "opacity-75")}
-              >
-                <CardHeader className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-semibold">
-                      {venue.name}
-                      {isArchived && (
-                        <Badge variant="secondary" className="ms-2 text-tiny">
-                          {m.admin_venue_archived_badge()}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-subtle text-sm">{locationLine || "—"}</div>
-                  </div>
-                  <RowActions
-                    className="shrink-0"
-                    destructive={
-                      isArchived ? (
-                        <RowActionButton
-                          destructive
-                          icon={TrashIcon}
-                          label={m.admin_delete_item({ name: venue.name })}
-                          onClick={() => setConfirmDeleteVenueId(venue.id)}
-                        />
-                      ) : undefined
-                    }
-                  >
-                    <RowActionButton
-                      icon={PencilIcon}
-                      label={m.admin_edit_item({ name: venue.name })}
-                      onClick={() => openEditVenue(venue)}
-                    />
-                    {isArchived ? (
-                      <RowActionButton
-                        variant="outline-success"
-                        icon={RotateCcwIcon}
-                        label={`${m.admin_content_restore()}: ${venue.name}`}
-                        onClick={() => handleRestoreVenue(venue.id)}
-                      />
-                    ) : (
-                      <RowActionButton
-                        icon={ArchiveIcon}
-                        label={`${m.admin_content_archive()}: ${venue.name}`}
-                        onClick={() => setConfirmArchiveVenueId(venue.id)}
-                      />
-                    )}
-                  </RowActions>
-                </CardHeader>
-                {showProperties && (
-                  <CardContent className="py-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-subtle text-sm uppercase font-semibold">
-                        {m.admin_rooms_tab()}
-                      </span>
-                      {!isArchived && (
-                        <AdminAddButton variant="outline" onClick={() => openAddRoom(venue.id)}>
-                          {m.admin_room_add()}
-                        </AdminAddButton>
-                      )}
-                    </div>
-                    {venueRooms.length === 0 ? (
-                      <AdminEmptyState>{m.admin_room_no_rooms()}</AdminEmptyState>
-                    ) : (
-                      <PresentationList flush className="mb-4">
-                        {venueRooms.map((room) => (
-                          <PresentationListItem
-                            key={room.id}
-                            id={auditRecordId("room", room.id)}
-                            tabIndex={-1}
-                            ref={focusAuditRecord}
-                            className={cn(
-                              "flex justify-between items-center gap-2 py-1 px-0",
-                              !room.active && "opacity-50",
-                            )}
-                          >
-                            <span className="flex items-center gap-2">
-                              <span
-                                aria-hidden="true"
-                                className="inline-block size-2.5 rounded-full shrink-0"
-
-                                /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                                style={{ background: safeRoomColor(room.color) }}
-                                /* oxlint-enable shadcn/no-inline-styles */
-                              />
-                              {room.name}
-                              {!room.dimensions_placeholder && (
-                                <small className="text-subtle">
-                                  {m.admin_room_dimensions_summary({
-                                    width: number.format(room.width_m),
-                                    length: number.format(room.length_m),
-                                  })}
-                                </small>
-                              )}
-                              {room.dimensions_placeholder && (
-                                <span
-                                  role="img"
-                                  aria-label={m.admin_room_dimensions_placeholder_badge()}
-                                  title={m.admin_room_dimensions_placeholder_hint()}
-                                >
-                                  <Icon icon={TriangleAlertIcon} className="text-xs text-warning" />
-                                </span>
-                              )}
-                            </span>
-                            {!isArchived && (
-                              <RowActions
-                                className="shrink-0"
-                                destructive={
-                                  room.active ? undefined : (
-                                    <RowActionButton
-                                      destructive
-                                      icon={TrashIcon}
-                                      label={m.admin_delete_item({ name: room.name })}
-                                      onClick={() => setConfirmDeleteRoomId(room.id)}
-                                    />
-                                  )
-                                }
-                              >
-                                {room.active && (
-                                  <RowActionButton
-                                    icon={PencilIcon}
-                                    label={m.admin_edit_item({ name: room.name })}
-                                    onClick={() => openEditRoom(room)}
-                                  />
-                                )}
-                                {room.active ? (
-                                  <RowActionButton
-                                    icon={ArchiveIcon}
-                                    label={`${m.admin_content_archive()}: ${room.name}`}
-                                    onClick={() => handleArchiveRoom(room.id)}
-                                  />
-                                ) : (
-                                  <RowActionButton
-                                    variant="outline-success"
-                                    icon={RotateCcwIcon}
-                                    label={`${m.admin_content_restore()}: ${room.name}`}
-                                    onClick={() => handleRestoreRoom(room.id)}
-                                  />
-                                )}
-                              </RowActions>
-                            )}
-                          </PresentationListItem>
-                        ))}
-                      </PresentationList>
-                    )}
-
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-subtle text-sm uppercase font-semibold">
-                        {m.admin_table_types_tab()}
-                      </span>
-                      {!isArchived && (
-                        <AdminAddButton
-                          variant="outline"
-                          onClick={() => openAddTableType(venue.id)}
-                        >
-                          {m.admin_add_table_type()}
-                        </AdminAddButton>
-                      )}
-                    </div>
-                    {venueTableTypes.length === 0 ? (
-                      <AdminEmptyState>{m.admin_no_table_types()}</AdminEmptyState>
-                    ) : (
-                      <PresentationList flush className="mb-0">
-                        {venueTableTypes.map((tt) => (
-                          <PresentationListItem
-                            key={tt.id}
-                            id={auditRecordId("table_type", tt.id)}
-                            tabIndex={-1}
-                            ref={focusAuditRecord}
-                            className={cn(
-                              "flex justify-between items-center gap-2 py-1 px-0",
-                              !tt.active && "opacity-50",
-                            )}
-                          >
-                            <span className="flex items-center gap-2">
-                              <Icon icon={tt.shape === "round" ? CircleIcon : SquareIcon} />
-                              <span>
-                                {tt.name}
-                                <small className="block text-subtle">
-                                  {tt.shape === "round"
-                                    ? m.admin_table_shape_round()
-                                    : m.admin_table_shape_rectangle()}
-                                  {" · "}
-                                  {tt.height_type === "high"
-                                    ? m.admin_table_height_type_high()
-                                    : m.admin_table_height_type_low()}
-                                  {" · "}
-                                  {tt.capacity === 1
-                                    ? m.admin_table_type_seat()
-                                    : m.admin_table_type_seats({ count: tt.capacity })}
-                                </small>
-                              </span>
-                            </span>
-                            {!isArchived && (
-                              <RowActions
-                                className="shrink-0"
-                                destructive={
-                                  tt.active ? undefined : (
-                                    <RowActionButton
-                                      destructive
-                                      icon={TrashIcon}
-                                      label={m.admin_delete_item({ name: tt.name })}
-                                      onClick={() => setConfirmDeleteTableTypeId(tt.id)}
-                                    />
-                                  )
-                                }
-                              >
-                                {tt.active && (
-                                  <RowActionButton
-                                    icon={PencilIcon}
-                                    label={m.admin_edit_item({ name: tt.name })}
-                                    onClick={() => openEditTableType(tt)}
-                                  />
-                                )}
-                                {tt.active ? (
-                                  <RowActionButton
-                                    icon={ArchiveIcon}
-                                    label={`${m.admin_content_archive()}: ${tt.name}`}
-                                    onClick={() => handleArchiveTableType(tt.id)}
-                                  />
-                                ) : (
-                                  <RowActionButton
-                                    variant="outline-success"
-                                    icon={RotateCcwIcon}
-                                    label={`${m.admin_content_restore()}: ${tt.name}`}
-                                    onClick={() => handleRestoreTableType(tt.id)}
-                                  />
-                                )}
-                              </RowActions>
-                            )}
-                          </PresentationListItem>
-                        ))}
-                      </PresentationList>
-                    )}
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })
+          venues.map((venue) => (
+            <VenueCard
+              key={venue.id}
+              venue={venue}
+              rooms={rooms}
+              tableTypes={tableTypes}
+              actions={cardActions}
+            />
+          ))
         )}
       </CardContent>
 
-      {/* Add Venue Modal */}
-      <Dialog
+      <VenueFormDialog
         open={showVenueModal}
-        onOpenChange={(open) => {
-          if (!open) setShowVenueModal(false);
+        onClose={() => setShowVenueModal(false)}
+        onSaved={() => {
+          setEditingVenueId(null);
+          setShowVenueModal(false);
         }}
-      >
-        <DialogContent admin size="default">
-          <DialogHeader>
-            <DialogTitle id="add-venue-modal-title">
-              {editingVenueId ? `${m.admin_edit()} ${venueValues.name}` : m.admin_venue_add()}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            {addVenueError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-4 text-sm"
-              >
-                {addVenueError}
-              </Alert>
-            )}
-            <AdminField className="mb-4" controlId="venue-name">
-              <AdminLabel>{m.admin_venue_name_label()}</AdminLabel>
-              <venueForm.Field name="name">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                    placeholder={m.admin_venue_name_placeholder()}
-                  />
-                )}
-              </venueForm.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="venue-address">
-              <AdminLabel>{m.admin_venue_address_label()}</AdminLabel>
-              <venueForm.Field name="address">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  />
-                )}
-              </venueForm.Field>
-            </AdminField>
-            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
-              <div className="min-w-0 flex-1">
-                <AdminField controlId="venue-city">
-                  <AdminLabel>{m.admin_venue_city_label()}</AdminLabel>
-                  <venueForm.Field name="city">
-                    {(field) => (
-                      <AdminInput
-                        type="text"
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        className={ADMIN_CONTROL_CLASS}
-                      />
-                    )}
-                  </venueForm.Field>
-                </AdminField>
-              </div>
-              <div className="w-auto flex-none">
-                <AdminField controlId="venue-postal-code">
-                  <AdminLabel>{m.admin_venue_postal_code_label()}</AdminLabel>
-                  <venueForm.Field name="postalCode">
-                    {(field) => (
-                      <AdminInput
-                        type="text"
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        className="bg-muted text-content border-input w-28"
-                      />
-                    )}
-                  </venueForm.Field>
-                </AdminField>
-              </div>
-            </div>
-            <AdminField className="mb-4" controlId="venue-country">
-              <AdminLabel>{m.admin_venue_country_label()}</AdminLabel>
-              <venueForm.Field name="country">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  />
-                )}
-              </venueForm.Field>
-            </AdminField>
-            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
-              <div className="min-w-0 flex-1">
-                <AdminField controlId="venue-latitude">
-                  <AdminLabel>{m.admin_venue_latitude_label()}</AdminLabel>
-                  <venueForm.Field name="lat">
-                    {(field) => (
-                      <AdminInput
-                        type="number"
-                        step="any"
-                        min={-90}
-                        max={90}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? null : Number(e.target.value))
-                        }
-                        onBlur={field.handleBlur}
-                        className={ADMIN_CONTROL_CLASS}
-                      />
-                    )}
-                  </venueForm.Field>
-                </AdminField>
-              </div>
-              <div className="min-w-0 flex-1">
-                <AdminField controlId="venue-longitude">
-                  <AdminLabel>{m.admin_venue_longitude_label()}</AdminLabel>
-                  <venueForm.Field name="lng">
-                    {(field) => (
-                      <AdminInput
-                        type="number"
-                        step="any"
-                        min={-180}
-                        max={180}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? null : Number(e.target.value))
-                        }
-                        onBlur={field.handleBlur}
-                        className={ADMIN_CONTROL_CLASS}
-                      />
-                    )}
-                  </venueForm.Field>
-                </AdminField>
-              </div>
-            </div>
-            {previewCoordinates && (
-              <div className="mt-4">
-                <div className="text-subtle text-sm mb-1">{m.admin_venue_map_preview()}</div>
-                <Suspense
-                  fallback={
-                    <div className="flex aspect-video items-center justify-center rounded-md border border-subtle">
-                      {m.loading()}
-                    </div>
-                  }
-                >
-                  <MapComponent
-                    location={venueValues.name}
-                    address={venueValues.address}
-                    city={venueValues.city}
-                    postalCode={venueValues.postalCode}
-                    country={venueValues.country}
-                    coordinates={previewCoordinates}
-                  />
-                </Suspense>
-              </div>
-            )}
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowVenueModal(false)}>
-              {m.admin_action_cancel()}
-            </Button>
-            <Button variant="warning" onClick={handleSaveVenue} disabled={!venueFormIsValid}>
-              {m.admin_save()}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add/Edit Room Modal */}
-      <Dialog
+        editingId={editingVenueId}
+        editingVenue={editingVenue}
+        error={addVenueError}
+        onError={setAddVenueError}
+        onAdd={onAdd}
+        onUpdate={onUpdate}
+      />
+      <RoomFormDialog
         open={showRoomModal}
-        onOpenChange={(open) => {
-          if (!open) setShowRoomModal(false);
-        }}
-      >
-        <DialogContent admin size="default">
-          <DialogHeader>
-            <DialogTitle id="room-modal-title">
-              {editingRoomId ? m.admin_edit_room() : m.admin_room_add()}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            {addRoomError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-4 text-sm"
-              >
-                {addRoomError}
-              </Alert>
-            )}
-            <AdminField className="mb-4" controlId="room-venue">
-              <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
-              <roomForm.Field name="venueId">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(e) => field.handleChange(e)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  >
-                    {venues
-                      .filter((v) => v.active)
-                      .map((v) => (
-                        <AdminOption key={v.id} value={v.id}>
-                          {v.name}
-                        </AdminOption>
-                      ))}
-                  </AdminSelect>
-                )}
-              </roomForm.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="room-name">
-              <AdminLabel>{m.admin_room_name_label()}</AdminLabel>
-              <roomForm.Field name="name">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                    placeholder={m.admin_room_name_placeholder()}
-                  />
-                )}
-              </roomForm.Field>
-            </AdminField>
-            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
-              <div className="min-w-0 flex-1">
-                <AdminField controlId="room-width">
-                  <AdminLabel>{m.admin_room_width_label()}</AdminLabel>
-                  <roomForm.Field name="widthM">
-                    {(field) => (
-                      <AdminInput
-                        type="number"
-                        min={1}
-                        max={500}
-                        required
-                        value={field.value}
-                        onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                        }
-                        onBlur={field.handleBlur}
-                        className={ADMIN_CONTROL_CLASS}
-                      />
-                    )}
-                  </roomForm.Field>
-                </AdminField>
-              </div>
-              <div className="min-w-0 flex-1">
-                <AdminField controlId="room-length">
-                  <AdminLabel>{m.admin_room_length_label()}</AdminLabel>
-                  <roomForm.Field name="lengthM">
-                    {(field) => (
-                      <AdminInput
-                        type="number"
-                        min={1}
-                        max={500}
-                        required
-                        value={field.value}
-                        onChange={(e) =>
-                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                        }
-                        onBlur={field.handleBlur}
-                        className={ADMIN_CONTROL_CLASS}
-                      />
-                    )}
-                  </roomForm.Field>
-                </AdminField>
-              </div>
-            </div>
-            <AdminField controlId="room-color">
-              <AdminLabel>{m.admin_room_color_label()}</AdminLabel>
-              <roomForm.Field name="color">
-                {(field) => (
-                  <div className="flex gap-2 items-center">
-                    <AdminInput
-                      type="color"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="w-12 h-9.5 p-0.5"
-                    />
-                    <AdminInput
-                      type="text"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="bg-muted text-content border-input font-mono"
-                    />
-                  </div>
-                )}
-              </roomForm.Field>
-            </AdminField>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowRoomModal(false)}>
-              {m.admin_action_cancel()}
-            </Button>
-            <Button variant="warning" onClick={handleSaveRoom} disabled={!isRoomFormValid()}>
-              {m.admin_save()}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add/Edit Table Type Modal */}
-      <Dialog
+        onClose={() => setShowRoomModal(false)}
+        editingId={editingRoomId}
+        editingRoom={editingRoom}
+        addVenueId={addRoomVenueId}
+        venues={venues}
+        error={addRoomError}
+        onError={setAddRoomError}
+        onAddRoom={onAddRoom}
+        onUpdateRoom={onUpdateRoom}
+      />
+      <TableTypeFormDialog
         open={showTableTypeModal}
-        onOpenChange={(open) => {
-          if (!open) setShowTableTypeModal(false);
-        }}
-      >
-        <DialogContent admin size="default">
-          <DialogHeader>
-            <DialogTitle id="table-type-modal-title">
-              {editingTableTypeId ? m.admin_edit_table_type() : m.admin_add_table_type()}
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            {addTableTypeError && (
-              <Alert
-                role="alert"
-                aria-live="assertive"
-                variant="danger"
-                className="py-1 mb-4 text-sm"
-              >
-                {addTableTypeError}
-              </Alert>
-            )}
-            <AdminField className="mb-4" controlId="tt-venue">
-              <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
-              <tableTypeForm.Field name="venueId">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(e) => field.handleChange(e)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  >
-                    <AdminOption value="">— {m.admin_room_venue_label()} —</AdminOption>
-                    {venues
-                      .filter((v) => v.active || v.id === field.value)
-                      .map((v) => (
-                        <AdminOption key={v.id} value={v.id}>
-                          {v.name}
-                        </AdminOption>
-                      ))}
-                  </AdminSelect>
-                )}
-              </tableTypeForm.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="tt-name">
-              <AdminLabel>{m.admin_table_type_name_label()}</AdminLabel>
-              <tableTypeForm.Field name="name">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                    placeholder={m.admin_table_type_name_placeholder()}
-                  />
-                )}
-              </tableTypeForm.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="tt-shape">
-              <AdminLabel>{m.admin_table_shape_label()}</AdminLabel>
-              <tableTypeForm.Field name="shape">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(e) => {
-                      const s = e as "rectangle" | "round";
-                      field.handleChange(s);
-                      // Same reasoning as emptyTableTypeForm: a shape switch invalidates
-                      // whatever dimensions were entered, and no generic replacement is
-                      // defensible (#833/#835) — blank them rather than inventing values.
-                      tableTypeForm.setFieldValue("widthM", "");
-                      tableTypeForm.setFieldValue("lengthM", "");
-                    }}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  >
-                    <AdminOption value="rectangle">{m.admin_table_shape_rectangle()}</AdminOption>
-                    <AdminOption value="round">{m.admin_table_shape_round()}</AdminOption>
-                  </AdminSelect>
-                )}
-              </tableTypeForm.Field>
-            </AdminField>
-            <AdminField className="mb-4" controlId="tt-height-type">
-              <AdminLabel>{m.admin_table_height_type_label()}</AdminLabel>
-              <tableTypeForm.Field name="heightType">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(e) => field.handleChange(e as "low" | "high")}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  >
-                    <AdminOption value="low">{m.admin_table_height_type_low()}</AdminOption>
-                    <AdminOption value="high">{m.admin_table_height_type_high()}</AdminOption>
-                  </AdminSelect>
-                )}
-              </tableTypeForm.Field>
-            </AdminField>
-            {tableTypeValues.shape === "round" ? (
-              <AdminField className="mb-4" controlId="tt-diameter">
-                <AdminLabel>{m.admin_table_diameter_label()}</AdminLabel>
-                <tableTypeForm.Field name="widthM">
-                  {(field) => (
-                    <AdminInput
-                      type="number"
-                      min={0.1}
-                      max={20}
-                      step={0.1}
-                      required
-                      value={field.value}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const v = raw === "" ? "" : Number(raw);
-                        field.handleChange(v);
-                        tableTypeForm.setFieldValue("lengthM", v);
-                      }}
-                      onBlur={field.handleBlur}
-                      className={ADMIN_CONTROL_CLASS}
-                    />
-                  )}
-                </tableTypeForm.Field>
-              </AdminField>
-            ) : (
-              <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
-                <div className="min-w-0 flex-1">
-                  <AdminField controlId="tt-width">
-                    <AdminLabel>{m.admin_table_width_label()}</AdminLabel>
-                    <tableTypeForm.Field name="widthM">
-                      {(field) => (
-                        <AdminInput
-                          type="number"
-                          min={0.1}
-                          max={20}
-                          step={0.1}
-                          required
-                          value={field.value}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            field.handleChange(raw === "" ? "" : Number(raw));
-                          }}
-                          onBlur={field.handleBlur}
-                          className={ADMIN_CONTROL_CLASS}
-                        />
-                      )}
-                    </tableTypeForm.Field>
-                  </AdminField>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <AdminField controlId="tt-length">
-                    <AdminLabel>{m.admin_table_length_label()}</AdminLabel>
-                    <tableTypeForm.Field name="lengthM">
-                      {(field) => (
-                        <AdminInput
-                          type="number"
-                          min={0.1}
-                          max={20}
-                          step={0.1}
-                          required
-                          value={field.value}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            field.handleChange(raw === "" ? "" : Number(raw));
-                          }}
-                          onBlur={field.handleBlur}
-                          className={ADMIN_CONTROL_CLASS}
-                        />
-                      )}
-                    </tableTypeForm.Field>
-                  </AdminField>
-                </div>
-              </div>
-            )}
-            <AdminField controlId="tt-max-capacity">
-              <AdminLabel>{m.admin_table_type_max_capacity()}</AdminLabel>
-              <tableTypeForm.Field name="capacity">
-                {(field) => (
-                  <AdminInput
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={field.value}
-                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                    onBlur={field.handleBlur}
-                    className={ADMIN_CONTROL_CLASS}
-                  />
-                )}
-              </tableTypeForm.Field>
-            </AdminField>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setShowTableTypeModal(false)}>
-              {m.admin_action_cancel()}
-            </Button>
-            <Button
-              variant="warning"
-              onClick={handleSaveTableType}
-              disabled={
-                !tableTypeValues.name.trim() ||
-                !tableTypeValues.venueId ||
-                tableTypeValues.capacity < 1 ||
-                !Number.isInteger(tableTypeValues.capacity) ||
-                typeof tableTypeValues.widthM !== "number" ||
-                tableTypeValues.widthM <= 0 ||
-                typeof tableTypeValues.lengthM !== "number" ||
-                tableTypeValues.lengthM <= 0
-              }
-            >
-              {m.admin_save()}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onClose={() => setShowTableTypeModal(false)}
+        editingId={editingTableTypeId}
+        editingTableType={editingTableType}
+        addVenueId={addTableTypeVenueId}
+        venues={venues}
+        tables={tables}
+        layouts={layouts}
+        error={addTableTypeError}
+        onError={setAddTableTypeError}
+        onAddTableType={onAddTableType}
+        onUpdateTableType={onUpdateTableType}
+      />
 
       {confirmArchiveVenueId && (
         <ConfirmModal
@@ -1463,28 +375,6 @@ export function VenueManagementView({
           errorFallback={m.admin_error_delete_room()}
           onConfirm={() => onDeleteRoom(confirmDeleteRoomId)}
           onHide={() => setConfirmDeleteRoomId(null)}
-        />
-      )}
-      {tableTypeDimensionConfirm && (
-        <ConfirmModal
-          admin
-          show
-          title={m.admin_table_type_dimension_change_title()}
-          body={m.admin_table_type_dimension_change_confirm({
-            tableCount: tableTypeDimensionConfirm.tableCount,
-            roomCount: tableTypeDimensionConfirm.roomCount,
-          })}
-          variant="warning"
-          icon="exclamation-triangle"
-          confirmLabel={m.admin_action_confirm()}
-          errorFallback={m.admin_content_error_save()}
-          onConfirm={() =>
-            commitSaveTableType(
-              tableTypeDimensionConfirm.payload,
-              tableTypeDimensionConfirm.editingId,
-            )
-          }
-          onHide={() => setTableTypeDimensionConfirm(null)}
         />
       )}
       {confirmDeleteTableTypeId && (
