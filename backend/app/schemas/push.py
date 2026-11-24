@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 
 from app.core.vocabularies import Locale
 from app.schemas.base import RequestModel, ResponseModel
@@ -20,8 +20,6 @@ class PushSubscribeRequest(RequestModel):
     endpoint: NonEmptyText600
     keys: PushSubscriptionKeys
     locale: Locale
-    categories: list[str] = Field(default_factory=list, max_length=10)
-    event_ids: list[str] = Field(default_factory=list, max_length=20)
 
     @field_validator("endpoint")
     @classmethod
@@ -36,8 +34,6 @@ class PushSubscribeRequest(RequestModel):
 
 class PushSubscriptionOut(ResponseModel):
     id: str
-    categories: list[str]
-    event_ids: list[str]
 
 
 class PushUnsubscribeRequest(RequestModel):

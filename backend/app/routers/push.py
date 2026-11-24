@@ -23,7 +23,7 @@ from app.schemas import (
     VapidPublicKeyOut,
 )
 from app.services import push_service
-from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException
 from app.services.outbox_service import enqueue_job
 from app.services.push_delivery import WEB_PUSH_TEST, push_enabled
 
@@ -47,10 +47,8 @@ async def subscribe_to_push(
     db: AsyncSession = Depends(get_db),
 ) -> PushSubscriptionOut:
     client_ip = get_client_ip(request)
-    # Commit the bucket increment immediately, before validation that can
-    # raise — otherwise a rejected request (e.g. an unknown event id) rolls
-    # back with the rest of this request's uncommitted transaction and is
-    # never actually counted, matching app.routers.check_in's identical fix.
+    # Commit the bucket increment before subscribing, so the count survives a failed subscribe
+    # (matching app.routers.check_in).
     allowed = await check_push_subscription_rate_limit(db, client_ip)
     await db.commit()
     if not allowed:
@@ -59,19 +57,14 @@ async def subscribe_to_push(
             "rate_limited",
             "Too many requests. Please try again later.",
         )
-    try:
-        subscription = await push_service.subscribe(
-            db,
-            endpoint=body.endpoint,
-            p256dh_key=body.keys.p256dh,
-            auth_key=body.keys.auth,
-            locale=body.locale,
-            categories=body.categories,
-            event_ids=body.event_ids,
-        )
-    except ServiceError as exc:
-        raise to_http_exception(exc) from exc
-    return PushSubscriptionOut(id=subscription.id, categories=subscription.categories, event_ids=subscription.event_ids)
+    subscription = await push_service.subscribe(
+        db,
+        endpoint=body.endpoint,
+        p256dh_key=body.keys.p256dh,
+        auth_key=body.keys.auth,
+        locale=body.locale,
+    )
+    return PushSubscriptionOut(id=subscription.id)
 
 
 @router.post("/subscriptions/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)

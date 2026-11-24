@@ -31,7 +31,6 @@ async def test_people_crud_roles_and_filters(client):
         "roles": ["Volunteer", "Member"],
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
-        "visits_per_month": 1,
         "notes": "Often helps at entrance.",
     }
 

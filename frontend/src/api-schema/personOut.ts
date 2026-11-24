@@ -23,7 +23,6 @@ export type PersonOut = {
   eid_document_number: string | null;
   inactivity_exempt: boolean;
   inactivity_exempt_note: string;
-  visits_per_month: number | null;
   notes: string;
   anonymised: boolean;
   created_at: string;

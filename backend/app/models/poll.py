@@ -15,8 +15,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    select,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, column_property, mapped_column
 
 from app.core.translations import resolve_text
 from app.core.vocabularies import PollQuestionKind
@@ -94,13 +95,17 @@ class EditionPollOption(Base):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    edition_id: Mapped[str] = mapped_column(
-        String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
-    )
     question_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    """The question this option belongs to; ``edition_id`` is that question's edition."""
+    """The question this option belongs to."""
+    edition_id: Mapped[str] = column_property(
+        select(EditionPollQuestion.edition_id)
+        .where(EditionPollQuestion.id == question_id)
+        .correlate_except(EditionPollQuestion)
+        .scalar_subquery()
+    )
+    """Read-only projection of the question's edition; options have no edition column of their own (#1656)."""
     label_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)

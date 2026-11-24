@@ -26,9 +26,9 @@ browsers.
 ## Subscription and consent contract
 
 Subscriptions are anonymous and device-scoped, keyed by endpoint. The model
-stores locale, categories/event IDs, consent and activity timestamps. The
-public UI currently uses the default category and no event targeting; #942
-broadcasts to all opted-in subscribers.
+stores locale, consent and activity timestamps. Per-subscription category and
+event columns were dropped in #1656 because nothing used them; #942 broadcasts
+to all opted-in subscribers.
 
 An explicit consent checkbox precedes the browser permission prompt. UI copy
 lives in the three translation files. Formal privacy-policy publication is
@@ -60,7 +60,7 @@ the endpoint is retained for retry. See [retry safety](../retry-safety.md).
 
 `pushsubscriptionchange` is not handled; mount-time reconciliation is the
 current recovery mechanism. Category/event targeting needs a future opt-in
-UI and sender design. Bulk email is not part of Web Push.
+UI, sender design and its own storage (the unused columns were dropped in #1656). Bulk email is not part of Web Push.
 
 Tests: `backend/tests/routers/test_push.py`, `usePushSubscription.test.ts`, and
 `PushOptIn.test.tsx` cover consent, delivery, limiting, cleanup and accessibility.

@@ -167,7 +167,6 @@ async def create_person(
         address=body.address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
-        visits_per_month=body.visits_per_month,
         notes=body.notes,
     )
     sync_roles(person, normalise_roles(body.roles))
@@ -206,7 +205,7 @@ async def apply_person_update(
             # Release the indexed address before changing the parent email.
             await flush_member_changes(db)
 
-    for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
+    for field in ("name", "address", "preferred_language", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 
@@ -269,7 +268,7 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     pseudonym is derived from the stable person ID, so a repeat produces the
     same row rather than a second, different rewrite.
 
-    Does not touch ``registrations``, ``roles`` or ``visits_per_month`` — those are the
+    Does not touch ``registrations`` or ``roles`` — those are the
     operational/historical record this anonymisation is deliberately scoped to leave alone.
     """
     if person.national_register_number or person.eid_document_number:
@@ -393,11 +392,6 @@ async def merge_people(
     same_address = email_consent_service.normalise_email(canonical.email) == email_consent_service.normalise_email(
         duplicate.email
     )
-
-    # Fill blank nullable fields on canonical from duplicate.
-    for field in ("visits_per_month",):
-        if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
-            setattr(canonical, field, getattr(duplicate, field))
 
     # Keep an exemption attached to the person when an exempt duplicate is merged.
     if duplicate.inactivity_exempt and not canonical.inactivity_exempt:

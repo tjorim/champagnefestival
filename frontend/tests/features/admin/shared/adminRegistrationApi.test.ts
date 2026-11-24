@@ -276,7 +276,6 @@ describe("createAdminPerson", () => {
             eid_document_number: null,
             inactivity_exempt: false,
             inactivity_exempt_note: "",
-            visits_per_month: null,
             notes: "",
             anonymised: false,
             created_at: "2026-01-01T00:00:00Z",

@@ -500,20 +500,12 @@ export const publicHandlers = [
   ),
 
   /** POST /api/push/subscriptions — natural-key upsert by endpoint (#941). */
-  http.post("/api/push/subscriptions", async ({ request }) => {
-    const body = (await request.json()) as {
-      categories?: string[];
-      event_ids?: string[];
-    };
-    return jsonResponse<import("@/api-types").PushSubscriptionOut>(
-      {
-        id: "mock-push-subscription-id",
-        categories: body.categories ?? ["system_test"],
-        event_ids: body.event_ids ?? [],
-      },
+  http.post("/api/push/subscriptions", () =>
+    jsonResponse<import("@/api-types").PushSubscriptionOut>(
+      { id: "mock-push-subscription-id" },
       { status: 201 },
-    );
-  }),
+    ),
+  ),
 
   /** POST /api/push/subscriptions/unsubscribe — convergent delete (#941). */
   http.post("/api/push/subscriptions/unsubscribe", () => new HttpResponse(null, { status: 204 })),

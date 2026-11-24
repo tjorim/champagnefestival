@@ -24,6 +24,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Changed
 
+- **MCP:** `create_person`, `update_person`, `create_member` and `update_member` no longer accept `visits_per_month`, which no screen showed or edited and no rule used (#1656).
 - An included product in the product editor can now be counted per ordered quantity or per booked guest. Products that used the older "one per N guests" bundle were converted to the per-guest option, so included quantities for existing and new bookings are unchanged, and the old ratio line no longer appears in the product list. An included product can no longer be deleted while another product still includes it.
 - **MCP:** `create_product` and `update_product` no longer accept `included_product_id` or `included_per_guests`, and `update_product` no longer has `clear_included_product_id` or `clear_included_per_guests`. Use `inclusions` (each entry has an optional `basis` of `quantity` or `guests`); `clear_inclusions=true` or `inclusions=[]` removes all included products. Product responses always carry an `inclusions` list (#1651).
 - The audit log, payment ledger, floor-plan revision history, policy history and message composer show actor names. Select a name to reveal the stored ID, or use the actor picker to filter the audit log.
@@ -36,6 +37,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Remove stored fields nothing used (#1656): migration `017` drops `people.visits_per_month`, `push_subscriptions.categories` and `event_ids`, and the copied `edition_poll_options.edition_id` (now derived from the option's question). The `people`, `members` and push-subscription API responses and requests no longer carry the first three, and `POST /api/push/subscriptions` rejects `categories` and `event_ids`. Decisions for every item of the issue: [backend/README.md](backend/README.md#stored-fields-nothing-used-1656).
 - Retire the legacy single product inclusion: migration `016` converts it to a guest-based inclusion (also in booked package rules), makes `products.inclusions` non-null and drops `included_product_id` and `included_per_guests`. The API no longer has those fields (#1651).
 - Store directory membership and volunteering in indexed role periods, migrate legacy aliases, and limit the person editor to those two roles (#1649).
 - Store booked order lines in indexed rows, including booked prices, units and delivery counts (#1650).

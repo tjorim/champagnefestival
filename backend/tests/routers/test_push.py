@@ -16,7 +16,7 @@ from app.core.config import Settings, settings
 from app.models import AuditEntry, OutboxJob, PushSubscription
 from app.services.push_delivery import _resolves_to_public_address, deliver_web_push_test
 from app.services.push_service import cleanup_expired_subscriptions
-from tests.helpers import ADMIN_HEADERS, _create_event
+from tests.helpers import ADMIN_HEADERS
 
 
 def test_settings_reject_nonpositive_push_subscription_expiry_days():
@@ -76,8 +76,6 @@ def _subscription_body(*, endpoint: str = "https://push.example.com/abc123", **o
         "endpoint": endpoint,
         "keys": {"p256dh": "p256dh-key-value", "auth": "auth-key-value"},
         "locale": "en",
-        "categories": ["system_test"],
-        "event_ids": [],
     }
     body.update(overrides)
     return body
@@ -109,8 +107,7 @@ async def test_subscribe_creates_new_subscription(client, db_session):
     r = await client.post("/api/push/subscriptions", json=_subscription_body())
     assert r.status_code == 201
     body = r.json()
-    assert body["categories"] == ["system_test"]
-    assert body["event_ids"] == []
+    assert set(body) == {"id"}
 
     row = await db_session.get(PushSubscription, body["id"])
     assert row is not None
@@ -124,59 +121,26 @@ async def test_subscribe_upserts_by_endpoint(client, db_session):
 
     second = await client.post(
         "/api/push/subscriptions",
-        json=_subscription_body(categories=["system_test", "schedule_updates"], locale="fr"),
+        json=_subscription_body(locale="fr"),
     )
     assert second.status_code == 201
     assert second.json()["id"] == first.json()["id"]
 
     rows = (await db_session.execute(select(PushSubscription))).scalars().all()
     assert len(rows) == 1
-    assert rows[0].categories == ["system_test", "schedule_updates"]
     assert rows[0].locale == "fr"
 
 
-async def test_subscribe_rejects_invalid_category_format(client):
-    r = await client.post("/api/push/subscriptions", json=_subscription_body(categories=["Not Valid!"]))
-    assert r.status_code == 400
-
-
-async def test_subscribe_rejects_too_many_categories(client):
-    r = await client.post(
-        "/api/push/subscriptions", json=_subscription_body(categories=[f"cat_{i}" for i in range(11)])
-    )
-    assert r.status_code == 422
-
-
-async def test_subscribe_rejects_unknown_event_id(client):
-    r = await client.post("/api/push/subscriptions", json=_subscription_body(event_ids=["evt_nonexistent"]))
-    assert r.status_code == 400
-
-
-async def test_subscribe_accepts_valid_event_id(client):
-    event = await _create_event(client)
-    r = await client.post("/api/push/subscriptions", json=_subscription_body(event_ids=[event["id"]]))
-    assert r.status_code == 201
-    assert r.json()["event_ids"] == [event["id"]]
+async def test_subscribe_rejects_the_retired_targeting_fields(client):
+    """Category and event targeting were never implemented and are no longer accepted (#1656)."""
+    for field, value in (("categories", ["system_test"]), ("event_ids", [])):
+        r = await client.post("/api/push/subscriptions", json={**_subscription_body(), field: value})
+        assert r.status_code == 422
 
 
 async def test_subscribe_rejects_non_https_endpoint(client):
     r = await client.post("/api/push/subscriptions", json=_subscription_body(endpoint="http://push.example.com/x"))
     assert r.status_code == 422
-
-
-async def test_subscribe_rate_limit_counts_rejected_requests_too(client):
-    """A request that fails validation still debits the rate-limit bucket.
-
-    Without committing the bucket increment before validation runs, a
-    rejected request rolls back with the rest of the (uncommitted)
-    transaction and is never actually counted — letting an attacker send
-    unlimited invalid requests and bypass the limiter entirely.
-    """
-    for _ in range(20):
-        r = await client.post("/api/push/subscriptions", json=_subscription_body(event_ids=["evt_nonexistent"]))
-        assert r.status_code == 400
-    limited = await client.post("/api/push/subscriptions", json=_subscription_body(event_ids=["evt_nonexistent"]))
-    assert limited.status_code == 429
 
 
 async def test_subscribe_is_rate_limited(client):

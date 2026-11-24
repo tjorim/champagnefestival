@@ -1198,6 +1198,28 @@ Migration `012` records these decisions for the operational schema.
   earliest known timestamp. Stamps are immutable check-in facts and already
   store their creation time, so they have no modification timestamp.
 
+### Stored fields nothing used (#1656)
+
+Migration `017` and the frontend clean-up settle the issue's list. Where a field was never read by a screen,
+client or rule, it is removed end to end rather than surfaced.
+
+| Field | Decision | Notes |
+| --- | --- | --- |
+| `Event.sortOrder` | Already removed | The backend never had `sort_order` on events (they sort by date and start time) and the dashboard type, form and mapper no longer carry it. |
+| `people.visits_per_month` | **Removed** (column, REST/MCP, schemas, mocks) | No dashboard screen, export, Android or Pebble code and no rule read it; it could only be set through REST or MCP. The pre-upgrade backup is the only way to recover stored values. |
+| `push_subscriptions.categories` / `event_ids` | **Removed** (columns, request and response fields) | The public UI always sent the placeholder category `system_test` and no events, and the composer and test send target every subscriber. Targeting needs an opt-in UI and a sender design first ([push decision](../docs/decisions/941-web-push-foundation.md)); it will add its own columns then, so no groundwork is kept and no follow-up issue is needed. A subscribe body that still carries either field is rejected with 422, so a browser tab loaded before the deploy fails to subscribe until it reloads. |
+| `ItemDraft.active?` | Already removed | The draft type no longer exists; forms are typed from the generated request types. |
+| Mapper fallbacks that contradict the API | Already removed | There are no per-field mappers: the generated types are the client types and responses are read as they arrive (see `AGENTS.md`), so no frontend code supplies a default for a field the schema marks required. |
+| `Table.event_id` | Kept, derived | Not a column: a read-only projection of the table's layout event, as the API and floor-plan code need it. |
+| `Layout.edition_id` | Kept, derived | Not a column: derived from the layout's event. |
+| `edition_poll_options.edition_id` | **Removed** (column, index, foreign key); the API field stays | It copied the edition of the option's question and nothing kept the two in step. `EditionPollOption.edition_id` is now a read-only projection of the question's edition, so `PollOptionOut.edition_id` and the edition filter are unchanged. |
+
+Dropping columns cannot fail on odd legacy values (an out-of-range `visits_per_month`, malformed targeting
+JSON, an option whose edition disagrees with its question), so the upgrade needs no data repair. It discards
+those values. Downgrading re-adds `visits_per_month` as `NULL`, the push columns as empty lists, and the poll
+option edition rebuilt from its question, which also repairs any stale copy. Take a database backup before
+upgrading if the old values matter.
+
 ### Fixed vocabularies (#1652)
 
 Define fixed scalar database vocabularies in `app/core/vocabularies.py`.

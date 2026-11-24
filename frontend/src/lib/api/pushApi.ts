@@ -16,8 +16,6 @@ export interface PushSubscribeInput {
   p256dh: string;
   auth: string;
   locale: "nl" | "fr" | "en";
-  categories?: string[];
-  eventIds?: string[];
 }
 
 export type PushSubscriptionResult = PushSubscriptionOut;
@@ -30,8 +28,6 @@ export async function subscribeToPush(input: PushSubscribeInput): Promise<PushSu
       endpoint: input.endpoint,
       keys: { p256dh: input.p256dh, auth: input.auth },
       locale: input.locale,
-      categories: input.categories ?? ["system_test"],
-      event_ids: input.eventIds ?? [],
     }),
   });
   if (!response.ok) throw await apiErrorFromResponse(response, m.push_error_generic());

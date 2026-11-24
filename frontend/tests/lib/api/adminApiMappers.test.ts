@@ -27,7 +27,6 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     roles: [],
     national_register_number: null,
     eid_document_number: null,
-    visits_per_month: null,
     notes: "",
     anonymised: false,
     retired_roles: {},

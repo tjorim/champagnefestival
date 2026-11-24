@@ -521,7 +521,6 @@ def person_to_out(p: Person) -> PersonOut:
         eid_document_number=p.eid_document_number,
         inactivity_exempt=p.inactivity_exempt,
         inactivity_exempt_note=p.inactivity_exempt_note,
-        visits_per_month=p.visits_per_month,
         notes=p.notes,
         anonymised=p.anonymised,
         created_at=p.created_at,

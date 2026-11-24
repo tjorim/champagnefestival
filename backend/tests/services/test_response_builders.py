@@ -120,7 +120,6 @@ def person():
         eid_document_number="private-id",
         inactivity_exempt=False,
         inactivity_exempt_note="",
-        visits_per_month=None,
         notes="Internal",
         anonymised=False,
         oidc_subject="subject",
