@@ -30,12 +30,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import {
-  deleteEditionById,
-  deleteEditionEvent,
-  fetchEditionEvents,
-  saveEditionEvent,
-} from "@/lib/api/adminContentApi";
+import { deleteEditionById } from "@/lib/api/editionsApi";
+import { deleteEditionEvent, fetchEditionEvents, saveEditionEvent } from "@/lib/api/eventsApi";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/lib/query/queryKeys";
 import EditionArtwork from "./EditionArtwork";
@@ -44,14 +40,15 @@ import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
 import type { Edition } from "@/api-types";
-import type { Venue } from "@/api-types";
+import type { Organization, Venue } from "@/api-types";
 import type { Event } from "@/api-types";
 import type { EventFormData } from "@/types/event";
 
 interface EditionCardProps {
   edition: Edition;
   venues: Venue[];
-
+  organizations: Organization[];
+  organizationsPending?: boolean;
   onDeleted: (id: string) => void;
   onUpdated: (edition: Edition) => void;
   onEventMutation?: () => void;
@@ -71,7 +68,8 @@ function editionTypeBadge(type: Edition["edition_type"]): { label: string; bg: B
 export default function EditionCard({
   edition,
   venues,
-
+  organizations,
+  organizationsPending,
   onDeleted,
   onUpdated,
   onEventMutation,
@@ -373,7 +371,8 @@ export default function EditionCard({
           show={editionModalOpen}
           initial={edition}
           venues={venues}
-
+          organizations={organizations}
+          organizationsPending={organizationsPending}
           onSaved={(updated) => {
             onUpdated(updated);
             setEditionModalOpen(false);

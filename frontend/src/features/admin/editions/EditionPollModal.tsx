@@ -26,14 +26,14 @@ import {
   copyPollQuestions,
   createPollQuestion,
   deletePollQuestion,
-  fetchEditions,
-  fetchVolunteerPollEvents,
   fetchPollOrders,
   fetchPollQuestions,
   reorderPollQuestions,
   type PollQuestion,
   type PollQuestionWrite,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/pollsApi";
+import { fetchEditions } from "@/lib/api/editionsApi";
+import { fetchVolunteerPollEvents } from "@/lib/api/eventsApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import {
   pollKindLabel,
@@ -98,7 +98,7 @@ export default function EditionPollModal({
     staleTime: 0,
   });
   const editionsQuery = useQuery({
-    queryKey: queryKeys.admin.contentManagement.editions,
+    queryKey: queryKeys.admin.editions,
     queryFn: () => fetchEditions(),
     enabled,
   });

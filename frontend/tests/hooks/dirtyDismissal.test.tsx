@@ -12,7 +12,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/features/admin/editions/EditionModal";
 import EventModal from "@/features/admin/editions/EventModal";
-import ItemModal from "@/features/admin/editions/ItemModal";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
 import MemberFormModal from "@/features/admin/people/MemberFormModal";
 import PersonFormModal from "@/features/admin/people/PersonFormModal";
 import RegistrationCreateModal from "@/features/admin/registrations/RegistrationCreateModal";
@@ -132,13 +132,13 @@ const cases: Case[] = [
     pristine: "",
   },
   {
-    name: "ItemModal (create)",
+    name: "OrganizationModal (create)",
     modal: (show, onHide) => (
-      <ItemModal
+      <OrganizationModal
         show={show}
         initial={null}
-
         onSave={noop}
+        onLogoSaved={noop}
         onHide={onHide}
       />
     ),
@@ -153,7 +153,7 @@ const cases: Case[] = [
         show={show}
         initial={edition}
         venues={[]}
-
+        organizations={[]}
         onSaved={noop}
         onHide={onHide}
       />
@@ -268,12 +268,12 @@ describe("dismissal while saving", () => {
     const onHide = vi.fn();
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <ItemModal
+        <OrganizationModal
           show
           initial={null}
-
           saving
           onSave={noop}
+          onLogoSaved={noop}
           onHide={onHide}
         />
       </QueryClientProvider>,

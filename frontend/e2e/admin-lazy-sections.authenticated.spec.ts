@@ -37,7 +37,7 @@ test("downloads secondary tools only on selection and keeps navigation usable wh
     for (const module of [
       "AnalyticsDashboard",
       "LayoutEditor",
-      "ContentManagement",
+      "organizations/OrganizationsManagement",
       "SignageChannels",
     ] as const) {
       expect(requested.some((url) => url.includes(`/admin/${module}.tsx`))).toBe(false);

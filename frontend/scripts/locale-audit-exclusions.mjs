@@ -65,7 +65,7 @@ export const exclusions = {
   "features/admin/shared/ComposerManagement.tsx": {
     "https://…": "URL input example",
   },
-  "features/admin/editions/ItemModal.tsx": {
+  "features/admin/organizations/OrganizationModal.tsx": {
     "https://…": "URL input example",
   },
   "features/admin/editions/EventModal.tsx": {

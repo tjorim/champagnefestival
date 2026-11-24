@@ -1,12 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ContentSection } from "@/features/admin/editions/ContentManagement";
 import EditionCard from "@/features/admin/editions/EditionCard";
 import { seedEditions } from "@/mocks/data/editions";
 import { seedOrganizations } from "@/mocks/data/organizations";
 import { getLocale } from "@/paraglide/runtime";
 import { createTestQueryClient } from "../../../utils/queryClient";
+import { OrganizationsHarness } from "../../../utils/OrganizationsHarness";
 
 afterEach(() => window.history.replaceState(null, "", "/"));
 
@@ -15,7 +15,7 @@ describe("Dashboard lists", () => {
     const organization = seedOrganizations[0]!;
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <ContentSection sectionKey="organizations" title="Organisations" />
+        <OrganizationsHarness />
       </QueryClientProvider>,
     );
 
@@ -33,7 +33,7 @@ describe("Dashboard lists", () => {
         <EditionCard
           edition={edition}
           venues={[edition.venue]}
-
+          organizations={[]}
           onDeleted={vi.fn()}
           onUpdated={vi.fn()}
         />

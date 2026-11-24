@@ -1,7 +1,6 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
-import { captureAdminOrganizationsFence } from "@/lib/collections/adminOrganizationsCollection";
 import {
   ADMIN_CONTROL_CLASS,
   ADMIN_LABEL_CLASS,
@@ -18,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -39,27 +38,28 @@ import {
 import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/lib/query/queryKeys";
-import type { ItemDraft } from "@/types/itemTypes";
+import type { Organization, OrganizationCreate } from "@/api-types";
 import { fetchAdminPersonOptions, type PersonOption } from "../shared/adminRegistrationApi";
 
-interface ItemModalProps {
+interface OrganizationModalProps {
   show: boolean;
-  initial: ItemDraft | null; // null = new item
-
+  initial: Organization | null; // null = new organisation
   saving?: boolean;
-  onSave: (item: ItemDraft) => void;
+  /** The editable fields, and the id of the organisation being edited (null when creating). */
+  onSave: (body: OrganizationCreate, id: number | null) => void;
+  /** An uploaded logo changed the organisation on the server. */
+  onLogoSaved: () => void;
   onHide: () => void;
 }
 
-export default function ItemModal({
+export default function OrganizationModal({
   show,
   initial,
-
   saving,
   onSave,
+  onLogoSaved,
   onHide,
-}: ItemModalProps) {
-  const queryClient = useQueryClient();
+}: OrganizationModalProps) {
   const [descriptionError, setDescriptionError] = useState(false);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
@@ -95,22 +95,20 @@ export default function ItemModal({
         return;
       }
       setDescriptionError(false);
-      onSave({
-        // 0 marks the item as new. A client-minted positive id (e.g. Date.now())
-        // reads as an existing record to saveContentSectionItem, which then sends
-        // an update against an id the server has never seen.
-        id: record?.id ?? 0,
-        name: value.name.trim(),
-        image: value.image.trim(),
-        website: value.website.trim(),
-        description_nl: value.description_nl.trim() || null,
-        description_fr: value.description_fr.trim() || null,
-        description_en: value.description_en.trim() || null,
-        active: record?.active ?? true,
-        type: value.type,
-        contact_person_id: value.contactOption?.id ?? null,
-        contact_person: value.contactOption,
-      });
+      // The id is the server's: null creates, a number replaces that organisation.
+      onSave(
+        {
+          name: value.name.trim(),
+          image: value.image.trim(),
+          website: value.website.trim(),
+          description_nl: value.description_nl.trim() || null,
+          description_fr: value.description_fr.trim() || null,
+          description_en: value.description_en.trim() || null,
+          type: value.type,
+          contact_person_id: value.contactOption?.id ?? null,
+        },
+        record?.id ?? null,
+      );
     },
   });
 
@@ -286,14 +284,9 @@ export default function ItemModal({
                 key={initial.id}
                 admin
                 url={`/api/organizations/${initial.id}/logo`}
-
                 onSaved={(result) => {
                   if ("image" in result && result.image) form.setFieldValue("image", result.image);
-                  const isCurrent = captureAdminOrganizationsFence();
-                  if (isCurrent())
-                    void queryClient.invalidateQueries({
-                      queryKey: ["admin", "content-management"],
-                    });
+                  onLogoSaved();
                 }}
               />
             ) : null}

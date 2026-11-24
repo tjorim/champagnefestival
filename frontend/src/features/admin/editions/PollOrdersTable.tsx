@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
-import type { PollOrders } from "@/lib/api/adminContentApi";
+import type { PollOrders } from "@/lib/api/pollsApi";
 import { exportToCsv } from "../shared/csvExport";
 import { pollCountsSummary, type PollQuestionKind } from "@/lib/editions/pollKinds";
 

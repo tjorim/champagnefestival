@@ -25,7 +25,7 @@ import {
   type PollOption,
   type PollQuestion,
   type PollQuestionWrite,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/pollsApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { pollCountsSummary, pollKindLabel, POLL_KIND_HAS_OPTIONS } from "@/lib/editions/pollKinds";
 import { iso, localDate } from "../shared/AnnouncementManagement";

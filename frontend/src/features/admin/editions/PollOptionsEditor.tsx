@@ -26,7 +26,7 @@ import {
   type PollOption,
   type PollOptionWrite,
   type PollQuestion,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/pollsApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { dietaryTagLabel } from "@/lib/editions/dietaryTags";
 import { POLL_KIND_HAS_DIETARY_TAGS } from "@/lib/editions/pollKinds";

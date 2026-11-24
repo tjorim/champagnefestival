@@ -42,12 +42,8 @@ const AnalyticsDashboard = lazy(() => import("../insights/AnalyticsDashboard"));
 const AuditLogViewer = lazy(() => import("../insights/AuditLogViewer"));
 const PushOptIn = lazy(() => import("@/components/PushOptIn"));
 
-const EditionsPane = lazy(() =>
-  import("./AdminContentSections").then((module) => ({ default: module.EditionsPane })),
-);
-const OrganizationsSection = lazy(() =>
-  import("./AdminContentSections").then((module) => ({ default: module.OrganizationsSection })),
-);
+const EditionsPane = lazy(() => import("./AdminEditionsSection"));
+const OrganizationsSection = lazy(() => import("./AdminOrganizationsSection"));
 const PeoplePane = lazy(() => import("./AdminPeopleSection"));
 
 function ScratchpadSection() {

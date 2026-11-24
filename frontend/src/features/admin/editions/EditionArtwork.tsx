@@ -16,7 +16,7 @@ import {
   clearEditionArtwork,
   uploadEditionArtwork,
   type EditionArtworkSlot,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/editionsApi";
 import {
   DEFAULT_FLYER,
   DEFAULT_HERO,
