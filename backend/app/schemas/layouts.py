@@ -72,7 +72,7 @@ class LayoutWithTablesOut(LayoutOut):
 
 # The reserved "current" ref lets compare/restore-preview treat the live
 # arrangement as one more revision without a separate endpoint — see
-# app.services.layouts_service.compare_layout_revisions.
+# app.services.layout_revisions_service.compare_layout_revisions.
 CURRENT_REVISION_REF = "current"
 
 

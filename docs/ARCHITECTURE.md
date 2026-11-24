@@ -105,9 +105,10 @@ core/                   settings, OIDC and bearer auth, shared FastAPI dependenc
                         limits, observability, translation vocabulary, anti-spam, ids, CSV and geometry helpers
 db/                     engine and session (`session.py`), the declarative base (`base.py`), query helpers (`queries.py`),
                         the SQLite compatibility layer and the SQL bootstrap statements for search and the payment ledger
-mcp/                    the MCP server (`server.py`: the FastMCP assembly and tool registration), the tier modules
-                        (`public`, `seating`, `orders`, `check_in`, `delivery`), `admin/` (one module per domain) and
-                        MCP auth, capabilities and middleware
+mcp/                    the MCP server (`server.py`: the FastMCP assembly and tool registration), `tools/` (the tool
+                        methods of `ChampagneFestivalMcpBackend`, one mixin per domain over the shared caller resolution
+                        in `tools/base.py`), the tier modules (`public`, `seating`, `orders`, `check_in`, `delivery`),
+                        `admin/` (one module per domain) and MCP auth, capabilities and middleware
 middleware/             ASGI middleware: CORS, trusted hosts and the general rate limiter (`setup.py`), Server-Timing
                         and the slow-request log (`request_timing.py`)
 ```
@@ -131,7 +132,7 @@ only.
 Naming: `from app.models import X` and `from app.schemas import X` keep working through the package re-exports (explicit
 `__all__`); new code may import the submodule (`from app.schemas.registrations import RegistrationOut`). Models that
 refer to each other only in annotations import each other under `TYPE_CHECKING` (the module files use
-`from __future__ import annotations`). The `services/` modules are still one flat folder of 81 modules; grouping the
+`from __future__ import annotations`). The `services/` modules are still one flat folder of 83 modules; grouping the
 `poll_*`, `member_*`, `public_render*` and `signage_*` families into sub-packages is a later, mechanical step.
 
 ### Where does new backend code go?
@@ -140,7 +141,8 @@ refer to each other only in annotations import each other under `TYPE_CHECKING` 
   in `schemas/<domain>.py`, tables in `models/<domain>.py` plus an Alembic revision; add the new model module to
   `models/__init__.py` and the schemas to `schemas/__init__.py`.
 - An MCP tool: `mcp/admin/<domain>.py` (or a tier module), calling the same service the router calls; register it in
-  `mcp/server.py`.
+  `mcp/tools/<domain>.py` (the thin method that checks the role and delegates) and in `ChampagneFestivalMcpBackend`'s tool
+  list in `mcp/server.py`.
 - Something every domain needs and that knows nothing of a domain (settings, auth, limits, ids): `core/`.
 - Something that reads or writes the engine, session or schema bootstrap: `db/`. ASGI plumbing: `middleware/`.
 - A background job: a handler in `services/`, registered in `services/worker.py`.

@@ -329,7 +329,7 @@ async def test_layout_mcp_keeps_sparse_conflicts(monkeypatch):
         yield AsyncMock()
 
     monkeypatch.setattr(
-        layouts.layouts_service,
+        layouts.layout_revisions_service,
         "preview_layout_restore",
         AsyncMock(return_value=LayoutRestorePreview.model_validate(legacy)),
     )
@@ -368,7 +368,7 @@ def test_policy_history_and_consent_payload_parity():
 
 def test_revision_projection_keeps_snapshot_geometry():
     from app.models import LayoutRevision
-    from app.services import layouts_service
+    from app.services import layout_revisions_service
 
     snapshot = {
         "room": {"width_m": 12.5, "length_m": 8.0},
@@ -396,7 +396,7 @@ def test_revision_projection_keeps_snapshot_geometry():
         "created_at": NOW,
         "snapshot": snapshot,
     }
-    assert layouts_service._revision_to_out(LayoutRevision(**values), ACTOR_LABEL).model_dump() == (
+    assert layout_revisions_service._revision_to_out(LayoutRevision(**values), ACTOR_LABEL).model_dump() == (
         values | {"actor_label": ACTOR_LABEL.model_dump()}
     )
 

@@ -33,6 +33,7 @@ from app.schemas import (
     VolunteerTableResolveOut,
 )
 from app.services.allocations_service import allocated_registration_filter
+from app.services.check_in_service import check_in_guest
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_registration_match,
@@ -42,7 +43,7 @@ from app.services.operational_search import (
     person_search_predicate,
     rank_table_reference,
 )
-from app.services.registrations_service import check_in_guest, update_volunteer_entrance_details
+from app.services.registrations_service import update_volunteer_entrance_details
 from app.services.serializers import registration_to_checkin_out
 
 logger = logging.getLogger(__name__)

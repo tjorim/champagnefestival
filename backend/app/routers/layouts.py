@@ -23,7 +23,7 @@ from app.schemas import (
     LayoutRevisionSaveRequest,
     LayoutWithTablesOut,
 )
-from app.services import layouts_service
+from app.services import layout_revisions_service, layouts_service
 from app.services.errors import ServiceError, to_http_exception
 
 router = APIRouter(
@@ -142,7 +142,7 @@ async def save_layout_revision(
     actor: str = Depends(get_actor_id),
 ) -> LayoutRevisionOut:
     try:
-        return await layouts_service.save_layout_revision(
+        return await layout_revisions_service.save_layout_revision(
             db, actor=actor, layout_id=layout_id, body=body, request_id=getattr(request.state, "request_id", None)
         )
     except ServiceError as exc:
@@ -152,7 +152,7 @@ async def save_layout_revision(
 @router.get("/{layout_id}/revisions", response_model=list[LayoutRevisionOut])
 async def list_layout_revisions(layout_id: str, db: AsyncSession = Depends(get_db)) -> list[LayoutRevisionOut]:
     try:
-        return await layouts_service.list_layout_revisions(db, layout_id)
+        return await layout_revisions_service.list_layout_revisions(db, layout_id)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 
@@ -167,7 +167,7 @@ async def compare_layout_revisions(
     db: AsyncSession = Depends(get_db),
 ) -> LayoutRevisionDiff:
     try:
-        return await layouts_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
+        return await layout_revisions_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 
@@ -177,7 +177,7 @@ async def get_layout_revision(
     layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)
 ) -> LayoutRevisionOut:
     try:
-        return await layouts_service.get_layout_revision(db, layout_id, revision_number)
+        return await layout_revisions_service.get_layout_revision(db, layout_id, revision_number)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 
@@ -187,7 +187,7 @@ async def preview_layout_restore(
     layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)
 ) -> LayoutRestorePreview:
     try:
-        return await layouts_service.preview_layout_restore(db, layout_id, revision_number)
+        return await layout_revisions_service.preview_layout_restore(db, layout_id, revision_number)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 
@@ -202,7 +202,7 @@ async def restore_layout_revision(
     actor: str = Depends(get_actor_id),
 ) -> LayoutOut:
     try:
-        return await layouts_service.restore_layout_revision(
+        return await layout_revisions_service.restore_layout_revision(
             db,
             actor=actor,
             layout_id=layout_id,
