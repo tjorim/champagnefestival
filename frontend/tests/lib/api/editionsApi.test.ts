@@ -4,7 +4,8 @@ import { editionOut, eventOut } from "@/mocks/data/builders";
 import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
-import { saveEdition, saveEditionEvent } from "@/lib/api/adminContentApi";
+import { saveEdition } from "@/lib/api/editionsApi";
+import { saveEditionEvent } from "@/lib/api/eventsApi";
 
 /** Answers every API write with `body` and returns the JSON bodies it received, in order. */
 function serveJson(body: EditionOut | EventOut): Record<string, unknown>[] {

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
-import { setVolunteerPollOrder, type PollOrders } from "@/lib/api/adminContentApi";
+import { setVolunteerPollOrder, type PollOrders } from "@/lib/api/pollsApi";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 
 interface VolunteerPollOrderDialogProps {

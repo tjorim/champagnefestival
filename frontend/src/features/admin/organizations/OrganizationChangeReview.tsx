@@ -8,6 +8,7 @@ import { createAppColumnHelper, useAppTable } from "../shared/useAdminTable";
 import { AdminDataTable } from "../shared/AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
+import { queryKeys } from "@/lib/query/queryKeys";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -150,7 +151,7 @@ export default function OrganizationChangeReview({ onDecided }: { onDecided: () 
   const instance = useId();
   const { accountId } = useAuth();
   const query = useQuery({
-    queryKey: ["admin", "organization-changes", instance, accountId],
+    queryKey: [...queryKeys.admin.organizationChanges, instance, accountId],
     gcTime: 0,
     retry: false,
     queryFn: ({ signal }) =>

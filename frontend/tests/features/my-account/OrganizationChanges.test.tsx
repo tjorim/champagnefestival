@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
-import OrganizationChangeReview from "@/features/admin/editions/OrganizationChangeReview";
+import OrganizationChangeReview from "@/features/admin/organizations/OrganizationChangeReview";
 
 const texts = {
   image: "",

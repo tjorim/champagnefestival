@@ -9,7 +9,7 @@ import {
   AdminTextarea,
 } from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
-import type { PollAttendance, PollOrders } from "@/lib/api/adminContentApi";
+import type { PollAttendance, PollOrders } from "@/lib/api/pollsApi";
 import { MAX_POLL_PEOPLE, MAX_POLL_QUANTITY } from "@/lib/api/myVolunteerApi";
 import type { PollQuestionKind } from "@/lib/editions/pollKinds";
 

@@ -15,13 +15,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/features/admin/editions/EditionModal";
 import EventModal from "@/features/admin/editions/EventModal";
-import ItemModal from "@/features/admin/editions/ItemModal";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
+import { seedOrganizations } from "@/mocks/data/organizations";
 import MemberFormModal from "@/features/admin/people/MemberFormModal";
 import PersonFormModal from "@/features/admin/people/PersonFormModal";
 import VolunteerFormModal from "@/features/admin/people/VolunteerFormModal";
 
-import type { ItemDraft } from "@/types/itemTypes";
-import type { Venue } from "@/api-types";
+import type { Organization, Venue } from "@/api-types";
 
 import type { Person } from "@/types/person";
 import { createTestQueryClient } from "../../../utils/queryClient";
@@ -107,7 +107,7 @@ const existingItem = {
     email: "alice@example.com",
     phone: "0400000000",
   },
-} as unknown as ItemDraft;
+} as unknown as Organization;
 
 function withQuery(ui: React.ReactElement) {
   return <QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>;
@@ -220,7 +220,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={edition}
           venues={venues}
-
+          organizations={seedOrganizations}
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -247,7 +247,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={null}
           venues={[]}
-
+          organizations={[]}
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -264,7 +264,7 @@ describe("admin edit modals prefill from the record being edited", () => {
           show
           initial={null}
           venues={venues}
-
+          organizations={seedOrganizations}
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
@@ -276,14 +276,14 @@ describe("admin edit modals prefill from the record being edited", () => {
     });
   });
 
-  it("ItemModal keeps the item's values", async () => {
+  it("OrganizationModal keeps the organization's values", async () => {
     render(
       withQuery(
-        <ItemModal
+        <OrganizationModal
           show
           initial={existingItem}
-
           onSave={vi.fn()}
+          onLogoSaved={vi.fn()}
           onHide={vi.fn()}
         />,
       ),

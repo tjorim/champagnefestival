@@ -24,7 +24,6 @@ import type {
   TableType,
   Venue,
 } from "@/api-types";
-import type { Organization } from "@/types/admin";
 import type { Registration } from "@/types/registration";
 import type { VolunteerOut } from "@/api-types";
 import {
@@ -360,10 +359,6 @@ export async function restoreLayoutRevision(
     },
     m.admin_error_restore_layout_revision(),
   );
-}
-
-export async function fetchOrganizations(): Promise<Organization[]> {
-  return fetchJsonOrThrow<Organization[]>("/api/organizations", {}, m.admin_error_load_data());
 }
 
 export async function fetchAreas(): Promise<FloorArea[]> {

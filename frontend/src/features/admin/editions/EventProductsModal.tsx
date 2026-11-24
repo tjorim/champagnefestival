@@ -48,7 +48,7 @@ import {
   previewEventProduct,
   type ProductWrite,
   type ProductChangePreview,
-} from "@/lib/api/adminContentApi";
+} from "@/lib/api/productsApi";
 import { queryKeys } from "@/lib/query/queryKeys";
 import type { Event, Product, ProductInclusionOut as ProductInclusion } from "@/api-types";
 

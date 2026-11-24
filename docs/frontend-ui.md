@@ -150,7 +150,7 @@ if no newer edits arrived while that save was pending.
   inactive panels are hidden and inert.
 - FAQ uses a single-open Accordion. CheckInPage's controlled Collapsible keeps
   its search panel mounted to retain entered search state.
-- Tooltips supplement an accessible description; ContentManagement exposes
+- Tooltips supplement an accessible description; OrganizationsManagement exposes
   edition usage with the trigger's `aria-description` as well as a sighted hint.
 - RegistrationList Progress retains its accessible label. LayoutEditor room
   selection and PolicyManagement locales use labelled Toggle Groups, because
@@ -219,6 +219,12 @@ The client reads the current OIDC token for each request and handles transport a
 HTTP failures. Session recovery renews once and refreshes reads. Writes are
 never replayed by session recovery.
 
+Organisations have one client cache, the organisations collection. The list, the
+organisation editor, the edition editor's lineup picker and the registration and
+people views read its rows; `useOrganizationActions` takes the collection's session
+fence before each write and writes the server's response back into it. Nothing
+keeps a second Query copy of the organisations endpoint (#1658).
+
 Register each destination in `adminSections.tsx` so the section component,
 sidebar, access rule and page title share the same definition. Section hooks
 consume the workspace's collections and own their mutations.
@@ -256,7 +262,7 @@ Do not automatically retry writes; see [retry safety](retry-safety.md).
 Every admin create/edit editor follows one policy, implemented by
 `useDirtyDismiss` (`frontend/src/hooks/useDirtyDismiss.tsx`) on top of the
 shared confirmation dialog. `AdminEditorDialog` and the `show`-driven modals
-(`EventModal`, `EditionModal`, `ItemModal`, `PersonFormModal`, `MemberFormModal`,
+(`EventModal`, `EditionModal`, `OrganizationModal`, `PersonFormModal`, `MemberFormModal`,
 `VolunteerFormModal`, `RegistrationCreateModal`) all use it.
 
 - Escape, the header close button, the backdrop and the explicit Cancel/Close
@@ -451,7 +457,7 @@ Kept as they are:
 | `AnnouncementBanner` ticker item button | It is the text of a scrolling, live-region ticker item and is styled by the `announcement-ticker__item-content` rules per level. The generated `Button` adds height, padding, border and nowrap that would break the ticker. The details open in a generated `Dialog`. |
 | `LogoWall` card button | A stretched button (`after:absolute after:inset-0`) makes the whole card the target while the heading stays the accessible name. `Button` is an inline sized control and would fight that overlay. |
 | `AdminDashboard` active-edition strip | `admin-active-edition-strip` is a full-width summary row (edition label, day progress, check-in count) that doubles as the "filter registrations by the active edition" action. It is a multi-segment status banner styled by `admin.css`, not a sized control, so `Button` would add height, padding and nowrap that fight the layout. |
-| `ContentManagement` tooltip trigger | `TooltipTrigger render={<button type="button" />}` makes an item name look like inline text with a dotted underline while exposing the "used in editions" tooltip to keyboard users. Rendering through the Base UI trigger already gives it the generated tooltip behaviour; `Button` would restyle it as a control. |
+| `OrganizationsManagement` tooltip trigger | `TooltipTrigger render={<button type="button" />}` makes an item name look like inline text with a dotted underline while exposing the "used in editions" tooltip to keyboard users. Rendering through the Base UI trigger already gives it the generated tooltip behaviour; `Button` would restyle it as a control. |
 | `signage/offline-player.html` | The standalone offline signage export is a static HTML template with no React or Tailwind, so it cannot use any generated component. |
 | `CheckInPage` | Has no raw `<button>`; it already uses `Button`/`ButtonLink`. |
 | `MaintenancePage` flyer card trigger | A `DialogTrigger` rendered with the page's own card and zoom-overlay stylesheet; it is the `Dialog`'s trigger, not a hand-rolled button. |

@@ -8,6 +8,7 @@ import type {
   AreaOut,
   LayoutOut,
   LayoutRevisionOut,
+  OrganizationOut,
   PaymentTransactionLedgerRow,
   PaymentTransactionOut,
   RoomOut,
@@ -17,6 +18,9 @@ import type {
 } from "./api-schema";
 
 export type * from "./api-schema";
+
+// Organisations (producers, sponsors and vendors) have one client type: the API record.
+export type Organization = OrganizationOut;
 
 // Floor plan and room management. The stored table row leaves out `registration_ids`: occupancy is derived
 // from the registrations (see `state/tableOccupancy.ts`), never stored a second time.

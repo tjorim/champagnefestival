@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 
 import {
@@ -48,19 +48,19 @@ import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirt
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { apiErrorMessage } from "@/lib/api/apiErrors";
-import type { ItemDraft } from "@/types/itemTypes";
 import type { EditionType } from "./editionTypes";
 import type { Edition, EditionCreate } from "@/api-types";
-import type { Venue } from "@/api-types";
-import { queryKeys } from "@/lib/query/queryKeys";
-import { fetchEditionModalOrganizations, saveEdition } from "@/lib/api/adminContentApi";
+import type { Organization, Venue } from "@/api-types";
+import { saveEdition } from "@/lib/api/editionsApi";
 import { editionDisplayName } from "@/lib/editions/editionName";
 
 interface EditionModalProps {
   show: boolean;
   initial: Edition | null;
   venues: Venue[];
-
+  /** The organisations collection's rows, so the picker never keeps a copy of its own. */
+  organizations: Organization[];
+  organizationsPending?: boolean;
   onSaved: (edition: Edition) => void;
   onHide: () => void;
 }
@@ -72,8 +72,6 @@ interface ItemOption {
   /** Organisation type; only sponsors can have a level. */
   type?: string;
 }
-
-const editionModalOrganizationsQueryKey = queryKeys.admin.editionModalOrganizations;
 
 /** Moves one entry, as a new array. */
 function moved<T>(items: T[], from: number, to: number): T[] {
@@ -97,7 +95,7 @@ function lineupOptions(initial: Edition | null | undefined): ItemOption[] {
   });
 }
 
-function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
+function toOptions(items: Organization[]): { active: ItemOption[]; archived: ItemOption[] } {
   const active: ItemOption[] = [];
   const archived: ItemOption[] = [];
   for (const item of items) {
@@ -147,7 +145,8 @@ export default function EditionModal({
   show,
   initial,
   venues,
-
+  organizations,
+  organizationsPending = false,
   onSaved,
   onHide,
 }: EditionModalProps) {
@@ -257,14 +256,6 @@ export default function EditionModal({
     if (show) hydratedRef.current = false;
   }, [show]);
 
-  const organizationsQuery = useQuery({
-    queryKey: editionModalOrganizationsQueryKey,
-    queryFn: () => fetchEditionModalOrganizations(),
-    enabled: show,
-    staleTime: 60 * 1000,
-    retry: false,
-  });
-
   const saveEditionMutation = useMutation({
     mutationFn: (payload: {
       id: string;
@@ -280,7 +271,7 @@ export default function EditionModal({
     retry: false,
   });
 
-  const allOrganizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
+  const allOrganizations = organizations;
   const isEdit = !!record;
   const values = useSelector(form.atom, (s) => s.values);
   const { requestClose, confirmDialog } = useDirtyDismiss({
@@ -609,7 +600,7 @@ export default function EditionModal({
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_edition_festival_organizations()}
                 </AdminLabel>
-                {organizationsQuery.isPending ? (
+                {organizationsPending ? (
                   <div className="text-subtle text-sm">
                     <Spinner size="sm" className="me-2" />
                     {m.admin_edition_loading_organizations()}

@@ -7,7 +7,8 @@ import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
 import MyOrganizationsSection from "@/features/my-account/MyOrganizationsSection";
-import ItemModal from "@/features/admin/editions/ItemModal";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
+import type { Organization } from "@/api-types";
 
 const url = "/api/organizations/translation";
 const props = {
@@ -199,16 +200,18 @@ it("fills the admin form and saves only after manual review", async () => {
   );
   const save = vi.fn();
   mount(
-    <ItemModal
+    <OrganizationModal
       show
-      initial={{
-        id: 42,
-        name: "House",
-        image: "/logos/house.png",
-        description_nl: "Hallo",
-      }}
-
+      initial={
+        {
+          id: 42,
+          name: "House",
+          image: "/logos/house.png",
+          description_nl: "Hallo",
+        } as Organization
+      }
       onSave={save}
+      onLogoSaved={() => {}}
       onHide={() => {}}
     />,
   );
@@ -225,6 +228,7 @@ it("fills the admin form and saves only after manual review", async () => {
   await waitFor(() =>
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({ description_en: "Reviewed draft" }),
+      42,
     ),
   );
 });

@@ -4,13 +4,8 @@ import { http } from "msw/http";
 import type { PollOrdersOut, PollQuestionOut } from "@/api-types";
 import { seedOrganizations } from "@/mocks/data/organizations";
 import { server } from "@/mocks/server";
-import {
-  fetchContentSectionItems,
-  fetchEditionModalOrganizations,
-  fetchPollOrders,
-  fetchPollQuestions,
-  saveContentSectionItem,
-} from "@/lib/api/adminContentApi";
+import { fetchPollOrders, fetchPollQuestions } from "@/lib/api/pollsApi";
+import { fetchOrganizations, saveOrganization } from "@/lib/api/organizationsApi";
 
 const question: PollQuestionOut = {
   id: "question",
@@ -38,15 +33,14 @@ const question: PollQuestionOut = {
 };
 
 describe("generated content responses", () => {
-  it("preserves the complete organization and contact projection in both lists", async () => {
+  it("preserves the complete organization and contact projection in the list", async () => {
     const organizations = seedOrganizations;
     server.use(
       http.get("/api/organizations", () =>
         jsonResponse<import("@/api-types").OrganizationOut[]>(organizations),
       ),
     );
-    expect(await fetchContentSectionItems("organizations")).toEqual(organizations);
-    expect(await fetchEditionModalOrganizations()).toEqual(organizations);
+    expect(await fetchOrganizations()).toEqual(organizations);
   });
 
   it("sends the same organization write and preserves its response metadata", async () => {
@@ -58,8 +52,7 @@ describe("generated content responses", () => {
         return jsonResponse<import("@/api-types").OrganizationOut>(organization);
       }),
     );
-    expect(await saveContentSectionItem("organizations", organization)).toEqual(organization);
-    expect(sent).toEqual({
+    const body = {
       name: organization.name,
       image: organization.image,
       website: organization.website,
@@ -68,7 +61,9 @@ describe("generated content responses", () => {
       description_en: organization.description_en,
       type: organization.type,
       contact_person_id: organization.contact_person_id,
-    });
+    };
+    expect(await saveOrganization(organization.id, body)).toEqual(organization);
+    expect(sent).toEqual(body);
   });
 
   it("keeps poll records and answer arrays in their wire shape", async () => {

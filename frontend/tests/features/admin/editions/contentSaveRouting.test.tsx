@@ -2,9 +2,9 @@ import { jsonResponse } from "@/mocks/response";
 /**
  * Regression coverage for how admin content saves are routed and shaped.
  *
- * ItemModal used to mint a `Date.now()` id for brand-new items, which
- * `saveContentSectionItem` read as "existing" and sent as an update against an
- * id the server had never seen.
+ * OrganizationModal used to mint a `Date.now()` id for brand-new organisations,
+ * which the save read as "existing" and sent as an update against an id the
+ * server had never seen. The modal now hands over `null` for a new one.
  *
  * EditionModal's organization payload is pinned here too: the API rejects vendor
  * ids on an edition, so the form must submit producers and sponsors only.
@@ -15,10 +15,11 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { http } from "msw/http";
 import EditionModal from "@/features/admin/editions/EditionModal";
-import ItemModal from "@/features/admin/editions/ItemModal";
-import { saveContentSectionItem } from "@/lib/api/adminContentApi";
+import OrganizationModal from "@/features/admin/organizations/OrganizationModal";
+import { saveOrganization } from "@/lib/api/organizationsApi";
+import { seedOrganizations } from "@/mocks/data/organizations";
 import { server } from "@/mocks/server";
-import type { Edition } from "@/api-types";
+import type { Edition, OrganizationCreate } from "@/api-types";
 
 import type { Venue } from "@/api-types";
 import { createTestQueryClient } from "../../../utils/queryClient";
@@ -35,16 +36,16 @@ function withQuery(ui: React.ReactElement) {
   return <QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>;
 }
 
-describe("new content items are created, not updated", () => {
-  it("ItemModal emits id 0 for a new item so the save routes to POST", async () => {
+describe("new organizations are created, not updated", () => {
+  it("OrganizationModal hands over a null id for a new organization so the save routes to POST", async () => {
     const onSave = vi.fn();
     render(
       withQuery(
-        <ItemModal
+        <OrganizationModal
           show
           initial={null}
-
           onSave={onSave}
+          onLogoSaved={vi.fn()}
           onHide={vi.fn()}
         />,
       ),
@@ -59,15 +60,15 @@ describe("new content items are created, not updated", () => {
     fireEvent.click(screen.getByRole("button", { name: /admin_save/ }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const draft = onSave.mock.calls[0]![0] as { id: number; name: string };
-    expect(draft.id).toBe(0);
+    const [body, id] = onSave.mock.calls[0]! as [OrganizationCreate, number | null];
+    expect(id).toBeNull();
 
     const seen: string[] = [];
     server.events.on("request:start", ({ request }) => {
       seen.push(`${request.method} ${new URL(request.url).pathname}`);
     });
 
-    const saved = await saveContentSectionItem("organizations", draft as never);
+    const saved = await saveOrganization(id, body);
 
     expect(seen).toContain("POST /api/organizations");
     expect(seen.some((entry) => entry.startsWith("PUT /api/organizations/"))).toBe(false);
@@ -143,7 +144,7 @@ describe("saving a festival edition submits only programmable organizations", ()
           venues={
             [{ id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true }] as Venue[]
           }
-
+          organizations={seedOrganizations}
           onSaved={vi.fn()}
           onHide={vi.fn()}
         />,
