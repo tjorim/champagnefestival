@@ -6,11 +6,11 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import Person, Registration, VolunteerPollAnswer
+from app.models import Registration, VolunteerPollAnswer
 from app.schemas import VolunteerPollAnswerIn
 from app.services.poll_questions_service import answer_poll_question
 from app.services.role_history import retire_role
-from tests.helpers import _create_event, _post_registration, requires_postgres
+from tests.helpers import _create_event, _post_registration, person_by_subject, requires_postgres
 from tests.poll_helpers import Volunteers, create_question
 
 
@@ -21,7 +21,7 @@ async def setup(client, volunteer_client_as, db_session):
     question = await create_question(client, event["edition_id"], "yes_no", "Eet je mee?", event_id=event["id"])
     volunteers = Volunteers(volunteer_client_as, db_session)
     await volunteers.register("poll-event-volunteer")
-    person = await db_session.scalar(select(Person).where(Person.oidc_subject == "poll-event-volunteer"))
+    person = await person_by_subject(db_session, "poll-event-volunteer")
     assert person is not None
     return event, question, volunteers, person
 

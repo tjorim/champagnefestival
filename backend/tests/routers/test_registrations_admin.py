@@ -695,7 +695,7 @@ async def test_admin_assigns_registration_to_a_linked_volunteer(client, db_sessi
         id="per-assign-volunteer",
         name="Assign Volunteer",
         role_periods=role_periods(["volunteer"]),
-        oidc_subject="assign-volunteer-sub",
+        user=User(id="usr-assign-volunteer-sub", oidc_subject="assign-volunteer-sub"),
     )
     db_session.add(volunteer)
     await db_session.commit()
@@ -733,7 +733,7 @@ async def test_admin_assign_conflicts_when_already_owned(client, db_session):
         id="per-assign-conflict",
         name="Assign Conflict",
         role_periods=role_periods(["volunteer"]),
-        oidc_subject="assign-conflict-sub",
+        user=User(id="usr-assign-conflict-sub", oidc_subject="assign-conflict-sub"),
     )
     db_session.add(volunteer)
     await db_session.commit()
@@ -760,7 +760,7 @@ async def test_admin_assign_is_idempotent_for_a_repeated_same_target_call(client
         id="per-assign-retry",
         name="Assign Retry",
         role_periods=role_periods(["volunteer"]),
-        oidc_subject="assign-retry-sub",
+        user=User(id="usr-assign-retry-sub", oidc_subject="assign-retry-sub"),
     )
     db_session.add(volunteer)
     await db_session.commit()
@@ -803,13 +803,13 @@ async def test_concurrent_assign_to_different_volunteers_yields_exactly_one_winn
         id="per-assign-race-a",
         name="Race A",
         role_periods=role_periods(["volunteer"]),
-        oidc_subject="assign-race-a-sub",
+        user=User(id="usr-assign-race-a-sub", oidc_subject="assign-race-a-sub"),
     )
     volunteer_b = Person(
         id="per-assign-race-b",
         name="Race B",
         role_periods=role_periods(["volunteer"]),
-        oidc_subject="assign-race-b-sub",
+        user=User(id="usr-assign-race-b-sub", oidc_subject="assign-race-b-sub"),
     )
     db_session.add_all([volunteer_a, volunteer_b])
     await db_session.commit()

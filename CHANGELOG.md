@@ -33,10 +33,12 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Fixed
 
+- Booking again with a retyped or reformatted phone number no longer creates a second person in the directory: a public booking reuses the person with the same email address and name (#1655).
 - Admin registration counters use one server response and label check-in totals as guests. Booking details show the saved payment figures separately from the estimated total after edits (#1668).
 
 ### Internal
 
+- Link people to accounts by key (#1655): migration `018` adds `people.user_id` (unique, cleared when the account is deleted) and replaces `people.oidc_subject`. The backfill links by verified OIDC subject, and by verified email only when the address belongs to exactly one unlinked person without identity documents or the volunteer role; ambiguous cases stay unlinked. `person_account` is the single place that answers "which person is this account". Merge moves the link, refuses two different accounts (409 `person_account_conflict`), and anonymising clears it. See [backend/README.md](backend/README.md#people-linked-to-accounts-1655).
 - Remove stored fields nothing used (#1656): migration `017` drops `people.visits_per_month`, `push_subscriptions.categories` and `event_ids`, and the copied `edition_poll_options.edition_id` (now derived from the option's question). The `people`, `members` and push-subscription API responses and requests no longer carry the first three, and `POST /api/push/subscriptions` rejects `categories` and `event_ids`. Decisions for every item of the issue: [backend/README.md](backend/README.md#stored-fields-nothing-used-1656).
 - Retire the legacy single product inclusion: migration `016` converts it to a guest-based inclusion (also in booked package rules), makes `products.inclusions` non-null and drops `included_product_id` and `included_per_guests`. The API no longer has those fields (#1651).
 - Store directory membership and volunteering in indexed role periods, migrate legacy aliases, and limit the person editor to those two roles (#1649).

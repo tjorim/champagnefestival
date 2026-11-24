@@ -1317,3 +1317,48 @@ Downgrading restores the pair (and a null `inclusions`) for a product or frozen
 package whose only inclusion is a single guest-based one-per-N entry; any other
 guest-based entry keeps its `basis`, which the previous code ignores. Pairs or
 entries discarded at upgrade need the pre-upgrade backup.
+
+### People linked to accounts (#1655)
+
+`people.user_id` (nullable, unique, `ON DELETE SET NULL`) says which sign-in
+account owns a person. It replaces `people.oidc_subject`; the admin and MCP
+volunteer endpoints keep their `oidc_subject` field, which now resolves to the
+subject of the linked account (setting it creates the account row if that
+subject never signed in; clearing it unlinks). `app/services/person_account.py`
+is the only place that reads or writes the link: `person_for_account` answers
+"which person is this account", `link_person` / `unlink_person` write it, and
+`link_by_verified_email` is the one inferred link. See
+[the authorization model](../docs/authorization-model.md#linking-people-to-accounts).
+
+Migration `018` adds the column and backfills it in two passes, both written so
+that odd, duplicate or ambiguous legacy data leaves the link empty instead of
+failing or guessing:
+
+1. **Subject link.** Each non-blank `people.oidc_subject` maps to the account
+   holding that subject; a subject that never signed in gets an account row so
+   the link is not lost. Blank and whitespace-only subjects are ignored.
+2. **Verified-email link.** An account that still has no person is linked to the
+   one person that holds its verified email (compared trimmed and
+   case-insensitively) only when that address belongs to exactly one
+   non-anonymised person, no other account has the same normalised address, and
+   the person is unlinked, has no national register number or eID number and
+   does not hold the volunteer role. A shared inbox, an unmerged duplicate, an
+   anonymised record, a person with identity documents or a volunteer stays
+   unlinked; an admin merge or link resolves it. `people.email` itself is never
+   trusted: only the *account's* address is verified.
+
+Apply it with the previous application stopped. Downgrading restores
+`people.oidc_subject` from the linked account's subject. It is lossy: a person
+linked to an email-only account loses that link, and the account rows created for
+never-seen subjects are kept (harmless).
+
+Public bookings find or create their person in
+`people_service.find_or_create_public_person` with one rule: a non-anonymised
+person with the same email (trimmed, case-insensitive) **and** name (case-folded,
+whitespace collapsed). The phone number is not part of the key, so a retyped
+number no longer creates a second person. A person linked to the signed-in
+account wins, then the oldest match. An unauthenticated booking never overwrites
+a stored value (a blank phone is filled in) and the response shows the number the
+visitor typed, not the stored one. Merging two people moves the duplicate's link
+to the survivor, refuses two different accounts (409 `person_account_conflict`),
+and anonymising a person clears its link.

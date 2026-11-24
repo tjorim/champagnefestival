@@ -44,36 +44,17 @@ async def resolve_actor_labels(db: AsyncSession, actors: Iterable[Actor]) -> dic
             for key in integrations[client_id]:
                 labels[key] = ActorLabel(kind="integration", name=name)
 
-    if people:
-        result = await db.execute(
-            select(Person.oidc_subject, Person.name).where(Person.oidc_subject.in_(people), ~Person.anonymised)
-        )
-        for subject, name in result:
-            if subject is not None:
-                for key in people[subject]:
-                    labels[key] = ActorLabel(kind="person", name=name)
-
-    # Booking ownership can be delegated. Match a portal account by its verified
-    # address and use the name only when it identifies a single active record.
-    unmatched = {actor for actor, keys in people.items() if all(labels[key].name is None for key in keys)}
-    if visitors or unmatched:
+    # An actor is an OIDC subject (a signed-in caller) or a portal user id (a visitor session). The name comes
+    # from the person the account is linked to (``people.user_id``); an account nobody linked has no name.
+    if people or visitors:
         rows = await db.execute(
-            select(User.id, User.oidc_subject, Person.id, Person.name)
-            .select_from(User)
-            .join(Person, Person.search_email == User.verified_email)
-            .where(or_(User.id.in_(visitors), User.oidc_subject.in_(unmatched)), ~Person.anonymised)
-            .distinct()
+            select(User.id, User.oidc_subject, Person.name)
+            .join(Person, Person.user_id == User.id)
+            .where(or_(User.id.in_(visitors), User.oidc_subject.in_(people)), ~Person.anonymised)
         )
-        candidates: dict[Actor, dict[str, str]] = defaultdict(dict)
-        for user_id, subject, person_id, name in rows:
-            for key in visitors.get(user_id, ()):
-                candidates[key][person_id] = name
-            if subject is not None and subject in unmatched:
-                for key in people[subject]:
-                    candidates[key][person_id] = name
-        for key, names in candidates.items():
-            if len(names) == 1:
-                labels[key] = ActorLabel(kind="person", name=next(iter(names.values())))
+        for user_id, subject, name in rows:
+            for key in (*visitors.get(user_id, ()), *(people.get(subject, ()) if subject is not None else ())):
+                labels[key] = ActorLabel(kind="person", name=name)
     return labels
 
 

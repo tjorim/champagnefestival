@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Person
 from app.services import volunteer_self_service
-from tests.helpers import ADMIN_HEADERS, requires_postgres
+from tests.helpers import ADMIN_HEADERS, person_by_subject, requires_postgres
 
 NISS_A = "91010112319"
 EID_A = "123456789002"
@@ -77,7 +77,7 @@ async def test_register_creates_a_new_volunteer_record(volunteer_client_as, db_s
         assert get_r.status_code == 200
         assert get_r.json()["linked"] is True
 
-    person = (await db_session.scalars(select(Person).where(Person.oidc_subject == "subject-a"))).one()
+    person = await person_by_subject(db_session, "subject-a")
     assert "volunteer" in person.roles
     assert person.national_register_number == NISS_A
 
@@ -114,13 +114,13 @@ async def test_register_is_idempotent_for_an_already_linked_subject(volunteer_cl
 
     # docs/retry-safety.md requires this to converge without duplicate
     # state: exactly one linked Person and one audit entry, not two.
-    linked = (await db_session.scalars(select(Person).where(Person.oidc_subject == "subject-a"))).all()
-    assert len(linked) == 1
+    linked = await person_by_subject(db_session, "subject-a")
+    assert linked is not None
     audits = (
         await db_session.scalars(
             select(AuditEntry).where(
                 AuditEntry.action == "volunteer_identity_registered",
-                AuditEntry.resource_id == linked[0].id,
+                AuditEntry.resource_id == linked.id,
             )
         )
     ).all()
@@ -274,7 +274,7 @@ async def test_eid_correction_writes_directly_and_is_idempotent(volunteer_client
         assert first.json()["eid_document_number"] == EID_B
         assert replay.json() == first.json()
 
-    person = (await db_session.scalars(select(Person).where(Person.oidc_subject == "subject-a"))).one()
+    person = await person_by_subject(db_session, "subject-a")
     # Now a direct write, unlike the earlier admin-reviewed design.
     assert person.eid_document_number == EID_B
 

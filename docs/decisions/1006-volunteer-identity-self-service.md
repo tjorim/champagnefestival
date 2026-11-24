@@ -3,7 +3,8 @@
 ## Registration and authorisation
 
 Every `/api/me/volunteer/*` endpoint requires the OIDC volunteer role and resolves
-the caller's own `Person.oidc_subject` link (nullable, unique). The realm role
+the caller's own person, found through the account that owns the token's subject
+(`Person.user_id`, nullable, unique; [#1655](../authorization-model.md#linking-people-to-accounts)). The realm role
 allows volunteer operations; the link identifies the particular person.
 
 `POST /api/me/volunteer/register` accepts name, NISS and eID document number.
@@ -15,7 +16,7 @@ Registration creates a volunteer Person or adopts an unlinked record whose NISS
 and eID both exactly match, preserving imported history. Partial matches or a
 record linked to someone else return 409. Candidate adoption is locked against
 concurrent claims. An already-linked caller receives their existing record.
-Admins can set or clear `oidc_subject` through REST or MCP; MCP supports an
+Admins can set or clear `oidc_subject` (the linked account's subject) through REST or MCP; MCP supports an
 explicit `clear_oidc_subject` flag.
 
 ## Reads and corrections

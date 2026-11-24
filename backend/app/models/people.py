@@ -15,6 +15,7 @@ from app.models.vocabulary import vocabulary_check
 
 if TYPE_CHECKING:
     from app.models.registrations import Registration
+    from app.models.users import User
 
 
 class Person(Base):
@@ -116,16 +117,23 @@ class Person(Base):
     can flag a renewal themselves via `POST /api/me/volunteer/eid-correction`
     (see `oidc_subject` below and docs/decisions/1006-volunteer-identity-self-service.md)."""
 
-    oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-    """The `sub` claim of the OIDC-authenticated volunteer this Person record
-    is linked to, if any — established by the volunteer themselves via
-    `POST /api/me/volunteer/register` (which creates this Person row from
-    their submitted name/NISS/eID, or links to a pre-existing unlinked exact
-    match) or set directly by an admin. Unlike `Person.roles`, this is
-    independent of the OIDC `volunteer`/`admin` realm role used by
-    `require_volunteer` for event-day access — it identifies *which* Person a
-    token belongs to, not *whether* the token may act as a volunteer. See
-    docs/decisions/1006-volunteer-identity-self-service.md."""
+    user_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL"), unique=True, nullable=True
+    )
+    """The portal account proven to own this person, if any (#1655). Set only through
+    ``app.services.person_account`` — from a verified OIDC subject (volunteer self-registration or an
+    admin link) or a verified-email match against an unambiguous, unlinked record — and unique, so
+    one account answers for at most one person and one person for at most one account. Independent of
+    the OIDC ``volunteer``/``admin`` realm roles used by ``require_volunteer``: it identifies *which*
+    person an account is, not *whether* the account may act as a volunteer. See
+    docs/decisions/1006-volunteer-identity-self-service.md and docs/authorization-model.md."""
+    user: Mapped[User | None] = relationship(lazy="selectin")
+
+    @property
+    def oidc_subject(self) -> str | None:
+        """The linked account's OIDC ``sub`` (read-only view; link through ``person_account``)."""
+        return self.user.oidc_subject if self.user is not None else None
+
     notes: Mapped[str] = mapped_column(Text, default="")
     anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
     """Set when the record has been anonymised (``people_service.anonymise_person``); such a person

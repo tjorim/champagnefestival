@@ -35,8 +35,10 @@ from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
+from app.services.person_account import link_person, unlink_person
 from app.services.role_history import lock_role_people, reactivate_role, retire_role, set_role_start, sync_roles
 from app.services.serializers import person_to_out
+from app.services.users_service import get_or_create_user
 
 
 def ensure_volunteer_role(person: Person, *, started_on: dt_date | None = None) -> None:
@@ -50,14 +52,12 @@ async def ensure_unique_fields(
     db: AsyncSession,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
-    oidc_subject: str | None = None,
     exclude_id: str | None = None,
 ) -> None:
     """Check for a conflicting row. Callers are expected to have already run
     identity values through ``normalise_optional_identity`` (see
     ``create_volunteer``/``apply_volunteer_update``) — this only queries with
-    what it's given. ``oidc_subject`` needs no such normalisation; it's an
-    opaque OIDC ``sub`` claim, not a human-entered identity number."""
+    what it's given."""
     if national_register_number is not None:
         stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
@@ -82,16 +82,24 @@ async def ensure_unique_fields(
                 detail="Person with this eID document number already exists.",
             )
 
-    if oidc_subject is not None:
-        stmt = select(Person).where(Person.oidc_subject == oidc_subject)
-        if exclude_id:
-            stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
-        if existing is not None:
-            raise HTTPException(
-                status_code=409,
-                detail="Person with this OIDC identity link already exists.",
-            )
+
+async def set_account_link(
+    db: AsyncSession, volunteer: Person, subject: str | None, *, actor: str, request_id: str | None = None
+) -> None:
+    """Admin link/unlink of a volunteer's sign-in account by OIDC subject (#1006, #1655).
+
+    The subject is an administrator's assertion, the same trust the field always carried; the account
+    row is created if that subject has never signed in. An account already linked to another person is
+    never taken over (409 ``person_account_conflict``); replacing a volunteer's own link is an explicit
+    admin action and is audited as an unlink followed by a link.
+    """
+    if subject is None:
+        await unlink_person(db, volunteer, method="admin", actor=actor, request_id=request_id)
+        return
+    user = await get_or_create_user(db, subject, commit=False)
+    if volunteer.user_id is not None and volunteer.user_id != user.id:
+        await unlink_person(db, volunteer, method="admin_relink", actor=actor, request_id=request_id)
+    await link_person(db, volunteer, user, method="admin", actor=actor, request_id=request_id)
 
 
 async def replace_help_periods(
@@ -225,8 +233,6 @@ async def apply_volunteer_update(
         await ensure_unique_fields(db, national_register_number=nrr, exclude_id=volunteer_id)
     if eid_in_set and eid is not None:
         await ensure_unique_fields(db, eid_document_number=eid, exclude_id=volunteer_id)
-    if subject_in_set and body.oidc_subject is not None:
-        await ensure_unique_fields(db, oidc_subject=body.oidc_subject, exclude_id=volunteer_id)
 
     for field in ("name", "address"):
         if field in body.model_fields_set:
@@ -237,7 +243,7 @@ async def apply_volunteer_update(
     if eid_in_set:
         volunteer.eid_document_number = eid
     if subject_in_set:
-        volunteer.oidc_subject = body.oidc_subject
+        await set_account_link(db, volunteer, body.oidc_subject, actor=actor, request_id=request_id)
 
     if "help_periods" in body.model_fields_set and body.help_periods is not None:
         await replace_help_periods(db, volunteer_id, body.help_periods)
@@ -260,7 +266,7 @@ async def apply_volunteer_update(
         raise ApiHTTPException(
             code="person_identity_conflict",
             status_code=409,
-            detail="Person with this national register number, eID document number, or OIDC identity link already exists.",
+            detail="Person with this national register number or eID document number already exists.",
         ) from exc
     await db.refresh(volunteer)
     periods_map = await load_periods_map(db, [volunteer.id])

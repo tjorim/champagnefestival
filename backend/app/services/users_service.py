@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.ids import make_id
 from app.models import Person, Registration, User, VisitorMagicLink, VisitorSession
 from app.services.audit_service import write_audit_entry
+from app.services.person_account import email_matches, link_by_verified_email
 
 logger = logging.getLogger(__name__)
 
@@ -114,13 +115,18 @@ async def claim_unowned_registrations_for_email(
     confirming their own verified email) and visitor magic-link redemption
     (the link itself is that same proof).
 
+    The same verified address may also link the account to its person
+    (``person_account.link_by_verified_email``, which only links one
+    unambiguous, unlinked, identity-document-free record).
+
     Does not commit — caller commits as part of the same transaction.
     """
+    await link_by_verified_email(db, user, email, actor=actor, auth_source=auth_source)
     registrations = (
         await db.scalars(
             select(Registration)
             .join(Person, Registration.person_id == Person.id)
-            .where(Person.email == email, Registration.user_id.is_(None))
+            .where(email_matches(email), Registration.user_id.is_(None))
             .with_for_update()
         )
     ).all()

@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp.admin import payments as mcp_payments
 from app.mcp.utils import MCPToolError
-from app.models import IdempotencyKey, PaymentTransaction, Person
+from app.models import IdempotencyKey, PaymentTransaction, Person, User
 from app.schemas import PaymentTransactionOut
 from app.services import payments_service, registrations_service
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory, requires_postgres
@@ -730,7 +730,7 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
     registration_id = await _registration(client, amount_due="25.00")
     factory = mcp_session_factory(db_session)
 
-    person = Person(id="payment-actor", name="Alex Martin", oidc_subject="admin-1")
+    person = Person(id="payment-actor", name="Alex Martin", user=User(id="usr-admin-1", oidc_subject="admin-1"))
     db_session.add(person)
     await db_session.commit()
     response = await mcp_payments.create_payment_transaction(

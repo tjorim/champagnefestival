@@ -22,10 +22,17 @@ inbox control from an unverified claim. There is no different-email claim flow.
 ## Administrator assignment
 
 `POST /api/registrations/{id}/assign-volunteer` accepts `volunteer_id` and requires
-an administrator. The volunteer must have a linked `Person.oidc_subject` (else 422)
+an administrator. The volunteer must have a linked account, `Person.user_id` (else 422)
 and the booking must be unowned (else 409). It resolves the volunteer's User and
 records `registration_assigned`. There is no corresponding member assignment
 without an admin-visible identity link.
+
+Confirming a claim (and email-session redemption) may also link the account to
+the person that holds the verified address, but only when exactly one
+non-anonymised, unlinked person without identity documents or the volunteer role
+holds it; otherwise the link stays empty
+([#1655](../authorization-model.md#linking-people-to-accounts)). Claiming
+bookings itself is unchanged.
 
 Email-session redemption claims the address proven by its magic link. Signed-in
 booking creation assigns ownership directly. These paths share the same

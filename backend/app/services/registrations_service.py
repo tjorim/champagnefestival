@@ -117,39 +117,29 @@ async def create_public_registration(
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     await inventory.check_stock(db, event, resolved_order_items)
 
+    submitted_phone: str | None = None
     if member_identity is not None:
         person, user = member_identity
     else:
-        email_norm = str(body.email).lower().strip()
-        name_norm = " ".join(body.name.lower().split())
-        phone_norm = people_service.parse_phone(body.phone)
-
-        candidates = (
-            (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm)))
-            .scalars()
-            .all()
+        submitted_phone = people_service.parse_phone(body.phone)
+        person, created = await people_service.find_or_create_public_person(
+            db,
+            name=body.name,
+            email=str(body.email),
+            phone=submitted_phone,
+            preferred_language=body.preferred_language,
+            user=user,
         )
-        person = next(
-            (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
-            None,
-        )
-        if person is None:
-            person = Person(
-                id=make_id("per"),
-                preferred_language=body.preferred_language,
-                name=body.name,
-                email=email_norm,
-                phone=phone_norm,
-            )
-            db.add(person)
-            await db.flush()
-        else:
-            if user is not None and await db.scalar(
+        if (
+            not created
+            and user is not None
+            and await db.scalar(
                 select(Registration.id)
                 .where(Registration.person_id == person.id, Registration.user_id == user.id)
                 .limit(1)
-            ):
-                person.preferred_language = body.preferred_language
+            )
+        ):
+            person.preferred_language = body.preferred_language
 
     consent_confirmation = None
     if body.new_editions_opt_in:
@@ -218,7 +208,12 @@ async def create_public_registration(
         )
 
     registration = await get_registration_or_404(db, registration.id)
-    return registration_to_out(registration, person, event, public=True)
+    response = registration_to_out(registration, person, event, public=True)
+    if submitted_phone is not None:
+        # The booking matched an existing person by email and name; never echo a stored phone the visitor did
+        # not type (people_service.find_or_create_public_person).
+        response.person.phone = submitted_phone
+    return response
 
 
 async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Registration:
@@ -253,17 +248,16 @@ async def assign_registration_to_volunteer(
     claim flow (e.g. an account they rarely sign into, or a booking made
     before they self-registered).
     """
-    from app.services.users_service import get_or_create_user
-
     volunteer = await db.get(Person, volunteer_id)
     if volunteer is None or "volunteer" not in volunteer.roles:
         raise HTTPException(status_code=404, detail="Volunteer not found.")
-    if volunteer.oidc_subject is None:
+    if volunteer.user_id is None:
         raise HTTPException(
             status_code=422,
             detail="This volunteer hasn't linked their own account yet, so there's nothing to assign to.",
         )
-    user = await get_or_create_user(db, volunteer.oidc_subject, commit=False)
+    user = await db.get(User, volunteer.user_id)
+    assert user is not None
 
     # Lock and re-check under the lock rather than trusting the caller's
     # already-loaded `registration` snapshot — mirrors

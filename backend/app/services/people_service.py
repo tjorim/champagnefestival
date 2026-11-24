@@ -35,7 +35,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.ids import make_id
 from app.db.queries import get_or_404
-from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
+from app.models import Organization, Person, Registration, StampCard, User, VolunteerPeriod
 from app.schemas import PersonCreate, PersonOut, PersonUpdate
 from app.services import email_consent_service
 from app.services.audit_service import write_audit_entry
@@ -48,6 +48,7 @@ from app.services.member_email import (
     ensure_member_email,
     flush_member_changes,
 )
+from app.services.person_account import account_conflict, email_matches, normalise_email, unlink_person
 from app.services.role_history import lock_role_people, merge_roles, normalise_roles, sync_roles
 from app.services.serializers import person_to_out
 
@@ -251,6 +252,57 @@ async def apply_person_update(
     return person_to_out(person)
 
 
+def _name_key(name: str) -> str:
+    return " ".join(name.casefold().split())
+
+
+async def find_or_create_public_person(
+    db: AsyncSession,
+    *,
+    name: str,
+    email: str,
+    phone: str,
+    preferred_language: str | None,
+    user: User | None = None,
+) -> tuple[Person, bool]:
+    """The directory record a public booking belongs to, and whether it was just created (#1655).
+
+    This is the one matching rule for visitor bookings. A booking reuses an existing person when its
+    **email (trimmed, case-insensitive) and name (case-folded, whitespace collapsed)** both match a
+    non-anonymised record. The phone number is *not* part of the key, so a retyped or reformatted
+    number no longer creates a second person.
+
+    * A record the signed-in *user* is linked to wins when it matches, then the oldest match
+      (``created_at``, ``id``); an anonymised record is never reused.
+    * Nothing about an existing person is overwritten from an unauthenticated form: the stored phone
+      is kept, and only a blank phone is filled in. (The caller shows the visitor their own submitted
+      number, never the stored one, so matching on email and name cannot be used to read a phone back.)
+    * Otherwise a new person is created. Two different people sharing one inbox (a household) stay
+      separate because their names differ.
+
+    Does not commit; the new person is flushed so the caller can reference its id.
+    """
+    email_norm = normalise_email(email)
+    name_key = _name_key(name)
+    candidates = (
+        await db.scalars(
+            select(Person).where(email_matches(email_norm), ~Person.anonymised).order_by(Person.created_at, Person.id)
+        )
+    ).all()
+    matches = [candidate for candidate in candidates if _name_key(candidate.name) == name_key]
+    if user is not None:
+        matches.sort(key=lambda candidate: candidate.user_id != user.id)
+    if matches:
+        person = matches[0]
+        if not person.phone and phone:
+            person.phone = phone
+        return person, False
+    person = Person(id=make_id("per"), name=name, email=email_norm, phone=phone, preferred_language=preferred_language)
+    db.add(person)
+    await db.flush()
+    return person, True
+
+
 async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> PersonOut:
     """Blank a person's identity fields in place, keeping their registrations.
 
@@ -285,6 +337,9 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     person.address = ""
     person.notes = ""
     person.anonymised = True
+    # An erased record must not stay reachable from an account: the account keeps its bookings but no longer
+    # answers for this person (#1655).
+    await unlink_person(db, person, method="anonymised", actor=actor, request_id=request_id)
 
     await write_audit_entry(
         db,
@@ -374,6 +429,11 @@ async def merge_people(
                 detail=f"Both persons have a different {label}; resolve manually before merging.",
             )
 
+    # Two different accounts each own one of these records: merging would silently strip one account of
+    # its person, so it is a conflict to resolve by hand (unlink one side first), not something to guess.
+    if duplicate.user_id is not None and canonical.user_id not in (None, duplicate.user_id):
+        raise account_conflict("Both people are linked to different accounts; unlink one of them before merging.")
+
     # Normalise canonical's own existing identity fields in-place so the
     # surviving record is always in canonical form, consistent with
     # create/update_person.
@@ -425,6 +485,16 @@ async def merge_people(
         for field, value in adopted.items():
             setattr(canonical, field, value)
 
+    # The duplicate's account link follows the surviving record. The column is UNIQUE, so the duplicate
+    # releases it (and the release is flushed) before the canonical takes it.
+    moved_user = duplicate.user if duplicate.user_id is not None and canonical.user_id is None else None
+    if moved_user is not None:
+        duplicate.user_id = None
+        duplicate.user = None
+        await flush_member_changes(db)
+        canonical.user_id = moved_user.id
+        canonical.user = moved_user
+
     await flush_member_changes(db)
 
     # Re-point everything that references the duplicate. VolunteerPeriod matters
@@ -451,7 +521,7 @@ async def merge_people(
         resource_type="person",
         resource_id=canonical.id,
         request_id=request_id,
-        details={"duplicate_id": duplicate_id},
+        details={"duplicate_id": duplicate_id, "account_link_moved": moved_user is not None},
     )
     await commit_member_changes(db)
     await db.refresh(canonical)
