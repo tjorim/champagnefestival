@@ -37,8 +37,6 @@ async def create_product(
     unit: str = "item",
     stock: int | None = None,
     inclusions: list[dict] | None = None,
-    included_product_id: str | None = None,
-    included_per_guests: int | None = None,
 ) -> dict:
     body = validate_with_schema(
         ProductCreate,
@@ -55,9 +53,7 @@ async def create_product(
         required=required,
         unit=unit,
         stock=stock,
-        inclusions=inclusions,
-        included_product_id=included_product_id,
-        included_per_guests=included_per_guests,
+        **({} if inclusions is None else {"inclusions": inclusions}),
     )
     async with session_factory() as db:
         try:
@@ -100,12 +96,8 @@ async def update_product(
     unit: str | None = None,
     stock: int | None = None,
     inclusions: list[dict] | None = None,
-    included_product_id: str | None = None,
-    included_per_guests: int | None = None,
     clear_stock: bool = False,
     clear_inclusions: bool = False,
-    clear_included_product_id: bool = False,
-    clear_included_per_guests: bool = False,
     update_existing_contents: bool = False,
     update_existing_prices: bool = False,
     confirm_shortage: bool = False,
@@ -113,13 +105,11 @@ async def update_product(
 ) -> dict:
     """Partially update a product; omitted fields are left unchanged.
 
-    ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
-    are nullable with no natural "clear" value via a plain optional parameter
-    (there's no ambiguity-free way to tell "leave unchanged" apart from
-    "unset it" through a bare ``None`` default) — pass ``clear_stock=True`` /
-    ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
-    ``clear_included_per_guests=True`` to null them out instead of providing
-    a value. A product edit that touches existing bookings' contents or
+    ``stock`` is nullable with no natural "clear" value via a plain optional
+    parameter (there's no ambiguity-free way to tell "leave unchanged" apart
+    from "unset it" through a bare ``None`` default) — pass ``clear_stock=True``
+    to null it out, and ``clear_inclusions=True`` (or ``inclusions=[]``) to
+    remove every included product. A product edit that touches existing bookings' contents or
     prices requires a fresh ``preview_token`` from a prior call with
     ``update_existing_contents``/``update_existing_prices`` set — call this
     tool once to preview (its result includes ``preview_token``), then again
@@ -145,8 +135,6 @@ async def update_product(
             "unit": unit,
             "stock": stock,
             "inclusions": inclusions,
-            "included_product_id": included_product_id,
-            "included_per_guests": included_per_guests,
         }.items()
         if v is not None
     }
@@ -154,10 +142,6 @@ async def update_product(
         provided["stock"] = None
     if clear_inclusions:
         provided["inclusions"] = []
-    if clear_included_product_id:
-        provided["included_product_id"] = None
-    if clear_included_per_guests:
-        provided["included_per_guests"] = None
     provided["update_existing_contents"] = update_existing_contents
     provided["update_existing_prices"] = update_existing_prices
     provided["confirm_shortage"] = confirm_shortage

@@ -101,9 +101,7 @@ export default function BookingEditor({
         available_quantity: null,
         shortage: 0,
         sold_out: false,
-        inclusions: null,
-        included_product_id: null,
-        included_per_guests: null,
+        inclusions: [],
       }));
     return [...current, ...missing];
   }, [registration]);

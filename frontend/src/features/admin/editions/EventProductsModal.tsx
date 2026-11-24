@@ -69,9 +69,6 @@ interface ProductFormState {
   category: string;
   purchasable: boolean;
   required: boolean;
-  /** Empty string means "no bundle". */
-  included_product_id: string;
-  included_per_guests: string;
   unit: "item" | "table" | "person";
   stock: string;
   inclusions: ProductInclusion[];
@@ -86,8 +83,6 @@ const EMPTY_FORM: ProductFormState = {
   category: "",
   purchasable: true,
   required: false,
-  included_product_id: "",
-  included_per_guests: "",
   unit: "item",
   stock: "",
   inclusions: [],
@@ -180,25 +175,9 @@ export default function EventProductsModal({
             category: editingProduct.category,
             purchasable: editingProduct.purchasable,
             required: editingProduct.required,
-            included_product_id: editingProduct.included_product_id ?? "",
-            included_per_guests:
-              editingProduct.included_per_guests != null
-                ? String(editingProduct.included_per_guests)
-                : "",
             unit: editingProduct.unit ?? "item",
             stock: editingProduct.stock == null ? "" : String(editingProduct.stock),
-            inclusions:
-              editingProduct.inclusions ??
-              (editingProduct.included_product_id
-                ? [
-                    {
-                      product_id: editingProduct.included_product_id,
-                      quantity: 1,
-                      per_quantity: editingProduct.included_per_guests ?? 1,
-                      rounding: "down",
-                    },
-                  ]
-                : []),
+            inclusions: editingProduct.inclusions,
             updateExistingContents: false,
             updateExistingPrices: false,
           }
@@ -581,6 +560,22 @@ export default function EventProductsModal({
               />
               <AdminSelect
                 size="sm"
+                className="bg-muted text-content border-input max-w-40"
+
+                aria-label={m.admin_inventory_basis()}
+                value={edge.basis}
+                onValueChange={(e) =>
+                  form.setFieldValue(`inclusions[${index}]`, {
+                    ...edge,
+                    basis: e as "quantity" | "guests",
+                  })
+                }
+              >
+                <AdminOption value="quantity">{m.admin_inventory_basis_quantity()}</AdminOption>
+                <AdminOption value="guests">{m.admin_inventory_basis_guests()}</AdminOption>
+              </AdminSelect>
+              <AdminSelect
+                size="sm"
                 className="bg-muted text-content border-input max-w-35"
 
                 aria-label={m.admin_inventory_rounding()}
@@ -619,6 +614,7 @@ export default function EventProductsModal({
                 quantity: 1,
                 per_quantity: 1,
                 rounding: "down",
+                basis: "quantity",
               })
             }
           >
@@ -658,9 +654,6 @@ export default function EventProductsModal({
   }
 
   function renderRow(product: Product) {
-    const includedTarget = product.included_product_id
-      ? products.find((p) => p.id === product.included_product_id)
-      : undefined;
     const sold_out = product.purchasable && product.sold_out;
     const isBeingEdited = formOpen && editingId === product.id;
     return (
@@ -718,14 +711,6 @@ export default function EventProductsModal({
             />
           </RowActions>
         </div>
-        {includedTarget && product.included_per_guests && (
-          <div className="text-subtle text-xs">
-            {m.admin_products_bundle_note({
-              target: includedTarget.name,
-              ratio: product.included_per_guests,
-            })}
-          </div>
-        )}
       </PresentationListItem>
     );
   }

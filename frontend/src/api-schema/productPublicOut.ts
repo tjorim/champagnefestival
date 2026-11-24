@@ -12,7 +12,7 @@ import type { ProductPublicOutUnit } from './productPublicOutUnit';
  * The visitor-facing shape of a product: always `purchasable=True` —
  * see app.utils.event_to_summary_out, which excludes every hidden
  * (`purchasable=False`) product from the public response entirely, and
- * strips any `inclusions`/`included_product_id` edge that targets one.
+ * strips any `inclusions` edge that targets one.
  */
 export type ProductPublicOut = {
   id: string;
@@ -31,7 +31,5 @@ export type ProductPublicOut = {
   purchasable: boolean;
   available_quantity: number | null;
   sold_out: boolean;
-  inclusions: ProductInclusionOut[] | null;
-  included_product_id: string | null;
-  included_per_guests: number | null;
+  inclusions: ProductInclusionOut[];
 };

@@ -230,20 +230,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       const product = products.find((p) => p.id === id);
       if (!product) return;
       const nextPath = new Set([...path, id]);
-      const edges =
-        product.inclusions ??
-        (product.included_product_id && product.included_per_guests
-          ? [
-              {
-                product_id: product.included_product_id,
-                quantity: Math.floor((guestCount || 0) / product.included_per_guests),
-                per_quantity: quantity,
-                rounding: "down" as const,
-              },
-            ]
-          : []);
-      for (const edge of edges) {
-        const value = (quantity * edge.quantity) / edge.per_quantity;
+      for (const edge of product.inclusions) {
+        // A guest-based edge counts the booking's guests, not the units ordered.
+        const base = edge.basis === "guests" ? guestCount || 0 : quantity;
+        const value = (base * edge.quantity) / edge.per_quantity;
         const count = edge.rounding === "up" ? Math.ceil(value) : Math.floor(value);
         if (count <= 0) continue;
         const old = included.get(edge.product_id);

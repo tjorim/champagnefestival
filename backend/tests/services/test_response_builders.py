@@ -142,8 +142,6 @@ def product(**changes):
         category="drink",
         purchasable=True,
         required=False,
-        included_product_id="hidden",
-        included_per_guests=2,
         unit="table",
         stock=2,
         reserved_quantity=3,
@@ -238,8 +236,7 @@ def test_product_and_event_public_admin_parity():
     assert admin.model_dump(mode="json")["products"][0]["price"] == "12.50"
     public_product = public.products[0].model_dump()
     assert "stock" not in public_product and "reserved_quantity" not in public_product
-    assert public_product["included_product_id"] is None
-    assert public_product["included_per_guests"] is None
+    assert "included_product_id" not in public_product and "included_per_guests" not in public_product
     assert [edge["product_id"] for edge in public_product["inclusions"]] == ["wine"]
     assert public.title == "Feest" and public.title_fr is None
     assert utils.product_to_out(product(stock=None)).available_quantity is None

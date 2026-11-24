@@ -73,8 +73,6 @@ describe("EventProductsModal", () => {
         category: "other",
         purchasable: true,
         required: true,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -97,8 +95,6 @@ describe("EventProductsModal", () => {
         stock: 0,
         reserved_quantity: 0,
         sold_out: true,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -119,8 +115,6 @@ describe("EventProductsModal", () => {
         category: "other",
         purchasable: false,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -142,8 +136,6 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -169,7 +161,7 @@ describe("EventProductsModal", () => {
           available_quantity: null,
           shortage: 0,
           sold_out: false,
-          inclusions: null,
+          inclusions: [],
           name: "",
           description: "",
           name_nl: null,
@@ -182,8 +174,6 @@ describe("EventProductsModal", () => {
           category: "",
           purchasable: false,
           required: false,
-          included_product_id: null,
-          included_per_guests: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
           ...saved,
@@ -240,7 +230,7 @@ describe("EventProductsModal", () => {
           available_quantity: null,
           shortage: 0,
           sold_out: false,
-          inclusions: null,
+          inclusions: [],
           name: "",
           description: "",
           name_nl: null,
@@ -253,8 +243,6 @@ describe("EventProductsModal", () => {
           category: "",
           purchasable: false,
           required: false,
-          included_product_id: null,
-          included_per_guests: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
           ...saved,
@@ -304,8 +292,6 @@ describe("EventProductsModal", () => {
         category: "other",
         purchasable: true,
         required: true,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -335,8 +321,6 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -348,8 +332,6 @@ describe("EventProductsModal", () => {
         category: "food",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -368,7 +350,8 @@ describe("EventProductsModal", () => {
     expect(screen.queryByLabelText(nameIn("nl"))).not.toBeInTheDocument();
   });
 
-  it("shows the bundle note for a product that includes another", async () => {
+  it("keeps a guest-based inclusion when editing a product", async () => {
+    let previewed: Record<string, unknown> | null = null;
     renderModal([
       productOut({
         id: "prod-entry",
@@ -378,8 +361,15 @@ describe("EventProductsModal", () => {
         category: "other",
         purchasable: true,
         required: true,
-        included_product_id: "prod-bottle",
-        included_per_guests: 2,
+        inclusions: [
+          {
+            product_id: "prod-bottle",
+            quantity: 1,
+            per_quantity: 2,
+            rounding: "down",
+            basis: "guests",
+          },
+        ],
         created_at: "",
         updated_at: "",
       }),
@@ -391,17 +381,41 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
     ]);
+    server.use(
+      http.post("/api/products/prod-entry/preview", async ({ request }) => {
+        previewed = (await request.json()) as Record<string, unknown>;
+        return jsonResponse<import("@/api-types").ProductChangePreviewOut>({
+          preview_token: "token-guests",
+          bookings: [],
+          price_changed: false,
+          contents_changed: false,
+          shortages: [],
+        });
+      }),
+    );
 
     await screen.findByText("VIP Table");
-    expect(
-      screen.getByText('admin_products_bundle_note({"target":"Champagne Bottle","ratio":2})'),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"VIP Table"})'));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(previewed).not.toBeNull());
+    expect(previewed).toMatchObject({
+      inclusions: [
+        {
+          product_id: "prod-bottle",
+          quantity: 1,
+          per_quantity: 2,
+          rounding: "down",
+          basis: "guests",
+        },
+      ],
+    });
+    expect(previewed).not.toHaveProperty("included_product_id");
+    expect(previewed).not.toHaveProperty("included_per_guests");
   });
 
   it("submits required and bundle fields when adding a product", async () => {
@@ -414,8 +428,6 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -434,7 +446,7 @@ describe("EventProductsModal", () => {
             available_quantity: null,
             shortage: 0,
             sold_out: false,
-            inclusions: null,
+            inclusions: [],
             description: "",
             name_fr: null,
             name_en: null,
@@ -449,8 +461,6 @@ describe("EventProductsModal", () => {
             category: capturedBody.category ?? "",
             purchasable: true,
             required: capturedBody.required ?? false,
-            included_product_id: capturedBody.included_product_id ?? null,
-            included_per_guests: capturedBody.included_per_guests ?? null,
             created_at: "",
             updated_at: "",
           },
@@ -483,7 +493,15 @@ describe("EventProductsModal", () => {
       name_en: null,
       price: 200,
       required: true,
-      inclusions: [{ product_id: "prod-bottle", quantity: 1, per_quantity: 2, rounding: "down" }],
+      inclusions: [
+        {
+          product_id: "prod-bottle",
+          quantity: 1,
+          per_quantity: 2,
+          rounding: "down",
+          basis: "quantity",
+        },
+      ],
     });
   });
 
@@ -497,8 +515,6 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),
@@ -552,7 +568,7 @@ describe("EventProductsModal", () => {
           available_quantity: null,
           shortage: 0,
           sold_out: false,
-          inclusions: null,
+          inclusions: [],
           name: "",
           description: "",
           name_nl: null,
@@ -565,8 +581,6 @@ describe("EventProductsModal", () => {
           category: "",
           purchasable: false,
           required: false,
-          included_product_id: null,
-          included_per_guests: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
           ...saved,
@@ -611,7 +625,7 @@ describe("EventProductsModal", () => {
             available_quantity: null,
             shortage: 0,
             sold_out: false,
-            inclusions: null,
+            inclusions: [],
             id: "",
             event_id: "",
             name: "",
@@ -626,8 +640,6 @@ describe("EventProductsModal", () => {
             category: "",
             purchasable: false,
             required: false,
-            included_product_id: null,
-            included_per_guests: null,
             created_at: "2026-01-01T00:00:00Z",
             updated_at: "2026-01-01T00:00:00Z",
           },
@@ -659,8 +671,6 @@ describe("EventProductsModal", () => {
         category: "champagne",
         purchasable: true,
         required: false,
-        included_product_id: null,
-        included_per_guests: null,
         created_at: "",
         updated_at: "",
       }),

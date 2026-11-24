@@ -26,6 +26,4 @@ export type ProductUpdate = {
   category?: string | null;
   purchasable?: boolean | null;
   required?: boolean | null;
-  included_product_id?: string | null;
-  included_per_guests?: number | null;
 };

@@ -17,7 +17,8 @@ export type ProductCreate = {
   description_en?: string | null;
   unit?: ProductCreateUnit;
   stock?: number | null;
-  inclusions?: ProductInclusion[] | null;
+  /** @maxItems 50 */
+  inclusions?: ProductInclusion[];
   /**
      * @minLength 1
      * @maxLength 64
@@ -31,6 +32,4 @@ export type ProductCreate = {
   category: string;
   purchasable?: boolean;
   required?: boolean;
-  included_product_id?: string | null;
-  included_per_guests?: number | null;
 };

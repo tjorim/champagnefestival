@@ -27,7 +27,7 @@ class OrderItemBase(ResponseModel):
     delivered: bool = False
     included_quantity: NonNegativeQuantity = 0
     """How many of `quantity` came free via a product bundle (see
-    Product.included_product_id) — only `quantity - included_quantity` is
+    Product.inclusions) — only `quantity - included_quantity` is
     billed at `price` per unit."""
     visible: bool = True
     """Whether this line should be shown in the visitor-facing order summary —

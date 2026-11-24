@@ -45,8 +45,6 @@ def current_snapshot(event: Event) -> dict:
             "purchasable": p.purchasable,
             "required": p.required,
             "inclusions": deepcopy(p.inclusions),
-            "included_product_id": p.included_product_id,
-            "included_per_guests": p.included_per_guests,
         }
         for p in event.products
     }
@@ -67,13 +65,10 @@ def validate_graph(snapshot: dict) -> None:
             raise HTTPException(400, "Packages cannot nest more than 50 levels.")
         visiting.add(product_id)
         node = snapshot[product_id]
-        edges = node.get("inclusions")
-        if edges is None:
-            edges = [{"product_id": node["included_product_id"]}] if node.get("included_product_id") else []
-        else:
-            for edge in edges:
-                if edge.get("per_quantity", 1) <= 0:
-                    raise HTTPException(400, "Package inclusion per_quantity must be a positive number.")
+        edges = node["inclusions"]
+        for edge in edges:
+            if edge.get("per_quantity", 1) <= 0:
+                raise HTTPException(400, "Package inclusion per_quantity must be a positive number.")
         targets = [edge["product_id"] for edge in edges]
         if len(targets) != len(set(targets)):
             raise HTTPException(400, "A package cannot include the same product more than once.")
@@ -141,23 +136,14 @@ def resolve_booking(
             raise HTTPException(400, "Package expansion is too complex.")
         used.add(key)
         node = graph[key]
-        edges = node.get("inclusions")
-        if edges is None:
-            # Preserve legacy bundle semantics for products not edited yet.
-            # Expansion happens regardless of the target's purchasable flag —
-            # a hidden bundle target still receives its bundled quantity and
-            # reserves stock, it just never shows in the visitor summary.
-            target = node.get("included_product_id")
-            per = node.get("included_per_guests")
-            if target and per and target in graph:
-                qty = guest_count // per
-                if qty:
-                    included[target] += qty
-                    expand(target, qty)
-            return
-        for edge in edges:
+        # Expansion happens regardless of the target's purchasable flag — a
+        # hidden target still receives its bundled quantity and reserves
+        # stock, it just never shows in the visitor summary.
+        for edge in node["inclusions"]:
             target = edge["product_id"]
-            numerator = quantity * edge["quantity"]
+            # A guest-based edge counts the booking's guests, not the units of
+            # this product that were ordered.
+            numerator = (guest_count if edge.get("basis") == "guests" else quantity) * edge["quantity"]
             denominator = edge["per_quantity"]
             qty = (numerator + denominator - 1) // denominator if edge["rounding"] == "up" else numerator // denominator
             if qty:

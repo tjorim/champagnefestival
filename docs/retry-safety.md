@@ -274,7 +274,7 @@ resubmitting a create or update.
 
 A `purchasable` change is now treated as a contents change for the existing
 preview flow: `change_product` compares `purchasable` before/after alongside
-`inclusions`/`included_product_id`/`included_per_guests`, so a change that
+`inclusions`, so a change that
 would show or hide this product's line in another package's visitor-facing
 summary for an *existing* booking requires the same fresh-preview-fingerprint
 round trip as an inclusion or price edit — `update_existing_contents` must be
@@ -1306,3 +1306,14 @@ send these writes without automatic retries.
   contract for ambiguous results.
 - Volunteer entrance details continue to accept absolute strap and delivery values. Clients must
   reconcile after an ambiguous result because another update can commit between attempts.
+
+
+# Retiring the single product inclusion (#1651)
+
+`included_product_id` and `included_per_guests` are no longer part of the product
+create and update writes (REST or MCP); `inclusions` is the only way to bundle a
+product, and `null` is rejected. This removes request fields and adds no endpoint
+or key, so the decisions above stand: product create, update, preview and delete
+are **not automatically retry-safe**. `DELETE /api/products/{id}` now answers 409
+while another product still includes the target, in every case, so a repeated
+delete of an included product is refused consistently rather than clearing the link.
