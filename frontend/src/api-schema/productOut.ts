@@ -15,7 +15,7 @@ export type ProductOut = {
   available_quantity: number | null;
   shortage: number;
   sold_out: boolean;
-  inclusions: ProductInclusionOut[] | null;
+  inclusions: ProductInclusionOut[];
   id: string;
   event_id: string;
   name: string;
@@ -30,8 +30,6 @@ export type ProductOut = {
   category: string;
   purchasable: boolean;
   required: boolean;
-  included_product_id: string | null;
-  included_per_guests: number | null;
   created_at: string;
   updated_at: string;
 };

@@ -1400,8 +1400,6 @@ class ChampagneFestivalMcpBackend:
         unit: str = "item",
         stock: int | None = None,
         inclusions: list[dict] | None = None,
-        included_product_id: str | None = None,
-        included_per_guests: int | None = None,
     ) -> dict:
         """Create a product for an event. Requires the ``admin`` role.
 
@@ -1421,8 +1419,11 @@ class ChampagneFestivalMcpBackend:
         withdrawn product is simply set to ``purchasable=false``. A
         ``required`` product must be purchasable. ``stock`` is
         ``null``/omitted for unlimited, ``0`` for sold out. ``inclusions``
-        bundles a quantity of other products on this event into this one
-        (see ``app.models.Product``).
+        bundles a quantity of other products on this event into this one:
+        each entry has ``product_id``, ``quantity``, ``per_quantity``,
+        ``rounding`` (``up``/``down``) and ``basis`` (``quantity`` counts the
+        units ordered of this product, ``guests`` counts the booking's guests,
+        e.g. one bottle per two guests).
         """
         self._require_admin()
         return await mcp_admin_products.create_product(
@@ -1442,8 +1443,6 @@ class ChampagneFestivalMcpBackend:
             unit=unit,
             stock=stock,
             inclusions=inclusions,
-            included_product_id=included_product_id,
-            included_per_guests=included_per_guests,
         )
 
     async def get_product(self, product_id: str) -> dict:
@@ -1472,12 +1471,8 @@ class ChampagneFestivalMcpBackend:
         unit: str | None = None,
         stock: int | None = None,
         inclusions: list[dict] | None = None,
-        included_product_id: str | None = None,
-        included_per_guests: int | None = None,
         clear_stock: bool = False,
         clear_inclusions: bool = False,
-        clear_included_product_id: bool = False,
-        clear_included_per_guests: bool = False,
         update_existing_contents: bool = False,
         update_existing_prices: bool = False,
         confirm_shortage: bool = False,
@@ -1487,11 +1482,9 @@ class ChampagneFestivalMcpBackend:
 
         Name and description are per language: an empty string clears a
         translation, and the Dutch name must be kept.
-        ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
-        have no natural "clear" value, so pass ``clear_stock=True`` /
-        ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
-        ``clear_included_per_guests=True`` to unset them instead of providing
-        a value. A change affecting existing bookings' contents or prices
+        ``stock`` has no natural "clear" value, so pass ``clear_stock=True`` to
+        unset it; ``clear_inclusions=True`` (or ``inclusions=[]``) removes every
+        included product. A change affecting existing bookings' contents or prices
         needs a fresh ``preview_token``: call once with
         ``update_existing_contents``/``update_existing_prices`` set to preview
         (the result carries ``preview_token``), then again with that token to
@@ -1515,12 +1508,8 @@ class ChampagneFestivalMcpBackend:
             unit=unit,
             stock=stock,
             inclusions=inclusions,
-            included_product_id=included_product_id,
-            included_per_guests=included_per_guests,
             clear_stock=clear_stock,
             clear_inclusions=clear_inclusions,
-            clear_included_product_id=clear_included_product_id,
-            clear_included_per_guests=clear_included_per_guests,
             update_existing_contents=update_existing_contents,
             update_existing_prices=update_existing_prices,
             confirm_shortage=confirm_shortage,

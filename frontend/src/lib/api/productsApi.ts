@@ -30,15 +30,7 @@ export async function fetchEventProducts(eventId: string): Promise<Product[]> {
 /** UI command: generated product fields plus grouped translation controls and propagation choices. */
 export type ProductWrite = Pick<
   ProductCreate,
-  | "price"
-  | "category"
-  | "purchasable"
-  | "required"
-  | "included_product_id"
-  | "included_per_guests"
-  | "unit"
-  | "stock"
-  | "inclusions"
+  "price" | "category" | "purchasable" | "required" | "unit" | "stock" | "inclusions"
 > & {
   id?: string;
   eventId: ProductCreate["event_id"];
@@ -62,8 +54,6 @@ function productWriteBody(
     category: payload.category,
     purchasable: payload.purchasable,
     required: payload.required,
-    included_product_id: payload.included_product_id ?? null,
-    included_per_guests: payload.included_per_guests ?? null,
     ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
     ...(payload.stock !== undefined ? { stock: payload.stock } : {}),
     ...(payload.inclusions !== undefined ? { inclusions: payload.inclusions } : {}),

@@ -24,6 +24,8 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Changed
 
+- An included product in the product editor can now be counted per ordered quantity or per booked guest. Products that used the older "one per N guests" bundle were converted to the per-guest option, so included quantities for existing and new bookings are unchanged, and the old ratio line no longer appears in the product list. An included product can no longer be deleted while another product still includes it.
+- **MCP:** `create_product` and `update_product` no longer accept `included_product_id` or `included_per_guests`, and `update_product` no longer has `clear_included_product_id` or `clear_included_per_guests`. Use `inclusions` (each entry has an optional `basis` of `quantity` or `guests`); `clear_inclusions=true` or `inclusions=[]` removes all included products. Product responses always carry an `inclusions` list (#1651).
 - The audit log, payment ledger, floor-plan revision history, policy history and message composer show actor names. Select a name to reveal the stored ID, or use the actor picker to filter the audit log.
 
 - Dashboard lists show organisation logos, named tables and edition lineups, localised schedule dates, and room and table type summaries. The audit log shows resource names and filter choices, and booking details label the check-in link.
@@ -34,6 +36,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Retire the legacy single product inclusion: migration `016` converts it to a guest-based inclusion (also in booked package rules), makes `products.inclusions` non-null and drops `included_product_id` and `included_per_guests`. The API no longer has those fields (#1651).
 - Store directory membership and volunteering in indexed role periods, migrate legacy aliases, and limit the person editor to those two roles (#1649).
 - Store booked order lines in indexed rows, including booked prices, units and delivery counts (#1650).
 - Share public booking creation and QR, volunteer and admin check-in through registration services. Derive attendance from the check-in timestamp (#1663).

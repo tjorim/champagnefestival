@@ -75,15 +75,15 @@ class Product(Base):
     """Key of a `ProductCategory`; copied onto the order lines made from this product."""
     unit: Mapped[str] = mapped_column(String(10), default="item")
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    inclusions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    """Included product, numerator/denominator and rounding per parent quantity.
+    inclusions: Mapped[list[dict]] = mapped_column(JSON, nullable=False, default=list)
+    """Included product, numerator/denominator and rounding per parent quantity
+    (or per booked guest when an edge's `basis` is `guests`).
     Always counts toward stock/preparation totals. Whether an inclusion line
     reaches the visitor-facing order summary is decided entirely by the
     included product's own `purchasable` flag (see below) — there is no
     separate per-inclusion visibility switch.
 
-    Null retains the legacy single inclusion until an administrator edits it.
-    An explicit empty list means no included products.
+    An empty list means no included products.
     """
     __table_args__ = (
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
@@ -111,16 +111,6 @@ class Product(Base):
     app.services.registrations_service.resolve_order_items. A required product
     must be purchasable (`ck_products_required_implies_purchasable`) — a
     hidden product can never be the thing an order is required to contain."""
-    included_product_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
-    )
-    included_per_guests: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    """Together, these bundle a free quantity of another product on this event
-    into this one — a VIP table might include one champagne bottle per two
-    guests. `included_per_guests` is only meaningful alongside
-    `included_product_id`; both or neither are set (see ProductCreate/Update).
-    Deleting the included product clears the link (ON DELETE SET NULL) rather
-    than blocking the delete or cascading into an unrelated product."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

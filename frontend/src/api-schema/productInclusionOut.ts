@@ -5,6 +5,7 @@
  * Backend for the VIP reservation and check-in system. See the /docs endpoint for the interactive OpenAPI explorer.
  * OpenAPI spec version: snapshot
  */
+import type { ProductInclusionOutBasis } from './productInclusionOutBasis';
 import type { ProductInclusionOutRounding } from './productInclusionOutRounding';
 
 export type ProductInclusionOut = {
@@ -12,4 +13,5 @@ export type ProductInclusionOut = {
   quantity: number;
   per_quantity: number;
   rounding: ProductInclusionOutRounding;
+  basis: ProductInclusionOutBasis;
 };

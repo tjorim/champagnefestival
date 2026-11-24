@@ -25960,18 +25960,11 @@
             "title": "Stock"
           },
           "inclusions": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ProductInclusion"
-                },
-                "type": "array",
-                "maxItems": 50
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/ProductInclusion"
+            },
+            "type": "array",
+            "maxItems": 50,
             "title": "Inclusions"
           },
           "event_id": {
@@ -26007,31 +26000,6 @@
             "type": "boolean",
             "title": "Required",
             "default": false
-          },
-          "included_product_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 64,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Product Id"
-          },
-          "included_per_guests": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Per Guests"
           }
         },
         "additionalProperties": false,
@@ -26073,6 +26041,15 @@
             ],
             "title": "Rounding",
             "default": "down"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "quantity",
+              "guests"
+            ],
+            "title": "Basis",
+            "default": "quantity"
           }
         },
         "additionalProperties": false,
@@ -26103,6 +26080,15 @@
               "down"
             ],
             "title": "Rounding"
+          },
+          "basis": {
+            "type": "string",
+            "enum": [
+              "quantity",
+              "guests"
+            ],
+            "title": "Basis",
+            "default": "quantity"
           }
         },
         "type": "object",
@@ -26110,7 +26096,8 @@
           "product_id",
           "quantity",
           "per_quantity",
-          "rounding"
+          "rounding",
+          "basis"
         ],
         "title": "ProductInclusionOut"
       },
@@ -26164,17 +26151,10 @@
             "default": false
           },
           "inclusions": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ProductInclusionOut"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/ProductInclusionOut"
+            },
+            "type": "array",
             "title": "Inclusions"
           },
           "id": {
@@ -26276,28 +26256,6 @@
             "type": "boolean",
             "title": "Required"
           },
-          "included_product_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Product Id"
-          },
-          "included_per_guests": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Per Guests"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -26332,8 +26290,6 @@
           "category",
           "purchasable",
           "required",
-          "included_product_id",
-          "included_per_guests",
           "created_at",
           "updated_at"
         ],
@@ -26463,40 +26419,11 @@
             "default": false
           },
           "inclusions": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ProductInclusionOut"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/ProductInclusionOut"
+            },
+            "type": "array",
             "title": "Inclusions"
-          },
-          "included_product_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Product Id"
-          },
-          "included_per_guests": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Per Guests"
           }
         },
         "type": "object",
@@ -26517,12 +26444,10 @@
           "purchasable",
           "available_quantity",
           "sold_out",
-          "inclusions",
-          "included_product_id",
-          "included_per_guests"
+          "inclusions"
         ],
         "title": "ProductPublicOut",
-        "description": "The visitor-facing shape of a product: always `purchasable=True` —\nsee app.utils.event_to_summary_out, which excludes every hidden\n(`purchasable=False`) product from the public response entirely, and\nstrips any `inclusions`/`included_product_id` edge that targets one."
+        "description": "The visitor-facing shape of a product: always `purchasable=True` —\nsee app.utils.event_to_summary_out, which excludes every hidden\n(`purchasable=False`) product from the public response entirely, and\nstrips any `inclusions` edge that targets one."
       },
       "ProductUpdate": {
         "properties": {
@@ -26717,31 +26642,6 @@
               }
             ],
             "title": "Required"
-          },
-          "included_product_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 64,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Product Id"
-          },
-          "included_per_guests": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Included Per Guests"
           }
         },
         "additionalProperties": false,

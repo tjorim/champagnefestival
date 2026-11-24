@@ -38,13 +38,9 @@ function publicEvent(event: EventOut): EventPublicOut {
         updated_at: _updated,
         ...fields
       } = product;
-      const included =
-        product.included_product_id !== null && visible.has(product.included_product_id);
       return {
         ...fields,
-        inclusions: product.inclusions?.filter((edge) => visible.has(edge.product_id)) ?? null,
-        included_product_id: included ? product.included_product_id : null,
-        included_per_guests: included ? product.included_per_guests : null,
+        inclusions: product.inclusions.filter((edge) => visible.has(edge.product_id)),
       };
     });
   return { ...fields, products: publicProducts, members_only: seededState("members-only", false) };

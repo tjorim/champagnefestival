@@ -757,8 +757,9 @@ describe("RegistrationModal component", () => {
       category: "other",
       purchasable: true,
       required: true,
-      included_product_id: "bottle",
-      included_per_guests: 2,
+      inclusions: [
+        { product_id: "bottle", quantity: 1, per_quantity: 2, rounding: "down", basis: "guests" },
+      ],
       created_at: "",
       updated_at: "",
     });

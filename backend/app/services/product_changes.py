@@ -129,14 +129,9 @@ async def change_product(
     if text_changes:
         apply_text_changes(product, text_changes)
     for key, value in fields.items():
-        if value is None and key not in {"stock", "inclusions", "included_product_id", "included_per_guests"}:
+        if value is None and key != "stock":
             raise HTTPException(400, f"{key} cannot be null.")
         setattr(product, key, value)
-    if product.inclusions is not None:
-        product.included_product_id = None
-        product.included_per_guests = None
-    elif (product.included_product_id is None) != (product.included_per_guests is None):
-        raise HTTPException(400, "included_product_id and included_per_guests must be set together.")
     if product.required and not product.purchasable:
         raise HTTPException(400, "A required product must be purchasable.")
     after = inventory.current_snapshot(event)
@@ -145,10 +140,7 @@ async def change_product(
     # "purchasable" counts as a contents change too (#1020): it decides
     # whether this product's line is even orderable/visible, which is
     # exactly what a package summary shows — the same as an inclusion edit.
-    contents_changed = any(
-        before[product_id][key] != after[product_id][key]
-        for key in ("inclusions", "included_product_id", "included_per_guests", "purchasable")
-    )
+    contents_changed = any(before[product_id][key] != after[product_id][key] for key in ("inclusions", "purchasable"))
     changed_rows = []
     projected = []
     for registration in registrations:
@@ -173,12 +165,7 @@ async def change_product(
                     snapshot[item["product_id"]]["price"] = str(item["price"])
         node = dict(snapshot.get(product_id, before[product_id]))
         if contents_changed and body.update_existing_contents:
-            node.update(
-                {
-                    key: after[product_id][key]
-                    for key in ("inclusions", "included_product_id", "included_per_guests", "purchasable")
-                }
-            )
+            node.update({key: after[product_id][key] for key in ("inclusions", "purchasable")})
         if price_changed and body.update_existing_prices:
             node["price"] = after[product_id]["price"]
         snapshot[product_id] = node

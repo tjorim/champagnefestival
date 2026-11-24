@@ -14,7 +14,6 @@ from app.schemas.orders import OrderItemOut
 from app.schemas.types import (
     NonEmptyText50,
     OrderQuantity,
-    PositiveQuantity,
     ProductPrice,
     ResourceId,
     StockQuantity,
@@ -22,12 +21,19 @@ from app.schemas.types import (
     Text300,
 )
 
+InclusionBasis = Literal["quantity", "guests"]
+"""What `per_quantity` counts: units of the including product that were ordered
+(`quantity`), or the booking's guests (`guests`). A guest-based inclusion yields
+`quantity` units per `per_quantity` guests whatever quantity of the including
+product was ordered, e.g. a VIP table that includes one bottle per two guests."""
+
 
 class ProductInclusionOut(ResponseModel):
     product_id: str
     quantity: int
     per_quantity: int
     rounding: Literal["up", "down"]
+    basis: InclusionBasis = "quantity"
 
 
 class ProductInclusion(RequestModel):
@@ -35,6 +41,7 @@ class ProductInclusion(RequestModel):
     quantity: OrderQuantity = 1
     per_quantity: OrderQuantity = 1
     rounding: Literal["up", "down"] = "down"
+    basis: InclusionBasis = "quantity"
 
 
 class ProductTextFields(RequestModel):
@@ -67,25 +74,18 @@ class ProductTextFields(RequestModel):
 class ProductCreate(ProductTextFields):
     unit: ProductUnit = "item"
     stock: StockQuantity | None = None
-    inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
+    inclusions: list[ProductInclusion] = Field(default_factory=list, max_length=50)
+    """Other products of this event bundled into this one; empty means none."""
     event_id: ResourceId
     price: ProductPrice
     category: NonEmptyText50
     """Key of a product category (see ``/api/product-categories``)."""
     purchasable: bool = True
     required: bool = False
-    included_product_id: ResourceId | None = None
-    included_per_guests: PositiveQuantity | None = None
 
     @model_validator(mode="after")
     def check_text(self) -> Self:
         return self.validate_dutch()
-
-    @model_validator(mode="after")
-    def validate_inclusion_pair(self) -> Self:
-        if (self.included_product_id is None) != (self.included_per_guests is None):
-            raise ValueError("included_product_id and included_per_guests must be set together.")
-        return self
 
     @model_validator(mode="after")
     def validate_required_implies_purchasable(self) -> Self:
@@ -98,6 +98,7 @@ class ProductUpdate(ProductTextFields):
     unit: ProductUnit | None = None
     stock: StockQuantity | None = None
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
+    """Replaces the bundled products; ``[]`` removes them all, omitted keeps them."""
     update_existing_contents: bool = False
     update_existing_prices: bool = False
     confirm_shortage: bool = False
@@ -106,13 +107,9 @@ class ProductUpdate(ProductTextFields):
     category: NonEmptyText50 | None = None
     purchasable: bool | None = None
     required: bool | None = None
-    # Nullable and independently settable, so the router (not this schema) decides
-    # what "both or neither" means against the product's *resulting* state —
-    # a PATCH may touch only one field while leaving the other as already stored.
-    # `purchasable`/`required` are validated against the *resulting* state too
-    # (see app.services.product_changes.change_product), for the same reason.
-    included_product_id: ResourceId | None = None
-    included_per_guests: PositiveQuantity | None = None
+    # `purchasable`/`required` are validated against the *resulting* state
+    # (see app.services.product_changes.change_product): a PATCH may touch
+    # only one of them while leaving the other as already stored.
 
 
 class ProductOut(ResponseModel):
@@ -125,7 +122,7 @@ class ProductOut(ResponseModel):
     """A purchasable product with no remaining stock. Distinct from
     `purchasable` — a sold-out product stays purchasable (and visible), just
     unorderable until restocked."""
-    inclusions: list[ProductInclusionOut] | None = None
+    inclusions: list[ProductInclusionOut]
     id: str
     event_id: str
     name: str
@@ -141,8 +138,6 @@ class ProductOut(ResponseModel):
     category: str
     purchasable: bool
     required: bool
-    included_product_id: str | None
-    included_per_guests: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -153,7 +148,7 @@ class ProductPublicOut(ResponseModel):
     """The visitor-facing shape of a product: always `purchasable=True` —
     see app.utils.event_to_summary_out, which excludes every hidden
     (`purchasable=False`) product from the public response entirely, and
-    strips any `inclusions`/`included_product_id` edge that targets one."""
+    strips any `inclusions` edge that targets one."""
 
     id: str
     name: str
@@ -172,9 +167,7 @@ class ProductPublicOut(ResponseModel):
     purchasable: bool
     available_quantity: int | None = None
     sold_out: bool = False
-    inclusions: list[ProductInclusionOut] | None = None
-    included_product_id: str | None = None
-    included_per_guests: int | None = None
+    inclusions: list[ProductInclusionOut]
 
     model_config = ConfigDict(from_attributes=True)
 

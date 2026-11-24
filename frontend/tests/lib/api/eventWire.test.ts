@@ -49,9 +49,7 @@ describe("generated event, product and edition wire shapes", () => {
       purchasable: true,
       available_quantity: null,
       sold_out: false,
-      inclusions: null,
-      included_product_id: null,
-      included_per_guests: null,
+      inclusions: [],
     };
     const { edition: _edition, ...base } = eventOut();
     const event: EventPublicOut = { ...base, products: [product] };

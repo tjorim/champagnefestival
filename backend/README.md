@@ -1265,3 +1265,33 @@ quantities to the booked quantity, and uses zero when neither the line nor its
 snapshot has a valid booked price. Downgrading rebuilds the JSON columns from
 the canonical lines and frozen rules. A pre-migration backup is needed to recover
 the original shape or discarded or repaired data.
+
+### Product inclusions (#1651)
+
+A product bundles other products only through `inclusions` (an empty list means
+none; `null` is rejected). Each entry has `product_id`, `quantity`,
+`per_quantity`, `rounding` and `basis`. A `quantity` basis counts the units
+ordered of the including product. A `guests` basis counts the booking's guests
+and ignores the ordered quantity, so "one bottle per two guests" stays
+`floor(guests / 2)` however many tables were booked.
+
+Migration `016` converts the former `included_product_id` +
+`included_per_guests` pair into an inclusion with `basis: "guests"` (`quantity`
+1, `per_quantity` N, round down), in `products` and in the frozen package rules
+of booked orders (`registrations.package_snapshot`), so included quantities for
+existing bookings and new orders stay the same. It then makes
+`products.inclusions` non-null and drops both columns. An explicit list always
+won over the pair before, so it still does; unusable entries (a half-set pair,
+a target outside the product's event or the product itself, entries without a
+product or positive quantities, repeated targets) are discarded or repaired
+rather than failing the upgrade, and quantities are capped at the request
+limit. Apply it with the previous application stopped.
+
+Because a bundle target is now an ordinary inclusion, deleting a product that
+another product still includes is refused with 409 until it is removed from that
+package; it no longer silently clears the link.
+
+Downgrading restores the pair (and a null `inclusions`) for a product or frozen
+package whose only inclusion is a single guest-based one-per-N entry; any other
+guest-based entry keeps its `basis`, which the previous code ignores. Pairs or
+entries discarded at upgrade need the pre-upgrade backup.

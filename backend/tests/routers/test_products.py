@@ -662,23 +662,27 @@ async def test_admin_registration_creation_also_enforces_required_product(client
 
 
 @pytest.mark.anyio
-async def test_product_bundle_requires_both_fields_together(client):
+async def test_the_single_inclusion_fields_are_gone(client):
+    """`included_product_id`/`included_per_guests` were retired (#1651): use `inclusions`."""
     event = await _create_event(client)
     bottle = await _create_product(client, event["id"], name="Bottle")
 
     r = await client.post(
         "/api/products",
-        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "included_product_id": bottle["id"]},
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event["id"],
+            "included_product_id": bottle["id"],
+            "included_per_guests": 2,
+        },
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 422  # included_per_guests missing
+    assert r.status_code == 422
 
-    r = await client.post(
-        "/api/products",
-        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "included_per_guests": 2},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 422  # included_product_id missing
+    r = await client.get(f"/api/products/{bottle['id']}", headers=ADMIN_HEADERS)
+    assert "included_product_id" not in r.json()
+    assert "included_per_guests" not in r.json()
+    assert r.json()["inclusions"] == []
 
 
 @pytest.mark.anyio
@@ -688,9 +692,22 @@ async def test_product_bundle_rejects_self_reference(client):
 
     r = await client.put(
         f"/api/products/{table['id']}",
-        json={"included_product_id": table["id"], "included_per_guests": 2},
+        json={
+            "inclusions": [
+                {"product_id": table["id"], "quantity": 1, "per_quantity": 2, "rounding": "down", "basis": "guests"}
+            ]
+        },
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_inclusions_cannot_be_null(client):
+    event = await _create_event(client)
+    table = await _create_product(client, event["id"], name="VIP Table")
+
+    r = await client.put(f"/api/products/{table['id']}", json={"inclusions": None}, headers=ADMIN_HEADERS)
     assert r.status_code == 400
 
 
@@ -706,8 +723,15 @@ async def test_product_bundle_rejects_cross_event_target(client):
             **PRODUCT_PAYLOAD,
             "event_id": event_a["id"],
             "name_nl": "VIP Table",
-            "included_product_id": bottle_on_b["id"],
-            "included_per_guests": 2,
+            "inclusions": [
+                {
+                    "product_id": bottle_on_b["id"],
+                    "quantity": 1,
+                    "per_quantity": 2,
+                    "rounding": "down",
+                    "basis": "guests",
+                }
+            ],
         },
         headers=ADMIN_HEADERS,
     )
@@ -727,53 +751,12 @@ async def test_product_bundle_allows_a_hidden_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
-            "name_nl": "VIP Table",
-            "included_product_id": hidden["id"],
-            "included_per_guests": 2,
-        },
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 201, r.text
-
-    r = await client.post(
-        "/api/products",
-        json={
-            **PRODUCT_PAYLOAD,
-            "event_id": event["id"],
             "name_nl": "VIP Table 2",
             "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
         },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
-
-
-@pytest.mark.anyio
-async def test_product_bundle_rejects_chaining(client):
-    """Only single-level bundles are supported: the included product cannot
-    itself bundle another product."""
-    event = await _create_event(client)
-    base = await _create_product(client, event["id"], name="Base")
-    middle = await _create_product(
-        client,
-        event["id"],
-        name="Middle",
-        included_product_id=base["id"],
-        included_per_guests=1,
-    )
-
-    r = await client.post(
-        "/api/products",
-        json={
-            **PRODUCT_PAYLOAD,
-            "event_id": event["id"],
-            "name_nl": "Top",
-            "included_product_id": middle["id"],
-            "included_per_guests": 1,
-        },
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 400
 
 
 @pytest.mark.anyio
@@ -788,8 +771,9 @@ async def test_registration_computes_included_bundle_quantity(client):
         name="VIP Table",
         price="200.00",
         required=True,
-        included_product_id=bottle["id"],
-        included_per_guests=2,
+        inclusions=[
+            {"product_id": bottle["id"], "quantity": 1, "per_quantity": 2, "rounding": "down", "basis": "guests"}
+        ],
     )
 
     r = await _register(
@@ -856,8 +840,9 @@ async def test_registration_merges_explicit_extra_with_included_bundle_quantity(
         name="VIP Table",
         price="200.00",
         required=True,
-        included_product_id=bottle["id"],
-        included_per_guests=2,
+        inclusions=[
+            {"product_id": bottle["id"], "quantity": 1, "per_quantity": 2, "rounding": "down", "basis": "guests"}
+        ],
     )
 
     r = await _register(
@@ -887,8 +872,9 @@ async def test_registration_bundle_below_ratio_includes_nothing(client):
         name="VIP Table",
         price="200.00",
         required=True,
-        included_product_id=bottle["id"],
-        included_per_guests=10,
+        inclusions=[
+            {"product_id": bottle["id"], "quantity": 1, "per_quantity": 10, "rounding": "down", "basis": "guests"}
+        ],
     )
 
     r = await _register(
@@ -937,58 +923,6 @@ async def test_deleting_product_does_not_alter_existing_registration_order_items
 
 
 @pytest.mark.anyio
-async def test_deleting_bundled_product_clears_bundle_on_referencing_product(client):
-    """ON DELETE SET NULL clears included_product_id on any product that bundles
-    the deleted one; included_per_guests must be cleared alongside it so the
-    "both or neither" invariant still holds after the delete."""
-    event = await _create_event(client)
-    bottle = await _create_product(client, event["id"], name="Bottle")
-    table = await _create_product(
-        client,
-        event["id"],
-        name="VIP Table",
-        included_product_id=bottle["id"],
-        included_per_guests=2,
-    )
-
-    r = await client.delete(f"/api/products/{bottle['id']}", headers=ADMIN_HEADERS)
-    assert r.status_code == 204
-
-    r = await client.get(f"/api/products/{table['id']}", headers=ADMIN_HEADERS)
-    assert r.status_code == 200
-    body = r.json()
-    assert body["included_product_id"] is None
-    assert body["included_per_guests"] is None
-
-
-@pytest.mark.anyio
-async def test_product_bundle_rejects_reverse_chaining(client):
-    """Only single-level bundles are supported: a product that is already
-    bundled by another product cannot itself bundle a third product."""
-    event = await _create_event(client)
-    base = await _create_product(client, event["id"], name="Base")
-    middle = await _create_product(
-        client,
-        event["id"],
-        name="Middle",
-        included_product_id=base["id"],
-        included_per_guests=1,
-    )
-    other = await _create_product(client, event["id"], name="Other")
-
-    r = await client.put(
-        f"/api/products/{base['id']}",
-        json={"included_product_id": other["id"], "included_per_guests": 1},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 400
-
-    # sanity: middle's bundle is unaffected by the rejected attempt
-    r = await client.get(f"/api/products/{middle['id']}", headers=ADMIN_HEADERS)
-    assert r.json()["included_product_id"] == base["id"]
-
-
-@pytest.mark.anyio
 async def test_registration_rejects_order_item_quantity_over_limit(client):
     event = await _create_event(client)
     product = await _create_product(client, event["id"])
@@ -1030,3 +964,50 @@ async def test_registration_rejects_too_many_order_item_lines(client):
         },
     )
     assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_a_guest_based_inclusion_ignores_the_ordered_quantity(client):
+    """A guest-based edge yields the same included amount whatever quantity of the
+    including product was ordered; a quantity-based edge scales with it."""
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Bottle")
+    glass = await _create_product(client, event["id"], name="Glass")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        required=True,
+        inclusions=[
+            {"product_id": bottle["id"], "quantity": 1, "per_quantity": 2, "rounding": "down", "basis": "guests"},
+            {"product_id": glass["id"], "quantity": 1, "per_quantity": 1, "rounding": "down", "basis": "quantity"},
+        ],
+    )
+
+    r = await _register(client, event["id"], [{"product_id": table["id"], "quantity": 2}], guest_count=5)
+    assert r.status_code == 201, r.text
+    quantities = {item["product_id"]: item["included_quantity"] for item in r.json()["order_items"]}
+    assert quantities[bottle["id"]] == 2  # floor(5 guests / 2), not doubled by the two tables
+    assert quantities[glass["id"]] == 2  # one per ordered table
+
+
+@pytest.mark.anyio
+async def test_deleting_an_included_product_is_refused(client):
+    """An included product stays until it is removed from the packages that bundle it."""
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Bottle")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        inclusions=[
+            {"product_id": bottle["id"], "quantity": 1, "per_quantity": 2, "rounding": "down", "basis": "guests"}
+        ],
+    )
+
+    r = await client.delete(f"/api/products/{bottle['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 409
+
+    await client.put(f"/api/products/{table['id']}", json={"inclusions": []}, headers=ADMIN_HEADERS)
+    r = await client.delete(f"/api/products/{bottle['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204

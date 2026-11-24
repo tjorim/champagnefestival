@@ -182,8 +182,6 @@ def product_to_out(p: Product, locale: str | None = None) -> ProductOut:
         category=p.category,
         purchasable=p.purchasable,
         required=p.required,
-        included_product_id=p.included_product_id,
-        included_per_guests=p.included_per_guests,
         unit=type_cast(ProductUnit, p.unit),
         stock=p.stock,
         inclusions=p.inclusions,
@@ -202,20 +200,14 @@ def product_to_public_out(
     """The visitor-safe shape of a product — never exposes `stock`, and never
     named unless `p.purchasable`. `purchasable_ids`, when given, is the set
     of this event's purchasable product ids: any inclusion edge (or the
-    legacy `included_product_id`) pointing outside that set targets a hidden
+    pointing outside that set targets a hidden
     product and is stripped, so a hidden product's id never reaches an
     unauthenticated caller even as a bare bundle-target reference. See
     app.schemas.ProductPublicOut."""
     available_quantity = product_available_quantity(p)
     inclusions = p.inclusions
-    included_product_id = p.included_product_id
-    included_per_guests = p.included_per_guests
     if purchasable_ids is not None:
-        if inclusions is not None:
-            inclusions = [edge for edge in inclusions if edge["product_id"] in purchasable_ids]
-        if included_product_id is not None and included_product_id not in purchasable_ids:
-            included_product_id = None
-            included_per_guests = None
+        inclusions = [edge for edge in inclusions if edge["product_id"] in purchasable_ids]
     return ProductPublicOut(
         id=p.id,
         **product_text_dict(p, locale),
@@ -227,8 +219,6 @@ def product_to_public_out(
         available_quantity=available_quantity,
         sold_out=product_sold_out(p, available_quantity),
         inclusions=inclusions,
-        included_product_id=included_product_id,
-        included_per_guests=included_per_guests,
     )
 
 
