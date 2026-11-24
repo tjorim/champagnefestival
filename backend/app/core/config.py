@@ -1,9 +1,10 @@
 """Application settings loaded from environment variables / .env file."""
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from limits import parse as parse_rate_limit_string
 from pydantic import Field, field_validator, model_validator
@@ -130,9 +131,12 @@ class Settings(BaseSettings):
     to disable Host header validation entirely."""
 
     # --- MCP server ---
-    mcp_base_url: str = ""
-    """Public base URL of the MCP server (e.g. https://champagnefestival.tjor.im/mcp).
-    When set, mounts the FastMCP server at /mcp and enables Keycloak auth enforcement."""
+    mcp_resource_url: str = ""
+    """Canonical public URL of the MCP endpoint, trailing slash required (e.g.
+    https://champagnefestival.tjor.im/mcp/). When set, mounts the FastMCP server at /mcp and
+    enables Keycloak auth enforcement. It is advertised as the OAuth protected-resource
+    identifier and is the only audience MCP OAuth tokens may carry; OIDC_AUDIENCE keeps
+    guarding the REST API."""
 
     # --- Anti-spam ---
     min_form_seconds: int = 3
@@ -297,6 +301,35 @@ class Settings(BaseSettings):
         if v not in ("development", "production"):
             raise ValueError(f"ENVIRONMENT must be 'development' or 'production', got: {v}")
         return v
+
+    @field_validator("mcp_resource_url")
+    @classmethod
+    def validate_mcp_resource_url(cls, v: str) -> str:
+        """Require the canonical public MCP URL, so the audience can be compared byte for byte."""
+        if not v:
+            return v
+        parts = urlsplit(v)
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.path != "/mcp/"
+            or parts.query
+            or parts.fragment
+            or parts.username is not None
+            or parts.password is not None
+            or v != parts.geturl()
+        ):
+            raise ValueError("MCP_RESOURCE_URL must be a canonical HTTP(S) URL ending in /mcp/")
+        return v
+
+    @model_validator(mode="after")
+    def validate_mcp_base_url_is_retired(self) -> Settings:
+        """Fail loudly instead of silently unmounting MCP when only the old variable is set."""
+        if os.environ.get("MCP_BASE_URL") and not self.mcp_resource_url:
+            raise ValueError(
+                "MCP_BASE_URL is no longer read: set MCP_RESOURCE_URL to the canonical https://<host>/mcp/ URL."
+            )
+        return self
 
     @field_validator("sentry_traces_sample_rate")
     @classmethod

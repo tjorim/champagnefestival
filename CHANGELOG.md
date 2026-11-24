@@ -38,6 +38,7 @@ the allowed scopes are listed in `release.config.json`, and `check` validates `[
 
 ### Internal
 
+- Bind MCP OAuth access tokens to the canonical public MCP URL (`MCP_RESOURCE_URL`, replacing `MCP_BASE_URL`), with a separate audience for the REST API. Reconnect OAuth clients after the Keycloak cutover.
 - Split the largest dashboard files by domain without changing behaviour (#1664): the floor-plan editor, venue management, registration list, event products, people management, signage channels and templates screens, the check-in page and the mock admin handlers now keep their canvas, panels, dialogs, state hooks and per-domain handlers in sub-folders next to them (for example `features/admin/venue/layout/` and `mocks/handlers/admin/`). The screens keep their exports, so lazy sections and bundle budgets are unchanged, and no source file except the generated Paraglide declarations is above 800 lines. The new rule is in `docs/ARCHITECTURE.md`.
 
 - Split the largest backend files by domain without changing behaviour (#1664): the MCP tool methods of `app/mcp/server.py` now live in one mixin per domain under `app/mcp/tools/`, floor-plan layout revisions moved to `layout_revisions_service.py` and check-in to `check_in_service.py`, and the MCP tests were split to match. The registered tools, their schemas and the API are identical.

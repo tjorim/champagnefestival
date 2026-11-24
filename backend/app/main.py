@@ -89,7 +89,7 @@ from app.version import APP_VERSION
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-_mcp = create_mcp_server(auth=build_keycloak_auth()) if settings.mcp_base_url else None
+_mcp = create_mcp_server(auth=build_keycloak_auth()) if settings.mcp_resource_url else None
 _mcp_app = _mcp.http_app(path="/", stateless_http=True) if _mcp is not None else None
 
 
