@@ -43,8 +43,7 @@ def test_unused_fields_are_dropped_and_the_downgrade_restores_them(monkeypatch):
             for person_id, visits in (("regular", 3), ("odd", 99999), ("unset", None)):
                 connection.execute(
                     text(
-                        "INSERT INTO people (id, name, retired_roles, role_history, anonymised, visits_per_month) "
-                        "VALUES (:id, :id, '{}', '{}', false, :visits)"
+                        "INSERT INTO people (id, name, anonymised, visits_per_month) VALUES (:id, :id, false, :visits)"
                     ),
                     {"id": person_id, "visits": visits},
                 )
