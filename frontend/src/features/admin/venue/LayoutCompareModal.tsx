@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import type { FloorArea, FloorTable, Layout, TableType } from "@/api-types";
 import { m } from "@/paraglide/messages";
-import { getDayLabel, type DayOption } from "./LayoutEditor";
+import { getDayLabel, type DayOption } from "./layout/layoutDays";
 
 interface LayoutCompareModalProps {
   show: boolean;
