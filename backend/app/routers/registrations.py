@@ -52,6 +52,7 @@ from app.services.allocations_service import allocated_registration_filter
 from app.services.errors import ApiHTTPException
 from app.services.member_registration import visitor_user
 from app.services.operational_search import person_search_order_by, person_search_predicate
+from app.services.person_account import email_matches
 from app.services.serializers import (
     edition_display_name,
     order_answer_text,
@@ -623,7 +624,7 @@ async def _load_guest_registrations_by_email(
     db: AsyncSession,
     email_norm: str,
 ) -> list[tuple[Registration, Person, Event]]:
-    persons = (await db.execute(select(Person).where(Person.email == email_norm))).scalars().all()
+    persons = (await db.execute(select(Person).where(email_matches(email_norm)))).scalars().all()
     if not persons:
         return []
     person_map = {person.id: person for person in persons}

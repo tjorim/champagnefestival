@@ -8,7 +8,6 @@ from app.schemas import RegistrationAdminCreate, RegistrationUpdate
 from app.services import product_inventory as inventory
 from app.services import registrations_service
 from app.services.errors import ApiHTTPException
-from app.services.users_service import get_or_create_user
 
 
 async def validate_link(db: AsyncSession, question_id: str, kind: str, event_id: str | None) -> None:
@@ -107,8 +106,8 @@ async def sync_answer(
         )
         registration = await db.get(Registration, result.id)
         assert registration is not None
-        if person is not None and person.oidc_subject:
-            registration.user_id = (await get_or_create_user(db, person.oidc_subject, commit=False)).id
+        if person is not None and person.user_id is not None:
+            registration.user_id = person.user_id
         return
     status = "confirmed" if attending else "cancelled"
     guest_count = people if attending else registration.guest_count

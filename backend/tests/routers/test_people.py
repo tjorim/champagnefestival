@@ -146,7 +146,7 @@ async def test_reservation_auto_links_certain_person(client):
 
     event = await _create_event(client)
 
-    # Exact match on email + phone + name → auto-link
+    # Exact match on email + name → auto-link
     r = await _post_registration(
         client,
         path="/api/registrations",
@@ -199,7 +199,8 @@ async def test_reservation_auto_links_certain_person(client):
     assert r.status_code == 201
     assert r.json()["person_id"] == bob_id
 
-    # Different phone → new person (even if email + name match)
+    # A retyped or different phone number does not split the person: email and name decide (#1655), the stored
+    # phone is kept, and the response shows the number the visitor typed, not the stored one.
     r = await _post_registration(
         client,
         path="/api/registrations",
@@ -209,7 +210,10 @@ async def test_reservation_auto_links_certain_person(client):
         phone="+32499111111",
     )
     assert r.status_code == 201
-    assert r.json()["person_id"] != bob_id
+    assert r.json()["person_id"] == bob_id
+    assert r.json()["person"]["phone"] == "+32499111111"
+    stored = await client.get(f"/api/people/{bob_id}", headers=ADMIN_HEADERS)
+    assert stored.json()["phone"] == bob_phone
 
 
 @pytest.mark.anyio

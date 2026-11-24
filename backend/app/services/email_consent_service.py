@@ -17,7 +17,7 @@ import secrets
 from collections.abc import Collection
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,8 @@ from app.schemas import EmailConsentOut, EmailPreferenceOut, EmailPreferencesOut
 from app.services.audit_service import write_audit_entry
 from app.services.email_categories_service import NEW_EDITIONS, active_roles, person_allows
 from app.services.errors import NotFoundError, ServiceError
+from app.services.person_account import email_matches
+from app.services.person_account import normalise_email as normalise_email
 
 SELF_SERVICE = "self_service"
 REGISTRATION_FORM = "registration_form"
@@ -38,10 +40,6 @@ CONFIRMATION_TTL = timedelta(days=7)
 CONFIRMATION_RESEND_AFTER = timedelta(hours=1)
 """A confirmation mail is not sent again to the same person and category sooner than this, so a
 registration form cannot be used to mail someone repeatedly."""
-
-
-def normalise_email(email: str | None) -> str:
-    return (email or "").strip().lower()
 
 
 def hash_token(token: str) -> str:
@@ -62,7 +60,7 @@ async def people_for_email(db: AsyncSession, email: str, *, lock: bool = False) 
     normalised = normalise_email(email)
     if not normalised:
         return []
-    statement = select(Person).where(func.lower(func.trim(Person.email)) == normalised)
+    statement = select(Person).where(email_matches(normalised))
     if lock:
         statement = statement.with_for_update()
     people = list((await db.scalars(statement)).all())

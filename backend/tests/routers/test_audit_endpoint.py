@@ -148,10 +148,22 @@ async def test_read_time_actor_labels_are_shared_with_mcp_and_can_filter(client,
 
     db_session.add_all(
         [
-            Person(id="person_actor", name="Alex Martin", oidc_subject="staff-subject"),
-            Person(id="person_visitor", name="Sam Martin", email="sam@example.net"),
-            Person(id="person_erased", name="Erased", oidc_subject="erased-subject", anonymised=True),
-            User(id="usr_visitor", verified_email="sam@example.net"),
+            Person(id="person_actor", name="Alex Martin", user=User(id="usr_staff", oidc_subject="staff-subject")),
+            Person(
+                id="person_visitor",
+                name="Sam Martin",
+                email="sam@example.net",
+                user=User(id="usr_visitor", verified_email="sam@example.net"),
+            ),
+            # A verified address alone names nobody: this account is not linked to the same-named person.
+            Person(id="person_unlinked", name="Kim Martin", email="kim@example.net"),
+            User(id="usr_unlinked", verified_email="kim@example.net"),
+            Person(
+                id="person_erased",
+                name="Erased",
+                user=User(id="usr_erased", oidc_subject="erased-subject"),
+                anonymised=True,
+            ),
             IntegrationClient(
                 id="integration_actor",
                 name="Door scanner",
@@ -165,6 +177,7 @@ async def test_read_time_actor_labels_are_shared_with_mcp_and_can_filter(client,
     actors = [
         ("staff-subject", "keycloak", "person", "Alex Martin"),
         ("usr_visitor", "visitor_session", "person", "Sam Martin"),
+        ("usr_unlinked", "visitor_session", "visitor", None),
         ("integration:integration_actor", "integration", "integration", "Door scanner"),
         ("", "token", "visitor", None),
         ("192.0.2.5", "token", "visitor", None),

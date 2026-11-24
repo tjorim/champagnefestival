@@ -34,3 +34,42 @@ password and Keycloak magic-link login for one canonical account is the
 cross-repository follow-up [#1209](https://github.com/tjorim/champagnefestival/issues/1209);
 Keycloak email delivery/flow activation and existing email-account migration
 remain outstanding.
+
+## Linking people to accounts
+
+`people` (the directory record) and `users` (the sign-in account) describe the
+same human and are joined by one key, `people.user_id` (nullable, unique, set to
+null when the account is deleted), maintained only by
+`app/services/person_account.py`. "Which person is this account" has one answer,
+`person_for_account`, used by volunteer self-service, linked attendance polls,
+admin assignment of a booking to a volunteer and actor names. `people.oidc_subject`
+no longer exists; the admin field of that name is the linked account's subject.
+
+A link is written only from a verified identity:
+
+- **OIDC subject:** the volunteer registering themselves with their own token
+  ([#1006](decisions/1006-volunteer-identity-self-service.md)) or an administrator
+  linking a volunteer. An account that already has a person, or a person that
+  already has an account, is never taken over: 409 `person_account_conflict`.
+- **Verified email:** a magic-link redemption or a token with
+  `email_verified: true` links an account to the person holding that address only
+  when the address belongs to **exactly one** non-anonymised person, that person
+  is unlinked, and it has no national register or eID number and no volunteer
+  role. A shared inbox or an unmerged duplicate is never guessed, and identity
+  documents are reached only through the subject link. The write happens when the
+  account confirms a booking claim
+  ([#1044](decisions/1044-confirm-first-registration-claiming.md)) or redeems a
+  magic link; the claim itself is unchanged and still confirm-first.
+- An unverified or free-text address, a username or a service account never links.
+
+Merging two people moves the duplicate's link to the survivor and refuses two
+different accounts; anonymising a person removes its link.
+
+Two decisions deliberately stay on the verified address rather than the link,
+because they describe the address and not a person record: organisation manager
+access (the verified address against the contact person's, re-read on every
+request, [#1192](decisions/1192-organization-manager-login.md)) and the
+current-member gate for members-only events and `/api/me/membership` (the
+verified address against the unique current-member address). Both use the one
+trimmed, case-insensitive address comparison in `person_account.email_matches`,
+as do consent look-ups and the claimable-bookings preview.

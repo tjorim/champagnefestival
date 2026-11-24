@@ -10,11 +10,17 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer, noload
 
 from alembic import command
 from app.models import Person
 from tests.helpers import requires_postgres
+
+
+def person_at_015(session, person_id):
+    """Load a person from the schema as of revision 015 (before ``people.user_id`` exists)."""
+    return session.get_one(Person, person_id, options=[defer(Person.user_id), noload(Person.user)])
+
 
 pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
@@ -81,7 +87,7 @@ def test_person_role_period_backfill_and_email_invariant(monkeypatch):
 
         with Session(database) as session:
             migration_day = session.execute(text("SELECT CURRENT_DATE")).scalar_one().isoformat()
-            legacy = session.get_one(Person, "legacy")
+            legacy = person_at_015(session, "legacy")
             assert legacy.roles == ["member", "volunteer"]
             assert legacy.retired_roles == {}
             assert legacy.role_history == {
@@ -91,14 +97,14 @@ def test_person_role_period_backfill_and_email_invariant(monkeypatch):
                     {"started_on": None, "ended_on": None},
                 ],
             }
-            assert session.get_one(Person, "current").retired_roles == {}
-            assert session.get_one(Person, "alias").retired_roles == {"member": migration_day}
-            assert session.get_one(Person, "retired").retired_roles == {"volunteer": "2024-01-01"}
-            removed = session.get_one(Person, "removed")
+            assert person_at_015(session, "current").retired_roles == {}
+            assert person_at_015(session, "alias").retired_roles == {"member": migration_day}
+            assert person_at_015(session, "retired").retired_roles == {"volunteer": "2024-01-01"}
+            removed = person_at_015(session, "removed")
             assert removed.roles == []
             assert removed.role_history == {"member": [{"started_on": None, "ended_on": "2025-01-01"}]}
-            assert session.get_one(Person, "shape").role_history == {}
-            assert session.get_one(Person, "bad-date").retired_roles == {"member": migration_day}
+            assert person_at_015(session, "shape").role_history == {}
+            assert person_at_015(session, "bad-date").retired_roles == {"member": migration_day}
 
         assert {"roles", "retired_roles", "role_history"}.isdisjoint(
             column["name"] for column in inspect(database).get_columns("people")

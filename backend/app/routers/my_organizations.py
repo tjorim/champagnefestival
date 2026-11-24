@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Response, UploadFile
 from fastapi.responses import Response as ImageResponse
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -15,6 +15,7 @@ from app.schemas.openapi_responses import binary_response
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
+from app.services.person_account import email_matches
 from app.services.visitor_session import (
     actor_for_user,
     get_current_user_with_claims,
@@ -35,7 +36,7 @@ async def my_organizations(
         await db.scalars(
             select(Organization)
             .join(Person, Organization.contact_person_id == Person.id)
-            .where(func.lower(func.trim(Person.email)) == email)
+            .where(email_matches(email))
             .order_by(Organization.name, Organization.id)
         )
     ).all()

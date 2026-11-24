@@ -1,11 +1,12 @@
 """Self-service identity operations for OIDC-authenticated volunteers (#1006).
 
-There is no built-in link between an OIDC token and a ``Person`` row — the
-``volunteer``/``admin`` realm role checked by ``app.core.auth.require_volunteer``
+The ``volunteer``/``admin`` realm role checked by ``app.core.auth.require_volunteer``
 proves *that* a token may act as a volunteer, not *which* ``Person`` it
-belongs to. ``Person.oidc_subject`` (nullable, unique) is that link, and this
-module is the only place that establishes or reads it outside admin edits
-(``app.services.volunteers_service.apply_volunteer_update``).
+belongs to. ``Person.user_id`` (nullable, unique; #1655) is that link — the
+person is found through the account that owns the token's subject, and
+``app.services.person_account`` is the only place that reads or writes it. This
+module establishes it from the volunteer's own submission; the only other
+writer is an admin edit (``app.services.volunteers_service.apply_volunteer_update``).
 
 Registration is volunteer-initiated and self-contained: an admin grants the
 ``volunteer`` realm role in the identity provider (already a prerequisite
@@ -27,16 +28,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.ids import make_id
 from app.models import Person
+from app.services import person_account
 from app.services.audit_service import write_audit_entry
 from app.services.errors import ApiHTTPException
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity
+from app.services.users_service import get_or_create_user
 from app.services.volunteers_service import ensure_volunteer_role
 
 
 async def get_linked_volunteer(db: AsyncSession, subject: str) -> Person | None:
-    """Return the ``Person`` linked to this OIDC subject, if any."""
-    return (await db.execute(select(Person).where(Person.oidc_subject == subject))).scalar_one_or_none()
+    """Return the ``Person`` linked to the account owning this OIDC subject, if any."""
+    return await person_account.person_for_account(db, subject=subject)
 
 
 async def register_volunteer_identity(
@@ -85,6 +88,9 @@ async def register_volunteer_identity(
             detail="That eID document number doesn't look valid. Please check it and try again.",
         )
 
+    # The caller's own account: the subject comes from the verified token, so this row is the proven identity.
+    user = await get_or_create_user(db, subject, commit=False)
+
     # .with_for_update() closes the same race the admin assign-volunteer
     # override guards against (#1044): without it, two concurrent
     # registrations targeting the same unlinked Person could both read
@@ -113,22 +119,25 @@ async def register_volunteer_identity(
         )
 
     if exact_match is not None:
-        if exact_match.oidc_subject is not None:
+        if exact_match.user_id is not None:
             raise ApiHTTPException(
                 status_code=409,
                 code="volunteer_identity_conflict",
                 detail="This identity is already linked to another account. Ask an administrator for help.",
             )
-        exact_match.oidc_subject = subject
-        ensure_volunteer_role(exact_match)
         person = exact_match
+        ensure_volunteer_role(person)
+        await person_account.link_person(
+            db, person, user, method="volunteer_registration", actor=actor, request_id=request_id
+        )
     else:
         person = Person(
             id=make_id("per"),
             name=name,
             national_register_number=nrr,
             eid_document_number=eid,
-            oidc_subject=subject,
+            user_id=user.id,
+            user=user,
         )
         ensure_volunteer_role(person)
         db.add(person)

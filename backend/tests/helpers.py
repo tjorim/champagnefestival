@@ -26,6 +26,13 @@ def role_periods(roles: list[str], retired: dict[str, str] | None = None) -> lis
     ]
 
 
+async def person_by_subject(db_session: Any, subject: str) -> Any:
+    """The person linked (``people.user_id``) to the account holding this OIDC subject."""
+    from app.services.person_account import person_for_account
+
+    return await person_for_account(db_session, subject=subject)
+
+
 def requires_postgres(reason: str) -> Any:
     """Skip on SQLite for a test that exercises PostgreSQL behaviour. CI runs it on PostgreSQL."""
     return pytest.mark.skipif(IS_SQLITE, reason=f"needs PostgreSQL: {reason}")
