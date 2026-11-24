@@ -9,10 +9,7 @@ from app.models import (
     Person,
     PollDeletionNotification,
     VolunteerPollAnswer,
-    VolunteerPollChoice,
-    VolunteerPollRating,
     VolunteerPollSelection,
-    VolunteerPollText,
 )
 from tests.helpers import ADMIN_HEADERS, _create_event, mcp_session_factory
 from tests.poll_helpers import create_option, create_question
@@ -34,17 +31,17 @@ async def test_question_notification(client, db_session, transport, kind, notify
         row = (
             VolunteerPollSelection(volunteer_id=person.id, option_id=option["id"], quantity=3)
             if kind == "meals"
-            else VolunteerPollChoice(**base, option_id=option["id"])
+            else VolunteerPollAnswer(**base, kind=kind, option_id=option["id"])
         )
         expected = "Soep"  # Missing French translation falls back to Dutch.
     elif kind == "yes_no":
-        row = VolunteerPollAnswer(**base, attending=False, people=0)
+        row = VolunteerPollAnswer(**base, kind=kind, attending=False, people=0)
         expected = "Non (0)"
     elif kind == "free_text":
-        row = VolunteerPollText(**base, text="My answer")
+        row = VolunteerPollAnswer(**base, kind=kind, text="My answer")
         expected = "My answer"
     else:
-        row = VolunteerPollRating(**base, rating=4)
+        row = VolunteerPollAnswer(**base, kind=kind, rating=4)
         expected = "4"
     db_session.add(row)
     await db_session.commit()
@@ -113,7 +110,7 @@ async def test_unused_question_and_failed_delivery(client, db_session, monkeypat
     question = await create_question(client, edition, "rating")
     db_session.add(Person(id="p", name="Volunteer", email="v@example.com"))
     await db_session.flush()
-    db_session.add(VolunteerPollRating(volunteer_id="p", question_id=question["id"], rating=5))
+    db_session.add(VolunteerPollAnswer(volunteer_id="p", question_id=question["id"], kind="rating", rating=5))
     await db_session.commit()
     response = await client.delete(
         f"/api/poll-questions/{question['id']}", params={"confirm_answers": True}, headers=ADMIN_HEADERS
