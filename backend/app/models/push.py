@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, String
+from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.vocabularies import Locale
@@ -33,16 +33,6 @@ class PushSubscription(Base):
     p256dh_key: Mapped[str] = mapped_column(String(200))
     auth_key: Mapped[str] = mapped_column(String(50))
     locale: Mapped[str] = mapped_column(String(2))
-    categories: Mapped[list[str]] = mapped_column(JSON, default=list)
-    """Free-form category tags this subscription opted into (e.g.
-    ``["system_test"]``). Not a fixed enum — #941 only ever emits
-    "system_test" itself. The composer currently targets all subscribers;
-    category-based targeting is not implemented."""
-    event_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
-    """Specific Event ids this subscription wants event-scoped notifications
-    for; empty means general/non-event-specific only. Validated against
-    real Event rows at subscribe time, not DB-FK-enforced (a deleted event
-    should not break an otherwise-valid subscription)."""
     consent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)

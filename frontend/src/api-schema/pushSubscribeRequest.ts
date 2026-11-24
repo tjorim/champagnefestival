@@ -16,8 +16,4 @@ export type PushSubscribeRequest = {
   endpoint: string;
   keys: PushSubscriptionKeys;
   locale: PushSubscribeRequestLocale;
-  /** @maxItems 10 */
-  categories?: string[];
-  /** @maxItems 20 */
-  event_ids?: string[];
 };

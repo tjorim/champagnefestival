@@ -8,6 +8,4 @@
 
 export type PushSubscriptionOut = {
   id: string;
-  categories: string[];
-  event_ids: string[];
 };

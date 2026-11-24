@@ -126,7 +126,6 @@ class Person(Base):
     `require_volunteer` for event-day access — it identifies *which* Person a
     token belongs to, not *whether* the token may act as a volunteer. See
     docs/decisions/1006-volunteer-identity-self-service.md."""
-    visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str] = mapped_column(Text, default="")
     anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
     """Set when the record has been anonymised (``people_service.anonymise_person``); such a person

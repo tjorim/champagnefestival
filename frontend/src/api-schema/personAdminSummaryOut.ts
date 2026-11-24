@@ -32,7 +32,6 @@ export type PersonAdminSummaryOut = {
   role_history: PersonAdminSummaryOutRoleHistory;
   inactivity_exempt: boolean;
   inactivity_exempt_note: string;
-  visits_per_month: number | null;
   notes: string;
   anonymised: boolean;
   created_at: string;

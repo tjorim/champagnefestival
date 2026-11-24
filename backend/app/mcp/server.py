@@ -2541,7 +2541,6 @@ class ChampagneFestivalMcpBackend:
         roles: list[str] | None = None,
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        visits_per_month: int | None = None,
         notes: str = "",
     ) -> dict:
         """Create a person. Requires the ``admin`` role.
@@ -2559,7 +2558,6 @@ class ChampagneFestivalMcpBackend:
             roles=roles,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            visits_per_month=visits_per_month,
             notes=notes,
         )
 
@@ -2578,7 +2576,6 @@ class ChampagneFestivalMcpBackend:
         roles: list[str] | None = None,
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        visits_per_month: int | None = None,
         notes: str | None = None,
     ) -> dict:
         """Partially update a person; omitted fields are left unchanged.
@@ -2598,7 +2595,6 @@ class ChampagneFestivalMcpBackend:
             roles=roles,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            visits_per_month=visits_per_month,
             notes=notes,
         )
 
@@ -2624,7 +2620,6 @@ class ChampagneFestivalMcpBackend:
         address: str = "",
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        visits_per_month: int | None = None,
         inactivity_exempt: bool = False,
         inactivity_exempt_note: str = "",
         notes: str = "",
@@ -2644,7 +2639,6 @@ class ChampagneFestivalMcpBackend:
             address=address,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            visits_per_month=visits_per_month,
             notes=notes,
             inactivity_exempt=inactivity_exempt,
             inactivity_exempt_note=inactivity_exempt_note,
@@ -2686,7 +2680,6 @@ class ChampagneFestivalMcpBackend:
         address: str | None = None,
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        visits_per_month: int | None = None,
         inactivity_exempt: bool | None = None,
         inactivity_exempt_note: str | None = None,
         notes: str | None = None,
@@ -2704,7 +2697,6 @@ class ChampagneFestivalMcpBackend:
             address=address,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            visits_per_month=visits_per_month,
             notes=notes,
             inactivity_exempt=inactivity_exempt,
             inactivity_exempt_note=inactivity_exempt_note,

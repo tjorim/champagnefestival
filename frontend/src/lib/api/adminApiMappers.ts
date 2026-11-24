@@ -8,7 +8,6 @@ export function mergeVolunteerPerson(existing: Person | undefined, volunteer: Pe
     ...volunteer,
     email: existing?.email ?? volunteer.email,
     phone: existing?.phone ?? volunteer.phone,
-    visits_per_month: existing?.visits_per_month ?? volunteer.visits_per_month,
     notes: existing?.notes ?? volunteer.notes,
     roles: [...roles],
     help_periods: volunteer.help_periods,

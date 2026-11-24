@@ -23376,17 +23376,6 @@
             "title": "Inactivity Exempt Note",
             "default": ""
           },
-          "visits_per_month": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visits Per Month"
-          },
           "notes": {
             "type": "string",
             "title": "Notes"
@@ -23419,7 +23408,6 @@
           "role_history",
           "inactivity_exempt",
           "inactivity_exempt_note",
-          "visits_per_month",
           "notes",
           "anonymised",
           "created_at",
@@ -23506,19 +23494,6 @@
               }
             ],
             "title": "Eid Document Number"
-          },
-          "visits_per_month": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 31.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visits Per Month"
           },
           "notes": {
             "type": "string",
@@ -23663,17 +23638,6 @@
             "title": "Inactivity Exempt Note",
             "default": ""
           },
-          "visits_per_month": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visits Per Month"
-          },
           "notes": {
             "type": "string",
             "title": "Notes"
@@ -23732,7 +23696,6 @@
           "role_history",
           "inactivity_exempt",
           "inactivity_exempt_note",
-          "visits_per_month",
           "notes",
           "anonymised",
           "created_at",
@@ -23840,17 +23803,6 @@
             "title": "Inactivity Exempt Note",
             "default": ""
           },
-          "visits_per_month": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visits Per Month"
-          },
           "notes": {
             "type": "string",
             "title": "Notes"
@@ -23885,7 +23837,6 @@
           "eid_document_number",
           "inactivity_exempt",
           "inactivity_exempt_note",
-          "visits_per_month",
           "notes",
           "anonymised",
           "created_at",
@@ -24082,19 +24033,6 @@
               }
             ],
             "title": "Eid Document Number"
-          },
-          "visits_per_month": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 31.0,
-                "minimum": 1.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Visits Per Month"
           },
           "notes": {
             "anyOf": [
@@ -26759,22 +26697,6 @@
               "en"
             ],
             "title": "Locale"
-          },
-          "categories": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 10,
-            "title": "Categories"
-          },
-          "event_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 20,
-            "title": "Event Ids"
           }
         },
         "additionalProperties": false,
@@ -26815,27 +26737,11 @@
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "categories": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Categories"
-          },
-          "event_ids": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Event Ids"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "categories",
-          "event_ids"
+          "id"
         ],
         "title": "PushSubscriptionOut"
       },

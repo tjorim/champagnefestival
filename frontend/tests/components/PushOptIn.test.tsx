@@ -106,7 +106,7 @@ describe("PushOptIn", () => {
       },
       configurable: true,
     });
-    vi.mocked(subscribeToPush).mockResolvedValue({ id: "sub-1", categories: [], event_ids: [] });
+    vi.mocked(subscribeToPush).mockResolvedValue({ id: "sub-1" });
     vi.mocked(sendTestPush).mockResolvedValue(undefined);
 
     const user = userEvent.setup();

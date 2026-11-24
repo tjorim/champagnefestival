@@ -99,8 +99,6 @@ describe("usePushSubscription", () => {
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-existing",
-      categories: [],
-      event_ids: [],
     });
 
     const { result } = renderHook(() => usePushSubscription());
@@ -132,8 +130,6 @@ describe("usePushSubscription", () => {
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-1",
-      categories: ["system_test"],
-      event_ids: [],
     });
 
     const { result } = renderHook(() => usePushSubscription());
@@ -208,8 +204,6 @@ describe("usePushSubscription", () => {
     });
     vi.mocked(pushApi.subscribeToPush).mockResolvedValue({
       id: "sub-1",
-      categories: [],
-      event_ids: [],
     });
     vi.mocked(pushApi.unsubscribeFromPush).mockRejectedValueOnce(
       new ApiError("Backend said no.", { status: 503 }),

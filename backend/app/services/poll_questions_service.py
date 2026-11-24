@@ -345,7 +345,6 @@ async def copy_poll_questions(
             db.add(
                 EditionPollOption(
                     id=make_id("poll"),
-                    edition_id=body.to_edition_id,
                     question_id=copy.id,
                     label_nl=option.label_nl,
                     label_fr=option.label_fr,

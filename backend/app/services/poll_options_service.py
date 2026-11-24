@@ -120,7 +120,6 @@ async def create_poll_option(
     await lock_edition(db, question.edition_id)
     option = EditionPollOption(
         id=make_id("poll"),
-        edition_id=question.edition_id,
         question_id=question.id,
         label_nl=body.label_nl or "",
         label_fr=body.label_fr,
@@ -136,7 +135,7 @@ async def create_poll_option(
         resource_type="edition_poll_option",
         resource_id=option.id,
         request_id=request_id,
-        details={"edition_id": option.edition_id, "question_id": question.id, "label": option.label_nl},
+        details={"edition_id": question.edition_id, "question_id": question.id, "label": option.label_nl},
     )
     await db.commit()
     await db.refresh(option)

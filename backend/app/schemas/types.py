@@ -26,7 +26,6 @@ HexColor = Annotated[str, Field(pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-
 MarkdownSource = Annotated[str, Field(max_length=200000)]
 MemberInactivityMonths = Annotated[int, Field(ge=1, le=1200)]
 MemberLimit = Annotated[int, Field(ge=1, le=2147483647)]
-MonthlyVisits = Annotated[int, Field(ge=1, le=31)]
 NonEmptyText = Annotated[str, Field(min_length=1)]
 NonEmptyText20 = Annotated[str, Field(min_length=1, max_length=20)]
 NonEmptyText200 = Annotated[str, Field(min_length=1, max_length=200)]

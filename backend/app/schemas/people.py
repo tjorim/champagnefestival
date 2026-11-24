@@ -10,7 +10,7 @@ from pydantic import ConfigDict, EmailStr, Field
 
 from app.core.vocabularies import Locale
 from app.schemas.base import RequestModel, ResponseModel
-from app.schemas.types import MonthlyVisits, NonEmptyText200, Text20, Text50, Text300, Text2000
+from app.schemas.types import NonEmptyText200, Text20, Text50, Text300, Text2000
 
 
 class PersonSummaryOut(ResponseModel):
@@ -50,7 +50,6 @@ class PersonOut(ResponseModel):
     eid_document_number: str | None
     inactivity_exempt: bool = False
     inactivity_exempt_note: str = ""
-    visits_per_month: int | None
     notes: str
     anonymised: bool
     created_at: datetime
@@ -82,7 +81,6 @@ class PersonAdminSummaryOut(ResponseModel):
     role_history: dict[str, list[RoleStretchOut]] = {}
     inactivity_exempt: bool = False
     inactivity_exempt_note: str = ""
-    visits_per_month: int | None
     notes: str
     anonymised: bool
     created_at: datetime
@@ -143,7 +141,6 @@ class PersonCreate(RequestModel):
     roles: list[str] = Field(default_factory=list)
     national_register_number: Text20 | None = None
     eid_document_number: Text50 | None = None
-    visits_per_month: MonthlyVisits | None = None
     notes: Text2000 = ""
     inactivity_exempt: bool = False
     inactivity_exempt_note: Text2000 = ""
@@ -160,7 +157,6 @@ class PersonUpdate(RequestModel):
     roles: list[str] | None = None
     national_register_number: Text20 | None = None
     eid_document_number: Text50 | None = None
-    visits_per_month: MonthlyVisits | None = None
     notes: Text2000 | None = None
     inactivity_exempt: bool | None = None
     inactivity_exempt_note: Text2000 | None = None

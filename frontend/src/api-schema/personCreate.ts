@@ -22,7 +22,6 @@ export type PersonCreate = {
   roles?: string[];
   national_register_number?: string | null;
   eid_document_number?: string | null;
-  visits_per_month?: number | null;
   /** @maxLength 2000 */
   notes?: string;
   inactivity_exempt?: boolean;

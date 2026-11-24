@@ -16,7 +16,6 @@ export type PersonUpdate = {
   roles?: string[] | null;
   national_register_number?: string | null;
   eid_document_number?: string | null;
-  visits_per_month?: number | null;
   notes?: string | null;
   inactivity_exempt?: boolean | null;
   inactivity_exempt_note?: string | null;

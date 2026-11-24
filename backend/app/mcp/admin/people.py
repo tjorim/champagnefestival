@@ -32,7 +32,6 @@ async def create_person(
     roles: list[str] | None = None,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
-    visits_per_month: int | None = None,
     notes: str = "",
 ) -> dict:
     body = validate_with_schema(
@@ -44,7 +43,6 @@ async def create_person(
         roles=roles or [],
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
-        visits_per_month=visits_per_month,
         notes=notes,
     )
     async with session_factory() as db:
@@ -72,7 +70,6 @@ async def update_person(
     roles: list[str] | None = None,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
-    visits_per_month: int | None = None,
     notes: str | None = None,
 ) -> dict:
     provided = {
@@ -85,7 +82,6 @@ async def update_person(
             "roles": roles,
             "national_register_number": national_register_number,
             "eid_document_number": eid_document_number,
-            "visits_per_month": visits_per_month,
             "notes": notes,
         }.items()
         if v is not None

@@ -904,7 +904,6 @@ export const adminHandlers = [
       roles: Array.isArray(body.roles) ? (body.roles as string[]) : [],
       national_register_number: null,
       eid_document_number: null,
-      visits_per_month: null,
       notes: String(body.notes ?? ""),
       role_history: {},
       help_periods: [],
@@ -977,7 +976,6 @@ export const adminHandlers = [
       roles: ["member"],
       national_register_number: null,
       eid_document_number: null,
-      visits_per_month: typeof body.visits_per_month === "number" ? body.visits_per_month : null,
       notes: String(body.notes ?? ""),
       help_periods: [],
       anonymised: false,
@@ -1102,7 +1100,6 @@ export const adminHandlers = [
             }),
           )
         : [],
-      visits_per_month: null,
       notes: String(body.notes ?? ""),
       role_history: {},
       anonymised: false,
