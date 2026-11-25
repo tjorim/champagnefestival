@@ -70,7 +70,8 @@ Key variables:
 | `ENVIRONMENT` | Set to `production` |
 | `DATABASE_URL` | e.g. `postgresql+asyncpg://user:password@postgres:5432/champagnefestival` |
 | `OIDC_ISSUER_URL` | OIDC provider base URL, e.g. `https://auth.example.com/application/o/champagnefestival` |
-| `OIDC_AUDIENCE` | Expected audience claim in the JWT (optional) |
+| `OIDC_AUDIENCE` | Expected audience claim in the JWT; guards the REST API only. Optional, but required when `MCP_RESOURCE_URL` is set |
+| `MCP_RESOURCE_URL` | Canonical public MCP URL, e.g. `https://champagnefestival.be/mcp/` (trailing slash required). Mounts MCP and is the only audience its OAuth tokens may carry; replaces `MCP_BASE_URL` |
 | `OIDC_JWKS_URI` | JWKS endpoint override; leave empty to discover `jwks_uri` from OIDC metadata |
 | `OIDC_ALGORITHMS` | Accepted JWT algorithms, default `RS256` |
 | `CORS_ORIGINS` | Comma-separated allowed origins, e.g. `https://champagnefestival.be` |

@@ -264,7 +264,7 @@ def test_unknown_tools_default_to_admin_component_authorization():
 
 @pytest.mark.anyio
 async def test_mcp_capabilities_endpoint_reports_disabled_when_mcp_not_mounted(client):
-    # The test app's settings.mcp_base_url is unset, so app.main._mcp is None.
+    # The test app's settings.mcp_resource_url is unset, so app.main._mcp is None.
     r = await client.get("/api/mcp/capabilities")
     assert r.status_code == 200
     body = r.json()

@@ -173,7 +173,7 @@ For production use or when running as a network-accessible service, set the foll
 | Variable | Description |
 |----------|-------------|
 | `OIDC_ISSUER_URL` | Keycloak realm URL, e.g. `https://auth.example.com/realms/myrealm` |
-| `MCP_BASE_URL` | Public URL of this MCP server, e.g. `https://mcp.champagnefestival.be` |
+| `MCP_RESOURCE_URL` | Canonical public URL of this MCP server, trailing slash required, e.g. `https://champagnefestival.be/mcp/` |
 | `DATABASE_URL` | PostgreSQL connection string |
 
 There is no separate `app.mcp_http` module — the MCP server is mounted directly inside the
@@ -185,8 +185,16 @@ cd backend
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
-The MCP server is only mounted when `MCP_BASE_URL` is set; `OIDC_ISSUER_URL` is required
-whenever `MCP_BASE_URL` is (the app refuses to start otherwise). When both are configured,
+The MCP server is only mounted when `MCP_RESOURCE_URL` is set; `OIDC_ISSUER_URL` is required
+whenever `MCP_RESOURCE_URL` is (the app refuses to start otherwise). `MCP_RESOURCE_URL` must be
+canonical: HTTP(S), path exactly `/mcp/`, no query, fragment or credentials. It replaces
+`MCP_BASE_URL`, which is no longer read; startup fails if only the old variable is set.
+
+OAuth access tokens must carry `MCP_RESOURCE_URL` as their audience. A token minted for the REST API
+(`OIDC_AUDIENCE`) does not authenticate MCP, nor the reverse, so web and Android tokens cannot call MCP
+tools. The reverse relies on the REST audience check, so startup fails when `MCP_RESOURCE_URL` is set
+and `OIDC_AUDIENCE` is empty. Managed integration-client keys are independent of both. After the identity provider starts
+issuing the MCP audience, reconnect existing OAuth clients: tokens issued before the cutover are rejected. When both are configured,
 `build_keycloak_auth()` (`backend/app/mcp/server.py`) builds a FastMCP `MultiAuth` that
 accepts either credential type on the same endpoint:
 
