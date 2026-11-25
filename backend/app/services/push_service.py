@@ -89,7 +89,7 @@ async def unsubscribe(db: AsyncSession, endpoint: str) -> None:
 
 async def cleanup_expired_subscriptions(db: AsyncSession) -> int:
     """Delete subscriptions with no successful delivery in
-    ``settings.push_subscription_expiry_days``; run daily by ``python -m app.maintenance housekeeping``.
+    ``settings.push_subscription_expiry_days``; run daily by ``python -m app.services.maintenance housekeeping``.
 
     On top of explicit unsubscribe and 404/410 retirement (see ``app.services.push_delivery``),
     this catches subscriptions the push service never reports dead — e.g. the

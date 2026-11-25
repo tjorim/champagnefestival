@@ -4,7 +4,7 @@ Run one or more workers separately from the API process:
 
 ```bash
 cd backend
-uv run python -m app.worker
+uv run python -m app.services.worker
 ```
 
 `docker compose up backend worker` runs both development processes. Production
@@ -55,7 +55,7 @@ command, which the VPS schedules daily (`tjorim/apps`, systemd timer):
 
 ```bash
 cd backend
-uv run python -m app.maintenance housekeeping
+uv run python -m app.services.maintenance housekeeping
 ```
 
 It removes terminal outbox jobs past `OUTBOX_RETENTION_DAYS`, stale

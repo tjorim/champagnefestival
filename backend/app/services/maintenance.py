@@ -1,4 +1,4 @@
-"""Run-once maintenance commands: ``uv run python -m app.maintenance housekeeping``.
+"""Run-once maintenance commands: ``uv run python -m app.services.maintenance housekeeping``.
 
 The VPS schedules ``housekeeping`` daily (tjorim/apps); the application runs no
 cleanup scheduler of its own, and the outbox worker only delivers jobs.
@@ -56,7 +56,7 @@ async def housekeeping() -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m app.maintenance")
+    parser = argparse.ArgumentParser(prog="python -m app.services.maintenance")
     parser.add_subparsers(dest="command", required=True).add_parser("housekeeping", help="delete expired or stale rows")
     parser.parse_args(argv)
     return 1 if asyncio.run(housekeeping()) else 0

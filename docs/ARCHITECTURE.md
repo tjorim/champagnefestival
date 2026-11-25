@@ -92,8 +92,6 @@ Rules:
 
 ```
 main.py                 app assembly: middleware, router registration, lifespan; nothing else
-mcp_server.py           the stdio MCP entry point (`python -m app.mcp_server`): re-exports `app.mcp.server`, see "Entry points"
-worker.py, maintenance.py  `python -m app.worker` / `python -m app.maintenance`: forward to `services/`, see "Entry points"
 openapi_export.py       writes frontend/openapi.json (`uv run python -m app.openapi_export`)
 version.py              the release version read from /VERSION
 routers/                the HTTP layer, one module per domain; thin: validate, call a service, return a response model
@@ -102,7 +100,7 @@ services/              business logic shared by the routers and the MCP tools, o
   live/                 live-update infrastructure: in-process bus, Postgres NOTIFY publication and LISTEN relays, the
                         domain-action to TanStack-key mapping
   serializers.py        the response builders (`*_to_out`) that turn models into response schemas
-  worker.py, maintenance.py   the outbox worker and the housekeeping command (entry points: `app/worker.py`, `app/maintenance.py`)
+  worker.py, maintenance.py   the outbox worker and the housekeeping command (`python -m app.services.worker`, `python -m app.services.maintenance housekeeping`)
   email_service, member_mail*, push_*, composer_*, visitor_session, audit_service   the former loose domain modules
 models/                 SQLAlchemy models, one module per domain; `base.py` has the shared helpers, `__init__` imports
                         every module (Alembic needs them all) and re-exports the names
@@ -155,16 +153,9 @@ refer to each other only in annotations import each other under `TYPE_CHECKING` 
 - Something that reads or writes the engine, session or schema bootstrap: `db/`. ASGI plumbing: `middleware/`.
 - A background job: a handler in `services/`, registered in `services/worker.py`.
 
-### Entry points kept at their old path
+### Entry points
 
-These modules only forward to the code in the new layout, because the Dockerfile, the runbook, the docs and MCP client
-configurations start them by name. Each can go once the callers use the new path.
-
-| Old path | Forwards to | Used by | Removal |
-| --- | --- | --- | --- |
-| `app/mcp_server.py` | `app.mcp.server` | `python -m app.mcp_server` (docs/integrations/LOCAL_MCP_SERVER.md, MCP client configs), `from app.mcp_server import ...` | when MCP client configs use `python -m app.mcp.server` |
-| `app/worker.py` | `app.services.worker` | the Dockerfile `worker` target (`python -m app.worker`), docs/outbox-worker.md, RELEASE-RUNBOOK.md | when the Dockerfile target and the docs use `python -m app.services.worker` |
-| `app/maintenance.py` | `app.services.maintenance` | `python -m app.maintenance housekeeping` (docs/outbox-worker.md, scheduled units) | when the units use `python -m app.services.maintenance` |
+The commands that start something are modules run with `python -m`: `app.services.worker` (the Dockerfile `worker` target), `app.services.maintenance housekeeping` (the scheduled unit), `app.mcp.server` (the stdio MCP server) and `app.openapi_export`. Nothing forwards from an older path.
 
 Logger names that come from `__name__` follow the module (for example `app.middleware.setup`,
 `app.core.observability`, `app.mcp.server`, `app.services.live.listener`). The route and model docstrings that end up in
