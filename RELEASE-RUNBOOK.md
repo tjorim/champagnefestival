@@ -43,7 +43,7 @@ checks after that explicit deploy completes:
 - [ ] **Health endpoint** — `curl -sf https://champagnefestival.tjor.im/api/health` returns HTTP 200.
 - [ ] **Frontend loads** — open `https://champagnefestival.tjor.im` in a browser; the page renders without console errors.
 - [ ] **Public registration flow** — submit a test registration (use a clearly fake name) and confirm the confirmation appears.
-- [ ] **Outbox worker** — confirm the separately supervised `python -m app.worker` service is healthy, then verify the test registration's confirmation job reaches `delivered` in `GET /api/outbox` and the email arrives.
+- [ ] **Outbox worker** — confirm the separately supervised `python -m app.services.worker` service is healthy, then verify the test registration's confirmation job reaches `delivered` in `GET /api/outbox` and the email arrives.
 - [ ] **Admin login** — navigate to `/admin`, click **Login**, complete OIDC auth, and confirm the dashboard loads.
 - [ ] **Check-in token scan** — scan or manually enter a known check-in token; confirm guest lookup succeeds.
 - [ ] **Version visible** — `curl -sf https://champagnefestival.tjor.im/api/health | jq '{version, commit}'` matches `cat /opt/apps/champagnefestival/VERSION` and `git -C /opt/apps/champagnefestival rev-parse HEAD` from the build. A release version alone does not identify the deployed commit.

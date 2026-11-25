@@ -19,7 +19,7 @@ class RateLimitBucket(Base):
     enforced consistently across worker processes. ``key`` packs ``scope`` and
     the caller's bucket key (an IP or registration ID) with a separator that
     can't appear in either half; see ``app.core.ratelimit._bucket_key``. Swept daily
-    by ``app.worker`` alongside the outbox cleanup.
+    by ``app.services.worker`` alongside the outbox cleanup.
     """
 
     __tablename__ = "rate_limit_buckets"

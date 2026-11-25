@@ -33,7 +33,7 @@ The stdio transport is designed for **local desktop agents** such as Claude Desk
 
 ```bash
 cd backend
-uv run python -m app.mcp_server
+uv run python -m app.mcp.server
 ```
 
 This starts the MCP server in stdio mode without authentication enforcement. All unauthenticated tool calls resolve to the `public` role (edition/event/venue overview only). Call the `whoami` tool at any time to check which role a session is currently resolving to.
@@ -141,7 +141,7 @@ Add this to your `claude_desktop_config.json` (typically `~/Library/Application 
         "run",
         "python",
         "-m",
-        "app.mcp_server"
+        "app.mcp.server"
       ],
       "env": {
         "DATABASE_URL": "postgresql+asyncpg://postgres:postgres@localhost:5432/champagne"
@@ -160,7 +160,7 @@ Create or update your Codex MCP configuration (typically `~/.codex/config.toml`)
 ```toml
 [[mcp_servers]]
 name = "champagne-festival"
-command = ["uv", "--directory", "/absolute/path/to/champagnefestival/backend", "run", "python", "-m", "app.mcp_server"]
+command = ["uv", "--directory", "/absolute/path/to/champagnefestival/backend", "run", "python", "-m", "app.mcp.server"]
 env = { DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/champagne" }
 ```
 

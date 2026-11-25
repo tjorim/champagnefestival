@@ -330,7 +330,7 @@ async def mcp_capabilities() -> dict[str, object]:
     Reports whether the MCP server is mounted and, when it is, the live
     registered tool set with each tool's required role tier — generated
     directly from the local provider so it can never drift from what's
-    actually registered (see ``app.mcp_server.get_mcp_capabilities``).
+    actually registered (see ``app.mcp.capabilities.get_mcp_capabilities``).
     """
     if _mcp is None:
         return {
