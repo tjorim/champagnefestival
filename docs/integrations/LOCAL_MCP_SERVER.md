@@ -192,7 +192,8 @@ canonical: HTTP(S), path exactly `/mcp/`, no query, fragment or credentials. It 
 
 OAuth access tokens must carry `MCP_RESOURCE_URL` as their audience. A token minted for the REST API
 (`OIDC_AUDIENCE`) does not authenticate MCP, nor the reverse, so web and Android tokens cannot call MCP
-tools. Managed integration-client keys are independent of both. After the identity provider starts
+tools. The reverse relies on the REST audience check, so startup fails when `MCP_RESOURCE_URL` is set
+and `OIDC_AUDIENCE` is empty. Managed integration-client keys are independent of both. After the identity provider starts
 issuing the MCP audience, reconnect existing OAuth clients: tokens issued before the cutover are rejected. When both are configured,
 `build_keycloak_auth()` (`backend/app/mcp/server.py`) builds a FastMCP `MultiAuth` that
 accepts either credential type on the same endpoint:

@@ -1,7 +1,6 @@
 """Application settings loaded from environment variables / .env file."""
 
 import logging
-import os
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote, urlsplit
@@ -32,7 +31,8 @@ class Settings(BaseSettings):
     """OIDC provider base URL. Required in production. Example: https://auth.example.com/application/o/champagnefestival"""
 
     oidc_audience: str = ""
-    """Expected audience claim in the JWT. Optional."""
+    """Expected audience claim in the JWT; guards the REST API only. Optional, but required when
+    MCP_RESOURCE_URL is set (validate_mcp_requires_api_audience)."""
 
     mcp_interactive_client_ids: str = "champagnefestival,champagnefestival-android"
     """Comma-separated OIDC client IDs allowed to manage MCP credentials."""
@@ -137,6 +137,9 @@ class Settings(BaseSettings):
     enables Keycloak auth enforcement. It is advertised as the OAuth protected-resource
     identifier and is the only audience MCP OAuth tokens may carry; OIDC_AUDIENCE keeps
     guarding the REST API."""
+    # Retired MCP_BASE_URL, read from every settings source (environment and .env) only so
+    # startup can refuse a config that still uses it. Nothing else reads it.
+    retired_mcp_base_url: str = Field(default="", validation_alias="MCP_BASE_URL", exclude=True, repr=False)
 
     # --- Anti-spam ---
     min_form_seconds: int = 3
@@ -325,9 +328,18 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_mcp_base_url_is_retired(self) -> Settings:
         """Fail loudly instead of silently unmounting MCP when only the old variable is set."""
-        if os.environ.get("MCP_BASE_URL") and not self.mcp_resource_url:
+        if self.retired_mcp_base_url and not self.mcp_resource_url:
             raise ValueError(
                 "MCP_BASE_URL is no longer read: set MCP_RESOURCE_URL to the canonical https://<host>/mcp/ URL."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_mcp_requires_api_audience(self) -> Settings:
+        """Keep MCP and REST tokens apart: an empty OIDC_AUDIENCE skips the REST audience check."""
+        if self.mcp_resource_url and not self.oidc_audience:
+            raise ValueError(
+                "OIDC_AUDIENCE must be set when MCP_RESOURCE_URL is: without it the REST API accepts MCP tokens."
             )
         return self
 
