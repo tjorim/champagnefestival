@@ -21,7 +21,7 @@ dependencies = [
   "limits==5.8.0",
   "phonenumbers==9.0.44",
   "psycopg[binary]==3.3.9",
-  "pydantic[email]==2.14.3",
+  "pydantic[email]==2.14.4",
   "pydantic-settings==2.16.3",
   "pyjwt[crypto]==2.15.1",
   "python-dotenv==1.2.4",
