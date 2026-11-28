@@ -68,7 +68,7 @@
     "react-oidc-context": "^3.3.1"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.14.0",
+    "@axe-core/playwright": "^4.14.1",
     "@inlang/paraglide-js": "^3.2.2",
     "@inlang/plugin-m-function-matcher": "^2.4.3",
     "@inlang/plugin-message-format": "^4.6.0",
