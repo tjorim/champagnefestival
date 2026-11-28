@@ -169,6 +169,7 @@ Application UI imports use `@/components/ui/<component>`. Direct Base UI subpath
 
 ### Project process
 
+- Open a pull request as a draft while the work is in progress and mark it ready for review once it is complete and its checks pass locally, so reviewers and CI only see finished work; push once per pull request where you can rather than after every small change.
 - When a change implements, closes, splits, supersedes, or materially changes an issue tracked in `docs/product-audit-2026-08.md`, update that document in the same change. For completed or superseded items, remove the row from the active phase, renumber the remaining preferred order, and add a row to **Completed or superseded work** with the date, issue/PR or commit, outcome, and a concise implementation note. Update affected dependencies, index/specification text, and acceptance-criteria checkboxes. Partial work stays in the active phase with revised notes; do not record completion until the documented acceptance criteria are satisfied. Preserve the original finding/specification as historical context.
 - GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new sub-issue links and corrections by editing the issue body (read it first, keep the original text, and add or adjust a clearly headed section), including on closed issues
 
