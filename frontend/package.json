@@ -70,8 +70,8 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@inlang/paraglide-js": "^3.2.2",
-    "@inlang/plugin-m-function-matcher": "^2.4.3",
-    "@inlang/plugin-message-format": "^4.6.0",
+    "@inlang/plugin-m-function-matcher": "^2.4.4",
+    "@inlang/plugin-message-format": "^4.6.2",
     "@playwright/test": "^1.65.1",
     "@shadcn/lint": "^0.2.5",
     "@tailwindcss/vite": "^4.3.5",
